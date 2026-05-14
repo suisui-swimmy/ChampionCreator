@@ -6,17 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:calc-data": "node scripts/generate-calc-data.mjs",
+    "generate:localized-search": "node scripts/generate-localized-search-index.mjs",
+    "generate:pokemon-assets": "node scripts/generate-pokemon-assets.mjs",
+    "inspect:calc": "node scripts/inspect-smogon-calc.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@smogon/calc": "^0.11.0",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
-    "typescript": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "typescript": "latest"
   }
 }

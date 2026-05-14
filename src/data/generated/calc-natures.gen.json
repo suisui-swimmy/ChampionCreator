@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "calc-0.11.0-gen9",
+  "source": {
+    "package": "@smogon/calc",
+    "version": "0.11.0",
+    "generation": 9
+  },
+  "generatedBy": "scripts/generate-calc-data.mjs",
+  "kind": "natures",
+  "entries": [
+    {
+      "id": "adamant",
+      "showdownName": "Adamant",
+      "plus": "atk",
+      "minus": "spa",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bashful",
+      "showdownName": "Bashful",
+      "plus": "spa",
+      "minus": "spa",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bold",
+      "showdownName": "Bold",
+      "plus": "def",
+      "minus": "atk",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "brave",
+      "showdownName": "Brave",
+      "plus": "atk",
+      "minus": "spe",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "calm",
+      "showdownName": "Calm",
+      "plus": "spd",
+      "minus": "atk",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "careful",
+      "showdownName": "Careful",
+      "plus": "spd",
+      "minus": "spa",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "docile",
+      "showdownName": "Docile",
+      "plus": "def",
+      "minus": "def",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gentle",
+      "showdownName": "Gentle",
+      "plus": "spd",
+      "minus": "def",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hardy",
+      "showdownName": "Hardy",
+      "plus": "atk",
+      "minus": "atk",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hasty",
+      "showdownName": "Hasty",
+      "plus": "spe",
+      "minus": "def",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "impish",
+      "showdownName": "Impish",
+      "plus": "def",
+      "minus": "spa",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "jolly",
+      "showdownName": "Jolly",
+      "plus": "spe",
+      "minus": "spa",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lax",
+      "showdownName": "Lax",
+      "plus": "def",
+      "minus": "spd",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lonely",
+      "showdownName": "Lonely",
+      "plus": "atk",
+      "minus": "def",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mild",
+      "showdownName": "Mild",
+      "plus": "spa",
+      "minus": "def",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "modest",
+      "showdownName": "Modest",
+      "plus": "spa",
+      "minus": "atk",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "naive",
+      "showdownName": "Naive",
+      "plus": "spe",
+      "minus": "spd",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "naughty",
+      "showdownName": "Naughty",
+      "plus": "atk",
+      "minus": "spd",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quiet",
+      "showdownName": "Quiet",
+      "plus": "spa",
+      "minus": "spe",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quirky",
+      "showdownName": "Quirky",
+      "plus": "spd",
+      "minus": "spd",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rash",
+      "showdownName": "Rash",
+      "plus": "spa",
+      "minus": "spd",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "relaxed",
+      "showdownName": "Relaxed",
+      "plus": "def",
+      "minus": "spe",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sassy",
+      "showdownName": "Sassy",
+      "plus": "spd",
+      "minus": "spe",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "serious",
+      "showdownName": "Serious",
+      "plus": "spe",
+      "minus": "spe",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "timid",
+      "showdownName": "Timid",
+      "plus": "spe",
+      "minus": "atk",
+      "sourceStatus": "supported"
+    }
+  ]
+}

@@ -1,0 +1,1578 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "calc-0.11.0-gen9",
+  "source": {
+    "package": "@smogon/calc",
+    "version": "0.11.0",
+    "generation": 9
+  },
+  "generatedBy": "scripts/generate-calc-data.mjs",
+  "kind": "abilities",
+  "entries": [
+    {
+      "id": "adaptability",
+      "showdownName": "Adaptability",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aerilate",
+      "showdownName": "Aerilate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aftermath",
+      "showdownName": "Aftermath",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "airlock",
+      "showdownName": "Air Lock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "analytic",
+      "showdownName": "Analytic",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "angerpoint",
+      "showdownName": "Anger Point",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "angershell",
+      "showdownName": "Anger Shell",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "anticipation",
+      "showdownName": "Anticipation",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "arenatrap",
+      "showdownName": "Arena Trap",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "armortail",
+      "showdownName": "Armor Tail",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aromaveil",
+      "showdownName": "Aroma Veil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "asoneglastrier",
+      "showdownName": "As One (Glastrier)",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "asonespectrier",
+      "showdownName": "As One (Spectrier)",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aurabreak",
+      "showdownName": "Aura Break",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "baddreams",
+      "showdownName": "Bad Dreams",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ballfetch",
+      "showdownName": "Ball Fetch",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "battery",
+      "showdownName": "Battery",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "battlearmor",
+      "showdownName": "Battle Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "battlebond",
+      "showdownName": "Battle Bond",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "beadsofruin",
+      "showdownName": "Beads of Ruin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "beastboost",
+      "showdownName": "Beast Boost",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "berserk",
+      "showdownName": "Berserk",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bigpecks",
+      "showdownName": "Big Pecks",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blaze",
+      "showdownName": "Blaze",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bulletproof",
+      "showdownName": "Bulletproof",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cheekpouch",
+      "showdownName": "Cheek Pouch",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chillingneigh",
+      "showdownName": "Chilling Neigh",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chlorophyll",
+      "showdownName": "Chlorophyll",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "clearbody",
+      "showdownName": "Clear Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cloudnine",
+      "showdownName": "Cloud Nine",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "colorchange",
+      "showdownName": "Color Change",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "comatose",
+      "showdownName": "Comatose",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "commander",
+      "showdownName": "Commander",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "competitive",
+      "showdownName": "Competitive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "compoundeyes",
+      "showdownName": "Compound Eyes",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "contrary",
+      "showdownName": "Contrary",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "corrosion",
+      "showdownName": "Corrosion",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "costar",
+      "showdownName": "Costar",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cottondown",
+      "showdownName": "Cotton Down",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cudchew",
+      "showdownName": "Cud Chew",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "curiousmedicine",
+      "showdownName": "Curious Medicine",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cursedbody",
+      "showdownName": "Cursed Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cutecharm",
+      "showdownName": "Cute Charm",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "damp",
+      "showdownName": "Damp",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dancer",
+      "showdownName": "Dancer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "darkaura",
+      "showdownName": "Dark Aura",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dauntlessshield",
+      "showdownName": "Dauntless Shield",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dazzling",
+      "showdownName": "Dazzling",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "defeatist",
+      "showdownName": "Defeatist",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "defiant",
+      "showdownName": "Defiant",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "deltastream",
+      "showdownName": "Delta Stream",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "desolateland",
+      "showdownName": "Desolate Land",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "disguise",
+      "showdownName": "Disguise",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "download",
+      "showdownName": "Download",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragonsmaw",
+      "showdownName": "Dragon's Maw",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "drizzle",
+      "showdownName": "Drizzle",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "drought",
+      "showdownName": "Drought",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dryskin",
+      "showdownName": "Dry Skin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "earlybird",
+      "showdownName": "Early Bird",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "eartheater",
+      "showdownName": "Earth Eater",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "effectspore",
+      "showdownName": "Effect Spore",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electricsurge",
+      "showdownName": "Electric Surge",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electromorphosis",
+      "showdownName": "Electromorphosis",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "embodyaspectcornerstone",
+      "showdownName": "Embody Aspect (Cornerstone)",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "embodyaspecthearthflame",
+      "showdownName": "Embody Aspect (Hearthflame)",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "embodyaspectteal",
+      "showdownName": "Embody Aspect (Teal)",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "embodyaspectwellspring",
+      "showdownName": "Embody Aspect (Wellspring)",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "emergencyexit",
+      "showdownName": "Emergency Exit",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fairyaura",
+      "showdownName": "Fairy Aura",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "filter",
+      "showdownName": "Filter",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flamebody",
+      "showdownName": "Flame Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flareboost",
+      "showdownName": "Flare Boost",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flashfire",
+      "showdownName": "Flash Fire",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flowergift",
+      "showdownName": "Flower Gift",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flowerveil",
+      "showdownName": "Flower Veil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fluffy",
+      "showdownName": "Fluffy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "forecast",
+      "showdownName": "Forecast",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "forewarn",
+      "showdownName": "Forewarn",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "friendguard",
+      "showdownName": "Friend Guard",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "frisk",
+      "showdownName": "Frisk",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fullmetalbody",
+      "showdownName": "Full Metal Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "furcoat",
+      "showdownName": "Fur Coat",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "galewings",
+      "showdownName": "Gale Wings",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "galvanize",
+      "showdownName": "Galvanize",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gluttony",
+      "showdownName": "Gluttony",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "goodasgold",
+      "showdownName": "Good as Gold",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gooey",
+      "showdownName": "Gooey",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gorillatactics",
+      "showdownName": "Gorilla Tactics",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grasspelt",
+      "showdownName": "Grass Pelt",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grassysurge",
+      "showdownName": "Grassy Surge",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grimneigh",
+      "showdownName": "Grim Neigh",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "guarddog",
+      "showdownName": "Guard Dog",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gulpmissile",
+      "showdownName": "Gulp Missile",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "guts",
+      "showdownName": "Guts",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hadronengine",
+      "showdownName": "Hadron Engine",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "harvest",
+      "showdownName": "Harvest",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "healer",
+      "showdownName": "Healer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heatproof",
+      "showdownName": "Heatproof",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heavymetal",
+      "showdownName": "Heavy Metal",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "honeygather",
+      "showdownName": "Honey Gather",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hospitality",
+      "showdownName": "Hospitality",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hugepower",
+      "showdownName": "Huge Power",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hungerswitch",
+      "showdownName": "Hunger Switch",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hustle",
+      "showdownName": "Hustle",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hydration",
+      "showdownName": "Hydration",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hypercutter",
+      "showdownName": "Hyper Cutter",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icebody",
+      "showdownName": "Ice Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "iceface",
+      "showdownName": "Ice Face",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icescales",
+      "showdownName": "Ice Scales",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "illuminate",
+      "showdownName": "Illuminate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "illusion",
+      "showdownName": "Illusion",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "immunity",
+      "showdownName": "Immunity",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "imposter",
+      "showdownName": "Imposter",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "infiltrator",
+      "showdownName": "Infiltrator",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "innardsout",
+      "showdownName": "Innards Out",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "innerfocus",
+      "showdownName": "Inner Focus",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "insomnia",
+      "showdownName": "Insomnia",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "intimidate",
+      "showdownName": "Intimidate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "intrepidsword",
+      "showdownName": "Intrepid Sword",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ironbarbs",
+      "showdownName": "Iron Barbs",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ironfist",
+      "showdownName": "Iron Fist",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "justified",
+      "showdownName": "Justified",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "keeneye",
+      "showdownName": "Keen Eye",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "klutz",
+      "showdownName": "Klutz",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "leafguard",
+      "showdownName": "Leaf Guard",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "levitate",
+      "showdownName": "Levitate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "libero",
+      "showdownName": "Libero",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lightmetal",
+      "showdownName": "Light Metal",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lightningrod",
+      "showdownName": "Lightning Rod",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "limber",
+      "showdownName": "Limber",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lingeringaroma",
+      "showdownName": "Lingering Aroma",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "liquidooze",
+      "showdownName": "Liquid Ooze",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "liquidvoice",
+      "showdownName": "Liquid Voice",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "longreach",
+      "showdownName": "Long Reach",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magicbounce",
+      "showdownName": "Magic Bounce",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magicguard",
+      "showdownName": "Magic Guard",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magician",
+      "showdownName": "Magician",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magmaarmor",
+      "showdownName": "Magma Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magnetpull",
+      "showdownName": "Magnet Pull",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "marvelscale",
+      "showdownName": "Marvel Scale",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "megalauncher",
+      "showdownName": "Mega Launcher",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "merciless",
+      "showdownName": "Merciless",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mimicry",
+      "showdownName": "Mimicry",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mindseye",
+      "showdownName": "Mind's Eye",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "minus",
+      "showdownName": "Minus",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mirrorarmor",
+      "showdownName": "Mirror Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mistysurge",
+      "showdownName": "Misty Surge",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "moldbreaker",
+      "showdownName": "Mold Breaker",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "moody",
+      "showdownName": "Moody",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "motordrive",
+      "showdownName": "Motor Drive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mountaineer",
+      "showdownName": "Mountaineer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "moxie",
+      "showdownName": "Moxie",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "multiscale",
+      "showdownName": "Multiscale",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "multitype",
+      "showdownName": "Multitype",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mummy",
+      "showdownName": "Mummy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "myceliummight",
+      "showdownName": "Mycelium Might",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "naturalcure",
+      "showdownName": "Natural Cure",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "neuroforce",
+      "showdownName": "Neuroforce",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "neutralizinggas",
+      "showdownName": "Neutralizing Gas",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "noguard",
+      "showdownName": "No Guard",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "normalize",
+      "showdownName": "Normalize",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "oblivious",
+      "showdownName": "Oblivious",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "opportunist",
+      "showdownName": "Opportunist",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "orichalcumpulse",
+      "showdownName": "Orichalcum Pulse",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "overcoat",
+      "showdownName": "Overcoat",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "overgrow",
+      "showdownName": "Overgrow",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "owntempo",
+      "showdownName": "Own Tempo",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "parentalbond",
+      "showdownName": "Parental Bond",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pastelveil",
+      "showdownName": "Pastel Veil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "perishbody",
+      "showdownName": "Perish Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "persistent",
+      "showdownName": "Persistent",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pickpocket",
+      "showdownName": "Pickpocket",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pickup",
+      "showdownName": "Pickup",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pixilate",
+      "showdownName": "Pixilate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "plus",
+      "showdownName": "Plus",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisonheal",
+      "showdownName": "Poison Heal",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisonpoint",
+      "showdownName": "Poison Point",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisonpuppeteer",
+      "showdownName": "Poison Puppeteer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisontouch",
+      "showdownName": "Poison Touch",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerconstruct",
+      "showdownName": "Power Construct",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerofalchemy",
+      "showdownName": "Power of Alchemy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerspot",
+      "showdownName": "Power Spot",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "prankster",
+      "showdownName": "Prankster",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pressure",
+      "showdownName": "Pressure",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "primordialsea",
+      "showdownName": "Primordial Sea",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "prismarmor",
+      "showdownName": "Prism Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "propellertail",
+      "showdownName": "Propeller Tail",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "protean",
+      "showdownName": "Protean",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "protosynthesis",
+      "showdownName": "Protosynthesis",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psychicsurge",
+      "showdownName": "Psychic Surge",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "punkrock",
+      "showdownName": "Punk Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "purepower",
+      "showdownName": "Pure Power",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "purifyingsalt",
+      "showdownName": "Purifying Salt",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quarkdrive",
+      "showdownName": "Quark Drive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "queenlymajesty",
+      "showdownName": "Queenly Majesty",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quickdraw",
+      "showdownName": "Quick Draw",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quickfeet",
+      "showdownName": "Quick Feet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "raindish",
+      "showdownName": "Rain Dish",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rattled",
+      "showdownName": "Rattled",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rebound",
+      "showdownName": "Rebound",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "receiver",
+      "showdownName": "Receiver",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "reckless",
+      "showdownName": "Reckless",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "refrigerate",
+      "showdownName": "Refrigerate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "regenerator",
+      "showdownName": "Regenerator",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ripen",
+      "showdownName": "Ripen",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rivalry",
+      "showdownName": "Rivalry",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rkssystem",
+      "showdownName": "RKS System",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockhead",
+      "showdownName": "Rock Head",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockypayload",
+      "showdownName": "Rocky Payload",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "roughskin",
+      "showdownName": "Rough Skin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "runaway",
+      "showdownName": "Run Away",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sandforce",
+      "showdownName": "Sand Force",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sandrush",
+      "showdownName": "Sand Rush",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sandspit",
+      "showdownName": "Sand Spit",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sandstream",
+      "showdownName": "Sand Stream",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sandveil",
+      "showdownName": "Sand Veil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sapsipper",
+      "showdownName": "Sap Sipper",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "schooling",
+      "showdownName": "Schooling",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "scrappy",
+      "showdownName": "Scrappy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "screencleaner",
+      "showdownName": "Screen Cleaner",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "seedsower",
+      "showdownName": "Seed Sower",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "serenegrace",
+      "showdownName": "Serene Grace",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shadowshield",
+      "showdownName": "Shadow Shield",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shadowtag",
+      "showdownName": "Shadow Tag",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sharpness",
+      "showdownName": "Sharpness",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shedskin",
+      "showdownName": "Shed Skin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sheerforce",
+      "showdownName": "Sheer Force",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shellarmor",
+      "showdownName": "Shell Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shielddust",
+      "showdownName": "Shield Dust",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shieldsdown",
+      "showdownName": "Shields Down",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "simple",
+      "showdownName": "Simple",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "skilllink",
+      "showdownName": "Skill Link",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "slowstart",
+      "showdownName": "Slow Start",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "slushrush",
+      "showdownName": "Slush Rush",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sniper",
+      "showdownName": "Sniper",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "snowcloak",
+      "showdownName": "Snow Cloak",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "snowwarning",
+      "showdownName": "Snow Warning",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "solarpower",
+      "showdownName": "Solar Power",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "solidrock",
+      "showdownName": "Solid Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "soulheart",
+      "showdownName": "Soul-Heart",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "soundproof",
+      "showdownName": "Soundproof",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "speedboost",
+      "showdownName": "Speed Boost",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stakeout",
+      "showdownName": "Stakeout",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stall",
+      "showdownName": "Stall",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stalwart",
+      "showdownName": "Stalwart",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stamina",
+      "showdownName": "Stamina",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stancechange",
+      "showdownName": "Stance Change",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "static",
+      "showdownName": "Static",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steadfast",
+      "showdownName": "Steadfast",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steamengine",
+      "showdownName": "Steam Engine",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steelworker",
+      "showdownName": "Steelworker",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steelyspirit",
+      "showdownName": "Steely Spirit",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stench",
+      "showdownName": "Stench",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stickyhold",
+      "showdownName": "Sticky Hold",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stormdrain",
+      "showdownName": "Storm Drain",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "strongjaw",
+      "showdownName": "Strong Jaw",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sturdy",
+      "showdownName": "Sturdy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "suctioncups",
+      "showdownName": "Suction Cups",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "superluck",
+      "showdownName": "Super Luck",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "supersweetsyrup",
+      "showdownName": "Supersweet Syrup",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "supremeoverlord",
+      "showdownName": "Supreme Overlord",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "surgesurfer",
+      "showdownName": "Surge Surfer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "swarm",
+      "showdownName": "Swarm",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sweetveil",
+      "showdownName": "Sweet Veil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "swiftswim",
+      "showdownName": "Swift Swim",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "swordofruin",
+      "showdownName": "Sword of Ruin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "symbiosis",
+      "showdownName": "Symbiosis",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "synchronize",
+      "showdownName": "Synchronize",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tabletsofruin",
+      "showdownName": "Tablets of Ruin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tangledfeet",
+      "showdownName": "Tangled Feet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tanglinghair",
+      "showdownName": "Tangling Hair",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "technician",
+      "showdownName": "Technician",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "telepathy",
+      "showdownName": "Telepathy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "teraformzero",
+      "showdownName": "Teraform Zero",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "terashell",
+      "showdownName": "Tera Shell",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "terashift",
+      "showdownName": "Tera Shift",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "teravolt",
+      "showdownName": "Teravolt",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "thermalexchange",
+      "showdownName": "Thermal Exchange",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "thickfat",
+      "showdownName": "Thick Fat",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tintedlens",
+      "showdownName": "Tinted Lens",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "torrent",
+      "showdownName": "Torrent",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "toughclaws",
+      "showdownName": "Tough Claws",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "toxicboost",
+      "showdownName": "Toxic Boost",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "toxicchain",
+      "showdownName": "Toxic Chain",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "toxicdebris",
+      "showdownName": "Toxic Debris",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "trace",
+      "showdownName": "Trace",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "transistor",
+      "showdownName": "Transistor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "triage",
+      "showdownName": "Triage",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "truant",
+      "showdownName": "Truant",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "turboblaze",
+      "showdownName": "Turboblaze",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "unaware",
+      "showdownName": "Unaware",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "unburden",
+      "showdownName": "Unburden",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "unnerve",
+      "showdownName": "Unnerve",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "unseenfist",
+      "showdownName": "Unseen Fist",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "vesselofruin",
+      "showdownName": "Vessel of Ruin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "victorystar",
+      "showdownName": "Victory Star",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "vitalspirit",
+      "showdownName": "Vital Spirit",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "voltabsorb",
+      "showdownName": "Volt Absorb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wanderingspirit",
+      "showdownName": "Wandering Spirit",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "waterabsorb",
+      "showdownName": "Water Absorb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "waterbubble",
+      "showdownName": "Water Bubble",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "watercompaction",
+      "showdownName": "Water Compaction",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "waterveil",
+      "showdownName": "Water Veil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "weakarmor",
+      "showdownName": "Weak Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wellbakedbody",
+      "showdownName": "Well-Baked Body",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "whitesmoke",
+      "showdownName": "White Smoke",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wimpout",
+      "showdownName": "Wimp Out",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "windpower",
+      "showdownName": "Wind Power",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "windrider",
+      "showdownName": "Wind Rider",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wonderguard",
+      "showdownName": "Wonder Guard",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wonderskin",
+      "showdownName": "Wonder Skin",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "zenmode",
+      "showdownName": "Zen Mode",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "zerotohero",
+      "showdownName": "Zero to Hero",
+      "sourceStatus": "supported"
+    }
+  ]
+}

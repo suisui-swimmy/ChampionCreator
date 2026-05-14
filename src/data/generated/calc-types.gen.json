@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "calc-0.11.0-gen9",
+  "source": {
+    "package": "@smogon/calc",
+    "version": "0.11.0",
+    "generation": 9
+  },
+  "generatedBy": "scripts/generate-calc-data.mjs",
+  "kind": "types",
+  "entries": [
+    {
+      "id": "",
+      "showdownName": "???",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bug",
+      "showdownName": "Bug",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dark",
+      "showdownName": "Dark",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragon",
+      "showdownName": "Dragon",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electric",
+      "showdownName": "Electric",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fairy",
+      "showdownName": "Fairy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fighting",
+      "showdownName": "Fighting",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fire",
+      "showdownName": "Fire",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flying",
+      "showdownName": "Flying",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ghost",
+      "showdownName": "Ghost",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grass",
+      "showdownName": "Grass",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ground",
+      "showdownName": "Ground",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ice",
+      "showdownName": "Ice",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "normal",
+      "showdownName": "Normal",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poison",
+      "showdownName": "Poison",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psychic",
+      "showdownName": "Psychic",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rock",
+      "showdownName": "Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steel",
+      "showdownName": "Steel",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stellar",
+      "showdownName": "Stellar",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "water",
+      "showdownName": "Water",
+      "sourceStatus": "supported"
+    }
+  ]
+}

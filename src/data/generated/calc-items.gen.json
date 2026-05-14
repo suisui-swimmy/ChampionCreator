@@ -1,0 +1,3596 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "calc-0.11.0-gen9",
+  "source": {
+    "package": "@smogon/calc",
+    "version": "0.11.0",
+    "generation": 9
+  },
+  "generatedBy": "scripts/generate-calc-data.mjs",
+  "kind": "items",
+  "entries": [
+    {
+      "id": "abilityshield",
+      "showdownName": "Ability Shield",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "abomasite",
+      "showdownName": "Abomasite",
+      "megaStone": {
+        "Abomasnow": "Abomasnow-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "absolite",
+      "showdownName": "Absolite",
+      "megaStone": {
+        "Absol": "Absol-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "absolitez",
+      "showdownName": "Absolite Z",
+      "megaStone": {
+        "Absol": "Absol-Mega-Z"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "absorbbulb",
+      "showdownName": "Absorb Bulb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "adamantcrystal",
+      "showdownName": "Adamant Crystal",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "adamantorb",
+      "showdownName": "Adamant Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "adrenalineorb",
+      "showdownName": "Adrenaline Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aerodactylite",
+      "showdownName": "Aerodactylite",
+      "megaStone": {
+        "Aerodactyl": "Aerodactyl-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aggronite",
+      "showdownName": "Aggronite",
+      "megaStone": {
+        "Aggron": "Aggron-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aguavberry",
+      "showdownName": "Aguav Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Dragon"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "airballoon",
+      "showdownName": "Air Balloon",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "alakazite",
+      "showdownName": "Alakazite",
+      "megaStone": {
+        "Alakazam": "Alakazam-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aloraichiumz",
+      "showdownName": "Aloraichium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "altarianite",
+      "showdownName": "Altarianite",
+      "megaStone": {
+        "Altaria": "Altaria-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ampharosite",
+      "showdownName": "Ampharosite",
+      "megaStone": {
+        "Ampharos": "Ampharos-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "apicotberry",
+      "showdownName": "Apicot Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Ground"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "armorfossil",
+      "showdownName": "Armor Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "aspearberry",
+      "showdownName": "Aspear Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ice"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "assaultvest",
+      "showdownName": "Assault Vest",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "audinite",
+      "showdownName": "Audinite",
+      "megaStone": {
+        "Audino": "Audino-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "auspiciousarmor",
+      "showdownName": "Auspicious Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "babiriberry",
+      "showdownName": "Babiri Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Steel"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "banettite",
+      "showdownName": "Banettite",
+      "megaStone": {
+        "Banette": "Banette-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "barbaracite",
+      "showdownName": "Barbaracite",
+      "megaStone": {
+        "Barbaracle": "Barbaracle-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "baxcalibrite",
+      "showdownName": "Baxcalibrite",
+      "megaStone": {
+        "Baxcalibur": "Baxcalibur-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "beastball",
+      "showdownName": "Beast Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "beedrillite",
+      "showdownName": "Beedrillite",
+      "megaStone": {
+        "Beedrill": "Beedrill-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "belueberry",
+      "showdownName": "Belue Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Electric"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "berry",
+      "showdownName": "Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Poison"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "berryjuice",
+      "showdownName": "Berry Juice",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "berrysweet",
+      "showdownName": "Berry Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "berserkgene",
+      "showdownName": "Berserk Gene",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bignugget",
+      "showdownName": "Big Nugget",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bigroot",
+      "showdownName": "Big Root",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bindingband",
+      "showdownName": "Binding Band",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bitterberry",
+      "showdownName": "Bitter Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ground"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blackbelt",
+      "showdownName": "Black Belt",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blackglasses",
+      "showdownName": "Black Glasses",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blacksludge",
+      "showdownName": "Black Sludge",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blastoisinite",
+      "showdownName": "Blastoisinite",
+      "megaStone": {
+        "Blastoise": "Blastoise-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blazikenite",
+      "showdownName": "Blazikenite",
+      "megaStone": {
+        "Blaziken": "Blaziken-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blueorb",
+      "showdownName": "Blue Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blukberry",
+      "showdownName": "Bluk Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Fire"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "blunderpolicy",
+      "showdownName": "Blunder Policy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "boosterenergy",
+      "showdownName": "Booster Energy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bottlecap",
+      "showdownName": "Bottle Cap",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "brightpowder",
+      "showdownName": "Bright Powder",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "buggem",
+      "showdownName": "Bug Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "buginiumz",
+      "showdownName": "Buginium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "bugmemory",
+      "showdownName": "Bug Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "burndrive",
+      "showdownName": "Burn Drive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "burntberry",
+      "showdownName": "Burnt Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ice"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cameruptite",
+      "showdownName": "Cameruptite",
+      "megaStone": {
+        "Camerupt": "Camerupt-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cellbattery",
+      "showdownName": "Cell Battery",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chandelurite",
+      "showdownName": "Chandelurite",
+      "megaStone": {
+        "Chandelure": "Chandelure-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "charcoal",
+      "showdownName": "Charcoal",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "charizarditex",
+      "showdownName": "Charizardite X",
+      "megaStone": {
+        "Charizard": "Charizard-Mega-X"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "charizarditey",
+      "showdownName": "Charizardite Y",
+      "megaStone": {
+        "Charizard": "Charizard-Mega-Y"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chartiberry",
+      "showdownName": "Charti Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Rock"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cheriberry",
+      "showdownName": "Cheri Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fire"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cherishball",
+      "showdownName": "Cherish Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chesnaughtite",
+      "showdownName": "Chesnaughtite",
+      "megaStone": {
+        "Chesnaught": "Chesnaught-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chestoberry",
+      "showdownName": "Chesto Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Water"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chilanberry",
+      "showdownName": "Chilan Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Normal"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chilldrive",
+      "showdownName": "Chill Drive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chimechite",
+      "showdownName": "Chimechite",
+      "megaStone": {
+        "Chimecho": "Chimecho-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chippedpot",
+      "showdownName": "Chipped Pot",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "choiceband",
+      "showdownName": "Choice Band",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "choicescarf",
+      "showdownName": "Choice Scarf",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "choicespecs",
+      "showdownName": "Choice Specs",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "chopleberry",
+      "showdownName": "Chople Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fighting"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "clawfossil",
+      "showdownName": "Claw Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "clearamulet",
+      "showdownName": "Clear Amulet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "clefablite",
+      "showdownName": "Clefablite",
+      "megaStone": {
+        "Clefable": "Clefable-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cloversweet",
+      "showdownName": "Clover Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cobaberry",
+      "showdownName": "Coba Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Flying"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "colburberry",
+      "showdownName": "Colbur Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Dark"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cornerstonemask",
+      "showdownName": "Cornerstone Mask",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "cornnberry",
+      "showdownName": "Cornn Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Bug"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "coverfossil",
+      "showdownName": "Cover Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "covertcloak",
+      "showdownName": "Covert Cloak",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "crabominite",
+      "showdownName": "Crabominite",
+      "megaStone": {
+        "Crabominable": "Crabominable-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "crackedpot",
+      "showdownName": "Cracked Pot",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "crucibellite",
+      "showdownName": "Crucibellite",
+      "megaStone": {
+        "Crucibelle": "Crucibelle-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "custapberry",
+      "showdownName": "Custap Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Ghost"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "damprock",
+      "showdownName": "Damp Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "darkgem",
+      "showdownName": "Dark Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "darkiniumz",
+      "showdownName": "Darkinium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "darkmemory",
+      "showdownName": "Dark Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "darkranite",
+      "showdownName": "Darkranite",
+      "megaStone": {
+        "Darkrai": "Darkrai-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dawnstone",
+      "showdownName": "Dawn Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "decidiumz",
+      "showdownName": "Decidium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "deepseascale",
+      "showdownName": "Deep Sea Scale",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "deepseatooth",
+      "showdownName": "Deep Sea Tooth",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "delphoxite",
+      "showdownName": "Delphoxite",
+      "megaStone": {
+        "Delphox": "Delphox-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "destinyknot",
+      "showdownName": "Destiny Knot",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "diancite",
+      "showdownName": "Diancite",
+      "megaStone": {
+        "Diancie": "Diancie-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "diveball",
+      "showdownName": "Dive Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "domefossil",
+      "showdownName": "Dome Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dousedrive",
+      "showdownName": "Douse Drive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dracoplate",
+      "showdownName": "Draco Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragalgite",
+      "showdownName": "Dragalgite",
+      "megaStone": {
+        "Dragalge": "Dragalge-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragonfang",
+      "showdownName": "Dragon Fang",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragongem",
+      "showdownName": "Dragon Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragoninite",
+      "showdownName": "Dragoninite",
+      "megaStone": {
+        "Dragonite": "Dragonite-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragoniumz",
+      "showdownName": "Dragonium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragonmemory",
+      "showdownName": "Dragon Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dragonscale",
+      "showdownName": "Dragon Scale",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "drampanite",
+      "showdownName": "Drampanite",
+      "megaStone": {
+        "Drampa": "Drampa-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dreadplate",
+      "showdownName": "Dread Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dreamball",
+      "showdownName": "Dream Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "dubiousdisc",
+      "showdownName": "Dubious Disc",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "durinberry",
+      "showdownName": "Durin Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Water"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "duskball",
+      "showdownName": "Dusk Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "duskstone",
+      "showdownName": "Dusk Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "earthplate",
+      "showdownName": "Earth Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "eelektrossite",
+      "showdownName": "Eelektrossite",
+      "megaStone": {
+        "Eelektross": "Eelektross-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "eeviumz",
+      "showdownName": "Eevium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ejectbutton",
+      "showdownName": "Eject Button",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ejectpack",
+      "showdownName": "Eject Pack",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electirizer",
+      "showdownName": "Electirizer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electricgem",
+      "showdownName": "Electric Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electricmemory",
+      "showdownName": "Electric Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electricseed",
+      "showdownName": "Electric Seed",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "electriumz",
+      "showdownName": "Electrium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "emboarite",
+      "showdownName": "Emboarite",
+      "megaStone": {
+        "Emboar": "Emboar-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "enigmaberry",
+      "showdownName": "Enigma Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Bug"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "eviolite",
+      "showdownName": "Eviolite",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "excadrite",
+      "showdownName": "Excadrite",
+      "megaStone": {
+        "Excadrill": "Excadrill-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "expertbelt",
+      "showdownName": "Expert Belt",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fairiumz",
+      "showdownName": "Fairium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fairyfeather",
+      "showdownName": "Fairy Feather",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fairygem",
+      "showdownName": "Fairy Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fairymemory",
+      "showdownName": "Fairy Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "falinksite",
+      "showdownName": "Falinksite",
+      "megaStone": {
+        "Falinks": "Falinks-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fastball",
+      "showdownName": "Fast Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "feraligite",
+      "showdownName": "Feraligite",
+      "megaStone": {
+        "Feraligatr": "Feraligatr-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fightinggem",
+      "showdownName": "Fighting Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fightingmemory",
+      "showdownName": "Fighting Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fightiniumz",
+      "showdownName": "Fightinium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "figyberry",
+      "showdownName": "Figy Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Bug"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "firegem",
+      "showdownName": "Fire Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "firememory",
+      "showdownName": "Fire Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "firestone",
+      "showdownName": "Fire Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "firiumz",
+      "showdownName": "Firium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fistplate",
+      "showdownName": "Fist Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flameorb",
+      "showdownName": "Flame Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flameplate",
+      "showdownName": "Flame Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "floatstone",
+      "showdownName": "Float Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "floettite",
+      "showdownName": "Floettite",
+      "megaStone": {
+        "Floette-Eternal": "Floette-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flowersweet",
+      "showdownName": "Flower Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flyinggem",
+      "showdownName": "Flying Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flyingmemory",
+      "showdownName": "Flying Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "flyiniumz",
+      "showdownName": "Flyinium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "focusband",
+      "showdownName": "Focus Band",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "focussash",
+      "showdownName": "Focus Sash",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fossilizedbird",
+      "showdownName": "Fossilized Bird",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fossilizeddino",
+      "showdownName": "Fossilized Dino",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fossilizeddrake",
+      "showdownName": "Fossilized Drake",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fossilizedfish",
+      "showdownName": "Fossilized Fish",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "friendball",
+      "showdownName": "Friend Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "froslassite",
+      "showdownName": "Froslassite",
+      "megaStone": {
+        "Froslass": "Froslass-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "fullincense",
+      "showdownName": "Full Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "galaricacuff",
+      "showdownName": "Galarica Cuff",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "galaricawreath",
+      "showdownName": "Galarica Wreath",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "galladite",
+      "showdownName": "Galladite",
+      "megaStone": {
+        "Gallade": "Gallade-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ganlonberry",
+      "showdownName": "Ganlon Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Ice"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "garchompite",
+      "showdownName": "Garchompite",
+      "megaStone": {
+        "Garchomp": "Garchomp-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "garchompitez",
+      "showdownName": "Garchompite Z",
+      "megaStone": {
+        "Garchomp": "Garchomp-Mega-Z"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gardevoirite",
+      "showdownName": "Gardevoirite",
+      "megaStone": {
+        "Gardevoir": "Gardevoir-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gengarite",
+      "showdownName": "Gengarite",
+      "megaStone": {
+        "Gengar": "Gengar-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ghostgem",
+      "showdownName": "Ghost Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ghostiumz",
+      "showdownName": "Ghostium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ghostmemory",
+      "showdownName": "Ghost Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "glalitite",
+      "showdownName": "Glalitite",
+      "megaStone": {
+        "Glalie": "Glalie-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "glimmoranite",
+      "showdownName": "Glimmoranite",
+      "megaStone": {
+        "Glimmora": "Glimmora-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "goldberry",
+      "showdownName": "Gold Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Psychic"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "goldbottlecap",
+      "showdownName": "Gold Bottle Cap",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "golisopite",
+      "showdownName": "Golisopite",
+      "megaStone": {
+        "Golisopod": "Golisopod-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "golurkite",
+      "showdownName": "Golurkite",
+      "megaStone": {
+        "Golurk": "Golurk-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grassgem",
+      "showdownName": "Grass Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grassiumz",
+      "showdownName": "Grassium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grassmemory",
+      "showdownName": "Grass Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grassyseed",
+      "showdownName": "Grassy Seed",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "greatball",
+      "showdownName": "Great Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "greninjite",
+      "showdownName": "Greninjite",
+      "megaStone": {
+        "Greninja": "Greninja-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "grepaberry",
+      "showdownName": "Grepa Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Flying"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gripclaw",
+      "showdownName": "Grip Claw",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "griseouscore",
+      "showdownName": "Griseous Core",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "griseousorb",
+      "showdownName": "Griseous Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "groundgem",
+      "showdownName": "Ground Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "groundiumz",
+      "showdownName": "Groundium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "groundmemory",
+      "showdownName": "Ground Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "gyaradosite",
+      "showdownName": "Gyaradosite",
+      "megaStone": {
+        "Gyarados": "Gyarados-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "habanberry",
+      "showdownName": "Haban Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Dragon"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hardstone",
+      "showdownName": "Hard Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hawluchanite",
+      "showdownName": "Hawluchanite",
+      "megaStone": {
+        "Hawlucha": "Hawlucha-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "healball",
+      "showdownName": "Heal Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hearthflamemask",
+      "showdownName": "Hearthflame Mask",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heatranite",
+      "showdownName": "Heatranite",
+      "megaStone": {
+        "Heatran": "Heatran-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heatrock",
+      "showdownName": "Heat Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heavyball",
+      "showdownName": "Heavy Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heavydutyboots",
+      "showdownName": "Heavy-Duty Boots",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "helixfossil",
+      "showdownName": "Helix Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "heracronite",
+      "showdownName": "Heracronite",
+      "megaStone": {
+        "Heracross": "Heracross-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "hondewberry",
+      "showdownName": "Hondew Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Ground"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "houndoominite",
+      "showdownName": "Houndoominite",
+      "megaStone": {
+        "Houndoom": "Houndoom-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "iapapaberry",
+      "showdownName": "Iapapa Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Dark"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "iceberry",
+      "showdownName": "Ice Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Grass"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icegem",
+      "showdownName": "Ice Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icememory",
+      "showdownName": "Ice Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icestone",
+      "showdownName": "Ice Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icicleplate",
+      "showdownName": "Icicle Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "iciumz",
+      "showdownName": "Icium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "icyrock",
+      "showdownName": "Icy Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "inciniumz",
+      "showdownName": "Incinium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "insectplate",
+      "showdownName": "Insect Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ironball",
+      "showdownName": "Iron Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ironplate",
+      "showdownName": "Iron Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "jabocaberry",
+      "showdownName": "Jaboca Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Dragon"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "jawfossil",
+      "showdownName": "Jaw Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "kangaskhanite",
+      "showdownName": "Kangaskhanite",
+      "megaStone": {
+        "Kangaskhan": "Kangaskhan-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "kasibberry",
+      "showdownName": "Kasib Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ghost"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "kebiaberry",
+      "showdownName": "Kebia Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Poison"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "keeberry",
+      "showdownName": "Kee Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Fairy"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "kelpsyberry",
+      "showdownName": "Kelpsy Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Fighting"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "kingsrock",
+      "showdownName": "King's Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "kommoniumz",
+      "showdownName": "Kommonium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "laggingtail",
+      "showdownName": "Lagging Tail",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lansatberry",
+      "showdownName": "Lansat Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Flying"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "latiasite",
+      "showdownName": "Latiasite",
+      "megaStone": {
+        "Latias": "Latias-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "latiosite",
+      "showdownName": "Latiosite",
+      "megaStone": {
+        "Latios": "Latios-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "laxincense",
+      "showdownName": "Lax Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "leafstone",
+      "showdownName": "Leaf Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "leek",
+      "showdownName": "Leek",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "leftovers",
+      "showdownName": "Leftovers",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "leppaberry",
+      "showdownName": "Leppa Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fighting"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "levelball",
+      "showdownName": "Level Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "liechiberry",
+      "showdownName": "Liechi Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Grass"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lifeorb",
+      "showdownName": "Life Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lightball",
+      "showdownName": "Light Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lightclay",
+      "showdownName": "Light Clay",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "loadeddice",
+      "showdownName": "Loaded Dice",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lopunnite",
+      "showdownName": "Lopunnite",
+      "megaStone": {
+        "Lopunny": "Lopunny-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "loveball",
+      "showdownName": "Love Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lovesweet",
+      "showdownName": "Love Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lucarionite",
+      "showdownName": "Lucarionite",
+      "megaStone": {
+        "Lucario": "Lucario-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lucarionitez",
+      "showdownName": "Lucarionite Z",
+      "megaStone": {
+        "Lucario": "Lucario-Mega-Z"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "luckypunch",
+      "showdownName": "Lucky Punch",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lumberry",
+      "showdownName": "Lum Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Flying"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "luminousmoss",
+      "showdownName": "Luminous Moss",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lunaliumz",
+      "showdownName": "Lunalium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lureball",
+      "showdownName": "Lure Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lustrousglobe",
+      "showdownName": "Lustrous Globe",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lustrousorb",
+      "showdownName": "Lustrous Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "luxuryball",
+      "showdownName": "Luxury Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "lycaniumz",
+      "showdownName": "Lycanium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "machobrace",
+      "showdownName": "Macho Brace",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magearnite",
+      "showdownName": "Magearnite",
+      "megaStone": {
+        "Magearna": "Magearna-Mega",
+        "Magearna-Original": "Magearna-Original-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magmarizer",
+      "showdownName": "Magmarizer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magnet",
+      "showdownName": "Magnet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magoberry",
+      "showdownName": "Mago Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ghost"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "magostberry",
+      "showdownName": "Magost Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Rock"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mail",
+      "showdownName": "Mail",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "malamarite",
+      "showdownName": "Malamarite",
+      "megaStone": {
+        "Malamar": "Malamar-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "maliciousarmor",
+      "showdownName": "Malicious Armor",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "manectite",
+      "showdownName": "Manectite",
+      "megaStone": {
+        "Manectric": "Manectric-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "marangaberry",
+      "showdownName": "Maranga Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Dark"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "marshadiumz",
+      "showdownName": "Marshadium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "masterball",
+      "showdownName": "Master Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "masterpieceteacup",
+      "showdownName": "Masterpiece Teacup",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mawilite",
+      "showdownName": "Mawilite",
+      "megaStone": {
+        "Mawile": "Mawile-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "meadowplate",
+      "showdownName": "Meadow Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "medichamite",
+      "showdownName": "Medichamite",
+      "megaStone": {
+        "Medicham": "Medicham-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "meganiumite",
+      "showdownName": "Meganiumite",
+      "megaStone": {
+        "Meganium": "Meganium-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mentalherb",
+      "showdownName": "Mental Herb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "meowsticite",
+      "showdownName": "Meowsticite",
+      "megaStone": {
+        "Meowstic": "Meowstic-M-Mega",
+        "Meowstic-F": "Meowstic-F-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "metagrossite",
+      "showdownName": "Metagrossite",
+      "megaStone": {
+        "Metagross": "Metagross-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "metalalloy",
+      "showdownName": "Metal Alloy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "metalcoat",
+      "showdownName": "Metal Coat",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "metalpowder",
+      "showdownName": "Metal Powder",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "metronome",
+      "showdownName": "Metronome",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mewniumz",
+      "showdownName": "Mewnium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mewtwonitex",
+      "showdownName": "Mewtwonite X",
+      "megaStone": {
+        "Mewtwo": "Mewtwo-Mega-X"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mewtwonitey",
+      "showdownName": "Mewtwonite Y",
+      "megaStone": {
+        "Mewtwo": "Mewtwo-Mega-Y"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "micleberry",
+      "showdownName": "Micle Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Rock"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mimikiumz",
+      "showdownName": "Mimikium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mindplate",
+      "showdownName": "Mind Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mintberry",
+      "showdownName": "Mint Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Water"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "miracleberry",
+      "showdownName": "Miracle Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Flying"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "miracleseed",
+      "showdownName": "Miracle Seed",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mirrorherb",
+      "showdownName": "Mirror Herb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mistyseed",
+      "showdownName": "Misty Seed",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "moonball",
+      "showdownName": "Moon Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "moonstone",
+      "showdownName": "Moon Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "muscleband",
+      "showdownName": "Muscle Band",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mysteryberry",
+      "showdownName": "Mystery Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fighting"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "mysticwater",
+      "showdownName": "Mystic Water",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "nanabberry",
+      "showdownName": "Nanab Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Water"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "nestball",
+      "showdownName": "Nest Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "netball",
+      "showdownName": "Net Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "nevermeltice",
+      "showdownName": "Never-Melt Ice",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "nomelberry",
+      "showdownName": "Nomel Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Dragon"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "normalgem",
+      "showdownName": "Normal Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "normaliumz",
+      "showdownName": "Normalium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "occaberry",
+      "showdownName": "Occa Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fire"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "oddincense",
+      "showdownName": "Odd Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "oldamber",
+      "showdownName": "Old Amber",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "oranberry",
+      "showdownName": "Oran Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Poison"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ovalstone",
+      "showdownName": "Oval Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pamtreberry",
+      "showdownName": "Pamtre Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Steel"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "parkball",
+      "showdownName": "Park Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "passhoberry",
+      "showdownName": "Passho Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Water"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "payapaberry",
+      "showdownName": "Payapa Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Psychic"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pechaberry",
+      "showdownName": "Pecha Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Electric"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "persimberry",
+      "showdownName": "Persim Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ground"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "petayaberry",
+      "showdownName": "Petaya Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Poison"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pidgeotite",
+      "showdownName": "Pidgeotite",
+      "megaStone": {
+        "Pidgeot": "Pidgeot-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pikaniumz",
+      "showdownName": "Pikanium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pikashuniumz",
+      "showdownName": "Pikashunium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pinapberry",
+      "showdownName": "Pinap Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Grass"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pinkbow",
+      "showdownName": "Pink Bow",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pinsirite",
+      "showdownName": "Pinsirite",
+      "megaStone": {
+        "Pinsir": "Pinsir-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pixieplate",
+      "showdownName": "Pixie Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "plumefossil",
+      "showdownName": "Plume Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisonbarb",
+      "showdownName": "Poison Barb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisongem",
+      "showdownName": "Poison Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisoniumz",
+      "showdownName": "Poisonium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poisonmemory",
+      "showdownName": "Poison Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pokeball",
+      "showdownName": "Poke Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "polkadotbow",
+      "showdownName": "Polkadot Bow",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pomegberry",
+      "showdownName": "Pomeg Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Ice"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "poweranklet",
+      "showdownName": "Power Anklet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerband",
+      "showdownName": "Power Band",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerbelt",
+      "showdownName": "Power Belt",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerbracer",
+      "showdownName": "Power Bracer",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerherb",
+      "showdownName": "Power Herb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerlens",
+      "showdownName": "Power Lens",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "powerweight",
+      "showdownName": "Power Weight",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "premierball",
+      "showdownName": "Premier Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "prettyfeather",
+      "showdownName": "Pretty Feather",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "primariumz",
+      "showdownName": "Primarium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "prismscale",
+      "showdownName": "Prism Scale",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "protectivepads",
+      "showdownName": "Protective Pads",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "protector",
+      "showdownName": "Protector",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "przcureberry",
+      "showdownName": "PRZ Cure Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fire"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psncureberry",
+      "showdownName": "PSN Cure Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Electric"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psychicgem",
+      "showdownName": "Psychic Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psychicmemory",
+      "showdownName": "Psychic Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psychicseed",
+      "showdownName": "Psychic Seed",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "psychiumz",
+      "showdownName": "Psychium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "punchingglove",
+      "showdownName": "Punching Glove",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "pyroarite",
+      "showdownName": "Pyroarite",
+      "megaStone": {
+        "Pyroar": "Pyroar-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "qualotberry",
+      "showdownName": "Qualot Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Poison"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quickball",
+      "showdownName": "Quick Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quickclaw",
+      "showdownName": "Quick Claw",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "quickpowder",
+      "showdownName": "Quick Powder",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rabutaberry",
+      "showdownName": "Rabuta Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Ghost"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "raichunitex",
+      "showdownName": "Raichunite X",
+      "megaStone": {
+        "Raichu": "Raichu-Mega-X"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "raichunitey",
+      "showdownName": "Raichunite Y",
+      "megaStone": {
+        "Raichu": "Raichu-Mega-Y"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rarebone",
+      "showdownName": "Rare Bone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rawstberry",
+      "showdownName": "Rawst Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Grass"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "razorclaw",
+      "showdownName": "Razor Claw",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "razorfang",
+      "showdownName": "Razor Fang",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "razzberry",
+      "showdownName": "Razz Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Steel"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "reapercloth",
+      "showdownName": "Reaper Cloth",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "redcard",
+      "showdownName": "Red Card",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "redorb",
+      "showdownName": "Red Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "repeatball",
+      "showdownName": "Repeat Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ribbonsweet",
+      "showdownName": "Ribbon Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rindoberry",
+      "showdownName": "Rindo Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Grass"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ringtarget",
+      "showdownName": "Ring Target",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockgem",
+      "showdownName": "Rock Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockincense",
+      "showdownName": "Rock Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockiumz",
+      "showdownName": "Rockium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockmemory",
+      "showdownName": "Rock Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rockyhelmet",
+      "showdownName": "Rocky Helmet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "roomservice",
+      "showdownName": "Room Service",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rootfossil",
+      "showdownName": "Root Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "roseincense",
+      "showdownName": "Rose Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "roseliberry",
+      "showdownName": "Roseli Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Fairy"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rowapberry",
+      "showdownName": "Rowap Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Dark"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rustedshield",
+      "showdownName": "Rusted Shield",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "rustedsword",
+      "showdownName": "Rusted Sword",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sablenite",
+      "showdownName": "Sablenite",
+      "megaStone": {
+        "Sableye": "Sableye-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sachet",
+      "showdownName": "Sachet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "safariball",
+      "showdownName": "Safari Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "safetygoggles",
+      "showdownName": "Safety Goggles",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sailfossil",
+      "showdownName": "Sail Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "salacberry",
+      "showdownName": "Salac Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Fighting"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "salamencite",
+      "showdownName": "Salamencite",
+      "megaStone": {
+        "Salamence": "Salamence-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sceptilite",
+      "showdownName": "Sceptilite",
+      "megaStone": {
+        "Sceptile": "Sceptile-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "scizorite",
+      "showdownName": "Scizorite",
+      "megaStone": {
+        "Scizor": "Scizor-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "scolipite",
+      "showdownName": "Scolipite",
+      "megaStone": {
+        "Scolipede": "Scolipede-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "scopelens",
+      "showdownName": "Scope Lens",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "scovillainite",
+      "showdownName": "Scovillainite",
+      "megaStone": {
+        "Scovillain": "Scovillain-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "scraftinite",
+      "showdownName": "Scraftinite",
+      "megaStone": {
+        "Scrafty": "Scrafty-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "seaincense",
+      "showdownName": "Sea Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sharpbeak",
+      "showdownName": "Sharp Beak",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sharpedonite",
+      "showdownName": "Sharpedonite",
+      "megaStone": {
+        "Sharpedo": "Sharpedo-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shedshell",
+      "showdownName": "Shed Shell",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shellbell",
+      "showdownName": "Shell Bell",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shinystone",
+      "showdownName": "Shiny Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shockdrive",
+      "showdownName": "Shock Drive",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "shucaberry",
+      "showdownName": "Shuca Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ground"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "silkscarf",
+      "showdownName": "Silk Scarf",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "silverpowder",
+      "showdownName": "Silver Powder",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sitrusberry",
+      "showdownName": "Sitrus Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Psychic"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "skarmorite",
+      "showdownName": "Skarmorite",
+      "megaStone": {
+        "Skarmory": "Skarmory-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "skullfossil",
+      "showdownName": "Skull Fossil",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "skyplate",
+      "showdownName": "Sky Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "slowbronite",
+      "showdownName": "Slowbronite",
+      "megaStone": {
+        "Slowbro": "Slowbro-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "smoothrock",
+      "showdownName": "Smooth Rock",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "snorliumz",
+      "showdownName": "Snorlium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "snowball",
+      "showdownName": "Snowball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "softsand",
+      "showdownName": "Soft Sand",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "solganiumz",
+      "showdownName": "Solganium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "souldew",
+      "showdownName": "Soul Dew",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "spelltag",
+      "showdownName": "Spell Tag",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "spelonberry",
+      "showdownName": "Spelon Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Dark"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "splashplate",
+      "showdownName": "Splash Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "spookyplate",
+      "showdownName": "Spooky Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sportball",
+      "showdownName": "Sport Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "staraptite",
+      "showdownName": "Staraptite",
+      "megaStone": {
+        "Staraptor": "Staraptor-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "starfberry",
+      "showdownName": "Starf Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Psychic"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "starminite",
+      "showdownName": "Starminite",
+      "megaStone": {
+        "Starmie": "Starmie-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "starsweet",
+      "showdownName": "Star Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steelgem",
+      "showdownName": "Steel Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steeliumz",
+      "showdownName": "Steelium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steelixite",
+      "showdownName": "Steelixite",
+      "megaStone": {
+        "Steelix": "Steelix-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "steelmemory",
+      "showdownName": "Steel Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stick",
+      "showdownName": "Stick",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stickybarb",
+      "showdownName": "Sticky Barb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "stoneplate",
+      "showdownName": "Stone Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "strangeball",
+      "showdownName": "Strange Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "strawberrysweet",
+      "showdownName": "Strawberry Sweet",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sunstone",
+      "showdownName": "Sun Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "swampertite",
+      "showdownName": "Swampertite",
+      "megaStone": {
+        "Swampert": "Swampert-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "sweetapple",
+      "showdownName": "Sweet Apple",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "syrupyapple",
+      "showdownName": "Syrupy Apple",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tamatoberry",
+      "showdownName": "Tamato Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Psychic"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tangaberry",
+      "showdownName": "Tanga Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Bug"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tapuniumz",
+      "showdownName": "Tapunium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tartapple",
+      "showdownName": "Tart Apple",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tatsugirinite",
+      "showdownName": "Tatsugirinite",
+      "megaStone": {
+        "Tatsugiri": "Tatsugiri-Curly-Mega",
+        "Tatsugiri-Droopy": "Tatsugiri-Droopy-Mega",
+        "Tatsugiri-Stretchy": "Tatsugiri-Stretchy-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "terrainextender",
+      "showdownName": "Terrain Extender",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "thickclub",
+      "showdownName": "Thick Club",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "throatspray",
+      "showdownName": "Throat Spray",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "thunderstone",
+      "showdownName": "Thunder Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "timerball",
+      "showdownName": "Timer Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "toxicorb",
+      "showdownName": "Toxic Orb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "toxicplate",
+      "showdownName": "Toxic Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr00",
+      "showdownName": "TR00",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr01",
+      "showdownName": "TR01",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr02",
+      "showdownName": "TR02",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr03",
+      "showdownName": "TR03",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr04",
+      "showdownName": "TR04",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr05",
+      "showdownName": "TR05",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr06",
+      "showdownName": "TR06",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr07",
+      "showdownName": "TR07",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr08",
+      "showdownName": "TR08",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr09",
+      "showdownName": "TR09",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr10",
+      "showdownName": "TR10",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr11",
+      "showdownName": "TR11",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr12",
+      "showdownName": "TR12",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr13",
+      "showdownName": "TR13",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr14",
+      "showdownName": "TR14",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr15",
+      "showdownName": "TR15",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr16",
+      "showdownName": "TR16",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr17",
+      "showdownName": "TR17",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr18",
+      "showdownName": "TR18",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr19",
+      "showdownName": "TR19",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr20",
+      "showdownName": "TR20",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr21",
+      "showdownName": "TR21",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr22",
+      "showdownName": "TR22",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr23",
+      "showdownName": "TR23",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr24",
+      "showdownName": "TR24",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr25",
+      "showdownName": "TR25",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr26",
+      "showdownName": "TR26",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr27",
+      "showdownName": "TR27",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr28",
+      "showdownName": "TR28",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr29",
+      "showdownName": "TR29",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr30",
+      "showdownName": "TR30",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr31",
+      "showdownName": "TR31",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr32",
+      "showdownName": "TR32",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr33",
+      "showdownName": "TR33",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr34",
+      "showdownName": "TR34",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr35",
+      "showdownName": "TR35",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr36",
+      "showdownName": "TR36",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr37",
+      "showdownName": "TR37",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr38",
+      "showdownName": "TR38",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr39",
+      "showdownName": "TR39",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr40",
+      "showdownName": "TR40",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr41",
+      "showdownName": "TR41",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr42",
+      "showdownName": "TR42",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr43",
+      "showdownName": "TR43",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr44",
+      "showdownName": "TR44",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr45",
+      "showdownName": "TR45",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr46",
+      "showdownName": "TR46",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr47",
+      "showdownName": "TR47",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr48",
+      "showdownName": "TR48",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr49",
+      "showdownName": "TR49",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr50",
+      "showdownName": "TR50",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr51",
+      "showdownName": "TR51",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr52",
+      "showdownName": "TR52",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr53",
+      "showdownName": "TR53",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr54",
+      "showdownName": "TR54",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr55",
+      "showdownName": "TR55",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr56",
+      "showdownName": "TR56",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr57",
+      "showdownName": "TR57",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr58",
+      "showdownName": "TR58",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr59",
+      "showdownName": "TR59",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr60",
+      "showdownName": "TR60",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr61",
+      "showdownName": "TR61",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr62",
+      "showdownName": "TR62",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr63",
+      "showdownName": "TR63",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr64",
+      "showdownName": "TR64",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr65",
+      "showdownName": "TR65",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr66",
+      "showdownName": "TR66",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr67",
+      "showdownName": "TR67",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr68",
+      "showdownName": "TR68",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr69",
+      "showdownName": "TR69",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr70",
+      "showdownName": "TR70",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr71",
+      "showdownName": "TR71",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr72",
+      "showdownName": "TR72",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr73",
+      "showdownName": "TR73",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr74",
+      "showdownName": "TR74",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr75",
+      "showdownName": "TR75",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr76",
+      "showdownName": "TR76",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr77",
+      "showdownName": "TR77",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr78",
+      "showdownName": "TR78",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr79",
+      "showdownName": "TR79",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr80",
+      "showdownName": "TR80",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr81",
+      "showdownName": "TR81",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr82",
+      "showdownName": "TR82",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr83",
+      "showdownName": "TR83",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr84",
+      "showdownName": "TR84",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr85",
+      "showdownName": "TR85",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr86",
+      "showdownName": "TR86",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr87",
+      "showdownName": "TR87",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr88",
+      "showdownName": "TR88",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr89",
+      "showdownName": "TR89",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr90",
+      "showdownName": "TR90",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr91",
+      "showdownName": "TR91",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr92",
+      "showdownName": "TR92",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr93",
+      "showdownName": "TR93",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr94",
+      "showdownName": "TR94",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr95",
+      "showdownName": "TR95",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr96",
+      "showdownName": "TR96",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr97",
+      "showdownName": "TR97",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr98",
+      "showdownName": "TR98",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tr99",
+      "showdownName": "TR99",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "twistedspoon",
+      "showdownName": "Twisted Spoon",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "tyranitarite",
+      "showdownName": "Tyranitarite",
+      "megaStone": {
+        "Tyranitar": "Tyranitar-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ultraball",
+      "showdownName": "Ultra Ball",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "ultranecroziumz",
+      "showdownName": "Ultranecrozium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "unremarkableteacup",
+      "showdownName": "Unremarkable Teacup",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "upgrade",
+      "showdownName": "Up-Grade",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "utilityumbrella",
+      "showdownName": "Utility Umbrella",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "venusaurite",
+      "showdownName": "Venusaurite",
+      "megaStone": {
+        "Venusaur": "Venusaur-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "victreebelite",
+      "showdownName": "Victreebelite",
+      "megaStone": {
+        "Victreebel": "Victreebel-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "vilevial",
+      "showdownName": "Vile Vial",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wacanberry",
+      "showdownName": "Wacan Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Electric"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "watergem",
+      "showdownName": "Water Gem",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wateriumz",
+      "showdownName": "Waterium Z",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "watermemory",
+      "showdownName": "Water Memory",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "waterstone",
+      "showdownName": "Water Stone",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "watmelberry",
+      "showdownName": "Watmel Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 100,
+        "type": "Fire"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "waveincense",
+      "showdownName": "Wave Incense",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "weaknesspolicy",
+      "showdownName": "Weakness Policy",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wellspringmask",
+      "showdownName": "Wellspring Mask",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wepearberry",
+      "showdownName": "Wepear Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 90,
+        "type": "Electric"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "whippeddream",
+      "showdownName": "Whipped Dream",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "whiteherb",
+      "showdownName": "White Herb",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "widelens",
+      "showdownName": "Wide Lens",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wikiberry",
+      "showdownName": "Wiki Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Rock"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "wiseglasses",
+      "showdownName": "Wise Glasses",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "yacheberry",
+      "showdownName": "Yache Berry",
+      "isBerry": true,
+      "naturalGift": {
+        "basePower": 80,
+        "type": "Ice"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "zapplate",
+      "showdownName": "Zap Plate",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "zeraorite",
+      "showdownName": "Zeraorite",
+      "megaStone": {
+        "Zeraora": "Zeraora-Mega"
+      },
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "zoomlens",
+      "showdownName": "Zoom Lens",
+      "sourceStatus": "supported"
+    },
+    {
+      "id": "zygardite",
+      "showdownName": "Zygardite",
+      "megaStone": {
+        "Zygarde-Complete": "Zygarde-Mega"
+      },
+      "sourceStatus": "supported"
+    }
+  ]
+}

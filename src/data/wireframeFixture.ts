@@ -374,10 +374,11 @@ export const wireframeProject: AdjustmentProject = {
       handling: "0..32 SP / 合計 66 SP を正規モデルにする。",
     },
     {
-      id: "champions-availability",
-      label: "使用可能ポケモン・技",
-      status: "needs-confirmation",
-      handling: "公式 / Showdown / @pkmn 側の対応状況を確認してから本データ化。",
+      id: "calc-input-catalog",
+      label: "入力候補ポケモン・技",
+      status: "supported",
+      handling:
+        "@smogon/calc / Showdown 由来データに存在するものは原則入力可能。レギュ合法性は検証しない。",
     },
     {
       id: "multi-hit-sequence",
@@ -389,7 +390,8 @@ export const wireframeProject: AdjustmentProject = {
       id: "mega-tera",
       label: "Mega / Tera など",
       status: "needs-confirmation",
-      handling: "入力欄は確保し、未検証の計算には混ぜない。",
+      handling:
+        "全解禁サンドボックス前提で入力欄は確保し、未確定仕様は精度ラベルや手入力上書きで扱う。",
     },
   ],
   results: [
