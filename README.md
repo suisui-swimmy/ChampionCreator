@@ -13,6 +13,7 @@ npm run generate:calc-data
 npm run generate:localized-search
 npm run generate:pokemon-assets
 npm run generate:pokemon-options
+npm run generate:battle-options
 npm run generate:data
 npm run sync:pokemon-artwork
 npm run inspect:calc
@@ -45,6 +46,8 @@ Milestone -1 の本データ収集は、先に [docs/data-collection-plan.md](do
 
 `npm run inspect:calc` で実 API と型定義に基づく smoke check を行い、計算エンジン基準データ、計算精度オーバーレイ、日本語検索 index、画像 manifest を分けて管理します。
 
+`npm run generate:data` は、Pokemon options に加えて技 / 特性 / 道具 / 性格 / タイプの UI 検索候補 JSON も生成します。技・特性の日本語名は、ローカルに `../others/pokeranker_SV/data/foreign_*.txt` がある場合だけ取り込みます。
+
 ## 対応状況マトリクス
 
 | 項目 | 状態 | ChampionCreator での扱い |
@@ -54,3 +57,4 @@ Milestone -1 の本データ収集は、先に [docs/data-collection-plan.md](do
 | ポケモン・技・特性・持ち物の入力候補 | 対応済み | `@smogon/calc` / Showdown 由来データに存在するものを原則入力可能にする。レギュ合法性は検証しない |
 | 連続被弾・定数ダメージ | 仮対応 | 各 hit は calc、シーケンス管理だけアプリ側で扱う |
 | Mega / Tera など | 要確認 | 計算エンジンで表現できる範囲を確認し、未確定仕様は精度ラベルや手入力上書きで扱う |
+| Champions 新特性 | 要確認 | `メガソーラー` / `ドラゴンスキン` / `かんつうドリル` / `とびだすハバネロ` は `@smogon/calc@0.11.0` 未対応として [src/data/champions/champions-support-matrix.json](src/data/champions/champions-support-matrix.json) に記録する |

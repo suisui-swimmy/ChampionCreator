@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { wireframeProject } from "./data/wireframeFixture";
+import type { PokemonOptionEntry, PokemonOptionsPayload } from "./data/optionTypes";
 import {
   STAT_KEYS,
   type BaseScenario,
@@ -48,28 +49,9 @@ const scenarioKindLabels: Record<ScenarioKind, string> = {
   speed: "素早さ",
 };
 
-interface PokemonOption {
-  id: string;
-  label: string;
-  showdownName: string;
-  types: string[];
-  searchText: string;
-  artwork?: string;
-  fallback?: {
-    from?: string;
-    reason?: string;
-    nameSourceStatus?: string;
-    assetSourceStatus?: string;
-  };
-}
-
-interface PokemonOptionsPayload {
-  entries: PokemonOption[];
-}
-
 interface PokemonLookup {
-  byId: Map<string, PokemonOption>;
-  byShowdownName: Map<string, PokemonOption>;
+  byId: Map<string, PokemonOptionEntry>;
+  byShowdownName: Map<string, PokemonOptionEntry>;
 }
 
 const defaultTargetPokemonId = "charizardmegax";
@@ -88,10 +70,10 @@ const normalizePokemonSearch = (value: string): string =>
     .toLowerCase()
     .replace(/\s+/g, "");
 
-const pokemonOptionLabel = (option: PokemonOption): string =>
+const pokemonOptionLabel = (option: PokemonOptionEntry): string =>
   option.showdownName === option.label ? option.label : `${option.label} / ${option.showdownName}`;
 
-const pokemonOptionSearchScore = (option: PokemonOption, query: string): number => {
+const pokemonOptionSearchScore = (option: PokemonOptionEntry, query: string): number => {
   const normalizedQuery = normalizePokemonSearch(query);
 
   if (!normalizedQuery) {
@@ -128,14 +110,14 @@ const pokemonOptionSearchScore = (option: PokemonOption, query: string): number 
 const getPokemonOptionForSpecies = (
   species: SpeciesRef,
   lookup: PokemonLookup,
-  targetPokemon?: PokemonOption,
-): PokemonOption | undefined =>
+  targetPokemon?: PokemonOptionEntry,
+): PokemonOptionEntry | undefined =>
   species.id === wireframeProject.target.species.id
     ? targetPokemon
     : lookup.byId.get(species.id) ?? lookup.byShowdownName.get(normalizePokemonKey(species.showdownName));
 
 function usePokemonOptions() {
-  const [pokemonOptions, setPokemonOptions] = useState<PokemonOption[]>([]);
+  const [pokemonOptions, setPokemonOptions] = useState<PokemonOptionEntry[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -205,7 +187,7 @@ function PokemonField({
   onChange,
 }: {
   label: string;
-  options: PokemonOption[];
+  options: PokemonOptionEntry[];
   selectedId: string;
   fallbackLabel: string;
   onChange: (pokemonId: string) => void;
@@ -246,7 +228,7 @@ function PokemonField({
   const activeOption = filteredOptions[activeIndex];
   const hasOptions = options.length > 0;
 
-  const selectOption = (option: PokemonOption) => {
+  const selectOption = (option: PokemonOptionEntry) => {
     onChange(option.id);
     setQuery(pokemonOptionLabel(option));
     setIsOpen(false);
@@ -433,7 +415,7 @@ function TargetPanel({
   selectedPokemonId,
   onSelectedPokemonIdChange,
 }: {
-  pokemonOptions: PokemonOption[];
+  pokemonOptions: PokemonOptionEntry[];
   selectedPokemonId: string;
   onSelectedPokemonIdChange: (pokemonId: string) => void;
 }) {
@@ -546,7 +528,7 @@ function AttackCard({
   onSelect: () => void;
   selected: boolean;
   pokemonLookup: PokemonLookup;
-  targetPokemon?: PokemonOption;
+  targetPokemon?: PokemonOptionEntry;
 }) {
   const attackerPokemon = getPokemonOptionForSpecies(
     scenario.attacker.species,
@@ -629,7 +611,7 @@ function ScenarioRowView({
   selectedScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
   pokemonLookup: PokemonLookup;
-  targetPokemon?: PokemonOption;
+  targetPokemon?: PokemonOptionEntry;
 }) {
   const rowScenarios = row.scenarioIds
     .map(findScenario)
@@ -679,7 +661,7 @@ function ScenarioBoard({
   selectedScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
   pokemonLookup: PokemonLookup;
-  targetPokemon?: PokemonOption;
+  targetPokemon?: PokemonOptionEntry;
 }) {
   const [collapsedRows, setCollapsedRows] = useState<Record<string, boolean>>({
     "scenario-row-d": true,

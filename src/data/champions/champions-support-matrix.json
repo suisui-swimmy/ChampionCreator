@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026-05-16",
+  "source": {
+    "smogonCalcVersion": "0.11.0",
+    "championsAbilityNameSource": "https://yakkun.com/ch/tokusei_en.htm",
+    "championsAbilityEffectSource": "https://yakkun.com/ch/ability_list.htm?new=1"
+  },
+  "kind": "champions-support-matrix",
+  "entries": [
+    {
+      "id": "damage-calculation",
+      "label": "ダメージ計算",
+      "status": "supported",
+      "handling": "@smogon/calc に委譲する。ChampionCreator ではダメージ式・乱数・タイプ相性を独自実装しない。",
+      "scope": "core-calculation"
+    },
+    {
+      "id": "champions-stat-points",
+      "label": "Champions SP ルール",
+      "status": "supported",
+      "handling": "UI / domain / search では 0..32 SP / 合計 66 SP を正規モデルとし、@smogon/calc 用表現への変換は adapter に閉じる。",
+      "scope": "stat-model"
+    },
+    {
+      "id": "champions-ability-mega-sol",
+      "label": "メガソーラー / Mega Sol",
+      "status": "needs-confirmation",
+      "handling": "@smogon/calc@0.11.0 の ability catalog には存在しない。技使用時だけ晴れ相当として扱う仕様が、Solar Beam / Weather Ball / Synthesis / Fire・Water 技補正などへどう影響するかを上流対応または専用 adapter で確認するまで、計算結果には混ぜない。",
+      "scope": "champions-new-ability",
+      "showdownId": "megasol",
+      "japaneseName": "メガソーラー",
+      "englishName": "Mega Sol",
+      "affectsDamage": true,
+      "calcAvailable": false
+    },
+    {
+      "id": "champions-ability-dragonize",
+      "label": "ドラゴンスキン / Dragonize",
+      "status": "needs-confirmation",
+      "handling": "@smogon/calc@0.11.0 の ability catalog には存在しない。Normal 技を Dragon タイプへ変更し威力 1.2 倍にする Aerilate 系に近い仕様だが、正式対応を確認するまで薄い adapter 候補として隔離する。",
+      "scope": "champions-new-ability",
+      "showdownId": "dragonize",
+      "japaneseName": "ドラゴンスキン",
+      "englishName": "Dragonize",
+      "affectsDamage": true,
+      "calcAvailable": false
+    },
+    {
+      "id": "champions-ability-piercing-drill",
+      "label": "かんつうドリル / Piercing Drill",
+      "status": "needs-confirmation",
+      "handling": "@smogon/calc@0.11.0 の ability catalog には存在しない。接触技で守り効果を無視し 1/4 ダメージにする仕様は Protect 系の行動解決に近いため、通常ダメージロールとは別のシーケンス評価として扱う必要がある。",
+      "scope": "champions-new-ability",
+      "showdownId": "piercingdrill",
+      "japaneseName": "かんつうドリル",
+      "englishName": "Piercing Drill",
+      "affectsDamage": true,
+      "calcAvailable": false
+    },
+    {
+      "id": "champions-ability-spicy-spray",
+      "label": "とびだすハバネロ / Spicy Spray",
+      "status": "needs-confirmation",
+      "handling": "@smogon/calc@0.11.0 の ability catalog には存在しない。被ダメージ後に相手をやけどにする効果なので、単発ダメージロールではなく連続行動・状態異常管理側で扱う。",
+      "scope": "champions-new-ability",
+      "showdownId": "spicyspray",
+      "japaneseName": "とびだすハバネロ",
+      "englishName": "Spicy Spray",
+      "affectsDamage": false,
+      "calcAvailable": false
+    }
+  ],
+  "summary": {
+    "totalEntries": 6,
+    "supported": 2,
+    "needsConfirmation": 4,
+    "unsupportedTemporary": 0,
+    "adapterTemporary": 0
+  }
+}

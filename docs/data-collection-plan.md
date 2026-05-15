@@ -195,9 +195,11 @@ scripts/
   generate-localized-search-index.mjs
   generate-pokemon-assets.mjs
   generate-pokemon-options.mjs
+  generate-battle-options.mjs
   sync-official-artwork.mjs
 src/
   data/
+    optionTypes.ts
     champions/
       champions-support-matrix.json
     generated/
@@ -206,8 +208,15 @@ src/
       calc-items.gen.json
       calc-abilities.gen.json
       calc-natures.gen.json
+      calc-types.gen.json
       localized-search-index.gen.json
       pokemon-assets.gen.json
+      pokemon-options.gen.json
+      move-options.gen.json
+      ability-options.gen.json
+      item-options.gen.json
+      nature-options.gen.json
+      type-options.gen.json
 public/
   assets/
     pokemon-icons/
@@ -242,6 +251,21 @@ others/
 - `@pkmn/data` / `@pkmn/dex` を追加した方がよいデータ
 - Champions 側で `needs-confirmation` に置くべき計算仕様
 - UI では手入力に逃がすべきデータ
+
+## Champions 対応状況マトリクス
+
+`src/data/champions/champions-support-matrix.json` は、レギュレーション合法性ではなく、計算結果に影響する仕様の対応状況を管理する。
+
+特に Champions 新特性のうち `@smogon/calc` にまだ存在しないものは、入力候補として禁止するためではなく、計算精度の注意表示や将来 adapter 実装のために `needs-confirmation` として記録する。
+
+初期登録済み:
+
+| 日本語名 | 英語名 | 推定 Showdown id | 状態 | 扱い |
+| --- | --- | --- | --- | --- |
+| メガソーラー | Mega Sol | `megasol` | `needs-confirmation` | 技使用時だけ晴れ相当になる仕様の影響範囲を確認する |
+| ドラゴンスキン | Dragonize | `dragonize` | `needs-confirmation` | Normal 技を Dragon タイプ化し威力 1.2 倍にする処理を上流対応または薄い adapter で確認する |
+| かんつうドリル | Piercing Drill | `piercingdrill` | `needs-confirmation` | Protect 系の行動解決に近いため、通常ダメージロールと分けて扱う |
+| とびだすハバネロ | Spicy Spray | `spicyspray` | `needs-confirmation` | 被ダメージ後のやけど付与として、連続行動・状態管理側で扱う |
 
 ## `@smogon/calc` 由来データ生成
 
@@ -286,6 +310,125 @@ default UI で使う場合は、この options JSON を優先し、フル catalo
 options JSON は UI 配信用なので minified で出力する。
 直対応の entry は source status を省略し、fallback が必要な entry だけ `fallback` を持つ。
 現在のワイヤーフレーム UI では、この options JSON を遅延 import し、通常候補の select、調整対象画像、シナリオカードのポケモン画像表示に使う。
+
+`scripts/generate-battle-options.mjs` は、UI の検索候補に使う軽量 JSON として次を生成する。
+
+```text
+src/data/generated/move-options.gen.json
+src/data/generated/ability-options.gen.json
+src/data/generated/item-options.gen.json
+src/data/generated/nature-options.gen.json
+src/data/generated/type-options.gen.json
+```
+
+技・特性は、ローカルに `../others/pokeranker_SV/data/foreign_move.txt` / `../others/pokeranker_SV/data/foreign_ability.txt` がある場合だけ日本語名ソースとして使う。
+この外部ローカル辞書がない環境でも生成自体は失敗させず、Showdown 名 fallback と `summary.localizedNameSourceEntries` で状態を確認できるようにする。
+辞書にない公式技・公式道具のうち確認済みのものは、生成スクリプト内の小さい manual label map で補完する。
+CAP や Showdown placeholder のような標準 UI で推奨しない候補は、削除せず `sourceStatus: "unsupported-temporary"` として分類する。
+道具は `others/pokemon-data/ITEM_ALL.json` の `name_ja` / `name_en` を UI 表示名に使う。
+Mega Stone 系で item 名が辞書にないものは `others/pokemon-data/POKEMON_ALL.json` のポケモン日本語名から `adapter-temporary` な表示名を作り、英語名で一致できず manual label もないものだけ `sourceStatus: "needs-confirmation"` とする。
+性格・タイプは安定した小規模データとして生成スクリプト内の日本語 label map から出力する。
+
+これらはすべて UI 表示・検索・Showdown 名解決用であり、技威力や補正計算の正規ソースにはしない。
+
+## UI options schema
+
+UI の検索候補 JSON は、`src/data/optionTypes.ts` の型を正とする。
+すべて `src/data/generated/*-options.gen.json` に分けて置き、必要な画面だけが必要な options を遅延 import する。
+1 つの巨大な localized data に戻さない。
+
+共通 payload は次の形にする。
+
+```ts
+interface UiOptionPayload<TKind, TEntry> {
+  schemaVersion: number;
+  dataVersion: string;
+  source: Record<string, string | number | boolean>;
+  generatedBy: string;
+  kind: TKind;
+  entries: TEntry[];
+  summary: Record<string, number | string | boolean>;
+}
+```
+
+共通 entry は次の形にする。
+
+```ts
+interface UiOptionBase {
+  id: string;
+  label: string;
+  showdownName: string;
+  searchText: string;
+  sourceStatus?: SupportStatus;
+  fallback?: {
+    from?: string;
+    reason: string;
+    nameSourceStatus?: SupportStatus;
+    assetSourceStatus?: SupportStatus;
+  };
+  tags?: string[];
+}
+```
+
+`sourceStatus` は、直対応の `supported` では省略してよい。
+`adapter-temporary` や `needs-confirmation` のように UI へ注意表示したい場合だけ entry に持たせる。
+`searchText` は UI 検索専用の正規化済み token 文字列であり、計算には使わない。
+
+各 options の entry は次を基本形にする。
+
+```ts
+interface PokemonOptionEntry extends UiOptionBase {
+  types: BattleTypeName[];
+  artwork?: string;
+}
+
+interface MoveOptionEntry extends UiOptionBase {
+  type: BattleTypeName;
+  category: MoveCategory;
+  basePower?: number;
+  priority?: number;
+  target?: string;
+  tags?: MoveOptionTag[];
+  overrideOffensiveStat?: StatKey;
+  overrideDefensiveStat?: StatKey;
+}
+
+interface AbilityOptionEntry extends UiOptionBase {
+  tags?: AbilityOptionTag[];
+}
+
+interface ItemOptionEntry extends UiOptionBase {
+  tags?: ItemOptionTag[];
+  megaStone?: {
+    baseSpecies: string;
+    megaSpecies: string;
+  };
+  naturalGift?: {
+    type: BattleTypeName;
+    basePower: number;
+  };
+}
+
+interface NatureOptionEntry extends UiOptionBase {
+  plus?: StatKey;
+  minus?: StatKey;
+}
+
+interface TypeOptionEntry extends UiOptionBase {
+  type: BattleTypeName;
+  color: string;
+}
+```
+
+技 options は、ダメージ入力で即見たい `type`、`category`、`basePower`、`priority` を持つ。
+ただし、技威力補正やダメージ計算の正規ソースにはしない。
+最終計算時は必ず `showdownName` を `@smogon/calc` に渡し、手入力の技威力やタイプ上書きは `manualOverrides` 側で扱う。
+
+特性 / 道具 options は、日本語検索と Showdown 名解決が主目的。
+タグは UI の絞り込みや注意表示用であり、特性・道具の補正計算を独自実装するための表にはしない。
+
+性格 / タイプ options は件数が少ないため、手書き overlay でもよい。
+ただし payload 形式は他 options と揃え、UI からは同じ検索候補コンポーネントで扱えるようにする。
 
 ## 完了条件
 

@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:battle-options": "node scripts/generate-battle-options.mjs",
     "generate:calc-data": "node scripts/generate-calc-data.mjs",
-    "generate:data": "npm run generate:calc-data && npm run generate:localized-search && npm run generate:pokemon-assets && npm run generate:pokemon-options",
+    "generate:data": "npm run generate:calc-data && npm run generate:localized-search && npm run generate:pokemon-assets && npm run generate:pokemon-options && npm run generate:battle-options",
     "generate:localized-search": "node scripts/generate-localized-search-index.mjs",
     "generate:pokemon-options": "node scripts/generate-pokemon-options.mjs",
     "generate:pokemon-assets": "node scripts/generate-pokemon-assets.mjs",
