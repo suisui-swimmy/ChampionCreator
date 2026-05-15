@@ -127,10 +127,20 @@
     {
       "calcId": "aegislashboth",
       "showdownName": "Aegislash-Both",
+      "displayNameJa": "ギルガルド ブレードフォルム",
+      "sourceSpeciesNameJa": "ギルガルド",
+      "sourceFormNameJa": "ブレードフォルム",
+      "fallbackFromCalcId": "aegislashblade",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "681-blade.png",
+        "sourcePath": "others/official-artwork/681-blade.png",
+        "suggestedPublicPath": "/assets/official-artwork/681-blade.png",
+        "fallbackFromCalcId": "aegislashblade",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "aegislashshield",
@@ -536,138 +546,308 @@
     {
       "calcId": "arceusbug",
       "showdownName": "Arceus-Bug",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusdark",
       "showdownName": "Arceus-Dark",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusdragon",
       "showdownName": "Arceus-Dragon",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceuselectric",
       "showdownName": "Arceus-Electric",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusfairy",
       "showdownName": "Arceus-Fairy",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusfighting",
       "showdownName": "Arceus-Fighting",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusfire",
       "showdownName": "Arceus-Fire",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusflying",
       "showdownName": "Arceus-Flying",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusghost",
       "showdownName": "Arceus-Ghost",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusgrass",
       "showdownName": "Arceus-Grass",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusground",
       "showdownName": "Arceus-Ground",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusice",
       "showdownName": "Arceus-Ice",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceuspoison",
       "showdownName": "Arceus-Poison",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceuspsychic",
       "showdownName": "Arceus-Psychic",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceusrock",
       "showdownName": "Arceus-Rock",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceussteel",
       "showdownName": "Arceus-Steel",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "arceuswater",
       "showdownName": "Arceus-Water",
+      "displayNameJa": "アルセウス ノーマルタイプ",
+      "sourceSpeciesNameJa": "アルセウス",
+      "sourceFormNameJa": "ノーマルタイプ",
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "493.png",
+        "sourcePath": "others/official-artwork/493.png",
+        "suggestedPublicPath": "/assets/official-artwork/493.png",
+        "fallbackFromCalcId": "arceus",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "archaludon",
@@ -1112,26 +1292,56 @@
     {
       "calcId": "basculegion",
       "showdownName": "Basculegion",
+      "displayNameJa": "イダイトウ オスのすがた",
+      "sourceSpeciesNameJa": "イダイトウ",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "basculegionmale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "902.png",
+        "sourcePath": "others/official-artwork/902.png",
+        "suggestedPublicPath": "/assets/official-artwork/902.png",
+        "fallbackFromCalcId": "basculegionmale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "basculegionf",
       "showdownName": "Basculegion-F",
+      "displayNameJa": "イダイトウ メスのすがた",
+      "sourceSpeciesNameJa": "イダイトウ",
+      "sourceFormNameJa": "メスのすがた",
+      "fallbackFromCalcId": "basculegionfemale",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "902-female.png",
+        "sourcePath": "others/official-artwork/902-female.png",
+        "suggestedPublicPath": "/assets/official-artwork/902-female.png",
+        "fallbackFromCalcId": "basculegionfemale",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "basculin",
       "showdownName": "Basculin",
+      "displayNameJa": "バスラオ あかすじのすがた",
+      "sourceSpeciesNameJa": "バスラオ",
+      "sourceFormNameJa": "あかすじのすがた",
+      "fallbackFromCalcId": "basculinredstriped",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "550.png",
+        "sourcePath": "others/official-artwork/550.png",
+        "suggestedPublicPath": "/assets/official-artwork/550.png",
+        "fallbackFromCalcId": "basculinredstriped",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "basculinbluestriped",
@@ -2442,10 +2652,20 @@
     {
       "calcId": "cherrimsunshine",
       "showdownName": "Cherrim-Sunshine",
+      "displayNameJa": "チェリム ネガフォルム",
+      "sourceSpeciesNameJa": "チェリム",
+      "sourceFormNameJa": "ネガフォルム",
+      "fallbackFromCalcId": "cherrim",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "421.png",
+        "sourcePath": "others/official-artwork/421.png",
+        "suggestedPublicPath": "/assets/official-artwork/421.png",
+        "fallbackFromCalcId": "cherrim",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "cherubi",
@@ -3478,18 +3698,38 @@
     {
       "calcId": "darmanitan",
       "showdownName": "Darmanitan",
+      "displayNameJa": "ヒヒダルマ ノーマルモード",
+      "sourceSpeciesNameJa": "ヒヒダルマ",
+      "sourceFormNameJa": "ノーマルモード",
+      "fallbackFromCalcId": "darmanitanstandard",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "555.png",
+        "sourcePath": "others/official-artwork/555.png",
+        "suggestedPublicPath": "/assets/official-artwork/555.png",
+        "fallbackFromCalcId": "darmanitanstandard",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "darmanitangalar",
       "showdownName": "Darmanitan-Galar",
+      "displayNameJa": "ヒヒダルマ ガラルのすがた",
+      "sourceSpeciesNameJa": "ヒヒダルマ",
+      "sourceFormNameJa": "ガラルのすがた",
+      "fallbackFromCalcId": "darmanitangalarstandard",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "555-galar-standard.png",
+        "sourcePath": "others/official-artwork/555-galar-standard.png",
+        "suggestedPublicPath": "/assets/official-artwork/555-galar-standard.png",
+        "fallbackFromCalcId": "darmanitangalarstandard",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "darmanitangalarzen",
@@ -3682,10 +3922,20 @@
     {
       "calcId": "deoxys",
       "showdownName": "Deoxys",
+      "displayNameJa": "デオキシス ノーマルフォルム",
+      "sourceSpeciesNameJa": "デオキシス",
+      "sourceFormNameJa": "ノーマルフォルム",
+      "fallbackFromCalcId": "deoxysnormal",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "386.png",
+        "sourcePath": "others/official-artwork/386.png",
+        "suggestedPublicPath": "/assets/official-artwork/386.png",
+        "fallbackFromCalcId": "deoxysnormal",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "deoxysattack",
@@ -4327,10 +4577,20 @@
     {
       "calcId": "dudunsparce",
       "showdownName": "Dudunsparce",
+      "displayNameJa": "ノココッチ ふたふしフォルム",
+      "sourceSpeciesNameJa": "ノココッチ",
+      "sourceFormNameJa": "ふたふしフォルム",
+      "fallbackFromCalcId": "dudunsparcetwosegment",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "982.png",
+        "sourcePath": "others/official-artwork/982.png",
+        "suggestedPublicPath": "/assets/official-artwork/982.png",
+        "fallbackFromCalcId": "dudunsparcetwosegment",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "dudunsparcethreesegment",
@@ -4582,10 +4842,20 @@
     {
       "calcId": "eiscue",
       "showdownName": "Eiscue",
+      "displayNameJa": "コオリッポ アイスフェイス",
+      "sourceSpeciesNameJa": "コオリッポ",
+      "sourceFormNameJa": "アイスフェイス",
+      "fallbackFromCalcId": "eiscueice",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "875.png",
+        "sourcePath": "others/official-artwork/875.png",
+        "suggestedPublicPath": "/assets/official-artwork/875.png",
+        "fallbackFromCalcId": "eiscueice",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "eiscuenoice",
@@ -4791,10 +5061,20 @@
     {
       "calcId": "enamorus",
       "showdownName": "Enamorus",
+      "displayNameJa": "ラブトロス けしんフォルム",
+      "sourceSpeciesNameJa": "ラブトロス",
+      "sourceFormNameJa": "けしんフォルム",
+      "fallbackFromCalcId": "enamorusincarnate",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "905.png",
+        "sourcePath": "others/official-artwork/905.png",
+        "suggestedPublicPath": "/assets/official-artwork/905.png",
+        "fallbackFromCalcId": "enamorusincarnate",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "enamorustherian",
@@ -5528,10 +5808,20 @@
     {
       "calcId": "frillish",
       "showdownName": "Frillish",
+      "displayNameJa": "プルリル オスのすがた",
+      "sourceSpeciesNameJa": "プルリル",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "frillishmale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "592.png",
+        "sourcePath": "others/official-artwork/592.png",
+        "suggestedPublicPath": "/assets/official-artwork/592.png",
+        "fallbackFromCalcId": "frillishmale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "froakie",
@@ -5843,34 +6133,70 @@
     {
       "calcId": "genesectburn",
       "showdownName": "Genesect-Burn",
+      "displayNameJa": "ゲノセクト",
+      "sourceSpeciesNameJa": "ゲノセクト",
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "649.png",
+        "sourcePath": "others/official-artwork/649.png",
+        "suggestedPublicPath": "/assets/official-artwork/649.png",
+        "fallbackFromCalcId": "genesect",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "genesectchill",
       "showdownName": "Genesect-Chill",
+      "displayNameJa": "ゲノセクト",
+      "sourceSpeciesNameJa": "ゲノセクト",
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "649.png",
+        "sourcePath": "others/official-artwork/649.png",
+        "suggestedPublicPath": "/assets/official-artwork/649.png",
+        "fallbackFromCalcId": "genesect",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "genesectdouse",
       "showdownName": "Genesect-Douse",
+      "displayNameJa": "ゲノセクト",
+      "sourceSpeciesNameJa": "ゲノセクト",
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "649.png",
+        "sourcePath": "others/official-artwork/649.png",
+        "suggestedPublicPath": "/assets/official-artwork/649.png",
+        "fallbackFromCalcId": "genesect",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "genesectshock",
       "showdownName": "Genesect-Shock",
+      "displayNameJa": "ゲノセクト",
+      "sourceSpeciesNameJa": "ゲノセクト",
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "649.png",
+        "sourcePath": "others/official-artwork/649.png",
+        "suggestedPublicPath": "/assets/official-artwork/649.png",
+        "fallbackFromCalcId": "genesect",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "gengar",
@@ -6023,10 +6349,20 @@
     {
       "calcId": "giratina",
       "showdownName": "Giratina",
+      "displayNameJa": "ギラティナ アナザーフォルム",
+      "sourceSpeciesNameJa": "ギラティナ",
+      "sourceFormNameJa": "アナザーフォルム",
+      "fallbackFromCalcId": "giratinaaltered",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "487.png",
+        "sourcePath": "others/official-artwork/487.png",
+        "suggestedPublicPath": "/assets/official-artwork/487.png",
+        "fallbackFromCalcId": "giratinaaltered",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "giratinaorigin",
@@ -6454,10 +6790,20 @@
     {
       "calcId": "gourgeist",
       "showdownName": "Gourgeist",
+      "displayNameJa": "パンプジン ふつうのサイズ",
+      "sourceSpeciesNameJa": "パンプジン",
+      "sourceFormNameJa": "ふつうのサイズ",
+      "fallbackFromCalcId": "gourgeistaverage",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "711.png",
+        "sourcePath": "others/official-artwork/711.png",
+        "suggestedPublicPath": "/assets/official-artwork/711.png",
+        "fallbackFromCalcId": "gourgeistaverage",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "gourgeistlarge",
@@ -6636,10 +6982,19 @@
     {
       "calcId": "greninjabond",
       "showdownName": "Greninja-Bond",
+      "displayNameJa": "ゲッコウガ",
+      "sourceSpeciesNameJa": "ゲッコウガ",
+      "fallbackFromCalcId": "greninjabattlebond",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "658-battle-bond.png",
+        "sourcePath": "others/official-artwork/658-battle-bond.png",
+        "suggestedPublicPath": "/assets/official-artwork/658-battle-bond.png",
+        "fallbackFromCalcId": "greninjabattlebond",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "greninjamega",
@@ -7511,18 +7866,38 @@
     {
       "calcId": "indeedee",
       "showdownName": "Indeedee",
+      "displayNameJa": "イエッサン オスのすがた",
+      "sourceSpeciesNameJa": "イエッサン",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "indeedeemale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "876.png",
+        "sourcePath": "others/official-artwork/876.png",
+        "suggestedPublicPath": "/assets/official-artwork/876.png",
+        "fallbackFromCalcId": "indeedeemale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "indeedeef",
       "showdownName": "Indeedee-F",
+      "displayNameJa": "イエッサン メスのすがた",
+      "sourceSpeciesNameJa": "イエッサン",
+      "sourceFormNameJa": "メスのすがた",
+      "fallbackFromCalcId": "indeedeefemale",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "876-female.png",
+        "sourcePath": "others/official-artwork/876-female.png",
+        "suggestedPublicPath": "/assets/official-artwork/876-female.png",
+        "fallbackFromCalcId": "indeedeefemale",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "infernape",
@@ -7736,10 +8111,20 @@
     {
       "calcId": "jellicent",
       "showdownName": "Jellicent",
+      "displayNameJa": "ブルンゲル オスのすがた",
+      "sourceSpeciesNameJa": "ブルンゲル",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "jellicentmale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "593.png",
+        "sourcePath": "others/official-artwork/593.png",
+        "suggestedPublicPath": "/assets/official-artwork/593.png",
+        "fallbackFromCalcId": "jellicentmale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "jigglypuff",
@@ -7956,10 +8341,20 @@
     {
       "calcId": "keldeo",
       "showdownName": "Keldeo",
+      "displayNameJa": "ケルディオ いつものすがた",
+      "sourceSpeciesNameJa": "ケルディオ",
+      "sourceFormNameJa": "いつものすがた",
+      "fallbackFromCalcId": "keldeoordinary",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "647.png",
+        "sourcePath": "others/official-artwork/647.png",
+        "suggestedPublicPath": "/assets/official-artwork/647.png",
+        "fallbackFromCalcId": "keldeoordinary",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "keldeoresolute",
@@ -8399,10 +8794,20 @@
     {
       "calcId": "landorus",
       "showdownName": "Landorus",
+      "displayNameJa": "ランドロス けしんフォルム",
+      "sourceSpeciesNameJa": "ランドロス",
+      "sourceFormNameJa": "けしんフォルム",
+      "fallbackFromCalcId": "landorusincarnate",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "645.png",
+        "sourcePath": "others/official-artwork/645.png",
+        "suggestedPublicPath": "/assets/official-artwork/645.png",
+        "fallbackFromCalcId": "landorusincarnate",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "landorustherian",
@@ -9014,10 +9419,20 @@
     {
       "calcId": "lycanroc",
       "showdownName": "Lycanroc",
+      "displayNameJa": "ルガルガン まひるのすがた",
+      "sourceSpeciesNameJa": "ルガルガン",
+      "sourceFormNameJa": "まひるのすがた",
+      "fallbackFromCalcId": "lycanrocmidday",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "745.png",
+        "sourcePath": "others/official-artwork/745.png",
+        "suggestedPublicPath": "/assets/official-artwork/745.png",
+        "fallbackFromCalcId": "lycanrocmidday",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "lycanrocdusk",
@@ -9187,12 +9602,14 @@
       "sourceSpeciesNameJa": "マギアナ",
       "sourceFormNameJa": "メガマギアナ",
       "fallbackFromCalcId": "magearnamega",
+      "fallbackReason": "explicit-shared-form",
       "appSupportStatus": "supported",
       "artwork": {
         "filename": "801-mega.png",
         "sourcePath": "others/official-artwork/801-mega.png",
         "suggestedPublicPath": "/assets/official-artwork/801-mega.png",
-        "fallbackFromCalcId": "magearnamega"
+        "fallbackFromCalcId": "magearnamega",
+        "fallbackReason": "explicit-shared-form"
       },
       "sourceStatus": "adapter-temporary"
     },
@@ -9509,10 +9926,20 @@
     {
       "calcId": "marowakalolatotem",
       "showdownName": "Marowak-Alola-Totem",
+      "displayNameJa": "ガラガラ アローラのすがた",
+      "sourceSpeciesNameJa": "ガラガラ",
+      "sourceFormNameJa": "アローラのすがた",
+      "fallbackFromCalcId": "marowakalola",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "105-alola.png",
+        "sourcePath": "others/official-artwork/105-alola.png",
+        "suggestedPublicPath": "/assets/official-artwork/105-alola.png",
+        "fallbackFromCalcId": "marowakalola",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "marshadow",
@@ -9569,18 +9996,38 @@
     {
       "calcId": "maushold",
       "showdownName": "Maushold",
+      "displayNameJa": "イッカネズミ ４ひきかぞく",
+      "sourceSpeciesNameJa": "イッカネズミ",
+      "sourceFormNameJa": "４ひきかぞく",
+      "fallbackFromCalcId": "mausholdfamilyoffour",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "925.png",
+        "sourcePath": "others/official-artwork/925.png",
+        "suggestedPublicPath": "/assets/official-artwork/925.png",
+        "fallbackFromCalcId": "mausholdfamilyoffour",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "mausholdfour",
       "showdownName": "Maushold-Four",
+      "displayNameJa": "イッカネズミ ４ひきかぞく",
+      "sourceSpeciesNameJa": "イッカネズミ",
+      "sourceFormNameJa": "４ひきかぞく",
+      "fallbackFromCalcId": "mausholdfamilyoffour",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "925.png",
+        "sourcePath": "others/official-artwork/925.png",
+        "suggestedPublicPath": "/assets/official-artwork/925.png",
+        "fallbackFromCalcId": "mausholdfamilyoffour",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "mawile",
@@ -9706,10 +10153,20 @@
     {
       "calcId": "meloetta",
       "showdownName": "Meloetta",
+      "displayNameJa": "メロエッタ ボイスフォルム",
+      "sourceSpeciesNameJa": "メロエッタ",
+      "sourceFormNameJa": "ボイスフォルム",
+      "fallbackFromCalcId": "meloettaaria",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "648.png",
+        "sourcePath": "others/official-artwork/648.png",
+        "suggestedPublicPath": "/assets/official-artwork/648.png",
+        "fallbackFromCalcId": "meloettaaria",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "meloettapirouette",
@@ -9754,18 +10211,38 @@
     {
       "calcId": "meowstic",
       "showdownName": "Meowstic",
+      "displayNameJa": "ニャオニクス オスのすがた",
+      "sourceSpeciesNameJa": "ニャオニクス",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "meowsticmale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "678.png",
+        "sourcePath": "others/official-artwork/678.png",
+        "suggestedPublicPath": "/assets/official-artwork/678.png",
+        "fallbackFromCalcId": "meowsticmale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "meowsticf",
       "showdownName": "Meowstic-F",
+      "displayNameJa": "ニャオニクス メスのすがた",
+      "sourceSpeciesNameJa": "ニャオニクス",
+      "sourceFormNameJa": "メスのすがた",
+      "fallbackFromCalcId": "meowsticfemale",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "678-female.png",
+        "sourcePath": "others/official-artwork/678-female.png",
+        "suggestedPublicPath": "/assets/official-artwork/678-female.png",
+        "fallbackFromCalcId": "meowsticfemale",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "meowsticfmega",
@@ -9774,12 +10251,14 @@
       "sourceSpeciesNameJa": "ニャオニクス",
       "sourceFormNameJa": "メガニャオニクス",
       "fallbackFromCalcId": "meowsticmega",
+      "fallbackReason": "explicit-shared-form",
       "appSupportStatus": "supported",
       "artwork": {
         "filename": "678-mega.png",
         "sourcePath": "others/official-artwork/678-mega.png",
         "suggestedPublicPath": "/assets/official-artwork/678-mega.png",
-        "fallbackFromCalcId": "meowsticmega"
+        "fallbackFromCalcId": "meowsticmega",
+        "fallbackReason": "explicit-shared-form"
       },
       "sourceStatus": "adapter-temporary"
     },
@@ -9790,12 +10269,14 @@
       "sourceSpeciesNameJa": "ニャオニクス",
       "sourceFormNameJa": "メガニャオニクス",
       "fallbackFromCalcId": "meowsticmega",
+      "fallbackReason": "explicit-shared-form",
       "appSupportStatus": "supported",
       "artwork": {
         "filename": "678-mega.png",
         "sourcePath": "others/official-artwork/678-mega.png",
         "suggestedPublicPath": "/assets/official-artwork/678-mega.png",
-        "fallbackFromCalcId": "meowsticmega"
+        "fallbackFromCalcId": "meowsticmega",
+        "fallbackReason": "explicit-shared-form"
       },
       "sourceStatus": "adapter-temporary"
     },
@@ -10084,34 +10565,72 @@
     {
       "calcId": "mimikyu",
       "showdownName": "Mimikyu",
+      "displayNameJa": "ミミッキュ ばけたすがた",
+      "sourceSpeciesNameJa": "ミミッキュ",
+      "sourceFormNameJa": "ばけたすがた",
+      "fallbackFromCalcId": "mimikyudisguised",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "778.png",
+        "sourcePath": "others/official-artwork/778.png",
+        "suggestedPublicPath": "/assets/official-artwork/778.png",
+        "fallbackFromCalcId": "mimikyudisguised",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "mimikyubusted",
       "showdownName": "Mimikyu-Busted",
+      "displayNameJa": "ミミッキュ ばけたすがた",
+      "sourceSpeciesNameJa": "ミミッキュ",
+      "sourceFormNameJa": "ばけたすがた",
+      "fallbackFromCalcId": "mimikyudisguised",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "778.png",
+        "sourcePath": "others/official-artwork/778.png",
+        "suggestedPublicPath": "/assets/official-artwork/778.png",
+        "fallbackFromCalcId": "mimikyudisguised",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "mimikyubustedtotem",
       "showdownName": "Mimikyu-Busted-Totem",
+      "displayNameJa": "ミミッキュ",
+      "sourceSpeciesNameJa": "ミミッキュ",
+      "fallbackFromCalcId": "mimikyutotemdisguised",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "778-totem-disguised.png",
+        "sourcePath": "others/official-artwork/778-totem-disguised.png",
+        "suggestedPublicPath": "/assets/official-artwork/778-totem-disguised.png",
+        "fallbackFromCalcId": "mimikyutotemdisguised",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "mimikyutotem",
       "showdownName": "Mimikyu-Totem",
+      "displayNameJa": "ミミッキュ",
+      "sourceSpeciesNameJa": "ミミッキュ",
+      "fallbackFromCalcId": "mimikyutotemdisguised",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "778-totem-disguised.png",
+        "sourcePath": "others/official-artwork/778-totem-disguised.png",
+        "suggestedPublicPath": "/assets/official-artwork/778-totem-disguised.png",
+        "fallbackFromCalcId": "mimikyutotemdisguised",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "minccino",
@@ -10129,18 +10648,38 @@
     {
       "calcId": "minior",
       "showdownName": "Minior",
+      "displayNameJa": "メテノ りゅうせいのすがた",
+      "sourceSpeciesNameJa": "メテノ",
+      "sourceFormNameJa": "りゅうせいのすがた",
+      "fallbackFromCalcId": "miniorredmeteor",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "774.png",
+        "sourcePath": "others/official-artwork/774.png",
+        "suggestedPublicPath": "/assets/official-artwork/774.png",
+        "fallbackFromCalcId": "miniorredmeteor",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "miniormeteor",
       "showdownName": "Minior-Meteor",
+      "displayNameJa": "メテノ りゅうせいのすがた",
+      "sourceSpeciesNameJa": "メテノ",
+      "sourceFormNameJa": "りゅうせいのすがた",
+      "fallbackFromCalcId": "miniorredmeteor",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "774.png",
+        "sourcePath": "others/official-artwork/774.png",
+        "suggestedPublicPath": "/assets/official-artwork/774.png",
+        "fallbackFromCalcId": "miniorredmeteor",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "minun",
@@ -10280,10 +10819,20 @@
     {
       "calcId": "morpeko",
       "showdownName": "Morpeko",
+      "displayNameJa": "モルペコ まんぷくもよう",
+      "sourceSpeciesNameJa": "モルペコ",
+      "sourceFormNameJa": "まんぷくもよう",
+      "fallbackFromCalcId": "morpekofullbelly",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "877.png",
+        "sourcePath": "others/official-artwork/877.png",
+        "suggestedPublicPath": "/assets/official-artwork/877.png",
+        "fallbackFromCalcId": "morpekofullbelly",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "morpekohangry",
@@ -10567,18 +11116,38 @@
     {
       "calcId": "necrozmadawnwings",
       "showdownName": "Necrozma-Dawn-Wings",
+      "displayNameJa": "ネクロズマ あかつきのつばさ",
+      "sourceSpeciesNameJa": "ネクロズマ",
+      "sourceFormNameJa": "あかつきのつばさ",
+      "fallbackFromCalcId": "necrozmadawn",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "800-dawn.png",
+        "sourcePath": "others/official-artwork/800-dawn.png",
+        "suggestedPublicPath": "/assets/official-artwork/800-dawn.png",
+        "fallbackFromCalcId": "necrozmadawn",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "necrozmaduskmane",
       "showdownName": "Necrozma-Dusk-Mane",
+      "displayNameJa": "ネクロズマ たそがれのたてがみ",
+      "sourceSpeciesNameJa": "ネクロズマ",
+      "sourceFormNameJa": "たそがれのたてがみ",
+      "fallbackFromCalcId": "necrozmadusk",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "800-dusk.png",
+        "sourcePath": "others/official-artwork/800-dusk.png",
+        "suggestedPublicPath": "/assets/official-artwork/800-dusk.png",
+        "fallbackFromCalcId": "necrozmadusk",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "necrozmaultra",
@@ -10922,74 +11491,164 @@
     {
       "calcId": "ogerponcornerstone",
       "showdownName": "Ogerpon-Cornerstone",
+      "displayNameJa": "オーガポン いしずえのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "いしずえのめん",
+      "fallbackFromCalcId": "ogerponcornerstonemask",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017-cornerstone-mask.png",
+        "sourcePath": "others/official-artwork/1017-cornerstone-mask.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017-cornerstone-mask.png",
+        "fallbackFromCalcId": "ogerponcornerstonemask",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ogerponcornerstonetera",
       "showdownName": "Ogerpon-Cornerstone-Tera",
+      "displayNameJa": "オーガポン いしずえのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "いしずえのめん",
+      "fallbackFromCalcId": "ogerponcornerstonemask",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017-cornerstone-mask.png",
+        "sourcePath": "others/official-artwork/1017-cornerstone-mask.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017-cornerstone-mask.png",
+        "fallbackFromCalcId": "ogerponcornerstonemask",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ogerponhearthflame",
       "showdownName": "Ogerpon-Hearthflame",
+      "displayNameJa": "オーガポン かまどのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "かまどのめん",
+      "fallbackFromCalcId": "ogerponhearthflamemask",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017-hearthflame-mask.png",
+        "sourcePath": "others/official-artwork/1017-hearthflame-mask.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017-hearthflame-mask.png",
+        "fallbackFromCalcId": "ogerponhearthflamemask",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ogerponhearthflametera",
       "showdownName": "Ogerpon-Hearthflame-Tera",
+      "displayNameJa": "オーガポン かまどのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "かまどのめん",
+      "fallbackFromCalcId": "ogerponhearthflamemask",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017-hearthflame-mask.png",
+        "sourcePath": "others/official-artwork/1017-hearthflame-mask.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017-hearthflame-mask.png",
+        "fallbackFromCalcId": "ogerponhearthflamemask",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ogerpontealtera",
       "showdownName": "Ogerpon-Teal-Tera",
+      "displayNameJa": "オーガポン みどりのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "みどりのめん",
+      "fallbackFromCalcId": "ogerpon",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017.png",
+        "sourcePath": "others/official-artwork/1017.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017.png",
+        "fallbackFromCalcId": "ogerpon",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ogerponwellspring",
       "showdownName": "Ogerpon-Wellspring",
+      "displayNameJa": "オーガポン いどのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "いどのめん",
+      "fallbackFromCalcId": "ogerponwellspringmask",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017-wellspring-mask.png",
+        "sourcePath": "others/official-artwork/1017-wellspring-mask.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017-wellspring-mask.png",
+        "fallbackFromCalcId": "ogerponwellspringmask",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ogerponwellspringtera",
       "showdownName": "Ogerpon-Wellspring-Tera",
+      "displayNameJa": "オーガポン いどのめん",
+      "sourceSpeciesNameJa": "オーガポン",
+      "sourceFormNameJa": "いどのめん",
+      "fallbackFromCalcId": "ogerponwellspringmask",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1017-wellspring-mask.png",
+        "sourcePath": "others/official-artwork/1017-wellspring-mask.png",
+        "suggestedPublicPath": "/assets/official-artwork/1017-wellspring-mask.png",
+        "fallbackFromCalcId": "ogerponwellspringmask",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "oinkologne",
       "showdownName": "Oinkologne",
+      "displayNameJa": "パフュートン オスのすがた",
+      "sourceSpeciesNameJa": "パフュートン",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "oinkolognemale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "916.png",
+        "sourcePath": "others/official-artwork/916.png",
+        "suggestedPublicPath": "/assets/official-artwork/916.png",
+        "fallbackFromCalcId": "oinkolognemale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "oinkolognef",
       "showdownName": "Oinkologne-F",
+      "displayNameJa": "パフュートン メスのすがた",
+      "sourceSpeciesNameJa": "パフュートン",
+      "sourceFormNameJa": "メスのすがた",
+      "fallbackFromCalcId": "oinkolognefemale",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "916-female.png",
+        "sourcePath": "others/official-artwork/916-female.png",
+        "suggestedPublicPath": "/assets/official-artwork/916-female.png",
+        "fallbackFromCalcId": "oinkolognefemale",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "okidogi",
@@ -11086,10 +11745,20 @@
     {
       "calcId": "oricorio",
       "showdownName": "Oricorio",
+      "displayNameJa": "オドリドリ めらめらスタイル",
+      "sourceSpeciesNameJa": "オドリドリ",
+      "sourceFormNameJa": "めらめらスタイル",
+      "fallbackFromCalcId": "oricoriobaile",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "741.png",
+        "sourcePath": "others/official-artwork/741.png",
+        "suggestedPublicPath": "/assets/official-artwork/741.png",
+        "fallbackFromCalcId": "oricoriobaile",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "oricoriopau",
@@ -11196,10 +11865,20 @@
     {
       "calcId": "palafin",
       "showdownName": "Palafin",
+      "displayNameJa": "イルカマン ナイーブフォルム",
+      "sourceSpeciesNameJa": "イルカマン",
+      "sourceFormNameJa": "ナイーブフォルム",
+      "fallbackFromCalcId": "palafinzero",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "964.png",
+        "sourcePath": "others/official-artwork/964.png",
+        "suggestedPublicPath": "/assets/official-artwork/964.png",
+        "fallbackFromCalcId": "palafinzero",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "palafinhero",
@@ -11676,10 +12355,20 @@
     {
       "calcId": "pikachualola",
       "showdownName": "Pikachu-Alola",
+      "displayNameJa": "ピカチュウ アローラキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "アローラキャップ",
+      "fallbackFromCalcId": "pikachualolacap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-alola-cap.png",
+        "sourcePath": "others/official-artwork/25-alola-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-alola-cap.png",
+        "fallbackFromCalcId": "pikachualolacap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachugmax",
@@ -11698,58 +12387,128 @@
     {
       "calcId": "pikachuhoenn",
       "showdownName": "Pikachu-Hoenn",
+      "displayNameJa": "ピカチュウ ホウエンキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "ホウエンキャップ",
+      "fallbackFromCalcId": "pikachuhoenncap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-hoenn-cap.png",
+        "sourcePath": "others/official-artwork/25-hoenn-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-hoenn-cap.png",
+        "fallbackFromCalcId": "pikachuhoenncap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachukalos",
       "showdownName": "Pikachu-Kalos",
+      "displayNameJa": "ピカチュウ カロスキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "カロスキャップ",
+      "fallbackFromCalcId": "pikachukaloscap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-kalos-cap.png",
+        "sourcePath": "others/official-artwork/25-kalos-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-kalos-cap.png",
+        "fallbackFromCalcId": "pikachukaloscap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachuoriginal",
       "showdownName": "Pikachu-Original",
+      "displayNameJa": "ピカチュウ オリジナルキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "オリジナルキャップ",
+      "fallbackFromCalcId": "pikachuoriginalcap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-original-cap.png",
+        "sourcePath": "others/official-artwork/25-original-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-original-cap.png",
+        "fallbackFromCalcId": "pikachuoriginalcap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachupartner",
       "showdownName": "Pikachu-Partner",
+      "displayNameJa": "ピカチュウ キミにきめたキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "キミにきめたキャップ",
+      "fallbackFromCalcId": "pikachupartnercap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-partner-cap.png",
+        "sourcePath": "others/official-artwork/25-partner-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-partner-cap.png",
+        "fallbackFromCalcId": "pikachupartnercap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachusinnoh",
       "showdownName": "Pikachu-Sinnoh",
+      "displayNameJa": "ピカチュウ シンオウキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "シンオウキャップ",
+      "fallbackFromCalcId": "pikachusinnohcap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-sinnoh-cap.png",
+        "sourcePath": "others/official-artwork/25-sinnoh-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-sinnoh-cap.png",
+        "fallbackFromCalcId": "pikachusinnohcap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachuunova",
       "showdownName": "Pikachu-Unova",
+      "displayNameJa": "ピカチュウ イッシュキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "イッシュキャップ",
+      "fallbackFromCalcId": "pikachuunovacap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-unova-cap.png",
+        "sourcePath": "others/official-artwork/25-unova-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-unova-cap.png",
+        "fallbackFromCalcId": "pikachuunovacap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikachuworld",
       "showdownName": "Pikachu-World",
+      "displayNameJa": "ピカチュウ ワールドキャップ",
+      "sourceSpeciesNameJa": "ピカチュウ",
+      "sourceFormNameJa": "ワールドキャップ",
+      "fallbackFromCalcId": "pikachuworldcap",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "25-world-cap.png",
+        "sourcePath": "others/official-artwork/25-world-cap.png",
+        "suggestedPublicPath": "/assets/official-artwork/25-world-cap.png",
+        "fallbackFromCalcId": "pikachuworldcap",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pikipek",
@@ -11954,10 +12713,20 @@
     {
       "calcId": "poltchageistartisan",
       "showdownName": "Poltchageist-Artisan",
+      "displayNameJa": "チャデス マガイモノのすがた",
+      "sourceSpeciesNameJa": "チャデス",
+      "sourceFormNameJa": "マガイモノのすがた",
+      "fallbackFromCalcId": "poltchageist",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1012.png",
+        "sourcePath": "others/official-artwork/1012.png",
+        "suggestedPublicPath": "/assets/official-artwork/1012.png",
+        "fallbackFromCalcId": "poltchageist",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "polteageist",
@@ -11976,10 +12745,20 @@
     {
       "calcId": "polteageistantique",
       "showdownName": "Polteageist-Antique",
+      "displayNameJa": "ポットデス がんさくフォルム",
+      "sourceSpeciesNameJa": "ポットデス",
+      "sourceFormNameJa": "がんさくフォルム",
+      "fallbackFromCalcId": "polteageist",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "855.png",
+        "sourcePath": "others/official-artwork/855.png",
+        "suggestedPublicPath": "/assets/official-artwork/855.png",
+        "fallbackFromCalcId": "polteageist",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "ponyta",
@@ -12157,10 +12936,20 @@
     {
       "calcId": "pumpkaboo",
       "showdownName": "Pumpkaboo",
+      "displayNameJa": "バケッチャ ふつうのサイズ",
+      "sourceSpeciesNameJa": "バケッチャ",
+      "sourceFormNameJa": "ふつうのサイズ",
+      "fallbackFromCalcId": "pumpkabooaverage",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "710.png",
+        "sourcePath": "others/official-artwork/710.png",
+        "suggestedPublicPath": "/assets/official-artwork/710.png",
+        "fallbackFromCalcId": "pumpkabooaverage",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pumpkaboolarge",
@@ -12254,10 +13043,20 @@
     {
       "calcId": "pyroar",
       "showdownName": "Pyroar",
+      "displayNameJa": "カエンジシ オスのすがた",
+      "sourceSpeciesNameJa": "カエンジシ",
+      "sourceFormNameJa": "オスのすがた",
+      "fallbackFromCalcId": "pyroarmale",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "668.png",
+        "sourcePath": "others/official-artwork/668.png",
+        "suggestedPublicPath": "/assets/official-artwork/668.png",
+        "fallbackFromCalcId": "pyroarmale",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "pyroarmega",
@@ -12597,10 +13396,19 @@
     {
       "calcId": "raticatealolatotem",
       "showdownName": "Raticate-Alola-Totem",
+      "displayNameJa": "ラッタ",
+      "sourceSpeciesNameJa": "ラッタ",
+      "fallbackFromCalcId": "raticatetotemalola",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "20-totem-alola.png",
+        "sourcePath": "others/official-artwork/20-totem-alola.png",
+        "suggestedPublicPath": "/assets/official-artwork/20-totem-alola.png",
+        "fallbackFromCalcId": "raticatetotemalola",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "rattata",
@@ -12962,10 +13770,19 @@
     {
       "calcId": "rockruffdusk",
       "showdownName": "Rockruff-Dusk",
+      "displayNameJa": "イワンコ",
+      "sourceSpeciesNameJa": "イワンコ",
+      "fallbackFromCalcId": "rockruff",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "744.png",
+        "sourcePath": "others/official-artwork/744.png",
+        "suggestedPublicPath": "/assets/official-artwork/744.png",
+        "fallbackFromCalcId": "rockruff",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "roggenrola",
@@ -13827,10 +14644,20 @@
     {
       "calcId": "shaymin",
       "showdownName": "Shaymin",
+      "displayNameJa": "シェイミ ランドフォルム",
+      "sourceSpeciesNameJa": "シェイミ",
+      "sourceFormNameJa": "ランドフォルム",
+      "fallbackFromCalcId": "shayminland",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "492.png",
+        "sourcePath": "others/official-artwork/492.png",
+        "suggestedPublicPath": "/assets/official-artwork/492.png",
+        "fallbackFromCalcId": "shayminland",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "shayminsky",
@@ -14080,138 +14907,308 @@
     {
       "calcId": "silvallybug",
       "showdownName": "Silvally-Bug",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallydark",
       "showdownName": "Silvally-Dark",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallydragon",
       "showdownName": "Silvally-Dragon",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyelectric",
       "showdownName": "Silvally-Electric",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyfairy",
       "showdownName": "Silvally-Fairy",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyfighting",
       "showdownName": "Silvally-Fighting",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyfire",
       "showdownName": "Silvally-Fire",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyflying",
       "showdownName": "Silvally-Flying",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyghost",
       "showdownName": "Silvally-Ghost",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallygrass",
       "showdownName": "Silvally-Grass",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyground",
       "showdownName": "Silvally-Ground",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyice",
       "showdownName": "Silvally-Ice",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallypoison",
       "showdownName": "Silvally-Poison",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallypsychic",
       "showdownName": "Silvally-Psychic",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallyrock",
       "showdownName": "Silvally-Rock",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallysteel",
       "showdownName": "Silvally-Steel",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "silvallywater",
       "showdownName": "Silvally-Water",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
+      "sourceSpeciesNameJa": "シルヴァディ",
+      "sourceFormNameJa": "タイプ：ノーマル",
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "773.png",
+        "sourcePath": "others/official-artwork/773.png",
+        "suggestedPublicPath": "/assets/official-artwork/773.png",
+        "fallbackFromCalcId": "silvally",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "simipour",
@@ -14269,10 +15266,20 @@
     {
       "calcId": "sinistchamasterpiece",
       "showdownName": "Sinistcha-Masterpiece",
+      "displayNameJa": "ヤバソチャ ボンサクのすがた",
+      "sourceSpeciesNameJa": "ヤバソチャ",
+      "sourceFormNameJa": "ボンサクのすがた",
+      "fallbackFromCalcId": "sinistcha",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "1013.png",
+        "sourcePath": "others/official-artwork/1013.png",
+        "suggestedPublicPath": "/assets/official-artwork/1013.png",
+        "fallbackFromCalcId": "sinistcha",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "sinistea",
@@ -14291,10 +15298,20 @@
     {
       "calcId": "sinisteaantique",
       "showdownName": "Sinistea-Antique",
+      "displayNameJa": "ヤバチャ がんさくフォルム",
+      "sourceSpeciesNameJa": "ヤバチャ",
+      "sourceFormNameJa": "がんさくフォルム",
+      "fallbackFromCalcId": "sinistea",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "854.png",
+        "sourcePath": "others/official-artwork/854.png",
+        "suggestedPublicPath": "/assets/official-artwork/854.png",
+        "fallbackFromCalcId": "sinistea",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "sirfetchd",
@@ -15057,34 +16074,74 @@
     {
       "calcId": "squawkabilly",
       "showdownName": "Squawkabilly",
+      "displayNameJa": "イキリンコ グリーンフェザー",
+      "sourceSpeciesNameJa": "イキリンコ",
+      "sourceFormNameJa": "グリーンフェザー",
+      "fallbackFromCalcId": "squawkabillygreenplumage",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "931.png",
+        "sourcePath": "others/official-artwork/931.png",
+        "suggestedPublicPath": "/assets/official-artwork/931.png",
+        "fallbackFromCalcId": "squawkabillygreenplumage",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "squawkabillyblue",
       "showdownName": "Squawkabilly-Blue",
+      "displayNameJa": "イキリンコ ブルーフェザー",
+      "sourceSpeciesNameJa": "イキリンコ",
+      "sourceFormNameJa": "ブルーフェザー",
+      "fallbackFromCalcId": "squawkabillyblueplumage",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "931-blue-plumage.png",
+        "sourcePath": "others/official-artwork/931-blue-plumage.png",
+        "suggestedPublicPath": "/assets/official-artwork/931-blue-plumage.png",
+        "fallbackFromCalcId": "squawkabillyblueplumage",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "squawkabillywhite",
       "showdownName": "Squawkabilly-White",
+      "displayNameJa": "イキリンコ ホワイトフェザー",
+      "sourceSpeciesNameJa": "イキリンコ",
+      "sourceFormNameJa": "ホワイトフェザー",
+      "fallbackFromCalcId": "squawkabillywhiteplumage",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "931-white-plumage.png",
+        "sourcePath": "others/official-artwork/931-white-plumage.png",
+        "suggestedPublicPath": "/assets/official-artwork/931-white-plumage.png",
+        "fallbackFromCalcId": "squawkabillywhiteplumage",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "squawkabillyyellow",
       "showdownName": "Squawkabilly-Yellow",
+      "displayNameJa": "イキリンコ イエローフェザー",
+      "sourceSpeciesNameJa": "イキリンコ",
+      "sourceFormNameJa": "イエローフェザー",
+      "fallbackFromCalcId": "squawkabillyyellowplumage",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "931-yellow-plumage.png",
+        "sourcePath": "others/official-artwork/931-yellow-plumage.png",
+        "suggestedPublicPath": "/assets/official-artwork/931-yellow-plumage.png",
+        "fallbackFromCalcId": "squawkabillyyellowplumage",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "squirtle",
@@ -15732,10 +16789,20 @@
     {
       "calcId": "tatsugiri",
       "showdownName": "Tatsugiri",
+      "displayNameJa": "シャリタツ そったすがた",
+      "sourceSpeciesNameJa": "シャリタツ",
+      "sourceFormNameJa": "そったすがた",
+      "fallbackFromCalcId": "tatsugiricurly",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "978.png",
+        "sourcePath": "others/official-artwork/978.png",
+        "suggestedPublicPath": "/assets/official-artwork/978.png",
+        "fallbackFromCalcId": "tatsugiricurly",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "tatsugiricurlymega",
@@ -15744,12 +16811,14 @@
       "sourceSpeciesNameJa": "シャリタツ",
       "sourceFormNameJa": "メガシャリタツ",
       "fallbackFromCalcId": "tatsugiristretchymega",
+      "fallbackReason": "explicit-shared-form",
       "appSupportStatus": "supported",
       "artwork": {
         "filename": "978-stretchy-mega.png",
         "sourcePath": "others/official-artwork/978-stretchy-mega.png",
         "suggestedPublicPath": "/assets/official-artwork/978-stretchy-mega.png",
-        "fallbackFromCalcId": "tatsugiristretchymega"
+        "fallbackFromCalcId": "tatsugiristretchymega",
+        "fallbackReason": "explicit-shared-form"
       },
       "sourceStatus": "adapter-temporary"
     },
@@ -15774,12 +16843,14 @@
       "sourceSpeciesNameJa": "シャリタツ",
       "sourceFormNameJa": "メガシャリタツ",
       "fallbackFromCalcId": "tatsugiristretchymega",
+      "fallbackReason": "explicit-shared-form",
       "appSupportStatus": "supported",
       "artwork": {
         "filename": "978-stretchy-mega.png",
         "sourcePath": "others/official-artwork/978-stretchy-mega.png",
         "suggestedPublicPath": "/assets/official-artwork/978-stretchy-mega.png",
-        "fallbackFromCalcId": "tatsugiristretchymega"
+        "fallbackFromCalcId": "tatsugiristretchymega",
+        "fallbackReason": "explicit-shared-form"
       },
       "sourceStatus": "adapter-temporary"
     },
@@ -15827,26 +16898,56 @@
     {
       "calcId": "taurospaldeaaqua",
       "showdownName": "Tauros-Paldea-Aqua",
+      "displayNameJa": "ケンタロス パルデアのすがた",
+      "sourceSpeciesNameJa": "ケンタロス",
+      "sourceFormNameJa": "パルデアのすがた",
+      "fallbackFromCalcId": "taurospaldeaaquabreed",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "128-paldea-aqua-breed.png",
+        "sourcePath": "others/official-artwork/128-paldea-aqua-breed.png",
+        "suggestedPublicPath": "/assets/official-artwork/128-paldea-aqua-breed.png",
+        "fallbackFromCalcId": "taurospaldeaaquabreed",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "taurospaldeablaze",
       "showdownName": "Tauros-Paldea-Blaze",
+      "displayNameJa": "ケンタロス パルデアのすがた",
+      "sourceSpeciesNameJa": "ケンタロス",
+      "sourceFormNameJa": "パルデアのすがた",
+      "fallbackFromCalcId": "taurospaldeablazebreed",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "128-paldea-blaze-breed.png",
+        "sourcePath": "others/official-artwork/128-paldea-blaze-breed.png",
+        "suggestedPublicPath": "/assets/official-artwork/128-paldea-blaze-breed.png",
+        "fallbackFromCalcId": "taurospaldeablazebreed",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "taurospaldeacombat",
       "showdownName": "Tauros-Paldea-Combat",
+      "displayNameJa": "ケンタロス パルデアのすがた",
+      "sourceSpeciesNameJa": "ケンタロス",
+      "sourceFormNameJa": "パルデアのすがた",
+      "fallbackFromCalcId": "taurospaldeacombatbreed",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "128-paldea-combat-breed.png",
+        "sourcePath": "others/official-artwork/128-paldea-combat-breed.png",
+        "suggestedPublicPath": "/assets/official-artwork/128-paldea-combat-breed.png",
+        "fallbackFromCalcId": "taurospaldeacombatbreed",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "teddiursa",
@@ -15984,10 +17085,20 @@
     {
       "calcId": "thundurus",
       "showdownName": "Thundurus",
+      "displayNameJa": "ボルトロス けしんフォルム",
+      "sourceSpeciesNameJa": "ボルトロス",
+      "sourceFormNameJa": "けしんフォルム",
+      "fallbackFromCalcId": "thundurusincarnate",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "642.png",
+        "sourcePath": "others/official-artwork/642.png",
+        "suggestedPublicPath": "/assets/official-artwork/642.png",
+        "fallbackFromCalcId": "thundurusincarnate",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "thundurustherian",
@@ -16222,10 +17333,20 @@
     {
       "calcId": "tornadus",
       "showdownName": "Tornadus",
+      "displayNameJa": "トルネロス けしんフォルム",
+      "sourceSpeciesNameJa": "トルネロス",
+      "sourceFormNameJa": "けしんフォルム",
+      "fallbackFromCalcId": "tornadusincarnate",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "641.png",
+        "sourcePath": "others/official-artwork/641.png",
+        "suggestedPublicPath": "/assets/official-artwork/641.png",
+        "fallbackFromCalcId": "tornadusincarnate",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "tornadustherian",
@@ -16335,18 +17456,38 @@
     {
       "calcId": "toxtricity",
       "showdownName": "Toxtricity",
+      "displayNameJa": "ストリンダー ハイなすがた",
+      "sourceSpeciesNameJa": "ストリンダー",
+      "sourceFormNameJa": "ハイなすがた",
+      "fallbackFromCalcId": "toxtricityamped",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "849.png",
+        "sourcePath": "others/official-artwork/849.png",
+        "suggestedPublicPath": "/assets/official-artwork/849.png",
+        "fallbackFromCalcId": "toxtricityamped",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "toxtricitygmax",
       "showdownName": "Toxtricity-Gmax",
+      "displayNameJa": "ストリンダー ハイなすがた・キョダイマックスのすがた",
+      "sourceSpeciesNameJa": "ストリンダー",
+      "sourceFormNameJa": "ハイなすがた・キョダイマックスのすがた",
+      "fallbackFromCalcId": "toxtricityampedgmax",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "849-amped-gmax.png",
+        "sourcePath": "others/official-artwork/849-amped-gmax.png",
+        "suggestedPublicPath": "/assets/official-artwork/849-amped-gmax.png",
+        "fallbackFromCalcId": "toxtricityampedgmax",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "toxtricitylowkey",
@@ -16721,18 +17862,38 @@
     {
       "calcId": "urshifu",
       "showdownName": "Urshifu",
+      "displayNameJa": "ウーラオス いちげきのかた",
+      "sourceSpeciesNameJa": "ウーラオス",
+      "sourceFormNameJa": "いちげきのかた",
+      "fallbackFromCalcId": "urshifusinglestrike",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "892.png",
+        "sourcePath": "others/official-artwork/892.png",
+        "suggestedPublicPath": "/assets/official-artwork/892.png",
+        "fallbackFromCalcId": "urshifusinglestrike",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "urshifugmax",
       "showdownName": "Urshifu-Gmax",
+      "displayNameJa": "ウーラオス れんげきのかた・キョダイマックスのすがた",
+      "sourceSpeciesNameJa": "ウーラオス",
+      "sourceFormNameJa": "れんげきのかた・キョダイマックスのすがた",
+      "fallbackFromCalcId": "urshifurapidstrikegmax",
+      "fallbackReason": "same-form-family",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "892-rapid-strike-gmax.png",
+        "sourcePath": "others/official-artwork/892-rapid-strike-gmax.png",
+        "suggestedPublicPath": "/assets/official-artwork/892-rapid-strike-gmax.png",
+        "fallbackFromCalcId": "urshifurapidstrikegmax",
+        "fallbackReason": "same-form-family"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "urshifurapidstrike",
@@ -17097,18 +18258,38 @@
     {
       "calcId": "vivillonfancy",
       "showdownName": "Vivillon-Fancy",
+      "displayNameJa": "ビビヨン はなぞののもよう",
+      "sourceSpeciesNameJa": "ビビヨン",
+      "sourceFormNameJa": "はなぞののもよう",
+      "fallbackFromCalcId": "vivillon",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "666.png",
+        "sourcePath": "others/official-artwork/666.png",
+        "suggestedPublicPath": "/assets/official-artwork/666.png",
+        "fallbackFromCalcId": "vivillon",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "vivillonpokeball",
       "showdownName": "Vivillon-Pokeball",
+      "displayNameJa": "ビビヨン はなぞののもよう",
+      "sourceSpeciesNameJa": "ビビヨン",
+      "sourceFormNameJa": "はなぞののもよう",
+      "fallbackFromCalcId": "vivillon",
+      "fallbackReason": "base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "666.png",
+        "sourcePath": "others/official-artwork/666.png",
+        "suggestedPublicPath": "/assets/official-artwork/666.png",
+        "fallbackFromCalcId": "vivillon",
+        "fallbackReason": "base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "volbeat",
@@ -17512,10 +18693,20 @@
     {
       "calcId": "wishiwashi",
       "showdownName": "Wishiwashi",
+      "displayNameJa": "ヨワシ たんどくのすがた",
+      "sourceSpeciesNameJa": "ヨワシ",
+      "sourceFormNameJa": "たんどくのすがた",
+      "fallbackFromCalcId": "wishiwashisolo",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "746.png",
+        "sourcePath": "others/official-artwork/746.png",
+        "suggestedPublicPath": "/assets/official-artwork/746.png",
+        "fallbackFromCalcId": "wishiwashisolo",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "wishiwashischool",
@@ -17613,10 +18804,20 @@
     {
       "calcId": "wormadam",
       "showdownName": "Wormadam",
+      "displayNameJa": "ミノマダム くさきのミノ",
+      "sourceSpeciesNameJa": "ミノマダム",
+      "sourceFormNameJa": "くさきのミノ",
+      "fallbackFromCalcId": "wormadamplant",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "413.png",
+        "sourcePath": "others/official-artwork/413.png",
+        "suggestedPublicPath": "/assets/official-artwork/413.png",
+        "fallbackFromCalcId": "wormadamplant",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "wormadamsandy",
@@ -18116,10 +19317,20 @@
     {
       "calcId": "zygarde",
       "showdownName": "Zygarde",
+      "displayNameJa": "ジガルデ ５０％フォルム",
+      "sourceSpeciesNameJa": "ジガルデ",
+      "sourceFormNameJa": "５０％フォルム",
+      "fallbackFromCalcId": "zygarde50",
+      "fallbackReason": "same-base",
       "appSupportStatus": "supported",
-      "artwork": null,
-      "sourceStatus": "unsupported-temporary",
-      "notes": "No normal official-artwork CSV row found."
+      "artwork": {
+        "filename": "718.png",
+        "sourcePath": "others/official-artwork/718.png",
+        "suggestedPublicPath": "/assets/official-artwork/718.png",
+        "fallbackFromCalcId": "zygarde50",
+        "fallbackReason": "same-base"
+      },
+      "sourceStatus": "adapter-temporary"
     },
     {
       "calcId": "zygarde10",
@@ -18166,9 +19377,9 @@
   ],
   "summary": {
     "totalSpecies": 1451,
-    "withArtwork": 1250,
-    "missingArtwork": 201,
-    "supportedWithArtwork": 1250,
-    "supportedMissingArtwork": 121
+    "withArtwork": 1371,
+    "missingArtwork": 80,
+    "supportedWithArtwork": 1371,
+    "supportedMissingArtwork": 0
   }
 }

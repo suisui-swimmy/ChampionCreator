@@ -135,13 +135,18 @@
       "kind": "species",
       "calcId": "aegislashboth",
       "showdownName": "Aegislash-Both",
-      "displayNameJa": "Aegislash-Both",
+      "displayNameJa": "ギルガルド ブレードフォルム",
       "aliasesJa": [
+        "ギルガルド",
+        "ブレードフォルム",
+        "ギルガルド ブレードフォルム",
         "Aegislash-Both"
       ],
-      "normalizedSearchText": "aegislash-bothaegislashboth",
+      "normalizedSearchText": "ギルガルドブレードフォルムギルガルドブレードフォルムaegislash-bothaegislashboth",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "aegislashblade",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -559,205 +564,290 @@
       "kind": "species",
       "calcId": "arceusbug",
       "showdownName": "Arceus-Bug",
-      "displayNameJa": "Arceus-Bug",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Bug"
       ],
-      "normalizedSearchText": "arceus-bugarceusbug",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-bugarceusbug",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusdark",
       "showdownName": "Arceus-Dark",
-      "displayNameJa": "Arceus-Dark",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Dark"
       ],
-      "normalizedSearchText": "arceus-darkarceusdark",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-darkarceusdark",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusdragon",
       "showdownName": "Arceus-Dragon",
-      "displayNameJa": "Arceus-Dragon",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Dragon"
       ],
-      "normalizedSearchText": "arceus-dragonarceusdragon",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-dragonarceusdragon",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceuselectric",
       "showdownName": "Arceus-Electric",
-      "displayNameJa": "Arceus-Electric",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Electric"
       ],
-      "normalizedSearchText": "arceus-electricarceuselectric",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-electricarceuselectric",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusfairy",
       "showdownName": "Arceus-Fairy",
-      "displayNameJa": "Arceus-Fairy",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Fairy"
       ],
-      "normalizedSearchText": "arceus-fairyarceusfairy",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-fairyarceusfairy",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusfighting",
       "showdownName": "Arceus-Fighting",
-      "displayNameJa": "Arceus-Fighting",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Fighting"
       ],
-      "normalizedSearchText": "arceus-fightingarceusfighting",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-fightingarceusfighting",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusfire",
       "showdownName": "Arceus-Fire",
-      "displayNameJa": "Arceus-Fire",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Fire"
       ],
-      "normalizedSearchText": "arceus-firearceusfire",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-firearceusfire",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusflying",
       "showdownName": "Arceus-Flying",
-      "displayNameJa": "Arceus-Flying",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Flying"
       ],
-      "normalizedSearchText": "arceus-flyingarceusflying",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-flyingarceusflying",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusghost",
       "showdownName": "Arceus-Ghost",
-      "displayNameJa": "Arceus-Ghost",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Ghost"
       ],
-      "normalizedSearchText": "arceus-ghostarceusghost",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-ghostarceusghost",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusgrass",
       "showdownName": "Arceus-Grass",
-      "displayNameJa": "Arceus-Grass",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Grass"
       ],
-      "normalizedSearchText": "arceus-grassarceusgrass",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-grassarceusgrass",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusground",
       "showdownName": "Arceus-Ground",
-      "displayNameJa": "Arceus-Ground",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Ground"
       ],
-      "normalizedSearchText": "arceus-groundarceusground",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-groundarceusground",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusice",
       "showdownName": "Arceus-Ice",
-      "displayNameJa": "Arceus-Ice",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Ice"
       ],
-      "normalizedSearchText": "arceus-icearceusice",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-icearceusice",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceuspoison",
       "showdownName": "Arceus-Poison",
-      "displayNameJa": "Arceus-Poison",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Poison"
       ],
-      "normalizedSearchText": "arceus-poisonarceuspoison",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-poisonarceuspoison",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceuspsychic",
       "showdownName": "Arceus-Psychic",
-      "displayNameJa": "Arceus-Psychic",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Psychic"
       ],
-      "normalizedSearchText": "arceus-psychicarceuspsychic",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-psychicarceuspsychic",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceusrock",
       "showdownName": "Arceus-Rock",
-      "displayNameJa": "Arceus-Rock",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Rock"
       ],
-      "normalizedSearchText": "arceus-rockarceusrock",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-rockarceusrock",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceussteel",
       "showdownName": "Arceus-Steel",
-      "displayNameJa": "Arceus-Steel",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Steel"
       ],
-      "normalizedSearchText": "arceus-steelarceussteel",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-steelarceussteel",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "arceuswater",
       "showdownName": "Arceus-Water",
-      "displayNameJa": "Arceus-Water",
+      "displayNameJa": "アルセウス ノーマルタイプ",
       "aliasesJa": [
+        "アルセウス",
+        "ノーマルタイプ",
+        "アルセウス ノーマルタイプ",
         "Arceus-Water"
       ],
-      "normalizedSearchText": "arceus-waterarceuswater",
+      "normalizedSearchText": "アルセウスノーマルタイプアルセウスノーマルタイプarceus-waterarceuswater",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "arceus",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -1224,37 +1314,52 @@
       "kind": "species",
       "calcId": "basculegion",
       "showdownName": "Basculegion",
-      "displayNameJa": "Basculegion",
+      "displayNameJa": "イダイトウ オスのすがた",
       "aliasesJa": [
+        "イダイトウ",
+        "オスのすがた",
+        "イダイトウ オスのすがた",
         "Basculegion"
       ],
-      "normalizedSearchText": "basculegionbasculegion",
+      "normalizedSearchText": "イダイトウオスのすがたイダイトウオスのすがたbasculegionbasculegion",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "basculegionmale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "basculegionf",
       "showdownName": "Basculegion-F",
-      "displayNameJa": "Basculegion-F",
+      "displayNameJa": "イダイトウ メスのすがた",
       "aliasesJa": [
+        "イダイトウ",
+        "メスのすがた",
+        "イダイトウ メスのすがた",
         "Basculegion-F"
       ],
-      "normalizedSearchText": "basculegion-fbasculegionf",
+      "normalizedSearchText": "イダイトウメスのすがたイダイトウメスのすがたbasculegion-fbasculegionf",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "basculegionfemale",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "basculin",
       "showdownName": "Basculin",
-      "displayNameJa": "Basculin",
+      "displayNameJa": "バスラオ あかすじのすがた",
       "aliasesJa": [
+        "バスラオ",
+        "あかすじのすがた",
+        "バスラオ あかすじのすがた",
         "Basculin"
       ],
-      "normalizedSearchText": "basculinbasculin",
+      "normalizedSearchText": "バスラオあかすじのすがたバスラオあかすじのすがたbasculinbasculin",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "basculinredstriped",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -2613,13 +2718,18 @@
       "kind": "species",
       "calcId": "cherrimsunshine",
       "showdownName": "Cherrim-Sunshine",
-      "displayNameJa": "Cherrim-Sunshine",
+      "displayNameJa": "チェリム ネガフォルム",
       "aliasesJa": [
+        "チェリム",
+        "ネガフォルム",
+        "チェリム ネガフォルム",
         "Cherrim-Sunshine"
       ],
-      "normalizedSearchText": "cherrim-sunshinecherrimsunshine",
+      "normalizedSearchText": "チェリムネガフォルムチェリムネガフォルムcherrim-sunshinecherrimsunshine",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "cherrim",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -3705,25 +3815,35 @@
       "kind": "species",
       "calcId": "darmanitan",
       "showdownName": "Darmanitan",
-      "displayNameJa": "Darmanitan",
+      "displayNameJa": "ヒヒダルマ ノーマルモード",
       "aliasesJa": [
+        "ヒヒダルマ",
+        "ノーマルモード",
+        "ヒヒダルマ ノーマルモード",
         "Darmanitan"
       ],
-      "normalizedSearchText": "darmanitandarmanitan",
+      "normalizedSearchText": "ヒヒダルマノーマルモードヒヒダルマノーマルモードdarmanitandarmanitan",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "darmanitanstandard",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "darmanitangalar",
       "showdownName": "Darmanitan-Galar",
-      "displayNameJa": "Darmanitan-Galar",
+      "displayNameJa": "ヒヒダルマ ガラルのすがた",
       "aliasesJa": [
+        "ヒヒダルマ",
+        "ガラルのすがた",
+        "ヒヒダルマ ガラルのすがた",
         "Darmanitan-Galar"
       ],
-      "normalizedSearchText": "darmanitan-galardarmanitangalar",
+      "normalizedSearchText": "ヒヒダルマガラルのすがたヒヒダルマガラルのすがたdarmanitan-galardarmanitangalar",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "darmanitangalarstandard",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -3923,13 +4043,18 @@
       "kind": "species",
       "calcId": "deoxys",
       "showdownName": "Deoxys",
-      "displayNameJa": "Deoxys",
+      "displayNameJa": "デオキシス ノーマルフォルム",
       "aliasesJa": [
+        "デオキシス",
+        "ノーマルフォルム",
+        "デオキシス ノーマルフォルム",
         "Deoxys"
       ],
-      "normalizedSearchText": "deoxysdeoxys",
+      "normalizedSearchText": "デオキシスノーマルフォルムデオキシスノーマルフォルムdeoxysdeoxys",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "deoxysnormal",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -4590,13 +4715,18 @@
       "kind": "species",
       "calcId": "dudunsparce",
       "showdownName": "Dudunsparce",
-      "displayNameJa": "Dudunsparce",
+      "displayNameJa": "ノココッチ ふたふしフォルム",
       "aliasesJa": [
+        "ノココッチ",
+        "ふたふしフォルム",
+        "ノココッチ ふたふしフォルム",
         "Dudunsparce"
       ],
-      "normalizedSearchText": "dudunsparcedudunsparce",
+      "normalizedSearchText": "ノココッチふたふしフォルムノココッチふたふしフォルムdudunsparcedudunsparce",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "dudunsparcetwosegment",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -4858,13 +4988,18 @@
       "kind": "species",
       "calcId": "eiscue",
       "showdownName": "Eiscue",
-      "displayNameJa": "Eiscue",
+      "displayNameJa": "コオリッポ アイスフェイス",
       "aliasesJa": [
+        "コオリッポ",
+        "アイスフェイス",
+        "コオリッポ アイスフェイス",
         "Eiscue"
       ],
-      "normalizedSearchText": "eiscueeiscue",
+      "normalizedSearchText": "コオリッポアイスフェイスコオリッポアイスフェイスeiscueeiscue",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "eiscueice",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -5082,13 +5217,18 @@
       "kind": "species",
       "calcId": "enamorus",
       "showdownName": "Enamorus",
-      "displayNameJa": "Enamorus",
+      "displayNameJa": "ラブトロス けしんフォルム",
       "aliasesJa": [
+        "ラブトロス",
+        "けしんフォルム",
+        "ラブトロス けしんフォルム",
         "Enamorus"
       ],
-      "normalizedSearchText": "enamorusenamorus",
+      "normalizedSearchText": "ラブトロスけしんフォルムラブトロスけしんフォルムenamorusenamorus",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "enamorusincarnate",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -5856,13 +5996,18 @@
       "kind": "species",
       "calcId": "frillish",
       "showdownName": "Frillish",
-      "displayNameJa": "Frillish",
+      "displayNameJa": "プルリル オスのすがた",
       "aliasesJa": [
+        "プルリル",
+        "オスのすがた",
+        "プルリル オスのすがた",
         "Frillish"
       ],
-      "normalizedSearchText": "frillishfrillish",
+      "normalizedSearchText": "プルリルオスのすがたプルリルオスのすがたfrillishfrillish",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "frillishmale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -6183,49 +6328,61 @@
       "kind": "species",
       "calcId": "genesectburn",
       "showdownName": "Genesect-Burn",
-      "displayNameJa": "Genesect-Burn",
+      "displayNameJa": "ゲノセクト",
       "aliasesJa": [
+        "ゲノセクト",
         "Genesect-Burn"
       ],
-      "normalizedSearchText": "genesect-burngenesectburn",
+      "normalizedSearchText": "ゲノセクトgenesect-burngenesectburn",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "genesectchill",
       "showdownName": "Genesect-Chill",
-      "displayNameJa": "Genesect-Chill",
+      "displayNameJa": "ゲノセクト",
       "aliasesJa": [
+        "ゲノセクト",
         "Genesect-Chill"
       ],
-      "normalizedSearchText": "genesect-chillgenesectchill",
+      "normalizedSearchText": "ゲノセクトgenesect-chillgenesectchill",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "genesectdouse",
       "showdownName": "Genesect-Douse",
-      "displayNameJa": "Genesect-Douse",
+      "displayNameJa": "ゲノセクト",
       "aliasesJa": [
+        "ゲノセクト",
         "Genesect-Douse"
       ],
-      "normalizedSearchText": "genesect-dousegenesectdouse",
+      "normalizedSearchText": "ゲノセクトgenesect-dousegenesectdouse",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "genesectshock",
       "showdownName": "Genesect-Shock",
-      "displayNameJa": "Genesect-Shock",
+      "displayNameJa": "ゲノセクト",
       "aliasesJa": [
+        "ゲノセクト",
         "Genesect-Shock"
       ],
-      "normalizedSearchText": "genesect-shockgenesectshock",
+      "normalizedSearchText": "ゲノセクトgenesect-shockgenesectshock",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "genesect",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -6384,13 +6541,18 @@
       "kind": "species",
       "calcId": "giratina",
       "showdownName": "Giratina",
-      "displayNameJa": "Giratina",
+      "displayNameJa": "ギラティナ アナザーフォルム",
       "aliasesJa": [
+        "ギラティナ",
+        "アナザーフォルム",
+        "ギラティナ アナザーフォルム",
         "Giratina"
       ],
-      "normalizedSearchText": "giratinagiratina",
+      "normalizedSearchText": "ギラティナアナザーフォルムギラティナアナザーフォルムgiratinagiratina",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "giratinaaltered",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -6826,13 +6988,18 @@
       "kind": "species",
       "calcId": "gourgeist",
       "showdownName": "Gourgeist",
-      "displayNameJa": "Gourgeist",
+      "displayNameJa": "パンプジン ふつうのサイズ",
       "aliasesJa": [
+        "パンプジン",
+        "ふつうのサイズ",
+        "パンプジン ふつうのサイズ",
         "Gourgeist"
       ],
-      "normalizedSearchText": "gourgeistgourgeist",
+      "normalizedSearchText": "パンプジンふつうのサイズパンプジンふつうのサイズgourgeistgourgeist",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "gourgeistaverage",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -7017,13 +7184,16 @@
       "kind": "species",
       "calcId": "greninjabond",
       "showdownName": "Greninja-Bond",
-      "displayNameJa": "Greninja-Bond",
+      "displayNameJa": "ゲッコウガ",
       "aliasesJa": [
+        "ゲッコウガ",
         "Greninja-Bond"
       ],
-      "normalizedSearchText": "greninja-bondgreninjabond",
+      "normalizedSearchText": "ゲッコウガgreninja-bondgreninjabond",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "greninjabattlebond",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -7914,25 +8084,35 @@
       "kind": "species",
       "calcId": "indeedee",
       "showdownName": "Indeedee",
-      "displayNameJa": "Indeedee",
+      "displayNameJa": "イエッサン オスのすがた",
       "aliasesJa": [
+        "イエッサン",
+        "オスのすがた",
+        "イエッサン オスのすがた",
         "Indeedee"
       ],
-      "normalizedSearchText": "indeedeeindeedee",
+      "normalizedSearchText": "イエッサンオスのすがたイエッサンオスのすがたindeedeeindeedee",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "indeedeemale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "indeedeef",
       "showdownName": "Indeedee-F",
-      "displayNameJa": "Indeedee-F",
+      "displayNameJa": "イエッサン メスのすがた",
       "aliasesJa": [
+        "イエッサン",
+        "メスのすがた",
+        "イエッサン メスのすがた",
         "Indeedee-F"
       ],
-      "normalizedSearchText": "indeedee-findeedeef",
+      "normalizedSearchText": "イエッサンメスのすがたイエッサンメスのすがたindeedee-findeedeef",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "indeedeefemale",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -8148,13 +8328,18 @@
       "kind": "species",
       "calcId": "jellicent",
       "showdownName": "Jellicent",
-      "displayNameJa": "Jellicent",
+      "displayNameJa": "ブルンゲル オスのすがた",
       "aliasesJa": [
+        "ブルンゲル",
+        "オスのすがた",
+        "ブルンゲル オスのすがた",
         "Jellicent"
       ],
-      "normalizedSearchText": "jellicentjellicent",
+      "normalizedSearchText": "ブルンゲルオスのすがたブルンゲルオスのすがたjellicentjellicent",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "jellicentmale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -8381,13 +8566,18 @@
       "kind": "species",
       "calcId": "keldeo",
       "showdownName": "Keldeo",
-      "displayNameJa": "Keldeo",
+      "displayNameJa": "ケルディオ いつものすがた",
       "aliasesJa": [
+        "ケルディオ",
+        "いつものすがた",
+        "ケルディオ いつものすがた",
         "Keldeo"
       ],
-      "normalizedSearchText": "keldeokeldeo",
+      "normalizedSearchText": "ケルディオいつものすがたケルディオいつものすがたkeldeokeldeo",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "keldeoordinary",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -8848,13 +9038,18 @@
       "kind": "species",
       "calcId": "landorus",
       "showdownName": "Landorus",
-      "displayNameJa": "Landorus",
+      "displayNameJa": "ランドロス けしんフォルム",
       "aliasesJa": [
+        "ランドロス",
+        "けしんフォルム",
+        "ランドロス けしんフォルム",
         "Landorus"
       ],
-      "normalizedSearchText": "landoruslandorus",
+      "normalizedSearchText": "ランドロスけしんフォルムランドロスけしんフォルムlandoruslandorus",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "landorusincarnate",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -9476,13 +9671,18 @@
       "kind": "species",
       "calcId": "lycanroc",
       "showdownName": "Lycanroc",
-      "displayNameJa": "Lycanroc",
+      "displayNameJa": "ルガルガン まひるのすがた",
       "aliasesJa": [
+        "ルガルガン",
+        "まひるのすがた",
+        "ルガルガン まひるのすがた",
         "Lycanroc"
       ],
-      "normalizedSearchText": "lycanroclycanroc",
+      "normalizedSearchText": "ルガルガンまひるのすがたルガルガンまひるのすがたlycanroclycanroc",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "lycanrocmidday",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -9664,6 +9864,7 @@
       "normalizedSearchText": "マギアナメガマギアナマギアナメガマギアナmagearna-original-megamagearnaoriginalmega",
       "appSupportStatus": "supported",
       "fallbackFromCalcId": "magearnamega",
+      "fallbackReason": "explicit-shared-form",
       "sourceStatus": "adapter-temporary"
     },
     {
@@ -9987,13 +10188,18 @@
       "kind": "species",
       "calcId": "marowakalolatotem",
       "showdownName": "Marowak-Alola-Totem",
-      "displayNameJa": "Marowak-Alola-Totem",
+      "displayNameJa": "ガラガラ アローラのすがた",
       "aliasesJa": [
+        "ガラガラ",
+        "アローラのすがた",
+        "ガラガラ アローラのすがた",
         "Marowak-Alola-Totem"
       ],
-      "normalizedSearchText": "marowak-alola-totemmarowakalolatotem",
+      "normalizedSearchText": "ガラガラアローラのすがたガラガラアローラのすがたmarowak-alola-totemmarowakalolatotem",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "marowakalola",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -10051,25 +10257,35 @@
       "kind": "species",
       "calcId": "maushold",
       "showdownName": "Maushold",
-      "displayNameJa": "Maushold",
+      "displayNameJa": "イッカネズミ ４ひきかぞく",
       "aliasesJa": [
+        "イッカネズミ",
+        "４ひきかぞく",
+        "イッカネズミ ４ひきかぞく",
         "Maushold"
       ],
-      "normalizedSearchText": "mausholdmaushold",
+      "normalizedSearchText": "イッカネズミ4ひきかぞくイッカネズミ4ひきかぞくmausholdmaushold",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "mausholdfamilyoffour",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "mausholdfour",
       "showdownName": "Maushold-Four",
-      "displayNameJa": "Maushold-Four",
+      "displayNameJa": "イッカネズミ ４ひきかぞく",
       "aliasesJa": [
+        "イッカネズミ",
+        "４ひきかぞく",
+        "イッカネズミ ４ひきかぞく",
         "Maushold-Four"
       ],
-      "normalizedSearchText": "maushold-fourmausholdfour",
+      "normalizedSearchText": "イッカネズミ4ひきかぞくイッカネズミ4ひきかぞくmaushold-fourmausholdfour",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "mausholdfamilyoffour",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -10200,13 +10416,18 @@
       "kind": "species",
       "calcId": "meloetta",
       "showdownName": "Meloetta",
-      "displayNameJa": "Meloetta",
+      "displayNameJa": "メロエッタ ボイスフォルム",
       "aliasesJa": [
+        "メロエッタ",
+        "ボイスフォルム",
+        "メロエッタ ボイスフォルム",
         "Meloetta"
       ],
-      "normalizedSearchText": "meloettameloetta",
+      "normalizedSearchText": "メロエッタボイスフォルムメロエッタボイスフォルムmeloettameloetta",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "meloettaaria",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -10253,25 +10474,35 @@
       "kind": "species",
       "calcId": "meowstic",
       "showdownName": "Meowstic",
-      "displayNameJa": "Meowstic",
+      "displayNameJa": "ニャオニクス オスのすがた",
       "aliasesJa": [
+        "ニャオニクス",
+        "オスのすがた",
+        "ニャオニクス オスのすがた",
         "Meowstic"
       ],
-      "normalizedSearchText": "meowsticmeowstic",
+      "normalizedSearchText": "ニャオニクスオスのすがたニャオニクスオスのすがたmeowsticmeowstic",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "meowsticmale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "meowsticf",
       "showdownName": "Meowstic-F",
-      "displayNameJa": "Meowstic-F",
+      "displayNameJa": "ニャオニクス メスのすがた",
       "aliasesJa": [
+        "ニャオニクス",
+        "メスのすがた",
+        "ニャオニクス メスのすがた",
         "Meowstic-F"
       ],
-      "normalizedSearchText": "meowstic-fmeowsticf",
+      "normalizedSearchText": "ニャオニクスメスのすがたニャオニクスメスのすがたmeowstic-fmeowsticf",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "meowsticfemale",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -10287,6 +10518,7 @@
       "normalizedSearchText": "ニャオニクスメガニャオニクスニャオニクスメガニャオニクスmeowstic-f-megameowsticfmega",
       "appSupportStatus": "supported",
       "fallbackFromCalcId": "meowsticmega",
+      "fallbackReason": "explicit-shared-form",
       "sourceStatus": "adapter-temporary"
     },
     {
@@ -10303,6 +10535,7 @@
       "normalizedSearchText": "ニャオニクスメガニャオニクスニャオニクスメガニャオニクスmeowstic-m-megameowsticmmega",
       "appSupportStatus": "supported",
       "fallbackFromCalcId": "meowsticmega",
+      "fallbackReason": "explicit-shared-form",
       "sourceStatus": "adapter-temporary"
     },
     {
@@ -10605,49 +10838,65 @@
       "kind": "species",
       "calcId": "mimikyu",
       "showdownName": "Mimikyu",
-      "displayNameJa": "Mimikyu",
+      "displayNameJa": "ミミッキュ ばけたすがた",
       "aliasesJa": [
+        "ミミッキュ",
+        "ばけたすがた",
+        "ミミッキュ ばけたすがた",
         "Mimikyu"
       ],
-      "normalizedSearchText": "mimikyumimikyu",
+      "normalizedSearchText": "ミミッキュばけたすがたミミッキュばけたすがたmimikyumimikyu",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "mimikyudisguised",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "mimikyubusted",
       "showdownName": "Mimikyu-Busted",
-      "displayNameJa": "Mimikyu-Busted",
+      "displayNameJa": "ミミッキュ ばけたすがた",
       "aliasesJa": [
+        "ミミッキュ",
+        "ばけたすがた",
+        "ミミッキュ ばけたすがた",
         "Mimikyu-Busted"
       ],
-      "normalizedSearchText": "mimikyu-bustedmimikyubusted",
+      "normalizedSearchText": "ミミッキュばけたすがたミミッキュばけたすがたmimikyu-bustedmimikyubusted",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "mimikyudisguised",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "mimikyubustedtotem",
       "showdownName": "Mimikyu-Busted-Totem",
-      "displayNameJa": "Mimikyu-Busted-Totem",
+      "displayNameJa": "ミミッキュ",
       "aliasesJa": [
+        "ミミッキュ",
         "Mimikyu-Busted-Totem"
       ],
-      "normalizedSearchText": "mimikyu-busted-totemmimikyubustedtotem",
+      "normalizedSearchText": "ミミッキュmimikyu-busted-totemmimikyubustedtotem",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "mimikyutotemdisguised",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "mimikyutotem",
       "showdownName": "Mimikyu-Totem",
-      "displayNameJa": "Mimikyu-Totem",
+      "displayNameJa": "ミミッキュ",
       "aliasesJa": [
+        "ミミッキュ",
         "Mimikyu-Totem"
       ],
-      "normalizedSearchText": "mimikyu-totemmimikyutotem",
+      "normalizedSearchText": "ミミッキュmimikyu-totemmimikyutotem",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "mimikyutotemdisguised",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -10666,25 +10915,35 @@
       "kind": "species",
       "calcId": "minior",
       "showdownName": "Minior",
-      "displayNameJa": "Minior",
+      "displayNameJa": "メテノ りゅうせいのすがた",
       "aliasesJa": [
+        "メテノ",
+        "りゅうせいのすがた",
+        "メテノ りゅうせいのすがた",
         "Minior"
       ],
-      "normalizedSearchText": "miniorminior",
+      "normalizedSearchText": "メテノりゅうせいのすがたメテノりゅうせいのすがたminiorminior",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "miniorredmeteor",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "miniormeteor",
       "showdownName": "Minior-Meteor",
-      "displayNameJa": "Minior-Meteor",
+      "displayNameJa": "メテノ りゅうせいのすがた",
       "aliasesJa": [
+        "メテノ",
+        "りゅうせいのすがた",
+        "メテノ りゅうせいのすがた",
         "Minior-Meteor"
       ],
-      "normalizedSearchText": "minior-meteorminiormeteor",
+      "normalizedSearchText": "メテノりゅうせいのすがたメテノりゅうせいのすがたminior-meteorminiormeteor",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "miniorredmeteor",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -10835,13 +11094,18 @@
       "kind": "species",
       "calcId": "morpeko",
       "showdownName": "Morpeko",
-      "displayNameJa": "Morpeko",
+      "displayNameJa": "モルペコ まんぷくもよう",
       "aliasesJa": [
+        "モルペコ",
+        "まんぷくもよう",
+        "モルペコ まんぷくもよう",
         "Morpeko"
       ],
-      "normalizedSearchText": "morpekomorpeko",
+      "normalizedSearchText": "モルペコまんぷくもようモルペコまんぷくもようmorpekomorpeko",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "morpekofullbelly",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -11137,25 +11401,35 @@
       "kind": "species",
       "calcId": "necrozmadawnwings",
       "showdownName": "Necrozma-Dawn-Wings",
-      "displayNameJa": "Necrozma-Dawn-Wings",
+      "displayNameJa": "ネクロズマ あかつきのつばさ",
       "aliasesJa": [
+        "ネクロズマ",
+        "あかつきのつばさ",
+        "ネクロズマ あかつきのつばさ",
         "Necrozma-Dawn-Wings"
       ],
-      "normalizedSearchText": "necrozma-dawn-wingsnecrozmadawnwings",
+      "normalizedSearchText": "ネクロズマあかつきのつばさネクロズマあかつきのつばさnecrozma-dawn-wingsnecrozmadawnwings",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "necrozmadawn",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "necrozmaduskmane",
       "showdownName": "Necrozma-Dusk-Mane",
-      "displayNameJa": "Necrozma-Dusk-Mane",
+      "displayNameJa": "ネクロズマ たそがれのたてがみ",
       "aliasesJa": [
+        "ネクロズマ",
+        "たそがれのたてがみ",
+        "ネクロズマ たそがれのたてがみ",
         "Necrozma-Dusk-Mane"
       ],
-      "normalizedSearchText": "necrozma-dusk-manenecrozmaduskmane",
+      "normalizedSearchText": "ネクロズマたそがれのたてがみネクロズマたそがれのたてがみnecrozma-dusk-manenecrozmaduskmane",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "necrozmadusk",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -11515,109 +11789,154 @@
       "kind": "species",
       "calcId": "ogerponcornerstone",
       "showdownName": "Ogerpon-Cornerstone",
-      "displayNameJa": "Ogerpon-Cornerstone",
+      "displayNameJa": "オーガポン いしずえのめん",
       "aliasesJa": [
+        "オーガポン",
+        "いしずえのめん",
+        "オーガポン いしずえのめん",
         "Ogerpon-Cornerstone"
       ],
-      "normalizedSearchText": "ogerpon-cornerstoneogerponcornerstone",
+      "normalizedSearchText": "オーガポンいしずえのめんオーガポンいしずえのめんogerpon-cornerstoneogerponcornerstone",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerponcornerstonemask",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "ogerponcornerstonetera",
       "showdownName": "Ogerpon-Cornerstone-Tera",
-      "displayNameJa": "Ogerpon-Cornerstone-Tera",
+      "displayNameJa": "オーガポン いしずえのめん",
       "aliasesJa": [
+        "オーガポン",
+        "いしずえのめん",
+        "オーガポン いしずえのめん",
         "Ogerpon-Cornerstone-Tera"
       ],
-      "normalizedSearchText": "ogerpon-cornerstone-teraogerponcornerstonetera",
+      "normalizedSearchText": "オーガポンいしずえのめんオーガポンいしずえのめんogerpon-cornerstone-teraogerponcornerstonetera",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerponcornerstonemask",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "ogerponhearthflame",
       "showdownName": "Ogerpon-Hearthflame",
-      "displayNameJa": "Ogerpon-Hearthflame",
+      "displayNameJa": "オーガポン かまどのめん",
       "aliasesJa": [
+        "オーガポン",
+        "かまどのめん",
+        "オーガポン かまどのめん",
         "Ogerpon-Hearthflame"
       ],
-      "normalizedSearchText": "ogerpon-hearthflameogerponhearthflame",
+      "normalizedSearchText": "オーガポンかまどのめんオーガポンかまどのめんogerpon-hearthflameogerponhearthflame",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerponhearthflamemask",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "ogerponhearthflametera",
       "showdownName": "Ogerpon-Hearthflame-Tera",
-      "displayNameJa": "Ogerpon-Hearthflame-Tera",
+      "displayNameJa": "オーガポン かまどのめん",
       "aliasesJa": [
+        "オーガポン",
+        "かまどのめん",
+        "オーガポン かまどのめん",
         "Ogerpon-Hearthflame-Tera"
       ],
-      "normalizedSearchText": "ogerpon-hearthflame-teraogerponhearthflametera",
+      "normalizedSearchText": "オーガポンかまどのめんオーガポンかまどのめんogerpon-hearthflame-teraogerponhearthflametera",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerponhearthflamemask",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "ogerpontealtera",
       "showdownName": "Ogerpon-Teal-Tera",
-      "displayNameJa": "Ogerpon-Teal-Tera",
+      "displayNameJa": "オーガポン みどりのめん",
       "aliasesJa": [
+        "オーガポン",
+        "みどりのめん",
+        "オーガポン みどりのめん",
         "Ogerpon-Teal-Tera"
       ],
-      "normalizedSearchText": "ogerpon-teal-teraogerpontealtera",
+      "normalizedSearchText": "オーガポンみどりのめんオーガポンみどりのめんogerpon-teal-teraogerpontealtera",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerpon",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "ogerponwellspring",
       "showdownName": "Ogerpon-Wellspring",
-      "displayNameJa": "Ogerpon-Wellspring",
+      "displayNameJa": "オーガポン いどのめん",
       "aliasesJa": [
+        "オーガポン",
+        "いどのめん",
+        "オーガポン いどのめん",
         "Ogerpon-Wellspring"
       ],
-      "normalizedSearchText": "ogerpon-wellspringogerponwellspring",
+      "normalizedSearchText": "オーガポンいどのめんオーガポンいどのめんogerpon-wellspringogerponwellspring",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerponwellspringmask",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "ogerponwellspringtera",
       "showdownName": "Ogerpon-Wellspring-Tera",
-      "displayNameJa": "Ogerpon-Wellspring-Tera",
+      "displayNameJa": "オーガポン いどのめん",
       "aliasesJa": [
+        "オーガポン",
+        "いどのめん",
+        "オーガポン いどのめん",
         "Ogerpon-Wellspring-Tera"
       ],
-      "normalizedSearchText": "ogerpon-wellspring-teraogerponwellspringtera",
+      "normalizedSearchText": "オーガポンいどのめんオーガポンいどのめんogerpon-wellspring-teraogerponwellspringtera",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "ogerponwellspringmask",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "oinkologne",
       "showdownName": "Oinkologne",
-      "displayNameJa": "Oinkologne",
+      "displayNameJa": "パフュートン オスのすがた",
       "aliasesJa": [
+        "パフュートン",
+        "オスのすがた",
+        "パフュートン オスのすがた",
         "Oinkologne"
       ],
-      "normalizedSearchText": "oinkologneoinkologne",
+      "normalizedSearchText": "パフュートンオスのすがたパフュートンオスのすがたoinkologneoinkologne",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "oinkolognemale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "oinkolognef",
       "showdownName": "Oinkologne-F",
-      "displayNameJa": "Oinkologne-F",
+      "displayNameJa": "パフュートン メスのすがた",
       "aliasesJa": [
+        "パフュートン",
+        "メスのすがた",
+        "パフュートン メスのすがた",
         "Oinkologne-F"
       ],
-      "normalizedSearchText": "oinkologne-foinkolognef",
+      "normalizedSearchText": "パフュートンメスのすがたパフュートンメスのすがたoinkologne-foinkolognef",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "oinkolognefemale",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -11716,13 +12035,18 @@
       "kind": "species",
       "calcId": "oricorio",
       "showdownName": "Oricorio",
-      "displayNameJa": "Oricorio",
+      "displayNameJa": "オドリドリ めらめらスタイル",
       "aliasesJa": [
+        "オドリドリ",
+        "めらめらスタイル",
+        "オドリドリ めらめらスタイル",
         "Oricorio"
       ],
-      "normalizedSearchText": "oricoriooricorio",
+      "normalizedSearchText": "オドリドリめらめらスタイルオドリドリめらめらスタイルoricoriooricorio",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "oricoriobaile",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -11837,13 +12161,18 @@
       "kind": "species",
       "calcId": "palafin",
       "showdownName": "Palafin",
-      "displayNameJa": "Palafin",
+      "displayNameJa": "イルカマン ナイーブフォルム",
       "aliasesJa": [
+        "イルカマン",
+        "ナイーブフォルム",
+        "イルカマン ナイーブフォルム",
         "Palafin"
       ],
-      "normalizedSearchText": "palafinpalafin",
+      "normalizedSearchText": "イルカマンナイーブフォルムイルカマンナイーブフォルムpalafinpalafin",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "palafinzero",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -12325,13 +12654,18 @@
       "kind": "species",
       "calcId": "pikachualola",
       "showdownName": "Pikachu-Alola",
-      "displayNameJa": "Pikachu-Alola",
+      "displayNameJa": "ピカチュウ アローラキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "アローラキャップ",
+        "ピカチュウ アローラキャップ",
         "Pikachu-Alola"
       ],
-      "normalizedSearchText": "pikachu-alolapikachualola",
+      "normalizedSearchText": "ピカチュウアローラキャップピカチュウアローラキャップpikachu-alolapikachualola",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachualolacap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -12352,85 +12686,120 @@
       "kind": "species",
       "calcId": "pikachuhoenn",
       "showdownName": "Pikachu-Hoenn",
-      "displayNameJa": "Pikachu-Hoenn",
+      "displayNameJa": "ピカチュウ ホウエンキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "ホウエンキャップ",
+        "ピカチュウ ホウエンキャップ",
         "Pikachu-Hoenn"
       ],
-      "normalizedSearchText": "pikachu-hoennpikachuhoenn",
+      "normalizedSearchText": "ピカチュウホウエンキャップピカチュウホウエンキャップpikachu-hoennpikachuhoenn",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachuhoenncap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "pikachukalos",
       "showdownName": "Pikachu-Kalos",
-      "displayNameJa": "Pikachu-Kalos",
+      "displayNameJa": "ピカチュウ カロスキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "カロスキャップ",
+        "ピカチュウ カロスキャップ",
         "Pikachu-Kalos"
       ],
-      "normalizedSearchText": "pikachu-kalospikachukalos",
+      "normalizedSearchText": "ピカチュウカロスキャップピカチュウカロスキャップpikachu-kalospikachukalos",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachukaloscap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "pikachuoriginal",
       "showdownName": "Pikachu-Original",
-      "displayNameJa": "Pikachu-Original",
+      "displayNameJa": "ピカチュウ オリジナルキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "オリジナルキャップ",
+        "ピカチュウ オリジナルキャップ",
         "Pikachu-Original"
       ],
-      "normalizedSearchText": "pikachu-originalpikachuoriginal",
+      "normalizedSearchText": "ピカチュウオリジナルキャップピカチュウオリジナルキャップpikachu-originalpikachuoriginal",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachuoriginalcap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "pikachupartner",
       "showdownName": "Pikachu-Partner",
-      "displayNameJa": "Pikachu-Partner",
+      "displayNameJa": "ピカチュウ キミにきめたキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "キミにきめたキャップ",
+        "ピカチュウ キミにきめたキャップ",
         "Pikachu-Partner"
       ],
-      "normalizedSearchText": "pikachu-partnerpikachupartner",
+      "normalizedSearchText": "ピカチュウキミにきめたキャップピカチュウキミにきめたキャップpikachu-partnerpikachupartner",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachupartnercap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "pikachusinnoh",
       "showdownName": "Pikachu-Sinnoh",
-      "displayNameJa": "Pikachu-Sinnoh",
+      "displayNameJa": "ピカチュウ シンオウキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "シンオウキャップ",
+        "ピカチュウ シンオウキャップ",
         "Pikachu-Sinnoh"
       ],
-      "normalizedSearchText": "pikachu-sinnohpikachusinnoh",
+      "normalizedSearchText": "ピカチュウシンオウキャップピカチュウシンオウキャップpikachu-sinnohpikachusinnoh",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachusinnohcap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "pikachuunova",
       "showdownName": "Pikachu-Unova",
-      "displayNameJa": "Pikachu-Unova",
+      "displayNameJa": "ピカチュウ イッシュキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "イッシュキャップ",
+        "ピカチュウ イッシュキャップ",
         "Pikachu-Unova"
       ],
-      "normalizedSearchText": "pikachu-unovapikachuunova",
+      "normalizedSearchText": "ピカチュウイッシュキャップピカチュウイッシュキャップpikachu-unovapikachuunova",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachuunovacap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "pikachuworld",
       "showdownName": "Pikachu-World",
-      "displayNameJa": "Pikachu-World",
+      "displayNameJa": "ピカチュウ ワールドキャップ",
       "aliasesJa": [
+        "ピカチュウ",
+        "ワールドキャップ",
+        "ピカチュウ ワールドキャップ",
         "Pikachu-World"
       ],
-      "normalizedSearchText": "pikachu-worldpikachuworld",
+      "normalizedSearchText": "ピカチュウワールドキャップピカチュウワールドキャップpikachu-worldpikachuworld",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pikachuworldcap",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -12646,13 +13015,18 @@
       "kind": "species",
       "calcId": "poltchageistartisan",
       "showdownName": "Poltchageist-Artisan",
-      "displayNameJa": "Poltchageist-Artisan",
+      "displayNameJa": "チャデス マガイモノのすがた",
       "aliasesJa": [
+        "チャデス",
+        "マガイモノのすがた",
+        "チャデス マガイモノのすがた",
         "Poltchageist-Artisan"
       ],
-      "normalizedSearchText": "poltchageist-artisanpoltchageistartisan",
+      "normalizedSearchText": "チャデスマガイモノのすがたチャデスマガイモノのすがたpoltchageist-artisanpoltchageistartisan",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "poltchageist",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -12673,13 +13047,18 @@
       "kind": "species",
       "calcId": "polteageistantique",
       "showdownName": "Polteageist-Antique",
-      "displayNameJa": "Polteageist-Antique",
+      "displayNameJa": "ポットデス がんさくフォルム",
       "aliasesJa": [
+        "ポットデス",
+        "がんさくフォルム",
+        "ポットデス がんさくフォルム",
         "Polteageist-Antique"
       ],
-      "normalizedSearchText": "polteageist-antiquepolteageistantique",
+      "normalizedSearchText": "ポットデスがんさくフォルムポットデスがんさくフォルムpolteageist-antiquepolteageistantique",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "polteageist",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -12867,13 +13246,18 @@
       "kind": "species",
       "calcId": "pumpkaboo",
       "showdownName": "Pumpkaboo",
-      "displayNameJa": "Pumpkaboo",
+      "displayNameJa": "バケッチャ ふつうのサイズ",
       "aliasesJa": [
+        "バケッチャ",
+        "ふつうのサイズ",
+        "バケッチャ ふつうのサイズ",
         "Pumpkaboo"
       ],
-      "normalizedSearchText": "pumpkaboopumpkaboo",
+      "normalizedSearchText": "バケッチャふつうのサイズバケッチャふつうのサイズpumpkaboopumpkaboo",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pumpkabooaverage",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -12975,13 +13359,18 @@
       "kind": "species",
       "calcId": "pyroar",
       "showdownName": "Pyroar",
-      "displayNameJa": "Pyroar",
+      "displayNameJa": "カエンジシ オスのすがた",
       "aliasesJa": [
+        "カエンジシ",
+        "オスのすがた",
+        "カエンジシ オスのすがた",
         "Pyroar"
       ],
-      "normalizedSearchText": "pyroarpyroar",
+      "normalizedSearchText": "カエンジシオスのすがたカエンジシオスのすがたpyroarpyroar",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "pyroarmale",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -13337,13 +13726,16 @@
       "kind": "species",
       "calcId": "raticatealolatotem",
       "showdownName": "Raticate-Alola-Totem",
-      "displayNameJa": "Raticate-Alola-Totem",
+      "displayNameJa": "ラッタ",
       "aliasesJa": [
+        "ラッタ",
         "Raticate-Alola-Totem"
       ],
-      "normalizedSearchText": "raticate-alola-totemraticatealolatotem",
+      "normalizedSearchText": "ラッタraticate-alola-totemraticatealolatotem",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "raticatetotemalola",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -13717,13 +14109,16 @@
       "kind": "species",
       "calcId": "rockruffdusk",
       "showdownName": "Rockruff-Dusk",
-      "displayNameJa": "Rockruff-Dusk",
+      "displayNameJa": "イワンコ",
       "aliasesJa": [
+        "イワンコ",
         "Rockruff-Dusk"
       ],
-      "normalizedSearchText": "rockruff-duskrockruffdusk",
+      "normalizedSearchText": "イワンコrockruff-duskrockruffdusk",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "rockruff",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -14621,13 +15016,18 @@
       "kind": "species",
       "calcId": "shaymin",
       "showdownName": "Shaymin",
-      "displayNameJa": "Shaymin",
+      "displayNameJa": "シェイミ ランドフォルム",
       "aliasesJa": [
+        "シェイミ",
+        "ランドフォルム",
+        "シェイミ ランドフォルム",
         "Shaymin"
       ],
-      "normalizedSearchText": "shayminshaymin",
+      "normalizedSearchText": "シェイミランドフォルムシェイミランドフォルムshayminshaymin",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "shayminland",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -14885,205 +15285,290 @@
       "kind": "species",
       "calcId": "silvallybug",
       "showdownName": "Silvally-Bug",
-      "displayNameJa": "Silvally-Bug",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Bug"
       ],
-      "normalizedSearchText": "silvally-bugsilvallybug",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-bugsilvallybug",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallydark",
       "showdownName": "Silvally-Dark",
-      "displayNameJa": "Silvally-Dark",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Dark"
       ],
-      "normalizedSearchText": "silvally-darksilvallydark",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-darksilvallydark",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallydragon",
       "showdownName": "Silvally-Dragon",
-      "displayNameJa": "Silvally-Dragon",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Dragon"
       ],
-      "normalizedSearchText": "silvally-dragonsilvallydragon",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-dragonsilvallydragon",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyelectric",
       "showdownName": "Silvally-Electric",
-      "displayNameJa": "Silvally-Electric",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Electric"
       ],
-      "normalizedSearchText": "silvally-electricsilvallyelectric",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-electricsilvallyelectric",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyfairy",
       "showdownName": "Silvally-Fairy",
-      "displayNameJa": "Silvally-Fairy",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Fairy"
       ],
-      "normalizedSearchText": "silvally-fairysilvallyfairy",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-fairysilvallyfairy",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyfighting",
       "showdownName": "Silvally-Fighting",
-      "displayNameJa": "Silvally-Fighting",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Fighting"
       ],
-      "normalizedSearchText": "silvally-fightingsilvallyfighting",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-fightingsilvallyfighting",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyfire",
       "showdownName": "Silvally-Fire",
-      "displayNameJa": "Silvally-Fire",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Fire"
       ],
-      "normalizedSearchText": "silvally-firesilvallyfire",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-firesilvallyfire",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyflying",
       "showdownName": "Silvally-Flying",
-      "displayNameJa": "Silvally-Flying",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Flying"
       ],
-      "normalizedSearchText": "silvally-flyingsilvallyflying",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-flyingsilvallyflying",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyghost",
       "showdownName": "Silvally-Ghost",
-      "displayNameJa": "Silvally-Ghost",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Ghost"
       ],
-      "normalizedSearchText": "silvally-ghostsilvallyghost",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-ghostsilvallyghost",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallygrass",
       "showdownName": "Silvally-Grass",
-      "displayNameJa": "Silvally-Grass",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Grass"
       ],
-      "normalizedSearchText": "silvally-grasssilvallygrass",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-grasssilvallygrass",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyground",
       "showdownName": "Silvally-Ground",
-      "displayNameJa": "Silvally-Ground",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Ground"
       ],
-      "normalizedSearchText": "silvally-groundsilvallyground",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-groundsilvallyground",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyice",
       "showdownName": "Silvally-Ice",
-      "displayNameJa": "Silvally-Ice",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Ice"
       ],
-      "normalizedSearchText": "silvally-icesilvallyice",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-icesilvallyice",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallypoison",
       "showdownName": "Silvally-Poison",
-      "displayNameJa": "Silvally-Poison",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Poison"
       ],
-      "normalizedSearchText": "silvally-poisonsilvallypoison",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-poisonsilvallypoison",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallypsychic",
       "showdownName": "Silvally-Psychic",
-      "displayNameJa": "Silvally-Psychic",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Psychic"
       ],
-      "normalizedSearchText": "silvally-psychicsilvallypsychic",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-psychicsilvallypsychic",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallyrock",
       "showdownName": "Silvally-Rock",
-      "displayNameJa": "Silvally-Rock",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Rock"
       ],
-      "normalizedSearchText": "silvally-rocksilvallyrock",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-rocksilvallyrock",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallysteel",
       "showdownName": "Silvally-Steel",
-      "displayNameJa": "Silvally-Steel",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Steel"
       ],
-      "normalizedSearchText": "silvally-steelsilvallysteel",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-steelsilvallysteel",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "silvallywater",
       "showdownName": "Silvally-Water",
-      "displayNameJa": "Silvally-Water",
+      "displayNameJa": "シルヴァディ タイプ：ノーマル",
       "aliasesJa": [
+        "シルヴァディ",
+        "タイプ：ノーマル",
+        "シルヴァディ タイプ：ノーマル",
         "Silvally-Water"
       ],
-      "normalizedSearchText": "silvally-watersilvallywater",
+      "normalizedSearchText": "シルヴァディタイプ:ノーマルシルヴァディタイプ:ノーマルsilvally-watersilvallywater",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "silvally",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -15143,13 +15628,18 @@
       "kind": "species",
       "calcId": "sinistchamasterpiece",
       "showdownName": "Sinistcha-Masterpiece",
-      "displayNameJa": "Sinistcha-Masterpiece",
+      "displayNameJa": "ヤバソチャ ボンサクのすがた",
       "aliasesJa": [
+        "ヤバソチャ",
+        "ボンサクのすがた",
+        "ヤバソチャ ボンサクのすがた",
         "Sinistcha-Masterpiece"
       ],
-      "normalizedSearchText": "sinistcha-masterpiecesinistchamasterpiece",
+      "normalizedSearchText": "ヤバソチャボンサクのすがたヤバソチャボンサクのすがたsinistcha-masterpiecesinistchamasterpiece",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "sinistcha",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -15170,13 +15660,18 @@
       "kind": "species",
       "calcId": "sinisteaantique",
       "showdownName": "Sinistea-Antique",
-      "displayNameJa": "Sinistea-Antique",
+      "displayNameJa": "ヤバチャ がんさくフォルム",
       "aliasesJa": [
+        "ヤバチャ",
+        "がんさくフォルム",
+        "ヤバチャ がんさくフォルム",
         "Sinistea-Antique"
       ],
-      "normalizedSearchText": "sinistea-antiquesinisteaantique",
+      "normalizedSearchText": "ヤバチャがんさくフォルムヤバチャがんさくフォルムsinistea-antiquesinisteaantique",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "sinistea",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -15972,49 +16467,69 @@
       "kind": "species",
       "calcId": "squawkabilly",
       "showdownName": "Squawkabilly",
-      "displayNameJa": "Squawkabilly",
+      "displayNameJa": "イキリンコ グリーンフェザー",
       "aliasesJa": [
+        "イキリンコ",
+        "グリーンフェザー",
+        "イキリンコ グリーンフェザー",
         "Squawkabilly"
       ],
-      "normalizedSearchText": "squawkabillysquawkabilly",
+      "normalizedSearchText": "イキリンコグリーンフェザーイキリンコグリーンフェザーsquawkabillysquawkabilly",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "squawkabillygreenplumage",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "squawkabillyblue",
       "showdownName": "Squawkabilly-Blue",
-      "displayNameJa": "Squawkabilly-Blue",
+      "displayNameJa": "イキリンコ ブルーフェザー",
       "aliasesJa": [
+        "イキリンコ",
+        "ブルーフェザー",
+        "イキリンコ ブルーフェザー",
         "Squawkabilly-Blue"
       ],
-      "normalizedSearchText": "squawkabilly-bluesquawkabillyblue",
+      "normalizedSearchText": "イキリンコブルーフェザーイキリンコブルーフェザーsquawkabilly-bluesquawkabillyblue",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "squawkabillyblueplumage",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "squawkabillywhite",
       "showdownName": "Squawkabilly-White",
-      "displayNameJa": "Squawkabilly-White",
+      "displayNameJa": "イキリンコ ホワイトフェザー",
       "aliasesJa": [
+        "イキリンコ",
+        "ホワイトフェザー",
+        "イキリンコ ホワイトフェザー",
         "Squawkabilly-White"
       ],
-      "normalizedSearchText": "squawkabilly-whitesquawkabillywhite",
+      "normalizedSearchText": "イキリンコホワイトフェザーイキリンコホワイトフェザーsquawkabilly-whitesquawkabillywhite",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "squawkabillywhiteplumage",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "squawkabillyyellow",
       "showdownName": "Squawkabilly-Yellow",
-      "displayNameJa": "Squawkabilly-Yellow",
+      "displayNameJa": "イキリンコ イエローフェザー",
       "aliasesJa": [
+        "イキリンコ",
+        "イエローフェザー",
+        "イキリンコ イエローフェザー",
         "Squawkabilly-Yellow"
       ],
-      "normalizedSearchText": "squawkabilly-yellowsquawkabillyyellow",
+      "normalizedSearchText": "イキリンコイエローフェザーイキリンコイエローフェザーsquawkabilly-yellowsquawkabillyyellow",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "squawkabillyyellowplumage",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -16688,13 +17203,18 @@
       "kind": "species",
       "calcId": "tatsugiri",
       "showdownName": "Tatsugiri",
-      "displayNameJa": "Tatsugiri",
+      "displayNameJa": "シャリタツ そったすがた",
       "aliasesJa": [
+        "シャリタツ",
+        "そったすがた",
+        "シャリタツ そったすがた",
         "Tatsugiri"
       ],
-      "normalizedSearchText": "tatsugiritatsugiri",
+      "normalizedSearchText": "シャリタツそったすがたシャリタツそったすがたtatsugiritatsugiri",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "tatsugiricurly",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -16710,6 +17230,7 @@
       "normalizedSearchText": "シャリタツメガシャリタツシャリタツメガシャリタツtatsugiri-curly-megatatsugiricurlymega",
       "appSupportStatus": "supported",
       "fallbackFromCalcId": "tatsugiristretchymega",
+      "fallbackReason": "explicit-shared-form",
       "sourceStatus": "adapter-temporary"
     },
     {
@@ -16741,6 +17262,7 @@
       "normalizedSearchText": "シャリタツメガシャリタツシャリタツメガシャリタツtatsugiri-droopy-megatatsugiridroopymega",
       "appSupportStatus": "supported",
       "fallbackFromCalcId": "tatsugiristretchymega",
+      "fallbackReason": "explicit-shared-form",
       "sourceStatus": "adapter-temporary"
     },
     {
@@ -16790,37 +17312,52 @@
       "kind": "species",
       "calcId": "taurospaldeaaqua",
       "showdownName": "Tauros-Paldea-Aqua",
-      "displayNameJa": "Tauros-Paldea-Aqua",
+      "displayNameJa": "ケンタロス パルデアのすがた",
       "aliasesJa": [
+        "ケンタロス",
+        "パルデアのすがた",
+        "ケンタロス パルデアのすがた",
         "Tauros-Paldea-Aqua"
       ],
-      "normalizedSearchText": "tauros-paldea-aquataurospaldeaaqua",
+      "normalizedSearchText": "ケンタロスパルデアのすがたケンタロスパルデアのすがたtauros-paldea-aquataurospaldeaaqua",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "taurospaldeaaquabreed",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "taurospaldeablaze",
       "showdownName": "Tauros-Paldea-Blaze",
-      "displayNameJa": "Tauros-Paldea-Blaze",
+      "displayNameJa": "ケンタロス パルデアのすがた",
       "aliasesJa": [
+        "ケンタロス",
+        "パルデアのすがた",
+        "ケンタロス パルデアのすがた",
         "Tauros-Paldea-Blaze"
       ],
-      "normalizedSearchText": "tauros-paldea-blazetaurospaldeablaze",
+      "normalizedSearchText": "ケンタロスパルデアのすがたケンタロスパルデアのすがたtauros-paldea-blazetaurospaldeablaze",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "taurospaldeablazebreed",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "taurospaldeacombat",
       "showdownName": "Tauros-Paldea-Combat",
-      "displayNameJa": "Tauros-Paldea-Combat",
+      "displayNameJa": "ケンタロス パルデアのすがた",
       "aliasesJa": [
+        "ケンタロス",
+        "パルデアのすがた",
+        "ケンタロス パルデアのすがた",
         "Tauros-Paldea-Combat"
       ],
-      "normalizedSearchText": "tauros-paldea-combattaurospaldeacombat",
+      "normalizedSearchText": "ケンタロスパルデアのすがたケンタロスパルデアのすがたtauros-paldea-combattaurospaldeacombat",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "taurospaldeacombatbreed",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -16962,13 +17499,18 @@
       "kind": "species",
       "calcId": "thundurus",
       "showdownName": "Thundurus",
-      "displayNameJa": "Thundurus",
+      "displayNameJa": "ボルトロス けしんフォルム",
       "aliasesJa": [
+        "ボルトロス",
+        "けしんフォルム",
+        "ボルトロス けしんフォルム",
         "Thundurus"
       ],
-      "normalizedSearchText": "thundurusthundurus",
+      "normalizedSearchText": "ボルトロスけしんフォルムボルトロスけしんフォルムthundurusthundurus",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "thundurusincarnate",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -17209,13 +17751,18 @@
       "kind": "species",
       "calcId": "tornadus",
       "showdownName": "Tornadus",
-      "displayNameJa": "Tornadus",
+      "displayNameJa": "トルネロス けしんフォルム",
       "aliasesJa": [
+        "トルネロス",
+        "けしんフォルム",
+        "トルネロス けしんフォルム",
         "Tornadus"
       ],
-      "normalizedSearchText": "tornadustornadus",
+      "normalizedSearchText": "トルネロスけしんフォルムトルネロスけしんフォルムtornadustornadus",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "tornadusincarnate",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -17327,25 +17874,35 @@
       "kind": "species",
       "calcId": "toxtricity",
       "showdownName": "Toxtricity",
-      "displayNameJa": "Toxtricity",
+      "displayNameJa": "ストリンダー ハイなすがた",
       "aliasesJa": [
+        "ストリンダー",
+        "ハイなすがた",
+        "ストリンダー ハイなすがた",
         "Toxtricity"
       ],
-      "normalizedSearchText": "toxtricitytoxtricity",
+      "normalizedSearchText": "ストリンダーハイなすがたストリンダーハイなすがたtoxtricitytoxtricity",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "toxtricityamped",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "toxtricitygmax",
       "showdownName": "Toxtricity-Gmax",
-      "displayNameJa": "Toxtricity-Gmax",
+      "displayNameJa": "ストリンダー ハイなすがた・キョダイマックスのすがた",
       "aliasesJa": [
+        "ストリンダー",
+        "ハイなすがた・キョダイマックスのすがた",
+        "ストリンダー ハイなすがた・キョダイマックスのすがた",
         "Toxtricity-Gmax"
       ],
-      "normalizedSearchText": "toxtricity-gmaxtoxtricitygmax",
+      "normalizedSearchText": "ストリンダーハイなすがた・キョダイマックスのすがたストリンダーハイなすがた・キョダイマックスのすがたtoxtricity-gmaxtoxtricitygmax",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "toxtricityampedgmax",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -17727,25 +18284,35 @@
       "kind": "species",
       "calcId": "urshifu",
       "showdownName": "Urshifu",
-      "displayNameJa": "Urshifu",
+      "displayNameJa": "ウーラオス いちげきのかた",
       "aliasesJa": [
+        "ウーラオス",
+        "いちげきのかた",
+        "ウーラオス いちげきのかた",
         "Urshifu"
       ],
-      "normalizedSearchText": "urshifuurshifu",
+      "normalizedSearchText": "ウーラオスいちげきのかたウーラオスいちげきのかたurshifuurshifu",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "urshifusinglestrike",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "urshifugmax",
       "showdownName": "Urshifu-Gmax",
-      "displayNameJa": "Urshifu-Gmax",
+      "displayNameJa": "ウーラオス れんげきのかた・キョダイマックスのすがた",
       "aliasesJa": [
+        "ウーラオス",
+        "れんげきのかた・キョダイマックスのすがた",
+        "ウーラオス れんげきのかた・キョダイマックスのすがた",
         "Urshifu-Gmax"
       ],
-      "normalizedSearchText": "urshifu-gmaxurshifugmax",
+      "normalizedSearchText": "ウーラオスれんげきのかた・キョダイマックスのすがたウーラオスれんげきのかた・キョダイマックスのすがたurshifu-gmaxurshifugmax",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "urshifurapidstrikegmax",
+      "fallbackReason": "same-form-family",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -18125,25 +18692,35 @@
       "kind": "species",
       "calcId": "vivillonfancy",
       "showdownName": "Vivillon-Fancy",
-      "displayNameJa": "Vivillon-Fancy",
+      "displayNameJa": "ビビヨン はなぞののもよう",
       "aliasesJa": [
+        "ビビヨン",
+        "はなぞののもよう",
+        "ビビヨン はなぞののもよう",
         "Vivillon-Fancy"
       ],
-      "normalizedSearchText": "vivillon-fancyvivillonfancy",
+      "normalizedSearchText": "ビビヨンはなぞののもようビビヨンはなぞののもようvivillon-fancyvivillonfancy",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "vivillon",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
       "calcId": "vivillonpokeball",
       "showdownName": "Vivillon-Pokeball",
-      "displayNameJa": "Vivillon-Pokeball",
+      "displayNameJa": "ビビヨン はなぞののもよう",
       "aliasesJa": [
+        "ビビヨン",
+        "はなぞののもよう",
+        "ビビヨン はなぞののもよう",
         "Vivillon-Pokeball"
       ],
-      "normalizedSearchText": "vivillon-pokeballvivillonpokeball",
+      "normalizedSearchText": "ビビヨンはなぞののもようビビヨンはなぞののもようvivillon-pokeballvivillonpokeball",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "vivillon",
+      "fallbackReason": "base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -18567,13 +19144,18 @@
       "kind": "species",
       "calcId": "wishiwashi",
       "showdownName": "Wishiwashi",
-      "displayNameJa": "Wishiwashi",
+      "displayNameJa": "ヨワシ たんどくのすがた",
       "aliasesJa": [
+        "ヨワシ",
+        "たんどくのすがた",
+        "ヨワシ たんどくのすがた",
         "Wishiwashi"
       ],
-      "normalizedSearchText": "wishiwashiwishiwashi",
+      "normalizedSearchText": "ヨワシたんどくのすがたヨワシたんどくのすがたwishiwashiwishiwashi",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "wishiwashisolo",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -18674,13 +19256,18 @@
       "kind": "species",
       "calcId": "wormadam",
       "showdownName": "Wormadam",
-      "displayNameJa": "Wormadam",
+      "displayNameJa": "ミノマダム くさきのミノ",
       "aliasesJa": [
+        "ミノマダム",
+        "くさきのミノ",
+        "ミノマダム くさきのミノ",
         "Wormadam"
       ],
-      "normalizedSearchText": "wormadamwormadam",
+      "normalizedSearchText": "ミノマダムくさきのミノミノマダムくさきのミノwormadamwormadam",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "wormadamplant",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -19195,13 +19782,18 @@
       "kind": "species",
       "calcId": "zygarde",
       "showdownName": "Zygarde",
-      "displayNameJa": "Zygarde",
+      "displayNameJa": "ジガルデ ５０％フォルム",
       "aliasesJa": [
+        "ジガルデ",
+        "５０％フォルム",
+        "ジガルデ ５０％フォルム",
         "Zygarde"
       ],
-      "normalizedSearchText": "zygardezygarde",
+      "normalizedSearchText": "ジガルデ50%フォルムジガルデ50%フォルムzygardezygarde",
       "appSupportStatus": "supported",
-      "sourceStatus": "unsupported-temporary"
+      "fallbackFromCalcId": "zygarde50",
+      "fallbackReason": "same-base",
+      "sourceStatus": "adapter-temporary"
     },
     {
       "kind": "species",
@@ -19252,8 +19844,8 @@
   "summary": {
     "totalSpecies": 1451,
     "localizedSpecies": 1245,
-    "fallbackLocalizedSpecies": 5,
-    "missingLocalizedSpecies": 201,
+    "fallbackLocalizedSpecies": 126,
+    "missingLocalizedSpecies": 80,
     "defaultUiSpecies": 1371
   }
 }

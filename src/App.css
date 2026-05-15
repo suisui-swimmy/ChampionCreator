@@ -208,6 +208,7 @@ p {
 }
 
 .field span,
+.field > label,
 .boost-buttons span {
   color: var(--muted);
   font-size: 12px;
@@ -219,6 +220,125 @@ p {
   width: 100%;
   padding: 4px 8px;
   font-size: 14px;
+}
+
+.pokemon-field {
+  position: relative;
+}
+
+.pokemon-combobox {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+}
+
+.pokemon-combobox input {
+  min-height: 30px;
+  border-right: 0;
+  border-radius: 5px 0 0 5px;
+}
+
+.pokemon-combobox input:focus {
+  border-color: var(--teal);
+  outline: 2px solid rgb(7 147 155 / 0.16);
+  outline-offset: 0;
+}
+
+.pokemon-combobox button {
+  min-width: 34px;
+  border-radius: 0 5px 5px 0;
+  padding: 0;
+}
+
+.pokemon-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 310px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.pokemon-option {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  border: 0;
+  border-bottom: 1px solid #eef1f5;
+  border-radius: 0;
+  padding: 6px 8px;
+  background: #fff;
+  text-align: left;
+}
+
+.pokemon-option:hover,
+.pokemon-option.is-active {
+  background: var(--teal-soft);
+}
+
+.pokemon-option[aria-selected="true"] {
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.pokemon-option-art {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  background: #f3f6f8;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.pokemon-option-art img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.pokemon-option-main {
+  display: grid;
+  min-width: 0;
+}
+
+.pokemon-option-main strong,
+.pokemon-option-main small,
+.pokemon-option-types {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pokemon-option-main strong {
+  font-size: 13px;
+}
+
+.pokemon-option-main small,
+.pokemon-field-count,
+.pokemon-option-types {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pokemon-option-types {
+  max-width: 96px;
+}
+
+.pokemon-option-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .field-number {
@@ -1056,6 +1176,15 @@ p {
   .target-form,
   .chip-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pokemon-option {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .pokemon-option-types {
+    grid-column: 2;
+    max-width: none;
   }
 
   .target-art {

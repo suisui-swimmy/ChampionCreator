@@ -12,6 +12,9 @@ npm install
 npm run generate:calc-data
 npm run generate:localized-search
 npm run generate:pokemon-assets
+npm run generate:pokemon-options
+npm run generate:data
+npm run sync:pokemon-artwork
 npm run inspect:calc
 npm run dev
 npm run build
@@ -32,6 +35,7 @@ npm run preview
 ## アセット
 
 Milestone -1 では、ユーザー提供の Pokemon Legends Z-A のタマゴアイコンをワイヤーフレーム用の静的アセットとして `public/assets/pokemon-icons/` に配置しています。
+また、`others/official-artwork/` の通常画像は `npm run sync:pokemon-artwork` で `public/assets/official-artwork/` に同期し、UI 表示用の `pokemon-options.gen.json` から参照します。
 
 画像は計算ロジックに依存させず、読み込みに失敗しても主要導線が壊れない構造にしています。
 

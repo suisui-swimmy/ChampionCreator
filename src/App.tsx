@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { wireframeProject } from "./data/wireframeFixture";
 import {
@@ -10,6 +10,7 @@ import {
   type Result,
   type ScenarioKind,
   type ScenarioRow,
+  type SpeciesRef,
 } from "./domain/model";
 import { sumStatPoints, validateStatPoints } from "./domain/statPoints";
 import { APP_VERSION, CALC_ENGINE_VERSION, DATA_VERSION } from "./version";
@@ -47,7 +48,111 @@ const scenarioKindLabels: Record<ScenarioKind, string> = {
   speed: "素早さ",
 };
 
+interface PokemonOption {
+  id: string;
+  label: string;
+  showdownName: string;
+  types: string[];
+  searchText: string;
+  artwork?: string;
+  fallback?: {
+    from?: string;
+    reason?: string;
+    nameSourceStatus?: string;
+    assetSourceStatus?: string;
+  };
+}
+
+interface PokemonOptionsPayload {
+  entries: PokemonOption[];
+}
+
+interface PokemonLookup {
+  byId: Map<string, PokemonOption>;
+  byShowdownName: Map<string, PokemonOption>;
+}
+
+const defaultTargetPokemonId = "charizardmegax";
+
 const formatPercent = (value: number): string => `${Math.round(value * 1000) / 10}%`;
+
+const normalizePokemonKey = (value: string): string =>
+  value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+const normalizePokemonSearch = (value: string): string =>
+  value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+const pokemonOptionLabel = (option: PokemonOption): string =>
+  option.showdownName === option.label ? option.label : `${option.label} / ${option.showdownName}`;
+
+const pokemonOptionSearchScore = (option: PokemonOption, query: string): number => {
+  const normalizedQuery = normalizePokemonSearch(query);
+
+  if (!normalizedQuery) {
+    return 0;
+  }
+
+  const primaryTokens = [
+    option.label,
+    option.showdownName,
+    option.id,
+    pokemonOptionLabel(option),
+  ].map(normalizePokemonSearch);
+  const searchTokens = option.searchText.split(" ").map(normalizePokemonSearch);
+
+  if (primaryTokens.some((value) => value.startsWith(normalizedQuery))) {
+    return 0;
+  }
+
+  if (searchTokens.some((value) => value.startsWith(normalizedQuery))) {
+    return 1;
+  }
+
+  if (primaryTokens.some((value) => value.includes(normalizedQuery))) {
+    return 2;
+  }
+
+  if (searchTokens.some((value) => value.includes(normalizedQuery))) {
+    return 3;
+  }
+
+  return Number.POSITIVE_INFINITY;
+};
+
+const getPokemonOptionForSpecies = (
+  species: SpeciesRef,
+  lookup: PokemonLookup,
+  targetPokemon?: PokemonOption,
+): PokemonOption | undefined =>
+  species.id === wireframeProject.target.species.id
+    ? targetPokemon
+    : lookup.byId.get(species.id) ?? lookup.byShowdownName.get(normalizePokemonKey(species.showdownName));
+
+function usePokemonOptions() {
+  const [pokemonOptions, setPokemonOptions] = useState<PokemonOption[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void import("./data/generated/pokemon-options.gen.json").then((module) => {
+      if (mounted) {
+        setPokemonOptions((module.default as PokemonOptionsPayload).entries);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return pokemonOptions;
+}
 
 const findConstraint = (scenarioId: string): Constraint | undefined =>
   wireframeProject.constraints.find((constraint) => constraint.scenarioId === scenarioId);
@@ -89,6 +194,184 @@ function Field({
         <option>{value}</option>
       </select>
     </label>
+  );
+}
+
+function PokemonField({
+  label,
+  options,
+  selectedId,
+  fallbackLabel,
+  onChange,
+}: {
+  label: string;
+  options: PokemonOption[];
+  selectedId: string;
+  fallbackLabel: string;
+  onChange: (pokemonId: string) => void;
+}) {
+  const inputId = "target-pokemon-input";
+  const listboxId = "target-pokemon-listbox";
+  const isComposingRef = useRef(false);
+  const selectedOption = options.find((option) => option.id === selectedId);
+  const selectedLabel = selectedOption ? pokemonOptionLabel(selectedOption) : fallbackLabel;
+  const [query, setQuery] = useState(selectedLabel);
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setQuery(selectedLabel);
+    setActiveIndex(0);
+  }, [selectedLabel]);
+
+  const filteredOptions = useMemo(
+    () =>
+      options
+        .map((option) => ({
+          option,
+          score: pokemonOptionSearchScore(option, query),
+        }))
+        .filter(({ score }) => Number.isFinite(score))
+        .sort((a, b) => {
+          if (a.score !== b.score) {
+            return a.score - b.score;
+          }
+
+          return a.option.label.localeCompare(b.option.label, "ja");
+        })
+        .map(({ option }) => option)
+        .slice(0, 24),
+    [options, query],
+  );
+  const activeOption = filteredOptions[activeIndex];
+  const hasOptions = options.length > 0;
+
+  const selectOption = (option: PokemonOption) => {
+    onChange(option.id);
+    setQuery(pokemonOptionLabel(option));
+    setIsOpen(false);
+    setActiveIndex(0);
+  };
+
+  return (
+    <div
+      className="field pokemon-field"
+      onBlur={(event) => {
+        const nextTarget = event.relatedTarget;
+
+        if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+          setIsOpen(false);
+          setQuery(selectedLabel);
+        }
+      }}
+    >
+      <label htmlFor={inputId}>{label}</label>
+      <div className="pokemon-combobox">
+        <input
+          id={inputId}
+          type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-expanded={isOpen}
+          aria-activedescendant={activeOption ? `${listboxId}-${activeOption.id}` : undefined}
+          value={query}
+          disabled={!hasOptions}
+          placeholder={hasOptions ? "日本語名 / English / ID" : fallbackLabel}
+          onFocus={() => {
+            if (hasOptions) {
+              setIsOpen(true);
+            }
+          }}
+          onCompositionStart={() => {
+            isComposingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            isComposingRef.current = false;
+          }}
+          onChange={(event) => {
+            setQuery(event.currentTarget.value);
+            setIsOpen(true);
+            setActiveIndex(0);
+          }}
+          onKeyDown={(event) => {
+            if (isComposingRef.current || event.nativeEvent.isComposing) {
+              return;
+            }
+
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setIsOpen(true);
+              setActiveIndex((current) =>
+                Math.min(current + 1, Math.max(filteredOptions.length - 1, 0)),
+              );
+            }
+
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setActiveIndex((current) => Math.max(current - 1, 0));
+            }
+
+            if (event.key === "Enter" && isOpen && activeOption) {
+              event.preventDefault();
+              selectOption(activeOption);
+            }
+
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setIsOpen(false);
+              setQuery(selectedLabel);
+            }
+          }}
+        />
+        <button
+          type="button"
+          aria-label="ポケモン候補を開く"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            if (hasOptions) {
+              setIsOpen((current) => !current);
+            }
+          }}
+          disabled={!hasOptions}
+        >
+          ⌄
+        </button>
+        {isOpen && hasOptions && (
+          <div className="pokemon-options" id={listboxId} role="listbox">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option, index) => (
+                <button
+                  type="button"
+                  className={`pokemon-option ${index === activeIndex ? "is-active" : ""}`}
+                  id={`${listboxId}-${option.id}`}
+                  role="option"
+                  aria-selected={option.id === selectedId}
+                  key={option.id}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectOption(option)}
+                >
+                  <span className="pokemon-option-art">
+                    {option.artwork ? <img src={option.artwork} alt="" /> : option.label.slice(0, 1)}
+                  </span>
+                  <span className="pokemon-option-main">
+                    <strong>{option.label}</strong>
+                    <small>{option.showdownName}</small>
+                  </span>
+                  <span className="pokemon-option-types">{option.types.join(" / ")}</span>
+                </button>
+              ))
+            ) : (
+              <div className="pokemon-option-empty">候補なし</div>
+            )}
+          </div>
+        )}
+      </div>
+      <small className="pokemon-field-count">
+        {hasOptions ? `${filteredOptions.length} / ${options.length}` : "読み込み中"}
+      </small>
+    </div>
   );
 }
 
@@ -145,10 +428,23 @@ function StatEditorRow({
   );
 }
 
-function TargetPanel() {
+function TargetPanel({
+  pokemonOptions,
+  selectedPokemonId,
+  onSelectedPokemonIdChange,
+}: {
+  pokemonOptions: PokemonOption[];
+  selectedPokemonId: string;
+  onSelectedPokemonIdChange: (pokemonId: string) => void;
+}) {
   const target = wireframeProject.target;
   const totalSp = sumStatPoints(target.statPoints);
   const statErrors = validateStatPoints(target.statPoints);
+  const selectedPokemon =
+    pokemonOptions.find((option) => option.id === selectedPokemonId) ?? pokemonOptions[0];
+  const targetDisplayName = selectedPokemon?.label ?? target.species.displayName;
+  const targetArtwork = selectedPokemon?.artwork ?? target.species.iconAsset;
+  const targetTypes = selectedPokemon?.types.join(" / ") ?? "ほのお / ドラゴン";
 
   return (
     <section className="target-console" aria-labelledby="target-title">
@@ -162,7 +458,13 @@ function TargetPanel() {
 
       <div className="target-main-grid">
         <div className="target-form">
-          <Field label="ポケモン" value={target.species.displayName} />
+          <PokemonField
+            label="ポケモン"
+            options={pokemonOptions}
+            selectedId={selectedPokemon?.id ?? selectedPokemonId}
+            fallbackLabel={target.species.displayName}
+            onChange={onSelectedPokemonIdChange}
+          />
           <Field label="性格" value={target.nature} />
           <NumberField label="Lv." value={target.level} />
           <Field label="特性" value={target.ability ?? "未指定"} />
@@ -170,8 +472,11 @@ function TargetPanel() {
         </div>
         <div className="target-art">
           <img
-            src={target.species.iconAsset}
-            alt={target.species.displayName}
+            src={targetArtwork}
+            alt={targetDisplayName}
+            onLoad={(event) => {
+              event.currentTarget.style.display = "";
+            }}
             onError={(event) => {
               event.currentTarget.style.display = "none";
             }}
@@ -180,7 +485,7 @@ function TargetPanel() {
       </div>
 
       <div className="chip-grid">
-        <Field label="タイプ" value="ほのお / ドラゴン" compact />
+        <Field label="タイプ" value={targetTypes} compact />
         <Field label="テラスタイプ" value={target.teraType ?? "未指定"} compact />
         <div className="boost-buttons" aria-label="性格補正">
           <span>性格補正</span>
@@ -233,12 +538,24 @@ function AttackCard({
   collapsed,
   onSelect,
   selected,
+  pokemonLookup,
+  targetPokemon,
 }: {
   scenario: BaseScenario;
   collapsed: boolean;
   onSelect: () => void;
   selected: boolean;
+  pokemonLookup: PokemonLookup;
+  targetPokemon?: PokemonOption;
 }) {
+  const attackerPokemon = getPokemonOptionForSpecies(
+    scenario.attacker.species,
+    pokemonLookup,
+    targetPokemon,
+  );
+  const attackerName = attackerPokemon?.label ?? scenario.attacker.species.displayName;
+  const attackerArtwork = attackerPokemon?.artwork ?? scenario.attacker.species.iconAsset;
+
   return (
     <article
       className={`attack-card attack-${scenario.kind} ${selected ? "is-selected" : ""} ${
@@ -248,16 +565,25 @@ function AttackCard({
     >
       <div className="attack-card-header">
         <Toggle checked={scenario.enabled} />
-        <strong>{scenario.attacker.species.displayName}</strong>
+        <strong>{attackerName}</strong>
         <span className="chevron">{collapsed ? "›" : "⌄"}</span>
       </div>
 
       <div className="attack-card-body">
         <div className="mini-sprite">
-          {scenario.attacker.species.iconAsset ? (
-            <img src={scenario.attacker.species.iconAsset} alt="" />
+          {attackerArtwork ? (
+            <img
+              src={attackerArtwork}
+              alt=""
+              onLoad={(event) => {
+                event.currentTarget.style.display = "";
+              }}
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
           ) : (
-            <span>{scenario.attacker.species.displayName.slice(0, 1)}</span>
+            <span>{attackerName.slice(0, 1)}</span>
           )}
         </div>
         <div className="attack-fields">
@@ -294,12 +620,16 @@ function ScenarioRowView({
   onToggleCollapse,
   selectedScenarioId,
   onSelectScenario,
+  pokemonLookup,
+  targetPokemon,
 }: {
   row: ScenarioRow;
   collapsed: boolean;
   onToggleCollapse: () => void;
   selectedScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
+  pokemonLookup: PokemonLookup;
+  targetPokemon?: PokemonOption;
 }) {
   const rowScenarios = row.scenarioIds
     .map(findScenario)
@@ -325,6 +655,8 @@ function ScenarioRowView({
               collapsed={false}
               selected={selectedScenarioId === scenario.id}
               onSelect={() => onSelectScenario(scenario.id)}
+              pokemonLookup={pokemonLookup}
+              targetPokemon={targetPokemon}
             />
           ))}
 
@@ -341,9 +673,13 @@ function ScenarioRowView({
 function ScenarioBoard({
   selectedScenarioId,
   onSelectScenario,
+  pokemonLookup,
+  targetPokemon,
 }: {
   selectedScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
+  pokemonLookup: PokemonLookup;
+  targetPokemon?: PokemonOption;
 }) {
   const [collapsedRows, setCollapsedRows] = useState<Record<string, boolean>>({
     "scenario-row-d": true,
@@ -371,6 +707,8 @@ function ScenarioBoard({
             collapsed={Boolean(collapsedRows[row.id])}
             selectedScenarioId={selectedScenarioId}
             onSelectScenario={onSelectScenario}
+            pokemonLookup={pokemonLookup}
+            targetPokemon={targetPokemon}
             onToggleCollapse={() =>
               setCollapsedRows((current) => ({
                 ...current,
@@ -561,6 +899,18 @@ function ResultsBoard() {
 
 function App() {
   const [selectedScenarioId, setSelectedScenarioId] = useState(wireframeProject.scenarios[0].id);
+  const [selectedPokemonId, setSelectedPokemonId] = useState(defaultTargetPokemonId);
+  const pokemonOptions = usePokemonOptions();
+  const pokemonLookup = useMemo<PokemonLookup>(
+    () => ({
+      byId: new Map(pokemonOptions.map((option) => [option.id, option])),
+      byShowdownName: new Map(
+        pokemonOptions.map((option) => [normalizePokemonKey(option.showdownName), option]),
+      ),
+    }),
+    [pokemonOptions],
+  );
+  const selectedTargetPokemon = pokemonLookup.byId.get(selectedPokemonId);
 
   const selectedScenario = useMemo(
     () => findScenario(selectedScenarioId) ?? wireframeProject.scenarios[0],
@@ -588,8 +938,17 @@ function App() {
       </header>
 
       <div className="authoring-grid">
-        <TargetPanel />
-        <ScenarioBoard selectedScenarioId={selectedScenario.id} onSelectScenario={setSelectedScenarioId} />
+        <TargetPanel
+          pokemonOptions={pokemonOptions}
+          selectedPokemonId={selectedPokemonId}
+          onSelectedPokemonIdChange={setSelectedPokemonId}
+        />
+        <ScenarioBoard
+          selectedScenarioId={selectedScenario.id}
+          onSelectScenario={setSelectedScenarioId}
+          pokemonLookup={pokemonLookup}
+          targetPokemon={selectedTargetPokemon}
+        />
       </div>
 
       <ResultsBoard />

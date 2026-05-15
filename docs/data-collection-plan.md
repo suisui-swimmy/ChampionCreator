@@ -134,7 +134,8 @@ src/data/generated/pokemon-assets.gen.json
 
 `public/assets/pokemon-icons/pm0000_00_00_00_0.png` はダミーとして扱う。本データの根拠にしない。
 
-`others/official-artwork/` と `others/official_artwork_japanese_names.csv` は素材候補として使えるが、いきなり全部をアプリ本体へコピーしない。まず manifest を作り、必要なものだけ `public/assets/` へ移す。
+`others/official-artwork/` と `others/official_artwork_japanese_names.csv` は素材候補として使う。
+まず manifest と fallback 状況を確認し、`supported` species の画像導線が埋まったら `npm run sync:pokemon-artwork` で `public/assets/official-artwork/` へまとめて同期する。
 
 最小形:
 
@@ -193,6 +194,8 @@ scripts/
   generate-calc-data.mjs
   generate-localized-search-index.mjs
   generate-pokemon-assets.mjs
+  generate-pokemon-options.mjs
+  sync-official-artwork.mjs
 src/
   data/
     champions/
@@ -271,10 +274,18 @@ Showdown / CAP / original species は `appSupportStatus: "unsupported-temporary"
 
 `scripts/generate-pokemon-assets.mjs` は、同じ CSV と `others/official-artwork/` から `src/data/generated/pokemon-assets.gen.json` を生成する。
 manifest には素材元の `sourcePath` と、将来 public 配信用に使う `suggestedPublicPath` を入れる。
-この段階では大量画像を `public/assets/` へコピーしない。
+`supported` species の画像 fallback が埋まっていることを確認した後は、`scripts/sync-official-artwork.mjs` で `others/official-artwork/` の PNG を `public/assets/official-artwork/` に同期する。
 
 Meowstic や Tatsugiri の Mega など、calc catalog では複数フォームに分かれているが素材側では共有フォームとして扱われるものは、`fallbackFromCalcId` と `sourceStatus: "adapter-temporary"` で明示する。
 これは計算値を変える処理ではなく、表示名・画像の共有だけに使う。
+
+`scripts/generate-pokemon-options.mjs` は、UI の通常候補に使う軽量 JSON として `src/data/generated/pokemon-options.gen.json` を生成する。
+ここには `appSupportStatus: "supported"` の species だけを入れる。
+種族値、特性、体重、詳細な画像 manifest は含めず、UI 表示・検索に必要な `id`、`label`、`showdownName`、`types`、`searchText`、`artwork`、source status だけに絞る。
+default UI で使う場合は、この options JSON を優先し、フル catalog は詳細画面・adapter・検証用途に留める。
+options JSON は UI 配信用なので minified で出力する。
+直対応の entry は source status を省略し、fallback が必要な entry だけ `fallback` を持つ。
+現在のワイヤーフレーム UI では、この options JSON を遅延 import し、通常候補の select、調整対象画像、シナリオカードのポケモン画像表示に使う。
 
 ## 完了条件
 
