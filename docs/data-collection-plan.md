@@ -267,6 +267,10 @@ others/
 | かんつうドリル | Piercing Drill | `piercingdrill` | `needs-confirmation` | Protect 系の行動解決に近いため、通常ダメージロールと分けて扱う |
 | とびだすハバネロ | Spicy Spray | `spicyspray` | `needs-confirmation` | 被ダメージ後のやけど付与として、連続行動・状態管理側で扱う |
 
+これらの Champions 新特性は `ability-options.gen.json` にも追加し、UI では候補として選べるようにする。
+ただし `sourceStatus: "needs-confirmation"`、`tags: ["manual-review"]`、`calcAvailable: false` を持たせ、計算実行時や入力欄で「補正はまだ自動反映しない」ことを明示する。
+これはレギュレーション制限ではなく、計算精度の境界表示である。
+
 ## `@smogon/calc` 由来データ生成
 
 `scripts/generate-calc-data.mjs` は、`@smogon/calc` Gen9 のデータから次の JSON を生成する。

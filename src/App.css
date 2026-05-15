@@ -345,6 +345,20 @@ p {
   max-width: 86px;
 }
 
+.ability-field {
+  align-self: start;
+}
+
+.ability-warning {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.ability-warning strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
 .field-compact select,
 .field-compact input {
   min-height: 27px;

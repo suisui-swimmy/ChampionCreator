@@ -96,6 +96,9 @@ export type AbilityOptionTag =
 
 export interface AbilityOptionEntry extends UiOptionBase {
   tags?: AbilityOptionTag[];
+  supportMatrixId?: string;
+  calcAvailable?: boolean;
+  affectsDamage?: boolean;
 }
 
 export type ItemOptionTag =

@@ -48,6 +48,8 @@ Milestone -1 の本データ収集は、先に [docs/data-collection-plan.md](do
 
 `npm run generate:data` は、Pokemon options に加えて技 / 特性 / 道具 / 性格 / タイプの UI 検索候補 JSON も生成します。技・特性の日本語名は、ローカルに `../others/pokeranker_SV/data/foreign_*.txt` がある場合だけ取り込みます。
 
+Champions 新特性は候補として表示しますが、`@smogon/calc` 未対応のものは計算要確認として表示し、自動補正には混ぜません。
+
 ## 対応状況マトリクス
 
 | 項目 | 状態 | ChampionCreator での扱い |

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { wireframeProject } from "./data/wireframeFixture";
-import type { PokemonOptionEntry, PokemonOptionsPayload } from "./data/optionTypes";
+import type {
+  AbilityOptionEntry,
+  AbilityOptionsPayload,
+  PokemonOptionEntry,
+  PokemonOptionsPayload,
+} from "./data/optionTypes";
 import {
   STAT_KEYS,
   type BaseScenario,
@@ -55,6 +60,7 @@ interface PokemonLookup {
 }
 
 const defaultTargetPokemonId = "charizardmegax";
+const defaultTargetAbilityId = "";
 
 const formatPercent = (value: number): string => `${Math.round(value * 1000) / 10}%`;
 
@@ -136,6 +142,26 @@ function usePokemonOptions() {
   return pokemonOptions;
 }
 
+function useAbilityOptions() {
+  const [abilityOptions, setAbilityOptions] = useState<AbilityOptionEntry[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    void import("./data/generated/ability-options.gen.json").then((module) => {
+      if (mounted) {
+        setAbilityOptions((module.default as AbilityOptionsPayload).entries);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return abilityOptions;
+}
+
 const findConstraint = (scenarioId: string): Constraint | undefined =>
   wireframeProject.constraints.find((constraint) => constraint.scenarioId === scenarioId);
 
@@ -176,6 +202,65 @@ function Field({
         <option>{value}</option>
       </select>
     </label>
+  );
+}
+
+function AbilityField({
+  label,
+  options,
+  selectedId,
+  fallbackLabel,
+  onChange,
+}: {
+  label: string;
+  options: AbilityOptionEntry[];
+  selectedId: string;
+  fallbackLabel: string;
+  onChange: (abilityId: string) => void;
+}) {
+  const selectableOptions = options.filter((option) => option.sourceStatus !== "unsupported-temporary");
+  const needsConfirmationOptions = selectableOptions.filter((option) => option.sourceStatus === "needs-confirmation");
+  const standardOptions = selectableOptions.filter((option) => option.sourceStatus !== "needs-confirmation");
+  const selectedOption = selectableOptions.find((option) => option.id === selectedId);
+  const selectedLabel = selectedOption
+    ? `${selectedOption.label} / ${selectedOption.showdownName}`
+    : fallbackLabel;
+
+  return (
+    <div className="field ability-field">
+      <label htmlFor="target-ability-select">{label}</label>
+      <select
+        id="target-ability-select"
+        value={selectedId}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{fallbackLabel}</option>
+        {needsConfirmationOptions.length > 0 && (
+          <optgroup label="Champions新特性・計算要確認">
+            {needsConfirmationOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label} / {option.showdownName}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <optgroup label="通常候補">
+          {standardOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label} / {option.showdownName}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      {selectedOption?.sourceStatus === "needs-confirmation" && (
+        <div className="warning-box ability-warning" role="note">
+          <strong>{selectedLabel}</strong>
+          <p>
+            Champions新特性・計算要確認。現在の探索結果には、この特性の補正を自動反映しません。
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -412,12 +497,18 @@ function StatEditorRow({
 
 function TargetPanel({
   pokemonOptions,
+  abilityOptions,
   selectedPokemonId,
+  selectedAbilityId,
   onSelectedPokemonIdChange,
+  onSelectedAbilityIdChange,
 }: {
   pokemonOptions: PokemonOptionEntry[];
+  abilityOptions: AbilityOptionEntry[];
   selectedPokemonId: string;
+  selectedAbilityId: string;
   onSelectedPokemonIdChange: (pokemonId: string) => void;
+  onSelectedAbilityIdChange: (abilityId: string) => void;
 }) {
   const target = wireframeProject.target;
   const totalSp = sumStatPoints(target.statPoints);
@@ -449,7 +540,13 @@ function TargetPanel({
           />
           <Field label="性格" value={target.nature} />
           <NumberField label="Lv." value={target.level} />
-          <Field label="特性" value={target.ability ?? "未指定"} />
+          <AbilityField
+            label="特性"
+            options={abilityOptions}
+            selectedId={selectedAbilityId}
+            fallbackLabel={target.ability ?? "未指定"}
+            onChange={onSelectedAbilityIdChange}
+          />
           <Field label="持ち物" value={target.item ?? "未指定"} />
         </div>
         <div className="target-art">
@@ -882,7 +979,9 @@ function ResultsBoard() {
 function App() {
   const [selectedScenarioId, setSelectedScenarioId] = useState(wireframeProject.scenarios[0].id);
   const [selectedPokemonId, setSelectedPokemonId] = useState(defaultTargetPokemonId);
+  const [selectedAbilityId, setSelectedAbilityId] = useState(defaultTargetAbilityId);
   const pokemonOptions = usePokemonOptions();
+  const abilityOptions = useAbilityOptions();
   const pokemonLookup = useMemo<PokemonLookup>(
     () => ({
       byId: new Map(pokemonOptions.map((option) => [option.id, option])),
@@ -922,8 +1021,11 @@ function App() {
       <div className="authoring-grid">
         <TargetPanel
           pokemonOptions={pokemonOptions}
+          abilityOptions={abilityOptions}
           selectedPokemonId={selectedPokemonId}
+          selectedAbilityId={selectedAbilityId}
           onSelectedPokemonIdChange={setSelectedPokemonId}
+          onSelectedAbilityIdChange={setSelectedAbilityId}
         />
         <ScenarioBoard
           selectedScenarioId={selectedScenario.id}

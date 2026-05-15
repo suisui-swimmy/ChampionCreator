@@ -14,6 +14,7 @@ const inputPaths = {
   abilities: join(outputDir, "calc-abilities.gen.json"),
   natures: join(outputDir, "calc-natures.gen.json"),
   types: join(outputDir, "calc-types.gen.json"),
+  supportMatrix: join(projectRoot, "src", "data", "champions", "champions-support-matrix.json"),
   itemNames: join(pokemonDataDir, "ITEM_ALL.json"),
   pokemonNames: join(pokemonDataDir, "POKEMON_ALL.json"),
   moveNames: join(localOthersDir, "pokeranker_SV", "data", "foreign_move.txt"),
@@ -620,27 +621,61 @@ const inferAbilityLabel = (ability, abilityNameMap, pokemonNameMap) => {
   };
 };
 
-const makeAbilityOptions = (abilitiesCatalog, abilityNameRows, pokemonNames) => {
+const makeChampionsAbilityOption = (entry) =>
+  withOptional({
+    id: entry.showdownId,
+    label: entry.japaneseName,
+    showdownName: entry.englishName,
+    searchText: makeSearchText([
+      entry.japaneseName,
+      entry.englishName,
+      entry.showdownId,
+      "champions",
+      "新特性",
+    ]),
+    sourceStatus: entry.status,
+    fallback: {
+      reason: "champions-new-ability-calc-unavailable",
+    },
+    tags: [
+      "manual-review",
+      entry.affectsDamage ? "damage-modifier" : undefined,
+      entry.showdownId === "megasol" ? "weather-modifier" : undefined,
+    ].filter(Boolean),
+    supportMatrixId: entry.id,
+    calcAvailable: entry.calcAvailable,
+    affectsDamage: entry.affectsDamage,
+  });
+
+const makeAbilityOptions = (abilitiesCatalog, abilityNameRows, pokemonNames, supportMatrix) => {
   const abilityNameMap = buildLocalizedNameMap(abilityNameRows);
   const pokemonNameMap = buildPokemonNameMap(pokemonNames);
+  const calcAbilityIds = new Set(abilitiesCatalog.entries.map((ability) => ability.id));
+  const championsNewAbilityEntries = supportMatrix.entries.filter(
+    (entry) => entry.scope === "champions-new-ability" && entry.showdownId && !calcAbilityIds.has(entry.showdownId),
+  );
   const entries = sortByLabel(
-    abilitiesCatalog.entries.map((ability) => {
-      const localized = inferAbilityLabel(ability, abilityNameMap, pokemonNameMap);
+    [
+      ...abilitiesCatalog.entries.map((ability) => {
+        const localized = inferAbilityLabel(ability, abilityNameMap, pokemonNameMap);
 
-      return withOptional({
-        id: ability.id,
-        label: localized.label,
-        showdownName: ability.showdownName,
-        searchText: makeSearchText([localized.label, ability.showdownName, ability.id]),
-        sourceStatus: localized.sourceStatus,
-        fallback: localized.fallback,
-        tags: abilityTags(ability),
-      });
-    }),
+        return withOptional({
+          id: ability.id,
+          label: localized.label,
+          showdownName: ability.showdownName,
+          searchText: makeSearchText([localized.label, ability.showdownName, ability.id]),
+          sourceStatus: localized.sourceStatus,
+          fallback: localized.fallback,
+          tags: abilityTags(ability),
+        });
+      }),
+      ...championsNewAbilityEntries.map(makeChampionsAbilityOption),
+    ],
   );
   const directLocalizedCount = entries.filter((entry) => !entry.sourceStatus).length;
   const adapterTemporaryCount = entries.filter((entry) => entry.sourceStatus === "adapter-temporary").length;
   const unsupportedTemporaryCount = entries.filter((entry) => entry.sourceStatus === "unsupported-temporary").length;
+  const needsConfirmationCount = entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length;
 
   return makePayload({
     kind: "ability-options",
@@ -651,6 +686,7 @@ const makeAbilityOptions = (abilitiesCatalog, abilityNameRows, pokemonNames) => 
       localizedNameSourceAvailable: abilityNameRows.length > 0,
       pokemonNames: "others/pokemon-data/POKEMON_ALL.json",
       manualLabels: "scripts/generate-battle-options.mjs",
+      championsSupportMatrix: "src/data/champions/champions-support-matrix.json",
     },
     generatedBy: "scripts/generate-battle-options.mjs",
     entries,
@@ -659,8 +695,10 @@ const makeAbilityOptions = (abilitiesCatalog, abilityNameRows, pokemonNames) => 
       localized: directLocalizedCount,
       adapterTemporary: adapterTemporaryCount,
       unsupportedTemporary: unsupportedTemporaryCount,
-      englishFallback: entries.length - directLocalizedCount - adapterTemporaryCount - unsupportedTemporaryCount,
+      needsConfirmation: needsConfirmationCount,
+      englishFallback: entries.length - directLocalizedCount - adapterTemporaryCount - unsupportedTemporaryCount - needsConfirmationCount,
       localizedNameSourceEntries: abilityNameRows.length,
+      championsNewAbilities: championsNewAbilityEntries.length,
     },
   });
 };
@@ -829,6 +867,7 @@ const [
   abilitiesCatalog,
   naturesCatalog,
   typesCatalog,
+  supportMatrix,
   itemNames,
   pokemonNames,
   moveNameText,
@@ -840,6 +879,7 @@ const [
     readJson(inputPaths.abilities),
     readJson(inputPaths.natures),
     readJson(inputPaths.types),
+    readJson(inputPaths.supportMatrix),
     readJson(inputPaths.itemNames),
     readJson(inputPaths.pokemonNames),
     readOptionalText(inputPaths.moveNames),
@@ -853,7 +893,7 @@ await mkdir(outputDir, { recursive: true });
 const outputs = await Promise.all([
   writeJson(outputPaths.moves, makeMoveOptions(movesCatalog, moveNameRows)),
   writeJson(outputPaths.items, makeItemOptions(itemsCatalog, itemNames, pokemonNames)),
-  writeJson(outputPaths.abilities, makeAbilityOptions(abilitiesCatalog, abilityNameRows, pokemonNames)),
+  writeJson(outputPaths.abilities, makeAbilityOptions(abilitiesCatalog, abilityNameRows, pokemonNames, supportMatrix)),
   writeJson(outputPaths.natures, makeNatureOptions(naturesCatalog)),
   writeJson(outputPaths.types, makeTypeOptions(typesCatalog)),
 ]);
