@@ -18,6 +18,7 @@ npm run generate:data
 npm run sync:pokemon-artwork
 npm run inspect:calc
 npm run dev
+npm test
 npm run build
 npm run preview
 ```

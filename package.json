@@ -1,7 +1,7 @@
 {
   "name": "champion-creator",
   "private": true,
-  "version": "0.0.0-milestone-minus-1",
+  "version": "0.0.0-milestone-0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,8 @@
     "generate:pokemon-assets": "node scripts/generate-pokemon-assets.mjs",
     "inspect:calc": "node scripts/inspect-smogon-calc.mjs",
     "preview": "vite preview",
-    "sync:pokemon-artwork": "node scripts/sync-official-artwork.mjs"
+    "sync:pokemon-artwork": "node scripts/sync-official-artwork.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@smogon/calc": "^0.11.0",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^4.1.6"
   }
 }
