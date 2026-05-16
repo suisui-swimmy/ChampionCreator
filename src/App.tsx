@@ -22,6 +22,7 @@ import {
   type ChampionsStatPoints,
   type Constraint,
   type DamageScenarioEvaluation,
+  type DefenceConstraint,
   type FieldState,
   type RankStages,
   type Result,
@@ -30,6 +31,7 @@ import {
   type SpeciesRef,
 } from "./domain/model";
 import { sumStatPoints, validateStatPoints } from "./domain/statPoints";
+import { searchDefence } from "./search/searchDefence";
 import { APP_VERSION, CALC_ENGINE_VERSION, DATA_VERSION } from "./version";
 
 const statLabels: Record<keyof ChampionsStatPoints, string> = {
@@ -580,6 +582,9 @@ const findConstraint = (
   constraints: Constraint[] = wireframeProject.constraints,
 ): Constraint | undefined =>
   constraints.find((constraint) => constraint.scenarioId === scenarioId);
+
+const isDefenceConstraint = (constraint: Constraint): constraint is DefenceConstraint =>
+  constraint.type === "survive";
 
 const findScenario = (
   scenarioId: string,
@@ -1647,10 +1652,16 @@ function ResultsBoard({
   project,
   results,
   issues,
+  defenceSearchStatus,
+  hasDefenceSearchResults,
+  onRunDefenceSearch,
 }: {
   project: AdjustmentProject;
   results: Result[];
   issues: ScenarioEvaluationIssue[];
+  defenceSearchStatus: string;
+  hasDefenceSearchResults: boolean;
+  onRunDefenceSearch: () => void;
 }) {
   const [selectedResultId, setSelectedResultId] = useState(results[0]?.candidate.id ?? "");
   const selectedResult =
@@ -1672,7 +1683,7 @@ function ResultsBoard({
         </div>
         <div className="run-controls">
           <button type="button" className="primary-button">実評価更新済み</button>
-          <button type="button">M2で探索</button>
+          <button type="button" onClick={onRunDefenceSearch}>M2耐久探索</button>
           <Field label="探索モード" value={project.searchBudget.mode} compact />
         </div>
       </div>
@@ -1684,9 +1695,10 @@ function ResultsBoard({
           <label><input type="checkbox" checked readOnly /> 火力</label>
           <label><input type="checkbox" checked readOnly /> 素早さ</label>
           <hr />
-          <label><input type="checkbox" checked readOnly /> 現在SP</label>
-          <label><input type="checkbox" readOnly /> 探索候補</label>
-          <Field label="ソート" value="現在入力" />
+          <label><input type="checkbox" checked={!hasDefenceSearchResults} readOnly /> 現在SP</label>
+          <label><input type="checkbox" checked={hasDefenceSearchResults} readOnly /> 探索候補</label>
+          <Field label="ソート" value={hasDefenceSearchResults ? "H+B+D 最小" : "現在入力"} />
+          <p className="evaluation-message">{defenceSearchStatus}</p>
         </aside>
 
         <div className="candidate-list" role="list">
@@ -2028,6 +2040,9 @@ function App() {
   const [selectedAbilityId, setSelectedAbilityId] = useState(defaultTargetAbilityId);
   const [scenarioSelections, setScenarioSelections] = useState<Record<string, ScenarioInputSelection>>({});
   const [statusMessage, setStatusMessage] = useState("現在状態を編集中");
+  const [defenceSearchResults, setDefenceSearchResults] = useState<Result[]>([]);
+  const [defenceSearchStatus, setDefenceSearchStatus] =
+    useState("M2耐久探索はボタン実行で現在条件から候補を作ります");
   const importInputRef = useRef<HTMLInputElement>(null);
   const pokemonOptions = usePokemonOptions();
   const abilityOptions = useAbilityOptions();
@@ -2171,6 +2186,41 @@ function App() {
     }),
     [currentEvaluationState.results, currentProject],
   );
+  const displayedResults =
+    defenceSearchResults.length > 0 ? defenceSearchResults : currentEvaluationState.results;
+
+  useEffect(() => {
+    setDefenceSearchResults([]);
+    setDefenceSearchStatus("M2耐久探索はボタン実行で現在条件から候補を作ります");
+  }, [currentProject]);
+
+  const runDefenceSearch = () => {
+    try {
+      const results = searchDefence({
+        target: currentProject.target,
+        scenarios: currentProject.scenarios,
+        constraints: currentProject.constraints.filter(isDefenceConstraint),
+        budget: currentProject.searchBudget,
+        maxResults: 8,
+      });
+
+      setDefenceSearchResults(results);
+      setDefenceSearchStatus(
+        results.length > 0
+          ? `M2耐久探索: ${results.length} 件の最終再検証済み候補`
+          : "M2耐久探索: 条件を満たす候補がありません",
+      );
+      setStatusMessage(
+        results.length > 0 ? "M2耐久探索候補を表示しました" : "M2耐久探索の合格候補はありません",
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "M2耐久探索に失敗しました";
+
+      setDefenceSearchResults([]);
+      setDefenceSearchStatus(message);
+      setStatusMessage(message);
+    }
+  };
 
   const copyProjectJson = async () => {
     await navigator.clipboard.writeText(JSON.stringify(exportProject, null, 2));
@@ -2295,8 +2345,11 @@ function App() {
 
       <ResultsBoard
         project={currentProject}
-        results={currentEvaluationState.results}
+        results={displayedResults}
         issues={currentEvaluationState.issues}
+        defenceSearchStatus={defenceSearchStatus}
+        hasDefenceSearchResults={defenceSearchResults.length > 0}
+        onRunDefenceSearch={runDefenceSearch}
       />
     </main>
   );

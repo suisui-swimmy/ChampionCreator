@@ -22,8 +22,8 @@ export const isStatPointKey = (value: string): value is StatKey =>
 
 export const validateStatPoints = (
   points: ChampionsStatPoints,
-  maxPerStat = SP_LIMITS.maxPerStat,
-  maxTotal = SP_LIMITS.maxTotal,
+  maxPerStat: number = SP_LIMITS.maxPerStat,
+  maxTotal: number = SP_LIMITS.maxTotal,
 ): string[] => {
   const errors: string[] = [];
 
