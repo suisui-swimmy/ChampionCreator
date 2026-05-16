@@ -68,6 +68,7 @@ describe("championsAdapter", () => {
     expect(normalizeOptionalShowdownName("任意")).toBeUndefined();
     expect(normalizeOptionalShowdownName("Choice Band")).toBe("Choice Band");
     expect(normalizeOptionalCalcType("Water")).toBe("Water");
+    expect(normalizeOptionalCalcType("みず")).toBe("Water");
   });
 
   it("maps rank stages to calc boosts without hp", () => {

@@ -181,6 +181,18 @@ export interface ScenarioEvaluation {
   explanation: string;
 }
 
+export type DamageEvaluationCheck = "survive" | "ko" | "raw-damage";
+
+export interface DamageScenarioEvaluation extends ScenarioEvaluation {
+  evaluationKind: "damage";
+  check: DamageEvaluationCheck;
+  damageRolls: number[];
+  defenderHp: number;
+  hits: number;
+  thresholdProbability?: number;
+  engineDescription: string;
+}
+
 export interface Result {
   candidate: Candidate;
   passed: boolean;

@@ -1,5 +1,5 @@
 import { Field, Generations, Move, Pokemon, calculate } from "@smogon/calc";
-import type { BaseScenario, FieldState } from "../domain/model";
+import type { BaseScenario, Build, FieldState, StatTable } from "../domain/model";
 import { buildToCalcPokemonOptions } from "./championsAdapter";
 
 const generation = Generations.get(9);
@@ -23,6 +23,9 @@ const TERRAIN_TO_CALC = {
 export interface DamageScenarioResult {
   damageRolls: number[];
   damageRange: [number, number];
+  attackerStats: StatTable;
+  defenderStats: StatTable;
+  defenderHp: number;
   description: string;
 }
 
@@ -49,21 +52,46 @@ export const fieldStateToCalcField = (fieldState: FieldState): Field =>
     },
   });
 
+const applyManualFinalStats = (pokemon: Pokemon, build: Build): Pokemon => {
+  const finalStats = build.manualOverrides?.finalStats;
+
+  if (!finalStats) {
+    return pokemon;
+  }
+
+  for (const [stat, value] of Object.entries(finalStats)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    pokemon.rawStats[stat as keyof StatTable] = value;
+    pokemon.stats[stat as keyof StatTable] = value;
+  }
+
+  if (finalStats.hp !== undefined) {
+    pokemon.originalCurHP = finalStats.hp;
+  }
+
+  return pokemon;
+};
+
+const createCalcPokemon = (build: Build, stages = {}) =>
+  applyManualFinalStats(
+    new Pokemon(
+      generation,
+      build.species.showdownName,
+      buildToCalcPokemonOptions(build, stages),
+    ),
+    build,
+  );
+
 export const evaluateDamageScenario = (scenario: BaseScenario): DamageScenarioResult => {
   if (!scenario.move) {
     throw new Error(`Scenario ${scenario.id} is missing a move`);
   }
 
-  const attacker = new Pokemon(
-    generation,
-    scenario.attacker.species.showdownName,
-    buildToCalcPokemonOptions(scenario.attacker, scenario.attackerStages),
-  );
-  const defender = new Pokemon(
-    generation,
-    scenario.defender.species.showdownName,
-    buildToCalcPokemonOptions(scenario.defender, scenario.defenderStages),
-  );
+  const attacker = createCalcPokemon(scenario.attacker, scenario.attackerStages);
+  const defender = createCalcPokemon(scenario.defender, scenario.defenderStages);
   const movePowerOverride = scenario.manualOverrides?.movePower ?? scenario.move.powerOverride;
   const move = new Move(generation, scenario.move.showdownName, {
     isCrit: !!scenario.field.criticalHit,
@@ -80,6 +108,9 @@ export const evaluateDamageScenario = (scenario: BaseScenario): DamageScenarioRe
   return {
     damageRolls,
     damageRange: [Math.min(...damageRolls), Math.max(...damageRolls)],
+    attackerStats: { ...attacker.rawStats },
+    defenderStats: { ...defender.rawStats },
+    defenderHp: defender.curHP(),
     description: result.desc(),
   };
 };

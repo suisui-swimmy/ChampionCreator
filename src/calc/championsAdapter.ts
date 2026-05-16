@@ -25,6 +25,28 @@ export type CalcTypeName =
 
 const UNSET_TEXT_VALUES = new Set(["", "none", "未指定", "任意"]);
 
+const JAPANESE_TYPE_TO_CALC = {
+  ノーマル: "Normal",
+  ほのお: "Fire",
+  みず: "Water",
+  でんき: "Electric",
+  くさ: "Grass",
+  こおり: "Ice",
+  かくとう: "Fighting",
+  どく: "Poison",
+  じめん: "Ground",
+  ひこう: "Flying",
+  エスパー: "Psychic",
+  むし: "Bug",
+  いわ: "Rock",
+  ゴースト: "Ghost",
+  ドラゴン: "Dragon",
+  あく: "Dark",
+  はがね: "Steel",
+  フェアリー: "Fairy",
+  ステラ: "Stellar",
+} as const;
+
 export const CHAMPIONS_SP_TO_CALC_EV = 8;
 export const CALC_EV_LIMIT_PER_STAT = 252;
 
@@ -71,8 +93,16 @@ export const normalizeOptionalShowdownName = (value?: string): string | undefine
   return value;
 };
 
-export const normalizeOptionalCalcType = (value?: string): CalcTypeName | undefined =>
-  normalizeOptionalShowdownName(value) as CalcTypeName | undefined;
+export const normalizeOptionalCalcType = (value?: string): CalcTypeName | undefined => {
+  const normalized = normalizeOptionalShowdownName(value);
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  return (JAPANESE_TYPE_TO_CALC[normalized as keyof typeof JAPANESE_TYPE_TO_CALC] ??
+    normalized) as CalcTypeName;
+};
 
 export const rankStagesToCalcBoosts = (
   stages: RankStages = {},

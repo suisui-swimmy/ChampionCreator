@@ -105,6 +105,28 @@ p {
   padding: 0 10px;
 }
 
+.topbar-status {
+  max-width: 260px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  padding: 3px 9px;
+  color: var(--teal);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .eyebrow {
   margin: 0 0 3px;
   color: var(--muted);
@@ -126,7 +148,8 @@ p {
 .scenario-board,
 .results-board,
 .result-inspector,
-.filter-panel {
+.filter-panel,
+.live-evaluation-panel {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--panel);
@@ -142,6 +165,7 @@ p {
 .board-toolbar,
 .results-toolbar,
 .inspector-header,
+.live-evaluation-header,
 .target-footer,
 .candidate-head,
 .scenario-band-header,
@@ -159,7 +183,8 @@ p {
 .target-title-row,
 .board-toolbar,
 .results-toolbar,
-.inspector-header {
+.inspector-header,
+.live-evaluation-header {
   justify-content: space-between;
   gap: 12px;
 }
@@ -167,7 +192,8 @@ p {
 .target-title-row h1,
 .board-toolbar h2,
 .results-toolbar h2,
-.inspector-header h2 {
+.inspector-header h2,
+.live-evaluation-header h2 {
   margin: 0;
   font-size: 18px;
   line-height: 1.2;
@@ -222,35 +248,41 @@ p {
   font-size: 14px;
 }
 
-.pokemon-field {
+.pokemon-field,
+.battle-search-field {
   position: relative;
 }
 
-.pokemon-combobox {
+.pokemon-combobox,
+.search-combobox {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 34px;
 }
 
-.pokemon-combobox input {
+.pokemon-combobox input,
+.search-combobox input {
   min-height: 30px;
   border-right: 0;
   border-radius: 5px 0 0 5px;
 }
 
-.pokemon-combobox input:focus {
+.pokemon-combobox input:focus,
+.search-combobox input:focus {
   border-color: var(--teal);
   outline: 2px solid rgb(7 147 155 / 0.16);
   outline-offset: 0;
 }
 
-.pokemon-combobox button {
+.pokemon-combobox button,
+.search-combobox button {
   min-width: 34px;
   border-radius: 0 5px 5px 0;
   padding: 0;
 }
 
-.pokemon-options {
+.pokemon-options,
+.search-options {
   position: absolute;
   z-index: 20;
   top: calc(100% + 4px);
@@ -265,7 +297,8 @@ p {
   box-shadow: var(--shadow);
 }
 
-.pokemon-option {
+.pokemon-option,
+.search-option {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
@@ -280,11 +313,14 @@ p {
 }
 
 .pokemon-option:hover,
-.pokemon-option.is-active {
+.pokemon-option.is-active,
+.search-option:hover,
+.search-option.is-active {
   background: var(--teal-soft);
 }
 
-.pokemon-option[aria-selected="true"] {
+.pokemon-option[aria-selected="true"],
+.search-option[aria-selected="true"] {
   box-shadow: inset 3px 0 0 var(--teal);
 }
 
@@ -305,33 +341,45 @@ p {
   object-fit: contain;
 }
 
-.pokemon-option-main {
+.pokemon-option-main,
+.search-option-main {
   display: grid;
   min-width: 0;
 }
 
 .pokemon-option-main strong,
 .pokemon-option-main small,
-.pokemon-option-types {
+.pokemon-option-types,
+.search-option-main strong,
+.search-option-main small,
+.search-option-meta {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pokemon-option-main strong {
+.pokemon-option-main strong,
+.search-option-main strong {
   font-size: 13px;
 }
 
 .pokemon-option-main small,
 .pokemon-field-count,
-.pokemon-option-types {
+.pokemon-option-types,
+.search-option-main small,
+.search-option-meta {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
 }
 
-.pokemon-option-types {
+.pokemon-option-types,
+.search-option-meta {
   max-width: 96px;
+}
+
+.search-option {
+  grid-template-columns: minmax(0, 1fr) minmax(88px, auto);
 }
 
 .pokemon-option-empty {
@@ -826,6 +874,207 @@ p {
   padding: 10px;
 }
 
+.live-evaluation-panel {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.live-evaluation-header {
+  align-items: flex-start;
+}
+
+.evaluation-status {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.evaluation-status.is-pass {
+  color: var(--pass);
+}
+
+.evaluation-status.is-warn {
+  color: var(--warn);
+}
+
+.live-evaluation-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.scenario-input-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.25fr) repeat(4, minmax(150px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.scenario-condition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 0.6fr)) minmax(220px, 0.9fr) repeat(2, minmax(230px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+.scenario-select-field select {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.scenario-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.scenario-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 8px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.scenario-toggle input {
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+.rank-stage-editor {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 7px;
+}
+
+.rank-stage-editor > strong {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.rank-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(36px, 1fr));
+  gap: 4px;
+}
+
+.rank-stage-grid label {
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.rank-stage-grid input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 4px;
+  text-align: center;
+  color: var(--ink);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.evaluation-matchup {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.evaluation-matchup strong,
+.evaluation-matchup span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evaluation-matchup span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  text-align: center;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.evaluation-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(76px, 1fr));
+  gap: 6px;
+}
+
+.evaluation-metrics div {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 8px;
+  min-width: 0;
+}
+
+.evaluation-metrics span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.evaluation-metrics strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-roll-strip {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(34px, 1fr));
+  gap: 4px;
+}
+
+.damage-roll-strip span {
+  border-radius: 4px;
+  background: #eef6f7;
+  padding: 3px 4px;
+  text-align: center;
+  color: #17676d;
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.engine-description,
+.evaluation-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .results-toolbar {
   margin-bottom: 10px;
 }
@@ -1127,7 +1376,8 @@ p {
 
 @media (max-width: 1280px) {
   .authoring-grid,
-  .results-layout {
+  .results-layout,
+  .live-evaluation-panel {
     grid-template-columns: 1fr;
   }
 
@@ -1149,6 +1399,14 @@ p {
     grid-auto-columns: minmax(238px, 310px);
   }
 
+  .scenario-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scenario-condition-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .filter-panel {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: end;
@@ -1168,7 +1426,8 @@ p {
   .target-title-row,
   .board-toolbar,
   .results-toolbar,
-  .inspector-header {
+  .inspector-header,
+  .live-evaluation-header {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1194,6 +1453,14 @@ p {
 
   .pokemon-option {
     grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .search-option {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .search-option-meta {
+    max-width: none;
   }
 
   .pokemon-option-types {
@@ -1246,6 +1513,28 @@ p {
 
   .candidate-head {
     display: none;
+  }
+
+  .evaluation-matchup,
+  .evaluation-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .scenario-input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-condition-grid,
+  .scenario-toggle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rank-stage-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .damage-roll-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .result-lane {
