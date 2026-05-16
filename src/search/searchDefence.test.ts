@@ -7,7 +7,11 @@ import type {
   MoveRef,
   SearchBudget,
 } from "../domain/model";
-import { searchDefence } from "./searchDefence";
+import {
+  SearchDefenceCancelledError,
+  searchDefence,
+  searchDefenceAsync,
+} from "./searchDefence";
 
 const perfectIvs = {
   hp: 31,
@@ -230,5 +234,55 @@ describe("searchDefence", () => {
     expect(results.every((result) => result.candidate.statPoints.hp === 1)).toBe(true);
     expect(results.every((result) => result.candidate.statPoints.def === 2)).toBe(true);
     expect(results.every((result) => result.candidate.statPoints.spd === 3)).toBe(true);
+  });
+
+  it("reports async progress and partial results for worker usage", async () => {
+    const progress: string[] = [];
+    const partialCounts: number[] = [];
+
+    const results = await searchDefenceAsync({
+      target,
+      scenarios,
+      constraints,
+      budget,
+      maxResults: 2,
+      yieldEvery: 1,
+      evaluateScenario: (scenario) => makeEvaluation(scenario, true, 1),
+      onProgress: (entry) => {
+        progress.push(`${entry.phase}:${entry.evaluatedCandidates}:${entry.acceptedCandidates}`);
+      },
+      onPartialResult: (partialResults) => {
+        partialCounts.push(partialResults.length);
+      },
+    });
+
+    expect(results).toHaveLength(2);
+    expect(progress.some((entry) => entry.startsWith("coarse:"))).toBe(true);
+    expect(progress.some((entry) => entry.startsWith("refined:"))).toBe(true);
+    expect(progress.some((entry) => entry.startsWith("final-verified:"))).toBe(true);
+    expect(partialCounts.some((count) => count > 0)).toBe(true);
+  });
+
+  it("can cancel async search between worker yields", async () => {
+    let cancelled = false;
+    let progressEvents = 0;
+
+    await expect(
+      searchDefenceAsync({
+        target,
+        scenarios,
+        constraints,
+        budget,
+        maxResults: 2,
+        yieldEvery: 1,
+        isCancelled: () => cancelled,
+        evaluateScenario: (scenario) => makeEvaluation(scenario, true, 1),
+        onProgress: () => {
+          progressEvents += 1;
+          cancelled = true;
+        },
+      }),
+    ).rejects.toBeInstanceOf(SearchDefenceCancelledError);
+    expect(progressEvents).toBeGreaterThan(0);
   });
 });

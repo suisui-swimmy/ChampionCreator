@@ -36,6 +36,26 @@ export interface SearchDefenceInput {
   clearSearchedFinalStatOverrides?: boolean;
 }
 
+export interface SearchDefenceProgress {
+  phase: Candidate["searchPhase"];
+  evaluatedCandidates: number;
+  acceptedCandidates: number;
+}
+
+export interface SearchDefenceAsyncInput extends SearchDefenceInput {
+  isCancelled?: () => boolean;
+  onProgress?: (progress: SearchDefenceProgress) => void;
+  onPartialResult?: (results: Result[]) => void;
+  yieldEvery?: number;
+}
+
+export class SearchDefenceCancelledError extends Error {
+  constructor() {
+    super("Defence search cancelled");
+    this.name = "SearchDefenceCancelledError";
+  }
+}
+
 const DEFENCE_STATS = ["hp", "def", "spd"] as const;
 const FIXED_DURING_DEFENCE_SEARCH = ["atk", "spa", "spe"] as const;
 
@@ -394,4 +414,172 @@ export const searchDefence = (input: SearchDefenceInput): Result[] => {
 
       return verified;
     });
+};
+
+const yieldToWorker = (): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+const throwIfCancelled = (isCancelled?: () => boolean): void => {
+  if (isCancelled?.()) {
+    throw new SearchDefenceCancelledError();
+  }
+};
+
+export const searchDefenceAsync = async (
+  input: SearchDefenceAsyncInput,
+): Promise<Result[]> => {
+  const normalizedInput = {
+    ...input,
+    evaluateScenario: input.evaluateScenario ?? evaluateAttackScenario,
+    maxResults: input.maxResults ?? 12,
+    clearSearchedFinalStatOverrides: input.clearSearchedFinalStatOverrides ?? true,
+  };
+  const activeScenarios = activeDefenceScenarios(input.scenarios, input.constraints);
+
+  if (activeScenarios.length === 0) {
+    return [];
+  }
+
+  const fixed = fixedForDefenceSearch(input.target, input.budget);
+  const coarseStep =
+    input.budget.mode === "precise" ? 1 : Math.max(1, Math.floor(input.coarseStep ?? 4));
+  const refineRadius = input.refineRadius ?? Math.max(1, coarseStep - 1);
+  const yieldEvery = Math.max(1, input.yieldEvery ?? 25);
+  const coarseOptions = budgetToEnumerationOptions(
+    input.budget,
+    fixed,
+    DEFENCE_STATS,
+    coarseStep,
+  );
+  const coarseResults: Result[] = [];
+  let evaluatedCandidates = 0;
+
+  for (const points of enumerateStatPoints(coarseOptions)) {
+    throwIfCancelled(input.isCancelled);
+    evaluatedCandidates += 1;
+
+    const result = evaluateCandidate(
+      points,
+      normalizedInput,
+      activeScenarios,
+      "coarse",
+      `defence-coarse-${coarseResults.length + 1}`,
+    );
+
+    if (result) {
+      coarseResults.push(result);
+    }
+
+    if (evaluatedCandidates % yieldEvery === 0) {
+      input.onProgress?.({
+        phase: "coarse",
+        evaluatedCandidates,
+        acceptedCandidates: coarseResults.length,
+      });
+      await yieldToWorker();
+    }
+  }
+
+  input.onProgress?.({
+    phase: "coarse",
+    evaluatedCandidates,
+    acceptedCandidates: coarseResults.length,
+  });
+  input.onPartialResult?.(coarseResults.sort(compareDefenceResults).slice(0, normalizedInput.maxResults));
+  await yieldToWorker();
+
+  const candidatePoints =
+    input.budget.mode === "precise"
+      ? coarseResults.map((result) => result.candidate.statPoints)
+      : coarseResults
+          .sort(compareDefenceResults)
+          .slice(0, normalizedInput.maxResults * 2)
+          .flatMap((result) =>
+            refinedNeighborhood(
+              result.candidate.statPoints,
+              input.budget,
+              fixed,
+              refineRadius,
+            ),
+          );
+  const seen = new Set<string>();
+  const refinedResults: Result[] = [];
+
+  for (const points of candidatePoints) {
+    throwIfCancelled(input.isCancelled);
+
+    const key = statPointKey(points);
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    evaluatedCandidates += 1;
+    const result = evaluateCandidate(
+      points,
+      normalizedInput,
+      activeScenarios,
+      "refined",
+      `defence-refined-${refinedResults.length + 1}`,
+    );
+
+    if (result) {
+      refinedResults.push(result);
+    }
+
+    if (evaluatedCandidates % yieldEvery === 0) {
+      const partialResults = refinedResults.sort(compareDefenceResults).slice(0, normalizedInput.maxResults);
+      input.onProgress?.({
+        phase: "refined",
+        evaluatedCandidates,
+        acceptedCandidates: refinedResults.length,
+      });
+      input.onPartialResult?.(partialResults);
+      await yieldToWorker();
+    }
+  }
+
+  const sortedResults = refinedResults
+    .sort(compareDefenceResults)
+    .slice(0, normalizedInput.maxResults);
+  input.onProgress?.({
+    phase: "refined",
+    evaluatedCandidates,
+    acceptedCandidates: sortedResults.length,
+  });
+  input.onPartialResult?.(sortedResults);
+  await yieldToWorker();
+
+  const verifiedResults: Result[] = [];
+
+  for (const [index, result] of sortedResults.entries()) {
+    throwIfCancelled(input.isCancelled);
+    evaluatedCandidates += 1;
+
+    const verified = evaluateCandidate(
+      result.candidate.statPoints,
+      normalizedInput,
+      activeScenarios,
+      "final-verified",
+      `defence-${index + 1}`,
+    );
+
+    if (!verified) {
+      throw new Error(`Final defence verification failed for ${result.candidate.id}`);
+    }
+
+    verifiedResults.push(verified);
+    input.onProgress?.({
+      phase: "final-verified",
+      evaluatedCandidates,
+      acceptedCandidates: verifiedResults.length,
+    });
+    input.onPartialResult?.(verifiedResults);
+    await yieldToWorker();
+  }
+
+  return verifiedResults;
 };

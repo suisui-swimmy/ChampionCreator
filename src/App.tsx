@@ -31,8 +31,11 @@ import {
   type SpeciesRef,
 } from "./domain/model";
 import { sumStatPoints, validateStatPoints } from "./domain/statPoints";
-import { searchDefence } from "./search/searchDefence";
 import { APP_VERSION, CALC_ENGINE_VERSION, DATA_VERSION } from "./version";
+import type {
+  SearchWorkerOutboundMessage,
+  SearchWorkerProgressMessage,
+} from "./workers/searchWorker";
 
 const statLabels: Record<keyof ChampionsStatPoints, string> = {
   hp: "H",
@@ -65,6 +68,12 @@ const scenarioKindLabels: Record<ScenarioKind, string> = {
   defence: "耐久",
   offence: "火力",
   speed: "素早さ",
+};
+
+const searchPhaseLabels: Record<Candidate["searchPhase"], string> = {
+  coarse: "粗探索",
+  refined: "精密探索",
+  "final-verified": "最終再検証",
 };
 
 interface PokemonLookup {
@@ -1653,15 +1662,21 @@ function ResultsBoard({
   results,
   issues,
   defenceSearchStatus,
+  defenceSearchProgress,
   hasDefenceSearchResults,
+  isDefenceSearchRunning,
   onRunDefenceSearch,
+  onCancelDefenceSearch,
 }: {
   project: AdjustmentProject;
   results: Result[];
   issues: ScenarioEvaluationIssue[];
   defenceSearchStatus: string;
+  defenceSearchProgress?: SearchWorkerProgressMessage;
   hasDefenceSearchResults: boolean;
+  isDefenceSearchRunning: boolean;
   onRunDefenceSearch: () => void;
+  onCancelDefenceSearch: () => void;
 }) {
   const [selectedResultId, setSelectedResultId] = useState(results[0]?.candidate.id ?? "");
   const selectedResult =
@@ -1683,7 +1698,12 @@ function ResultsBoard({
         </div>
         <div className="run-controls">
           <button type="button" className="primary-button">実評価更新済み</button>
-          <button type="button" onClick={onRunDefenceSearch}>M2耐久探索</button>
+          <button type="button" onClick={onRunDefenceSearch} disabled={isDefenceSearchRunning}>
+            {isDefenceSearchRunning ? "探索中" : "M2耐久探索"}
+          </button>
+          {isDefenceSearchRunning && (
+            <button type="button" onClick={onCancelDefenceSearch}>キャンセル</button>
+          )}
           <Field label="探索モード" value={project.searchBudget.mode} compact />
         </div>
       </div>
@@ -1698,6 +1718,22 @@ function ResultsBoard({
           <label><input type="checkbox" checked={!hasDefenceSearchResults} readOnly /> 現在SP</label>
           <label><input type="checkbox" checked={hasDefenceSearchResults} readOnly /> 探索候補</label>
           <Field label="ソート" value={hasDefenceSearchResults ? "H+B+D 最小" : "現在入力"} />
+          {defenceSearchProgress && (
+            <>
+              <Field
+                label="探索フェーズ"
+                value={searchPhaseLabels[defenceSearchProgress.phase]}
+              />
+              <Field
+                label="評価候補"
+                value={`${defenceSearchProgress.evaluatedCandidates}`}
+              />
+              <Field
+                label="合格候補"
+                value={`${defenceSearchProgress.acceptedCandidates}`}
+              />
+            </>
+          )}
           <p className="evaluation-message">{defenceSearchStatus}</p>
         </aside>
 
@@ -2043,7 +2079,12 @@ function App() {
   const [defenceSearchResults, setDefenceSearchResults] = useState<Result[]>([]);
   const [defenceSearchStatus, setDefenceSearchStatus] =
     useState("M2耐久探索はボタン実行で現在条件から候補を作ります");
+  const [defenceSearchProgress, setDefenceSearchProgress] =
+    useState<SearchWorkerProgressMessage>();
+  const [isDefenceSearchRunning, setIsDefenceSearchRunning] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const defenceSearchWorkerRef = useRef<Worker | null>(null);
+  const defenceSearchRequestIdRef = useRef("");
   const pokemonOptions = usePokemonOptions();
   const abilityOptions = useAbilityOptions();
   const moveOptions = useMoveOptions();
@@ -2097,6 +2138,13 @@ function App() {
       setStatusMessage(error instanceof Error ? error.message : "共有URLの復元に失敗しました");
     }
   }, []);
+
+  useEffect(
+    () => () => {
+      defenceSearchWorkerRef.current?.terminate();
+    },
+    [],
+  );
 
   const currentTarget = useMemo<Build>(
     () => ({
@@ -2190,36 +2238,118 @@ function App() {
     defenceSearchResults.length > 0 ? defenceSearchResults : currentEvaluationState.results;
 
   useEffect(() => {
+    if (defenceSearchWorkerRef.current) {
+      defenceSearchWorkerRef.current.terminate();
+      defenceSearchWorkerRef.current = null;
+      defenceSearchRequestIdRef.current = "";
+    }
+
     setDefenceSearchResults([]);
+    setDefenceSearchProgress(undefined);
+    setIsDefenceSearchRunning(false);
     setDefenceSearchStatus("M2耐久探索はボタン実行で現在条件から候補を作ります");
   }, [currentProject]);
 
-  const runDefenceSearch = () => {
-    try {
-      const results = searchDefence({
-        target: currentProject.target,
-        scenarios: currentProject.scenarios,
-        constraints: currentProject.constraints.filter(isDefenceConstraint),
-        budget: currentProject.searchBudget,
-        maxResults: 8,
-      });
+  const finishDefenceSearchWorker = () => {
+    defenceSearchWorkerRef.current?.terminate();
+    defenceSearchWorkerRef.current = null;
+    defenceSearchRequestIdRef.current = "";
+    setIsDefenceSearchRunning(false);
+  };
 
-      setDefenceSearchResults(results);
+  const cancelDefenceSearch = () => {
+    const requestId = defenceSearchRequestIdRef.current;
+    const worker = defenceSearchWorkerRef.current;
+
+    if (!requestId || !worker) {
+      return;
+    }
+
+    worker.postMessage({
+      type: "cancel",
+      requestId,
+    });
+    setDefenceSearchStatus("M2耐久探索: キャンセル中です");
+    setStatusMessage("M2耐久探索をキャンセルしています");
+  };
+
+  const runDefenceSearch = () => {
+    defenceSearchWorkerRef.current?.terminate();
+
+    const requestId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `defence-search-${Date.now()}`;
+    const worker = new Worker(new URL("./workers/searchWorker.ts", import.meta.url), {
+      type: "module",
+    });
+
+    defenceSearchWorkerRef.current = worker;
+    defenceSearchRequestIdRef.current = requestId;
+    setDefenceSearchResults([]);
+    setDefenceSearchProgress(undefined);
+    setIsDefenceSearchRunning(true);
+    setDefenceSearchStatus("M2耐久探索: Worker で開始しました");
+    setStatusMessage("M2耐久探索を開始しました");
+
+    worker.onmessage = (event: MessageEvent<SearchWorkerOutboundMessage>) => {
+      const message = event.data;
+
+      if (message.requestId !== defenceSearchRequestIdRef.current) {
+        return;
+      }
+
+      if (message.type === "progress") {
+        setDefenceSearchProgress(message);
+        setDefenceSearchStatus(
+          `M2耐久探索: ${searchPhaseLabels[message.phase]} / 評価 ${message.evaluatedCandidates} 件 / 合格 ${message.acceptedCandidates} 件`,
+        );
+        return;
+      }
+
+      if (message.type === "partialResult") {
+        setDefenceSearchResults(message.results);
+        return;
+      }
+
+      if (message.type === "complete") {
+        setDefenceSearchResults(message.results);
+        setDefenceSearchStatus(
+          message.results.length > 0
+            ? `M2耐久探索: ${message.results.length} 件の最終再検証済み候補`
+            : "M2耐久探索: 条件を満たす候補がありません",
+        );
+        setStatusMessage(
+          message.results.length > 0 ? "M2耐久探索候補を表示しました" : "M2耐久探索の合格候補はありません",
+        );
+        finishDefenceSearchWorker();
+        return;
+      }
+
       setDefenceSearchStatus(
-        results.length > 0
-          ? `M2耐久探索: ${results.length} 件の最終再検証済み候補`
-          : "M2耐久探索: 条件を満たす候補がありません",
+        message.cancelled ? "M2耐久探索: キャンセルしました" : message.message,
       );
-      setStatusMessage(
-        results.length > 0 ? "M2耐久探索候補を表示しました" : "M2耐久探索の合格候補はありません",
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "M2耐久探索に失敗しました";
+      setStatusMessage(message.cancelled ? "M2耐久探索をキャンセルしました" : message.message);
+      finishDefenceSearchWorker();
+    };
+
+    worker.onerror = (event) => {
+      const message = event.message || "M2耐久探索 Worker でエラーが発生しました";
 
       setDefenceSearchResults([]);
       setDefenceSearchStatus(message);
       setStatusMessage(message);
-    }
+      finishDefenceSearchWorker();
+    };
+
+    worker.postMessage({
+      type: "start",
+      requestId,
+      project: {
+        ...currentProject,
+        constraints: currentProject.constraints.filter(isDefenceConstraint),
+      },
+    });
   };
 
   const copyProjectJson = async () => {
@@ -2348,8 +2478,11 @@ function App() {
         results={displayedResults}
         issues={currentEvaluationState.issues}
         defenceSearchStatus={defenceSearchStatus}
+        defenceSearchProgress={defenceSearchProgress}
         hasDefenceSearchResults={defenceSearchResults.length > 0}
+        isDefenceSearchRunning={isDefenceSearchRunning}
         onRunDefenceSearch={runDefenceSearch}
+        onCancelDefenceSearch={cancelDefenceSearch}
       />
     </main>
   );
