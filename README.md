@@ -23,6 +23,13 @@ npm run build
 npm run preview
 ```
 
+## デプロイ
+
+GitHub Pages は GitHub Actions から `dist/` を公開します。
+
+初回だけ GitHub の repository settings で、`Pages` → `Build and deployment` → `Source` を `GitHub Actions` に設定します。
+以後は `main` への push、または Actions の手動実行で `.github/workflows/deploy.yml` が `npm ci`、`npm test`、`npm run build` を実行してから Pages へデプロイします。
+
 ## 現在の方針
 
 - UI / ドメインモデル / 探索ロジックでは `SP` を正規値として扱う
