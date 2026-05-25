@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChampionCreator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>ChampionCreator</h1>
+          <p>Pokemon Champions 自動耐久調整</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-button" type="button">JSON</button>
+          <button class="ghost-button" type="button">共有</button>
+          <button class="primary-button" type="button" id="runButton">計算実行</button>
+        </div>
+      </header>
+
+      <main class="workbench">
+        <section class="target-panel" aria-labelledby="target-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="target-title">調整対象</h2>
+              <span>自分のポケモン</span>
+            </div>
+            <button class="icon-button" type="button" aria-label="調整対象をリセット">↺</button>
+          </div>
+
+          <div class="target-summary">
+            <div class="target-art" aria-hidden="true">
+              <div class="wing-mark"></div>
+              <strong>MX</strong>
+            </div>
+            <div class="field-grid">
+              <label>
+                ポケモン
+                <select>
+                  <option>メガリザードンX</option>
+                  <option>ガブリアス</option>
+                </select>
+              </label>
+              <label>
+                性格
+                <select>
+                  <option>ひかえめ</option>
+                  <option>ようき</option>
+                </select>
+              </label>
+              <label>
+                Lv.
+                <input type="number" value="100" min="1" max="100" />
+              </label>
+              <label>
+                持ち物
+                <select>
+                  <option>こだわりスカーフ</option>
+                  <option>あつぞこブーツ</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="type-row">
+            <span class="type-chip fire">ほのお</span>
+            <span class="type-chip dragon">ドラゴン</span>
+            <span class="type-chip dragon">テラ: ドラゴン</span>
+          </div>
+
+          <div class="ev-table" aria-label="努力値配分">
+            <div class="ev-header">
+              <span>能力</span>
+              <span>実数値</span>
+              <span>現在SP</span>
+              <span>SP配分</span>
+              <span>固定</span>
+            </div>
+            <div class="ev-row hp">
+              <strong>HP</strong><span>297</span><input value="2" aria-label="HP SP" /><div class="bar"><i style="width: 10%"></i></div><input type="checkbox" />
+            </div>
+            <div class="ev-row atk">
+              <strong>A</strong><span>328</span><input value="0" aria-label="A SP" /><div class="bar"><i style="width: 0%"></i></div><input type="checkbox" />
+            </div>
+            <div class="ev-row def">
+              <strong>B</strong><span>197</span><input value="0" aria-label="B SP" /><div class="bar"><i style="width: 12%"></i></div><input type="checkbox" />
+            </div>
+            <div class="ev-row spa">
+              <strong>C</strong><span>348</span><input value="32" aria-label="C SP" /><div class="bar"><i style="width: 100%"></i></div><input type="checkbox" checked />
+            </div>
+            <div class="ev-row spd">
+              <strong>D</strong><span>206</span><input value="0" aria-label="D SP" /><div class="bar"><i style="width: 0%"></i></div><input type="checkbox" />
+            </div>
+            <div class="ev-row spe">
+              <strong>S</strong><span>328</span><input value="32" aria-label="S SP" /><div class="bar"><i style="width: 100%"></i></div><input type="checkbox" checked />
+            </div>
+          </div>
+
+          <div class="sp-summary">
+            <span>合計SP</span>
+            <strong>66 / 66</strong>
+          </div>
+        </section>
+
+        <section class="scenario-panel" aria-labelledby="scenario-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="scenario-title">仮想敵シナリオ</h2>
+              <span>カードで条件をまとめる</span>
+            </div>
+            <button class="ghost-button" type="button">+ シナリオを追加</button>
+          </div>
+
+          <div class="scenario-grid">
+            <article class="scenario-card selected" data-scenario="シナリオA" tabindex="0">
+              <div class="scenario-header">
+                <label class="switch"><input type="checkbox" checked /><span></span></label>
+                <div><strong>シナリオA</strong><small>1回耐える / 93.8%以上</small></div>
+                <button class="icon-button" type="button" aria-label="シナリオAを折りたたむ">⌄</button>
+              </div>
+              <div class="attack-pair">
+                <div class="attack-card ground">
+                  <div class="thumb landorus">L</div>
+                  <div class="attack-fields">
+                    <select><option>ランドロス(霊獣)</option></select>
+                    <select><option>じしん</option></select>
+                    <div class="mini-row"><span>Lv.100</span><span>いじっぱり</span><span>こだわりハチマキ</span></div>
+                  </div>
+                  <div class="type-strip">じめん / 物理</div>
+                </div>
+                <div class="attack-card dragon">
+                  <div class="thumb garchomp">G</div>
+                  <div class="attack-fields">
+                    <select><option>ガブリアス</option></select>
+                    <select><option>げきりん</option></select>
+                    <div class="mini-row"><span>Lv.100</span><span>ようき</span><span>こだわりスカーフ</span></div>
+                  </div>
+                  <div class="type-strip">ドラゴン / 物理</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="scenario-card" data-scenario="シナリオB" tabindex="0">
+              <div class="scenario-header">
+                <label class="switch"><input type="checkbox" checked /><span></span></label>
+                <div><strong>シナリオB</strong><small>確定2発 / 75.0%以上</small></div>
+                <button class="icon-button" type="button" aria-label="シナリオBを折りたたむ">⌄</button>
+              </div>
+              <div class="attack-pair">
+                <div class="attack-card fire">
+                  <div class="thumb blissey">H</div>
+                  <div class="attack-fields">
+                    <select><option>ハピナス</option></select>
+                    <select><option>だいもんじ</option></select>
+                    <div class="check-row"><label><input type="checkbox" checked /> もらもの</label><label><input type="checkbox" /> 壁</label></div>
+                  </div>
+                  <div class="type-strip">ほのお / 特殊</div>
+                </div>
+                <div class="attack-card ghost">
+                  <div class="thumb gholdengo">S</div>
+                  <div class="attack-fields">
+                    <select><option>サーフゴー</option></select>
+                    <select><option>シャドーボール</option></select>
+                    <div class="mini-row"><span>ランク ±0</span><span>こだわりメガネ</span></div>
+                  </div>
+                  <div class="type-strip">ゴースト / 特殊</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="scenario-card" data-scenario="シナリオC" tabindex="0">
+              <div class="scenario-header">
+                <label class="switch"><input type="checkbox" checked /><span></span></label>
+                <div><strong>シナリオC</strong><small>最速ドラパルト抜き</small></div>
+                <button class="icon-button" type="button" aria-label="シナリオCを折りたたむ">⌄</button>
+              </div>
+              <div class="attack-pair single">
+                <div class="attack-card dragon">
+                  <div class="thumb dragapult">D</div>
+                  <div class="attack-fields">
+                    <select><option>ドラパルト</option></select>
+                    <select><option>ドラゴンアロー</option></select>
+                    <div class="mini-row"><span>すりぬけ</span><span>きあいのタスキ</span></div>
+                  </div>
+                  <div class="type-strip">ドラゴン / 物理</div>
+                </div>
+                <button class="add-attack" type="button">+ 攻撃を追加</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="results-panel" aria-labelledby="results-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="results-title">結果</h2>
+              <span>候補 38 件</span>
+            </div>
+            <div class="segmented">
+              <button class="active" type="button">PASSのみ</button>
+              <button type="button">全部</button>
+            </div>
+          </div>
+
+          <div class="result-layout">
+            <aside class="filter-panel">
+              <h3>表示フィルタ</h3>
+              <label><input type="checkbox" checked /> 耐久</label>
+              <label><input type="checkbox" checked /> 火力</label>
+              <label><input type="checkbox" checked /> 素早さ</label>
+              <select aria-label="ソート">
+                <option>総使用SPが少ない順</option>
+                <option>余裕が大きい順</option>
+              </select>
+            </aside>
+
+            <div class="candidate-table" role="table" aria-label="候補一覧">
+              <div class="candidate-row header" role="row">
+                <span>順位</span><span>SP配分 (H-A-B-C-D-S)</span><span>使用/残り</span><span>PASS</span><span>ボトルネック</span>
+              </div>
+              <button class="candidate-row selected" type="button" data-rank="1">
+                <span class="rank crown">1</span><span class="allocation"><b>12</b><b>0</b><b>4</b><b>28</b><b>0</b><b>22</b><i></i></span><span>66 / 0</span><span class="pass">3 / 3</span><span>シナリオA +7.9%</span>
+              </button>
+              <button class="candidate-row" type="button" data-rank="2">
+                <span class="rank">2</span><span class="allocation"><b>12</b><b>0</b><b>8</b><b>28</b><b>0</b><b>18</b><i></i></span><span>66 / 0</span><span class="pass">3 / 3</span><span>シナリオB +5.3%</span>
+              </button>
+              <button class="candidate-row" type="button" data-rank="3">
+                <span class="rank">3</span><span class="allocation"><b>12</b><b>0</b><b>0</b><b>30</b><b>0</b><b>24</b><i></i></span><span>66 / 0</span><span class="pass">3 / 3</span><span>シナリオC +4.1%</span>
+              </button>
+              <button class="candidate-row warning" type="button" data-rank="4">
+                <span class="rank">4</span><span class="allocation"><b>12</b><b>0</b><b>12</b><b>24</b><b>0</b><b>18</b><i></i></span><span>64 / 2</span><span class="fail">2 / 3</span><span>シナリオB -8.7%</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="detail-panel" aria-live="polite">
+          <div class="section-heading">
+            <div>
+              <h2>選択中の候補 <span id="candidateRank">#1</span></h2>
+              <span id="selectedScenario">シナリオA を確認中</span>
+            </div>
+            <button class="primary-button small" type="button" id="applyButton">適用</button>
+          </div>
+          <div class="detail-allocation">
+            <span>H</span><strong>12</strong>
+            <span>A</span><strong>0</strong>
+            <span>B</span><strong>4</strong>
+            <span>C</span><strong>28</strong>
+            <span>D</span><strong>0</strong>
+            <span>S</span><strong>22</strong>
+          </div>
+          <div class="tabs" role="tablist" aria-label="候補詳細">
+            <button class="active" type="button">条件の確認</button>
+            <button type="button">詳細ステータス</button>
+            <button type="button">ダメージ内訳</button>
+          </div>
+          <div class="check-list">
+            <div><span class="badge blue"></span><strong>シナリオA</strong><span>98.7%</span><em>PASS</em><small>+7.9%</small></div>
+            <div><span class="badge red"></span><strong>シナリオB</strong><span>82.3%</span><em>PASS</em><small>+7.3%</small></div>
+            <div><span class="badge purple"></span><strong>シナリオC</strong><span>6実数値上</span><em>PASS</em><small>+6</small></div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
