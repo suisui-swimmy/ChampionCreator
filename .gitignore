@@ -1,2 +1,7 @@
 others/
 docs/
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
