@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "m1-seed-2026-05-26",
+  "generatedBy": "scripts/generate-localization-seed.mjs",
+  "source": "m1 hand-maintained seed source for resolver wiring",
+  "entries": [
+    {
+      "kind": "ability",
+      "id": "intimidate",
+      "canonicalName": "Intimidate",
+      "displayNameJa": "いかく",
+      "searchText": [
+        "威嚇"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "ability",
+      "id": "static",
+      "canonicalName": "Static",
+      "displayNameJa": "せいでんき",
+      "searchText": [
+        "静電気"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "item",
+      "id": "choiceband",
+      "canonicalName": "Choice Band",
+      "displayNameJa": "こだわりハチマキ",
+      "searchText": [
+        "鉢巻",
+        "ハチマキ",
+        "こだわりはちまき"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "item",
+      "id": "choicescarf",
+      "canonicalName": "Choice Scarf",
+      "displayNameJa": "こだわりスカーフ",
+      "searchText": [
+        "スカーフ",
+        "こだわりすかーふ"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "item",
+      "id": "choicespecs",
+      "canonicalName": "Choice Specs",
+      "displayNameJa": "こだわりメガネ",
+      "searchText": [
+        "眼鏡",
+        "メガネ",
+        "こだわりめがね"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "move",
+      "id": "dragondarts",
+      "canonicalName": "Dragon Darts",
+      "displayNameJa": "ドラゴンアロー",
+      "searchText": [
+        "どらごんあろー"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "move",
+      "id": "earthquake",
+      "canonicalName": "Earthquake",
+      "displayNameJa": "じしん",
+      "searchText": [
+        "地震"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "move",
+      "id": "outrage",
+      "canonicalName": "Outrage",
+      "displayNameJa": "げきりん",
+      "searchText": [
+        "逆鱗"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "move",
+      "id": "thunderbolt",
+      "canonicalName": "Thunderbolt",
+      "displayNameJa": "10まんボルト",
+      "searchText": [
+        "10万ボルト",
+        "十万ボルト",
+        "じゅうまんぼると"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "nature",
+      "id": "adamant",
+      "canonicalName": "Adamant",
+      "displayNameJa": "いじっぱり",
+      "searchText": [
+        "意地っ張り"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "nature",
+      "id": "jolly",
+      "canonicalName": "Jolly",
+      "displayNameJa": "ようき",
+      "searchText": [
+        "陽気"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "nature",
+      "id": "modest",
+      "canonicalName": "Modest",
+      "displayNameJa": "ひかえめ",
+      "searchText": [
+        "控えめ"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "pokemon",
+      "id": "dragapult",
+      "canonicalName": "Dragapult",
+      "displayNameJa": "ドラパルト",
+      "searchText": [
+        "どらぱると",
+        "高速ドラゴン"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "pokemon",
+      "id": "dragonite",
+      "canonicalName": "Dragonite",
+      "displayNameJa": "カイリュー",
+      "searchText": [
+        "かいりゅー",
+        "600族"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "pokemon",
+      "id": "garchomp",
+      "canonicalName": "Garchomp",
+      "displayNameJa": "ガブリアス",
+      "searchText": [
+        "がぶりあす"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "pokemon",
+      "id": "landorustherian",
+      "canonicalName": "Landorus-Therian",
+      "displayNameJa": "ランドロス(霊獣)",
+      "searchText": [
+        "ランドロス霊獣",
+        "ランドロスれいじゅう"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "pokemon",
+      "id": "pikachu",
+      "canonicalName": "Pikachu",
+      "displayNameJa": "ピカチュウ",
+      "searchText": [
+        "ぴかちゅう",
+        "ピカ",
+        "Pikachu"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "type",
+      "id": "dragon",
+      "canonicalName": "Dragon",
+      "displayNameJa": "ドラゴン",
+      "searchText": [
+        "どらごん"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "type",
+      "id": "electric",
+      "canonicalName": "Electric",
+      "displayNameJa": "でんき",
+      "searchText": [
+        "電気"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "type",
+      "id": "fire",
+      "canonicalName": "Fire",
+      "displayNameJa": "ほのお",
+      "searchText": [
+        "炎",
+        "ほのおタイプ"
+      ],
+      "sourceStatus": "seed"
+    },
+    {
+      "kind": "type",
+      "id": "ground",
+      "canonicalName": "Ground",
+      "displayNameJa": "じめん",
+      "searchText": [
+        "地面"
+      ],
+      "sourceStatus": "seed"
+    }
+  ]
+}

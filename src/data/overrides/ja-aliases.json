@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "m1-manual-overrides-2026-05-26",
+  "entries": [
+    {
+      "kind": "pokemon",
+      "id": "dragonite",
+      "aliasesJa": ["ドラゴン"],
+      "sourceStatus": "manual",
+      "note": "Used to verify ambiguous resolver output."
+    },
+    {
+      "kind": "pokemon",
+      "id": "dragapult",
+      "aliasesJa": ["ドラゴン"],
+      "sourceStatus": "manual",
+      "note": "Used to verify ambiguous resolver output."
+    },
+    {
+      "kind": "move",
+      "id": "thunderbolt",
+      "aliasesJa": ["10万ボルト", "十万ボルト"],
+      "sourceStatus": "manual",
+      "note": "Numeric spelling variants for Japanese input."
+    }
+  ]
+}
