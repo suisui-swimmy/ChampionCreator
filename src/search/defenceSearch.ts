@@ -104,6 +104,14 @@ export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceEvCa
 export const enumerateDefenceEvCandidates = (build: Build): DefenceEvCandidate[] =>
   Array.from(iterateDefenceEvCandidates(build));
 
+export const countDefenceEvCandidates = (build: Build): number => {
+  let count = 0;
+  for (const _candidate of iterateDefenceEvCandidates(build)) {
+    count += 1;
+  }
+  return count;
+};
+
 const getMaxHp = (build: Build): number => toSmogonPokemon(build).maxHP();
 
 const expandDamageSequence = (
@@ -234,7 +242,7 @@ export const evaluateScenario = (
   };
 };
 
-const sortCandidateResults = (left: CandidateResult, right: CandidateResult): number => {
+export const compareCandidateResults = (left: CandidateResult, right: CandidateResult): number => {
   const leftDefenceBudget = getCandidateDefenceBudget(left.candidate);
   const rightDefenceBudget = getCandidateDefenceBudget(right.candidate);
   if (leftDefenceBudget !== rightDefenceBudget) {
@@ -270,7 +278,7 @@ const sortCandidateResults = (left: CandidateResult, right: CandidateResult): nu
   return right.candidate.hp - left.candidate.hp;
 };
 
-const withRanks = (results: CandidateResult[]): CandidateResult[] =>
+export const rankCandidateResults = (results: CandidateResult[]): CandidateResult[] =>
   results.map((result, index) => ({
     ...result,
     id: `candidate-${index + 1}`,
@@ -303,6 +311,23 @@ export const evaluateCandidate = (
   };
 };
 
+export const finalizeDefenceSearchResults = (
+  defenderBuild: Build,
+  scenarios: Scenario[],
+  passingResults: CandidateResult[],
+  options: DefenceSearchOptions = {},
+): CandidateResult[] => {
+  const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+  const topCandidates = passingResults.sort(compareCandidateResults).slice(0, maxResults);
+  const revalidatedCandidates = topCandidates
+    .map((result) => evaluateCandidate(defenderBuild, scenarios, result.candidate, options))
+    .filter((result) => result.passed)
+    .sort(compareCandidateResults)
+    .slice(0, maxResults);
+
+  return rankCandidateResults(revalidatedCandidates);
+};
+
 export const searchDefenceCandidates = (
   defenderBuild: Build,
   scenarios: Scenario[],
@@ -331,12 +356,5 @@ export const searchDefenceCandidates = (
     }
   }
 
-  const topCandidates = passingResults.sort(sortCandidateResults).slice(0, maxResults);
-  const revalidatedCandidates = topCandidates
-    .map((result) => evaluateCandidate(defenderBuild, scenarios, result.candidate, options))
-    .filter((result) => result.passed)
-    .sort(sortCandidateResults)
-    .slice(0, maxResults);
-
-  return withRanks(revalidatedCandidates);
+  return finalizeDefenceSearchResults(defenderBuild, scenarios, passingResults, options);
 };
