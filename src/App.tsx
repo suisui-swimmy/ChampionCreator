@@ -1,274 +1,385 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import type { CandidateResult, StatKey, StatTable, Terrain, Weather } from "./domain/model";
+import {
+  applyTopCandidateToTarget,
+  buildDefenceSearchInput,
+  createDefaultScenarioForms,
+  createDefaultTargetForm,
+  createInitialSearchUiState,
+  searchUiReducer,
+  startDefenceSearchFromUi,
+  type ScenarioFormState,
+  type TargetFormState,
+} from "./ui/defenceSearchUi";
+import {
+  DefenceSearchWorkerClient,
+  type ActiveDefenceSearchRequest,
+} from "./worker/defenceSearchWorkerClient";
 
-type ScenarioId = "シナリオA" | "シナリオB" | "シナリオC";
-
-type AttackCard = {
-  pokemon: string;
-  move: string;
-  meta: string[];
-  typeLabel: string;
-  cardClass: string;
-  thumbClass: string;
-  thumbText: string;
-  checks?: string[];
+const statLabels: Record<StatKey, string> = {
+  hp: "H",
+  atk: "A",
+  def: "B",
+  spa: "C",
+  spd: "D",
+  spe: "S",
 };
 
-type Scenario = {
-  id: ScenarioId;
-  summary: string;
-  attacks: AttackCard[];
-  hasAddAttack?: boolean;
-};
+const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
+const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
+const fixedStatKeys = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
+const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
 
-type Candidate = {
-  rank: number;
-  allocation: [number, number, number, number, number, number];
-  usage: string;
-  passLabel: string;
-  pass: boolean;
-  bottleneck: string;
-};
-
-const evRows = [
-  { key: "hp", label: "HP", stat: 297, sp: 2, width: "10%", fixed: false },
-  { key: "atk", label: "A", stat: 328, sp: 0, width: "0%", fixed: false },
-  { key: "def", label: "B", stat: 197, sp: 0, width: "12%", fixed: false },
-  { key: "spa", label: "C", stat: 348, sp: 32, width: "100%", fixed: true },
-  { key: "spd", label: "D", stat: 206, sp: 0, width: "0%", fixed: false },
-  { key: "spe", label: "S", stat: 328, sp: 32, width: "100%", fixed: true },
-] as const;
-
-const scenarios: Scenario[] = [
-  {
-    id: "シナリオA",
-    summary: "1回耐える / 93.8%以上",
-    attacks: [
-      {
-        pokemon: "ランドロス(霊獣)",
-        move: "じしん",
-        meta: ["Lv.100", "いじっぱり", "こだわりハチマキ"],
-        typeLabel: "じめん / 物理",
-        cardClass: "ground",
-        thumbClass: "landorus",
-        thumbText: "L",
-      },
-      {
-        pokemon: "ガブリアス",
-        move: "げきりん",
-        meta: ["Lv.100", "ようき", "こだわりスカーフ"],
-        typeLabel: "ドラゴン / 物理",
-        cardClass: "dragon",
-        thumbClass: "garchomp",
-        thumbText: "G",
-      },
-    ],
-  },
-  {
-    id: "シナリオB",
-    summary: "確定2発 / 75.0%以上",
-    attacks: [
-      {
-        pokemon: "ハピナス",
-        move: "だいもんじ",
-        meta: [],
-        checks: ["もらもの", "壁"],
-        typeLabel: "ほのお / 特殊",
-        cardClass: "fire",
-        thumbClass: "blissey",
-        thumbText: "H",
-      },
-      {
-        pokemon: "サーフゴー",
-        move: "シャドーボール",
-        meta: ["ランク ±0", "こだわりメガネ"],
-        typeLabel: "ゴースト / 特殊",
-        cardClass: "ghost",
-        thumbClass: "gholdengo",
-        thumbText: "S",
-      },
-    ],
-  },
-  {
-    id: "シナリオC",
-    summary: "最速ドラパルト抜き",
-    hasAddAttack: true,
-    attacks: [
-      {
-        pokemon: "ドラパルト",
-        move: "ドラゴンアロー",
-        meta: ["すりぬけ", "きあいのタスキ"],
-        typeLabel: "ドラゴン / 物理",
-        cardClass: "dragon",
-        thumbClass: "dragapult",
-        thumbText: "D",
-      },
-    ],
-  },
+const weatherOptions: Array<{ value: Weather; label: string }> = [
+  { value: "none", label: "なし" },
+  { value: "sun", label: "晴れ" },
+  { value: "rain", label: "雨" },
+  { value: "sand", label: "砂" },
+  { value: "snow", label: "雪" },
 ];
 
-const candidates: Candidate[] = [
-  { rank: 1, allocation: [12, 0, 4, 28, 0, 22], usage: "66 / 0", passLabel: "3 / 3", pass: true, bottleneck: "シナリオA +7.9%" },
-  { rank: 2, allocation: [12, 0, 8, 28, 0, 18], usage: "66 / 0", passLabel: "3 / 3", pass: true, bottleneck: "シナリオB +5.3%" },
-  { rank: 3, allocation: [12, 0, 0, 30, 0, 24], usage: "66 / 0", passLabel: "3 / 3", pass: true, bottleneck: "シナリオC +4.1%" },
-  { rank: 4, allocation: [12, 0, 12, 24, 0, 18], usage: "64 / 2", passLabel: "2 / 3", pass: false, bottleneck: "シナリオB -8.7%" },
+const terrainOptions: Array<{ value: Terrain; label: string }> = [
+  { value: "none", label: "なし" },
+  { value: "electric", label: "エレキ" },
+  { value: "grassy", label: "グラス" },
+  { value: "misty", label: "ミスト" },
+  { value: "psychic", label: "サイコ" },
 ];
+
+const toNumber = (value: string, fallback = 0): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const sumEvs = (evs: StatTable): number => statKeys.reduce((total, key) => total + evs[key], 0);
+
+const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
+
+const formatDamageRange = (min: number, max: number): string =>
+  min === max ? String(min) : `${min}-${max}`;
+
+const createScenario = (index: number): ScenarioFormState => ({
+  ...createDefaultScenarioForms()[index % createDefaultScenarioForms().length],
+  id: `scenario-${Date.now()}-${index}`,
+  label: `シナリオ${index + 1}`,
+});
 
 export function App() {
-  const [selectedScenario, setSelectedScenario] = useState<ScenarioId>("シナリオA");
-  const [selectedRank, setSelectedRank] = useState(1);
-  const [isRunning, setIsRunning] = useState(false);
-  const [applyLabel, setApplyLabel] = useState("適用");
-  const runTimer = useRef<number | null>(null);
-  const applyTimer = useRef<number | null>(null);
+  const [targetForm, setTargetForm] = useState<TargetFormState>(() => createDefaultTargetForm());
+  const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(() => createDefaultScenarioForms());
+  const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [applyLabel, setApplyLabel] = useState("1位を適用");
+  const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
+  const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
+  const applyTimerRef = useRef<number | null>(null);
+
+  const selectedCandidate = useMemo(() => {
+    if (searchState.candidates.length === 0) {
+      return null;
+    }
+    return searchState.candidates.find((candidate) => candidate.id === selectedCandidateId)
+      ?? searchState.candidates[0];
+  }, [searchState.candidates, selectedCandidateId]);
+
+  const previewInput = useMemo(() => {
+    try {
+      return { input: buildDefenceSearchInput(targetForm, scenarioForms), error: null };
+    } catch (error) {
+      return { input: null, error: error instanceof Error ? error.message : String(error) };
+    }
+  }, [targetForm, scenarioForms]);
 
   useEffect(() => {
     return () => {
-      if (runTimer.current !== null) {
-        window.clearTimeout(runTimer.current);
-      }
-      if (applyTimer.current !== null) {
-        window.clearTimeout(applyTimer.current);
+      activeRequestRef.current?.cancel();
+      workerClientRef.current?.dispose();
+      if (applyTimerRef.current !== null) {
+        window.clearTimeout(applyTimerRef.current);
       }
     };
   }, []);
 
+  const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
+    setTargetForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateTargetEv = (key: StatKey, value: number) => {
+    setTargetForm((current) => ({
+      ...current,
+      evs: { ...current.evs, [key]: value },
+    }));
+  };
+
+  const updateScenario = <K extends keyof ScenarioFormState>(
+    id: string,
+    key: K,
+    value: ScenarioFormState[K],
+  ) => {
+    setScenarioForms((current) => current.map((scenario) => (
+      scenario.id === id ? { ...scenario, [key]: value } : scenario
+    )));
+  };
+
+  const updateScenarioAttackerEv = (id: string, key: StatKey, value: number) => {
+    setScenarioForms((current) => current.map((scenario) => (
+      scenario.id === id
+        ? { ...scenario, attackerEvs: { ...scenario.attackerEvs, [key]: value } }
+        : scenario
+    )));
+  };
+
+  const handleAddScenario = () => {
+    setScenarioForms((current) => [...current, createScenario(current.length)]);
+  };
+
+  const handleRemoveScenario = (id: string) => {
+    setScenarioForms((current) => (
+      current.length <= 1 ? current : current.filter((scenario) => scenario.id !== id)
+    ));
+  };
+
   const handleRun = () => {
-    if (isRunning) {
+    if (searchState.status === "running") {
       return;
     }
 
-    setIsRunning(true);
-    runTimer.current = window.setTimeout(() => setIsRunning(false), 900);
+    try {
+      workerClientRef.current ??= new DefenceSearchWorkerClient();
+      const { request } = startDefenceSearchFromUi(
+        workerClientRef.current,
+        targetForm,
+        scenarioForms,
+        dispatchSearch,
+      );
+      activeRequestRef.current = request;
+      setSelectedCandidateId(null);
+    } catch (error) {
+      dispatchSearch({
+        type: "validationError",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
-  const handleApply = () => {
+  const handleCancel = () => {
+    activeRequestRef.current?.cancel();
+    dispatchSearch({ type: "cancel", requestId: activeRequestRef.current?.requestId });
+    activeRequestRef.current = null;
+  };
+
+  const handleApplyTopCandidate = () => {
+    setTargetForm((current) => applyTopCandidateToTarget(current, searchState.candidates));
     setApplyLabel("適用済み");
-    applyTimer.current = window.setTimeout(() => setApplyLabel("適用"), 1200);
+    if (applyTimerRef.current !== null) {
+      window.clearTimeout(applyTimerRef.current);
+    }
+    applyTimerRef.current = window.setTimeout(() => setApplyLabel("1位を適用"), 1200);
   };
 
   return (
-    <div className={`app-shell${isRunning ? " is-running" : ""}`}>
+    <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
       <header className="topbar">
         <div>
           <h1>ChampionCreator</h1>
           <p>Pokemon Champions 自動耐久調整</p>
         </div>
         <div className="topbar-actions">
-          <button className="ghost-button" type="button">JSON</button>
-          <button className="ghost-button" type="button">共有</button>
-          <button className="primary-button" type="button" id="runButton" onClick={handleRun}>
-            {isRunning ? "計算中..." : "計算実行"}
+          <div className="run-meter" aria-live="polite">
+            <strong>{Math.round(searchState.progress * 100)}%</strong>
+            <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} candidates</span>
+          </div>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={handleCancel}
+            disabled={searchState.status !== "running"}
+          >
+            キャンセル
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            id="runButton"
+            onClick={handleRun}
+            disabled={searchState.status === "running"}
+          >
+            {searchState.status === "running" ? "計算中..." : "計算開始"}
           </button>
         </div>
       </header>
 
+      {searchState.errorMessage ? (
+        <div className="status-banner error" role="alert">{searchState.errorMessage}</div>
+      ) : null}
+      {previewInput.error ? (
+        <div className="status-banner warning" role="status">{previewInput.error}</div>
+      ) : null}
+
       <main className="workbench">
-        <TargetPanel />
-        <ScenarioPanel selectedScenario={selectedScenario} onSelectScenario={setSelectedScenario} />
-        <ResultsPanel selectedRank={selectedRank} onSelectRank={setSelectedRank} />
+        <TargetPanel
+          targetForm={targetForm}
+          onUpdateField={updateTargetField}
+          onUpdateEv={updateTargetEv}
+          canonicalPokemon={previewInput.input?.build.pokemon.canonicalName}
+          totalEv={sumEvs(targetForm.evs)}
+        />
+        <ScenarioPanel
+          scenarios={scenarioForms}
+          onAddScenario={handleAddScenario}
+          onRemoveScenario={handleRemoveScenario}
+          onUpdateScenario={updateScenario}
+          onUpdateAttackerEv={updateScenarioAttackerEv}
+        />
+        <ResultsPanel
+          candidates={searchState.candidates}
+          selectedCandidate={selectedCandidate}
+          status={searchState.status}
+          onSelectCandidate={setSelectedCandidateId}
+        />
         <DetailPanel
-          selectedScenario={selectedScenario}
-          selectedRank={selectedRank}
+          candidate={selectedCandidate}
+          scenarios={scenarioForms}
           applyLabel={applyLabel}
-          onApply={handleApply}
+          canApply={searchState.candidates.length > 0}
+          onApply={handleApplyTopCandidate}
         />
       </main>
     </div>
   );
 }
 
-function TargetPanel() {
+type TargetPanelProps = {
+  targetForm: TargetFormState;
+  canonicalPokemon?: string;
+  totalEv: number;
+  onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
+  onUpdateEv: (key: StatKey, value: number) => void;
+};
+
+function TargetPanel({ targetForm, canonicalPokemon, totalEv, onUpdateField, onUpdateEv }: TargetPanelProps) {
   return (
     <section className="target-panel" aria-labelledby="target-title">
       <div className="section-heading">
         <div>
           <h2 id="target-title">調整対象</h2>
-          <span>自分のポケモン</span>
-        </div>
-        <button className="icon-button" type="button" aria-label="調整対象をリセット">↺</button>
-      </div>
-
-      <div className="target-summary">
-        <div className="target-art" aria-hidden="true">
-          <div className="wing-mark" />
-          <strong>MX</strong>
-        </div>
-        <div className="field-grid">
-          <label>
-            ポケモン
-            <select defaultValue="メガリザードンX">
-              <option>メガリザードンX</option>
-              <option>ガブリアス</option>
-            </select>
-          </label>
-          <label>
-            性格
-            <select defaultValue="ひかえめ">
-              <option>ひかえめ</option>
-              <option>ようき</option>
-            </select>
-          </label>
-          <label>
-            Lv.
-            <input type="number" defaultValue="100" min="1" max="100" />
-          </label>
-          <label>
-            持ち物
-            <select defaultValue="こだわりスカーフ">
-              <option>こだわりスカーフ</option>
-              <option>あつぞこブーツ</option>
-            </select>
-          </label>
+          <span>{canonicalPokemon ? `calc: ${canonicalPokemon}` : "resolver 未確定"}</span>
         </div>
       </div>
 
-      <div className="type-row">
-        <span className="type-chip fire">ほのお</span>
-        <span className="type-chip dragon">ドラゴン</span>
-        <span className="type-chip dragon">テラ: ドラゴン</span>
+      <div className="target-summary compact">
+        <label>
+          ポケモン
+          <input
+            value={targetForm.pokemonInput}
+            onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
+          />
+        </label>
+        <label>
+          性格
+          <input
+            value={targetForm.natureInput}
+            onChange={(event) => onUpdateField("natureInput", event.target.value)}
+          />
+        </label>
+        <label>
+          Lv.
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={targetForm.level}
+            onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
+          />
+        </label>
+        <label>
+          持ち物
+          <input
+            value={targetForm.itemInput}
+            placeholder="任意"
+            onChange={(event) => onUpdateField("itemInput", event.target.value)}
+          />
+        </label>
+        <label>
+          特性
+          <input
+            value={targetForm.abilityInput}
+            placeholder="任意"
+            onChange={(event) => onUpdateField("abilityInput", event.target.value)}
+          />
+        </label>
+        <label>
+          テラ
+          <input
+            value={targetForm.teraTypeInput}
+            placeholder="任意"
+            onChange={(event) => onUpdateField("teraTypeInput", event.target.value)}
+          />
+        </label>
       </div>
 
-      <div className="ev-table" aria-label="努力値配分">
+      <div className="ev-table" aria-label="調整対象の努力値">
         <div className="ev-header">
           <span>能力</span>
-          <span>実数値</span>
-          <span>現在SP</span>
-          <span>SP配分</span>
+          <span>EV</span>
+          <span>探索</span>
           <span>固定</span>
         </div>
-        {evRows.map((row) => (
-          <div className={`ev-row ${row.key}`} key={row.key}>
-            <strong>{row.label}</strong>
-            <span>{row.stat}</span>
-            <input defaultValue={row.sp} aria-label={`${row.label} SP`} />
-            <div className="bar"><i style={{ width: row.width }} /></div>
-            <input type="checkbox" defaultChecked={row.fixed} aria-label={`${row.label}を固定`} />
+        {statKeys.map((key) => (
+          <div className={`ev-row ${key}`} key={key}>
+            <strong>{statLabels[key]}</strong>
+            <input
+              type="number"
+              min="0"
+              max="252"
+              step="4"
+              value={targetForm.evs[key]}
+              aria-label={`${statLabels[key]} EV`}
+              onChange={(event) => onUpdateEv(key, toNumber(event.target.value))}
+            />
+            <div className="bar"><i style={{ width: `${Math.min(100, (targetForm.evs[key] / 252) * 100)}%` }} /></div>
+            <span className={defenceStatKeySet.has(key) ? "search-chip" : "fixed-chip"}>
+              {defenceStatKeySet.has(key) ? "HBD" : "固定"}
+            </span>
           </div>
         ))}
       </div>
 
       <div className="sp-summary">
-        <span>合計SP</span>
-        <strong>66 / 66</strong>
+        <span>合計EV</span>
+        <strong>{totalEv} / 508</strong>
       </div>
     </section>
   );
 }
 
 type ScenarioPanelProps = {
-  selectedScenario: ScenarioId;
-  onSelectScenario: (scenario: ScenarioId) => void;
+  scenarios: ScenarioFormState[];
+  onAddScenario: () => void;
+  onRemoveScenario: (id: string) => void;
+  onUpdateScenario: <K extends keyof ScenarioFormState>(
+    id: string,
+    key: K,
+    value: ScenarioFormState[K],
+  ) => void;
+  onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
 
-function ScenarioPanel({ selectedScenario, onSelectScenario }: ScenarioPanelProps) {
+function ScenarioPanel({
+  scenarios,
+  onAddScenario,
+  onRemoveScenario,
+  onUpdateScenario,
+  onUpdateAttackerEv,
+}: ScenarioPanelProps) {
   return (
     <section className="scenario-panel" aria-labelledby="scenario-title">
       <div className="section-heading">
         <div>
           <h2 id="scenario-title">仮想敵シナリオ</h2>
-          <span>カードで条件をまとめる</span>
+          <span>有効な条件を Worker で同時評価</span>
         </div>
-        <button className="ghost-button" type="button">+ シナリオを追加</button>
+        <button className="ghost-button" type="button" onClick={onAddScenario}>+ シナリオを追加</button>
       </div>
 
       <div className="scenario-grid">
@@ -276,8 +387,9 @@ function ScenarioPanel({ selectedScenario, onSelectScenario }: ScenarioPanelProp
           <ScenarioCard
             key={scenario.id}
             scenario={scenario}
-            selected={selectedScenario === scenario.id}
-            onSelect={() => onSelectScenario(scenario.id)}
+            onRemoveScenario={onRemoveScenario}
+            onUpdateScenario={onUpdateScenario}
+            onUpdateAttackerEv={onUpdateAttackerEv}
           />
         ))}
       </div>
@@ -286,158 +398,262 @@ function ScenarioPanel({ selectedScenario, onSelectScenario }: ScenarioPanelProp
 }
 
 type ScenarioCardProps = {
-  scenario: Scenario;
-  selected: boolean;
-  onSelect: () => void;
+  scenario: ScenarioFormState;
+  onRemoveScenario: (id: string) => void;
+  onUpdateScenario: <K extends keyof ScenarioFormState>(
+    id: string,
+    key: K,
+    value: ScenarioFormState[K],
+  ) => void;
+  onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
 
-function ScenarioCard({ scenario, selected, onSelect }: ScenarioCardProps) {
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onSelect();
-    }
-  };
+function ScenarioCard({
+  scenario,
+  onRemoveScenario,
+  onUpdateScenario,
+  onUpdateAttackerEv,
+}: ScenarioCardProps) {
+  const onInput = <K extends keyof ScenarioFormState>(key: K) => (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => onUpdateScenario(scenario.id, key, event.target.value as ScenarioFormState[K]);
 
   return (
-    <article
-      className={`scenario-card${selected ? " selected" : ""}`}
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={onKeyDown}
-    >
+    <article className={`scenario-card${scenario.enabled ? "" : " disabled"}`}>
       <div className="scenario-header">
-        <label className="switch"><input type="checkbox" defaultChecked /><span /></label>
-        <div><strong>{scenario.id}</strong><small>{scenario.summary}</small></div>
-        <button className="icon-button" type="button" aria-label={`${scenario.id}を折りたたむ`}>⌄</button>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={scenario.enabled}
+            onChange={(event) => onUpdateScenario(scenario.id, "enabled", event.target.checked)}
+          />
+          <span />
+        </label>
+        <div>
+          <input
+            className="inline-title-input"
+            value={scenario.label}
+            aria-label="シナリオ名"
+            onChange={onInput("label")}
+          />
+          <small>{scenario.requiredSurvivedHits} hit / {scenario.minSurvivalProbabilityPercent}% 以上</small>
+        </div>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={`${scenario.label}を削除`}
+          onClick={() => onRemoveScenario(scenario.id)}
+        >
+          ×
+        </button>
       </div>
-      <div className={`attack-pair${scenario.hasAddAttack ? " single" : ""}`}>
-        {scenario.attacks.map((attack) => <AttackCardView attack={attack} key={`${scenario.id}-${attack.pokemon}`} />)}
-        {scenario.hasAddAttack ? <button className="add-attack" type="button">+ 攻撃を追加</button> : null}
+
+      <div className="scenario-fields">
+        <label>
+          攻撃側
+          <input value={scenario.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
+        </label>
+        <label>
+          技
+          <input value={scenario.moveInput} onChange={onInput("moveInput")} />
+        </label>
+        <label>
+          性格
+          <input value={scenario.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
+        </label>
+        <label>
+          持ち物
+          <input value={scenario.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
+        </label>
+        <label>
+          Lv.
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={scenario.attackerLevel}
+            onChange={(event) => onUpdateScenario(scenario.id, "attackerLevel", toNumber(event.target.value, 50))}
+          />
+        </label>
+        <label>
+          回数
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={scenario.repeat}
+            onChange={(event) => onUpdateScenario(scenario.id, "repeat", toNumber(event.target.value, 1))}
+          />
+        </label>
+        <label>
+          必要耐久
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={scenario.requiredSurvivedHits}
+            onChange={(event) => onUpdateScenario(scenario.id, "requiredSurvivedHits", toNumber(event.target.value, 1))}
+          />
+        </label>
+        <label>
+          生存率%
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={scenario.minSurvivalProbabilityPercent}
+            onChange={(event) => onUpdateScenario(scenario.id, "minSurvivalProbabilityPercent", toNumber(event.target.value, 100))}
+          />
+        </label>
+      </div>
+
+      <div className="attacker-evs" aria-label={`${scenario.label} 攻撃側努力値`}>
+        {fixedStatKeys.map((key) => (
+          <label key={key}>
+            {statLabels[key]} EV
+            <input
+              type="number"
+              min="0"
+              max="252"
+              step="4"
+              value={scenario.attackerEvs[key]}
+              onChange={(event) => onUpdateAttackerEv(scenario.id, key, toNumber(event.target.value))}
+            />
+          </label>
+        ))}
+      </div>
+
+      <div className="scenario-options">
+        <label><input type="checkbox" checked={scenario.critical} onChange={(event) => onUpdateScenario(scenario.id, "critical", event.target.checked)} /> 急所</label>
+        <label><input type="checkbox" checked={scenario.reflect} onChange={(event) => onUpdateScenario(scenario.id, "reflect", event.target.checked)} /> リフレクター</label>
+        <label><input type="checkbox" checked={scenario.lightScreen} onChange={(event) => onUpdateScenario(scenario.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+        <label><input type="checkbox" checked={scenario.auroraVeil} onChange={(event) => onUpdateScenario(scenario.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+        <label><input type="checkbox" checked={scenario.helpingHand} onChange={(event) => onUpdateScenario(scenario.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+      </div>
+
+      <div className="scenario-fields short">
+        <label>
+          天候
+          <select
+            value={scenario.weather}
+            onChange={(event) => onUpdateScenario(scenario.id, "weather", event.target.value as Weather)}
+          >
+            {weatherOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
+          フィールド
+          <select
+            value={scenario.terrain}
+            onChange={(event) => onUpdateScenario(scenario.id, "terrain", event.target.value as Terrain)}
+          >
+            {terrainOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
+        </label>
       </div>
     </article>
   );
 }
 
-function AttackCardView({ attack }: { attack: AttackCard }) {
-  return (
-    <div className={`attack-card ${attack.cardClass}`}>
-      <div className={`thumb ${attack.thumbClass}`}>{attack.thumbText}</div>
-      <div className="attack-fields">
-        <select defaultValue={attack.pokemon}><option>{attack.pokemon}</option></select>
-        <select defaultValue={attack.move}><option>{attack.move}</option></select>
-        {attack.checks ? (
-          <div className="check-row">
-            {attack.checks.map((check, index) => (
-              <label key={check}><input type="checkbox" defaultChecked={index === 0} /> {check}</label>
-            ))}
-          </div>
-        ) : (
-          <div className="mini-row">
-            {attack.meta.map((meta) => <span key={meta}>{meta}</span>)}
-          </div>
-        )}
-      </div>
-      <div className="type-strip">{attack.typeLabel}</div>
-    </div>
-  );
-}
-
 type ResultsPanelProps = {
-  selectedRank: number;
-  onSelectRank: (rank: number) => void;
+  candidates: CandidateResult[];
+  selectedCandidate: CandidateResult | null;
+  status: string;
+  onSelectCandidate: (id: string) => void;
 };
 
-function ResultsPanel({ selectedRank, onSelectRank }: ResultsPanelProps) {
+function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate }: ResultsPanelProps) {
   return (
     <section className="results-panel" aria-labelledby="results-title">
       <div className="section-heading">
         <div>
-          <h2 id="results-title">結果</h2>
-          <span>候補 38 件</span>
-        </div>
-        <div className="segmented">
-          <button className="active" type="button">PASSのみ</button>
-          <button type="button">全部</button>
+          <h2 id="results-title">候補一覧</h2>
+          <span>{status === "running" ? "探索中" : `候補 ${candidates.length} 件`}</span>
         </div>
       </div>
 
-      <div className="result-layout">
-        <aside className="filter-panel">
-          <h3>表示フィルタ</h3>
-          <label><input type="checkbox" defaultChecked /> 耐久</label>
-          <label><input type="checkbox" defaultChecked /> 火力</label>
-          <label><input type="checkbox" defaultChecked /> 素早さ</label>
-          <select aria-label="ソート">
-            <option>総使用SPが少ない順</option>
-            <option>余裕が大きい順</option>
-          </select>
-        </aside>
-
-        <div className="candidate-table" role="table" aria-label="候補一覧">
-          <div className="candidate-row header" role="row">
-            <span>順位</span><span>SP配分 (H-A-B-C-D-S)</span><span>使用/残り</span><span>PASS</span><span>ボトルネック</span>
-          </div>
-          {candidates.map((candidate) => (
-            <button
-              className={`candidate-row${selectedRank === candidate.rank ? " selected" : ""}${candidate.pass ? "" : " warning"}`}
-              type="button"
-              key={candidate.rank}
-              onClick={() => onSelectRank(candidate.rank)}
-            >
-              <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
-              <span className="allocation">
-                {candidate.allocation.map((value, index) => <b key={`${candidate.rank}-${index}`}>{value}</b>)}
-                <i />
-              </span>
-              <span>{candidate.usage}</span>
-              <span className={candidate.pass ? "pass" : "fail"}>{candidate.passLabel}</span>
-              <span>{candidate.bottleneck}</span>
-            </button>
-          ))}
+      <div className="candidate-table" role="table" aria-label="候補一覧">
+        <div className="candidate-row header" role="row">
+          <span>順位</span><span>H/B/D</span><span>使用EV</span><span>残りEV</span><span>ボトルネック</span>
         </div>
+        {candidates.length === 0 ? (
+          <div className="empty-result">計算開始で Worker 経由の候補がここに出ます</div>
+        ) : candidates.map((candidate) => (
+          <button
+            className={`candidate-row${selectedCandidate?.id === candidate.id ? " selected" : ""}`}
+            type="button"
+            key={candidate.id}
+            onClick={() => onSelectCandidate(candidate.id)}
+          >
+            <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
+            <span className="allocation compact-allocation">
+              <b>{candidate.candidate.hp}</b>
+              <b>{candidate.candidate.def}</b>
+              <b>{candidate.candidate.spd}</b>
+              <i />
+            </span>
+            <span>{candidate.usedEvBudget}</span>
+            <span>{candidate.remainingEvBudget}</span>
+            <span>{candidate.bottleneckLabel}</span>
+          </button>
+        ))}
       </div>
     </section>
   );
 }
 
 type DetailPanelProps = {
-  selectedScenario: ScenarioId;
-  selectedRank: number;
+  candidate: CandidateResult | null;
+  scenarios: ScenarioFormState[];
   applyLabel: string;
+  canApply: boolean;
   onApply: () => void;
 };
 
-function DetailPanel({ selectedScenario, selectedRank, applyLabel, onApply }: DetailPanelProps) {
-  const selectedCandidate = candidates.find((candidate) => candidate.rank === selectedRank) ?? candidates[0];
+function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: DetailPanelProps) {
+  const scenarioLabels = new Map(scenarios.map((scenario) => [scenario.id, scenario.label]));
 
   return (
     <aside className="detail-panel" aria-live="polite">
       <div className="section-heading">
         <div>
-          <h2>選択中の候補 <span>#{selectedRank}</span></h2>
-          <span>{selectedScenario} を確認中</span>
+          <h2>選択候補詳細 {candidate ? <span>#{candidate.rank}</span> : null}</h2>
+          <span>{candidate?.bottleneckLabel ?? "候補未選択"}</span>
         </div>
-        <button className="primary-button small" type="button" onClick={onApply}>{applyLabel}</button>
+        <button className="primary-button small" type="button" onClick={onApply} disabled={!canApply}>{applyLabel}</button>
       </div>
-      <div className="detail-allocation">
-        {["H", "A", "B", "C", "D", "S"].map((label) => (
-          <span key={label}>{label}</span>
-        ))}
-        {selectedCandidate.allocation.map((value, index) => (
-          <strong key={`value-${index}`}>{value}</strong>
-        ))}
-      </div>
-      <div className="tabs" role="tablist" aria-label="候補詳細">
-        <button className="active" type="button">条件の確認</button>
-        <button type="button">詳細ステータス</button>
-        <button type="button">ダメージ内訳</button>
-      </div>
-      <div className="check-list">
-        <div><span className="badge blue" /><strong>シナリオA</strong><span>98.7%</span><em>PASS</em><small>+7.9%</small></div>
-        <div><span className="badge red" /><strong>シナリオB</strong><span>82.3%</span><em>PASS</em><small>+7.3%</small></div>
-        <div><span className="badge purple" /><strong>シナリオC</strong><span>6実数値上</span><em>PASS</em><small>+6</small></div>
-      </div>
+
+      {candidate ? (
+        <>
+          <div className="detail-allocation">
+            {statKeys.map((key) => <span key={key}>{statLabels[key]}</span>)}
+            {statKeys.map((key) => <strong key={key}>{candidate.appliedEvs[key]}</strong>)}
+          </div>
+
+          <div className="check-list">
+            {candidate.scenarioResults.map((result) => (
+              <div key={result.scenarioId}>
+                <span className={`badge ${result.passed ? "green" : "red"}`} />
+                <strong>{scenarioLabels.get(result.scenarioId) ?? result.scenarioId}</strong>
+                <span>{formatPercent(result.survivalProbability)}</span>
+                <em className={result.passed ? "" : "fail-badge"}>{result.passed ? "PASS" : "FAIL"}</em>
+                <small>{result.bottleneckLabel}</small>
+                <ul>
+                  {result.hitEvaluations.map((hit) => (
+                    <li key={hit.hitId}>
+                      damage {formatDamageRange(hit.damageRange.min, hit.damageRange.max)}
+                      {" / "}
+                      {hit.damageRange.percentMin.toFixed(1)}-{hit.damageRange.percentMax.toFixed(1)}%
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="empty-detail">候補を計算すると scenario ごとの pass / survivalProbability / damage range を確認できます</div>
+      )}
     </aside>
   );
 }

@@ -1,0 +1,435 @@
+import type { EntityKind } from "../data/localizationTypes";
+import type {
+  ActiveDefenceSearchRequest,
+  StartDefenceSearchWorkerOptions,
+} from "../worker/defenceSearchWorkerClient";
+import { createDefenceSearchRequestId } from "../worker/defenceSearchWorkerClient";
+import type {
+  Build,
+  CandidateResult,
+  EntityRef,
+  FieldState,
+  Scenario,
+  ScenarioHit,
+  SideState,
+  StatTable,
+  Weather,
+  Terrain,
+} from "../domain/model";
+import { toEntityRef } from "../domain/model";
+import { resolveEntity } from "../localization/resolver";
+
+export interface TargetFormState {
+  pokemonInput: string;
+  natureInput: string;
+  abilityInput: string;
+  itemInput: string;
+  teraTypeInput: string;
+  level: number;
+  evs: StatTable;
+}
+
+export interface ScenarioFormState {
+  id: string;
+  label: string;
+  enabled: boolean;
+  attackerPokemonInput: string;
+  attackerNatureInput: string;
+  attackerAbilityInput: string;
+  attackerItemInput: string;
+  attackerLevel: number;
+  attackerEvs: StatTable;
+  moveInput: string;
+  repeat: number;
+  critical: boolean;
+  requiredSurvivedHits: number;
+  minSurvivalProbabilityPercent: number;
+  weather: Weather;
+  terrain: Terrain;
+  reflect: boolean;
+  lightScreen: boolean;
+  auroraVeil: boolean;
+  helpingHand: boolean;
+}
+
+export interface DefenceSearchInput {
+  build: Build;
+  scenarios: Scenario[];
+}
+
+export type SearchStatus = "idle" | "running" | "complete" | "error" | "canceled";
+
+export interface SearchUiState {
+  status: SearchStatus;
+  activeRequestId: string | null;
+  searchedCandidates: number;
+  totalCandidates: number;
+  progress: number;
+  candidates: CandidateResult[];
+  errorMessage: string | null;
+}
+
+export type SearchUiAction =
+  | { type: "start"; requestId: string }
+  | {
+      type: "progress";
+      requestId: string;
+      searchedCandidates: number;
+      totalCandidates: number;
+      progress: number;
+    }
+  | { type: "partialResult"; requestId: string; candidates: CandidateResult[] }
+  | { type: "complete"; requestId: string; candidates: CandidateResult[] }
+  | { type: "error"; requestId?: string; message: string }
+  | { type: "cancel"; requestId?: string }
+  | { type: "validationError"; message: string };
+
+export interface DefenceSearchWorkerClientAdapter {
+  start: (
+    build: Build,
+    scenarios: Scenario[],
+    options?: StartDefenceSearchWorkerOptions,
+  ) => ActiveDefenceSearchRequest;
+}
+
+export type SearchUiDispatch = (action: SearchUiAction) => void;
+
+export const createInitialSearchUiState = (): SearchUiState => ({
+  status: "idle",
+  activeRequestId: null,
+  searchedCandidates: 0,
+  totalCandidates: 0,
+  progress: 0,
+  candidates: [],
+  errorMessage: null,
+});
+
+const zeroEvs: StatTable = {
+  hp: 0,
+  atk: 0,
+  def: 0,
+  spa: 0,
+  spd: 0,
+  spe: 0,
+};
+
+const defaultIvs: StatTable = {
+  hp: 31,
+  atk: 31,
+  def: 31,
+  spa: 31,
+  spd: 31,
+  spe: 31,
+};
+
+const emptySide: SideState = {
+  reflect: false,
+  lightScreen: false,
+  auroraVeil: false,
+  helpingHand: false,
+};
+
+const clampInt = (value: number, min: number, max: number): number => {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+};
+
+const clampProbabilityPercent = (value: number): number => clampInt(value, 0, 100) / 100;
+
+const normalizeStatTable = (evs: StatTable): StatTable => ({
+  hp: clampInt(evs.hp, 0, 252),
+  atk: clampInt(evs.atk, 0, 252),
+  def: clampInt(evs.def, 0, 252),
+  spa: clampInt(evs.spa, 0, 252),
+  spd: clampInt(evs.spd, 0, 252),
+  spe: clampInt(evs.spe, 0, 252),
+});
+
+const mustResolve = <K extends EntityKind>(
+  kind: K,
+  input: string,
+  label: string,
+): EntityRef<K> => {
+  const result = resolveEntity(kind, input);
+  const ref = toEntityRef(result, kind);
+  if (!ref) {
+    const suffix = result.candidates.length > 0
+      ? `候補: ${result.candidates.map((candidate) => candidate.displayNameJa).join(", ")}`
+      : "候補なし";
+    throw new Error(`${label}「${input}」を canonical name に解決できません (${result.status}, ${suffix})`);
+  }
+  return ref;
+};
+
+const resolveOptional = <K extends EntityKind>(
+  kind: K,
+  input: string,
+  label: string,
+): EntityRef<K> | undefined => {
+  if (!input.trim()) {
+    return undefined;
+  }
+  return mustResolve(kind, input, label);
+};
+
+export const createDefaultTargetForm = (): TargetFormState => ({
+  pokemonInput: "カイリュー",
+  natureInput: "ひかえめ",
+  abilityInput: "",
+  itemInput: "",
+  teraTypeInput: "ドラゴン",
+  level: 50,
+  evs: { ...zeroEvs, atk: 0, spa: 0, spe: 0 },
+});
+
+export const createDefaultScenarioForms = (): ScenarioFormState[] => [
+  {
+    id: "scenario-special",
+    label: "シナリオA",
+    enabled: true,
+    attackerPokemonInput: "ピカチュウ",
+    attackerNatureInput: "ひかえめ",
+    attackerAbilityInput: "",
+    attackerItemInput: "",
+    attackerLevel: 50,
+    attackerEvs: { ...zeroEvs, spa: 252 },
+    moveInput: "10まんボルト",
+    repeat: 1,
+    critical: false,
+    requiredSurvivedHits: 1,
+    minSurvivalProbabilityPercent: 100,
+    weather: "none",
+    terrain: "none",
+    reflect: false,
+    lightScreen: false,
+    auroraVeil: false,
+    helpingHand: false,
+  },
+  {
+    id: "scenario-physical",
+    label: "シナリオB",
+    enabled: true,
+    attackerPokemonInput: "ガブリアス",
+    attackerNatureInput: "ようき",
+    attackerAbilityInput: "",
+    attackerItemInput: "",
+    attackerLevel: 1,
+    attackerEvs: { ...zeroEvs, atk: 0 },
+    moveInput: "げきりん",
+    repeat: 1,
+    critical: false,
+    requiredSurvivedHits: 1,
+    minSurvivalProbabilityPercent: 100,
+    weather: "none",
+    terrain: "none",
+    reflect: false,
+    lightScreen: false,
+    auroraVeil: false,
+    helpingHand: false,
+  },
+];
+
+const toBuild = (form: TargetFormState, id: string): Build => ({
+  id,
+  pokemon: mustResolve("pokemon", form.pokemonInput, "ポケモン"),
+  level: clampInt(form.level, 1, 100),
+  nature: resolveOptional("nature", form.natureInput, "性格"),
+  ability: resolveOptional("ability", form.abilityInput, "特性"),
+  item: resolveOptional("item", form.itemInput, "持ち物"),
+  teraType: resolveOptional("type", form.teraTypeInput, "テラスタイプ"),
+  ivs: defaultIvs,
+  evs: normalizeStatTable(form.evs),
+});
+
+const toScenarioHit = (form: ScenarioFormState): ScenarioHit => {
+  const attacker = toBuild(
+    {
+      pokemonInput: form.attackerPokemonInput,
+      natureInput: form.attackerNatureInput,
+      abilityInput: form.attackerAbilityInput,
+      itemInput: form.attackerItemInput,
+      teraTypeInput: "",
+      level: form.attackerLevel,
+      evs: form.attackerEvs,
+    },
+    `${form.id}-attacker`,
+  );
+
+  return {
+    id: `${form.id}-hit-1`,
+    attacker,
+    move: mustResolve("move", form.moveInput, "技"),
+    repeat: Math.max(1, clampInt(form.repeat, 1, 10)),
+    critical: form.critical,
+    attackerBoosts: {},
+    defenderBoosts: {},
+    attackerSide: { ...emptySide, helpingHand: form.helpingHand },
+    defenderSide: {
+      ...emptySide,
+      reflect: form.reflect,
+      lightScreen: form.lightScreen,
+      auroraVeil: form.auroraVeil,
+    },
+  };
+};
+
+const toFieldState = (form: ScenarioFormState): FieldState => ({
+  weather: form.weather,
+  terrain: form.terrain,
+});
+
+export const buildDefenceSearchInput = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): DefenceSearchInput => ({
+  build: toBuild(targetForm, "target"),
+  scenarios: scenarioForms.map((form): Scenario => ({
+    id: form.id,
+    label: form.label,
+    enabled: form.enabled,
+    hits: [toScenarioHit(form)],
+    field: toFieldState(form),
+    constraint: {
+      enabled: form.enabled,
+      requiredSurvivedHits: Math.max(1, clampInt(form.requiredSurvivedHits, 1, 10)),
+      minSurvivalProbability: clampProbabilityPercent(form.minSurvivalProbabilityPercent),
+    },
+  })),
+});
+
+const isActiveRequest = (state: SearchUiState, requestId: string): boolean =>
+  state.activeRequestId === requestId;
+
+export const searchUiReducer = (
+  state: SearchUiState,
+  action: SearchUiAction,
+): SearchUiState => {
+  if ("requestId" in action && action.requestId && !isActiveRequest(state, action.requestId)) {
+    if (action.type !== "start") {
+      return state;
+    }
+  }
+
+  switch (action.type) {
+    case "start":
+      return {
+        status: "running",
+        activeRequestId: action.requestId,
+        searchedCandidates: 0,
+        totalCandidates: 0,
+        progress: 0,
+        candidates: [],
+        errorMessage: null,
+      };
+    case "progress":
+      return {
+        ...state,
+        searchedCandidates: action.searchedCandidates,
+        totalCandidates: action.totalCandidates,
+        progress: action.progress,
+      };
+    case "partialResult":
+      return {
+        ...state,
+        candidates: action.candidates,
+      };
+    case "complete":
+      return {
+        ...state,
+        status: "complete",
+        activeRequestId: null,
+        progress: 1,
+        candidates: action.candidates,
+      };
+    case "error":
+      return {
+        ...state,
+        status: "error",
+        activeRequestId: null,
+        errorMessage: action.message,
+      };
+    case "cancel":
+      return {
+        ...state,
+        status: "canceled",
+        activeRequestId: null,
+      };
+    case "validationError":
+      return {
+        ...state,
+        status: "error",
+        activeRequestId: null,
+        errorMessage: action.message,
+      };
+    default:
+      return state;
+  }
+};
+
+export const startDefenceSearchFromUi = (
+  client: DefenceSearchWorkerClientAdapter,
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+  dispatch: SearchUiDispatch,
+  options: { requestId?: string; maxResults?: number } = {},
+): { request: ActiveDefenceSearchRequest; input: DefenceSearchInput } => {
+  const input = buildDefenceSearchInput(targetForm, scenarioForms);
+  const requestId = options.requestId ?? createDefenceSearchRequestId();
+  dispatch({ type: "start", requestId });
+
+  const request = client.start(input.build, input.scenarios, {
+    requestId,
+    maxResults: options.maxResults ?? 20,
+    progressInterval: 250,
+    partialResultInterval: 1,
+    yieldEvery: 250,
+    callbacks: {
+      onProgress: (message) => dispatch({
+        type: "progress",
+        requestId: message.requestId,
+        searchedCandidates: message.searchedCandidates,
+        totalCandidates: message.totalCandidates,
+        progress: message.progress,
+      }),
+      onPartialResult: (message) => dispatch({
+        type: "partialResult",
+        requestId: message.requestId,
+        candidates: message.candidates,
+      }),
+      onComplete: (message) => dispatch({
+        type: "complete",
+        requestId: message.requestId,
+        candidates: message.candidates,
+      }),
+      onError: (message) => dispatch({
+        type: "error",
+        requestId: message.requestId,
+        message: message.message,
+      }),
+    },
+  });
+
+  return { request, input };
+};
+
+export const applyTopCandidateToTarget = (
+  targetForm: TargetFormState,
+  candidates: CandidateResult[],
+): TargetFormState => {
+  const [topCandidate] = candidates;
+  if (!topCandidate) {
+    return targetForm;
+  }
+
+  return {
+    ...targetForm,
+    evs: {
+      ...targetForm.evs,
+      hp: topCandidate.candidate.hp,
+      def: topCandidate.candidate.def,
+      spd: topCandidate.candidate.spd,
+    },
+  };
+};

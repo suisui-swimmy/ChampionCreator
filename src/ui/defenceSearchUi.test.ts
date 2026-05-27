@@ -1,0 +1,194 @@
+import { describe, expect, it } from "vitest";
+import type { Build, CandidateResult, Scenario } from "../domain/model";
+import type {
+  ActiveDefenceSearchRequest,
+  StartDefenceSearchWorkerOptions,
+} from "../worker/defenceSearchWorkerClient";
+import {
+  applyTopCandidateToTarget,
+  buildDefenceSearchInput,
+  createDefaultScenarioForms,
+  createDefaultTargetForm,
+  createInitialSearchUiState,
+  searchUiReducer,
+  startDefenceSearchFromUi,
+  type DefenceSearchWorkerClientAdapter,
+} from "./defenceSearchUi";
+
+class FakeWorkerClient implements DefenceSearchWorkerClientAdapter {
+  build: Build | null = null;
+  scenarios: Scenario[] = [];
+  options: StartDefenceSearchWorkerOptions | undefined;
+  canceledRequestIds: string[] = [];
+
+  start(
+    build: Build,
+    scenarios: Scenario[],
+    options?: StartDefenceSearchWorkerOptions,
+  ): ActiveDefenceSearchRequest {
+    this.build = build;
+    this.scenarios = scenarios;
+    this.options = options;
+
+    return {
+      requestId: options?.requestId ?? "fake-request",
+      cancel: () => {
+        this.canceledRequestIds.push(options?.requestId ?? "fake-request");
+      },
+    };
+  }
+}
+
+const makeCandidate = (id: string, rank: number, hp: number, def: number, spd: number): CandidateResult => ({
+  id,
+  rank,
+  candidate: { hp, def, spd },
+  appliedEvs: { hp, atk: 0, def, spa: 0, spd, spe: 0 },
+  usedEvBudget: hp + def + spd,
+  remainingEvBudget: 508 - hp - def - spd,
+  passed: true,
+  scenarioResults: [],
+  bottleneckLabel: "シナリオA +100.0%",
+});
+
+describe("buildDefenceSearchInput", () => {
+  it("converts UI input to domain Build and Scenario with canonical names", () => {
+    const target = createDefaultTargetForm();
+    const scenarios = createDefaultScenarioForms();
+
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    expect(input.build.pokemon.canonicalName).toBe("Dragonite");
+    expect(input.build.pokemon.displayNameJa).toBe("カイリュー");
+    expect(input.build.nature?.canonicalName).toBe("Modest");
+    expect(input.build.teraType?.canonicalName).toBe("Dragon");
+    expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Pikachu");
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(input.scenarios[1].hits[0].attacker.pokemon.canonicalName).toBe("Garchomp");
+    expect(input.scenarios[1].hits[0].move.canonicalName).toBe("Outrage");
+  });
+});
+
+describe("searchUiReducer", () => {
+  it("reflects progress, partialResult, and complete messages for the active request", () => {
+    const candidate = makeCandidate("candidate-1", 1, 4, 0, 0);
+    let state = createInitialSearchUiState();
+
+    state = searchUiReducer(state, { type: "start", requestId: "request-a" });
+    state = searchUiReducer(state, {
+      type: "progress",
+      requestId: "request-a",
+      searchedCandidates: 5,
+      totalCandidates: 20,
+      progress: 0.25,
+    });
+    state = searchUiReducer(state, {
+      type: "partialResult",
+      requestId: "request-a",
+      candidates: [candidate],
+    });
+    state = searchUiReducer(state, {
+      type: "complete",
+      requestId: "request-a",
+      candidates: [candidate],
+    });
+
+    expect(state.status).toBe("complete");
+    expect(state.progress).toBe(1);
+    expect(state.searchedCandidates).toBe(5);
+    expect(state.candidates).toEqual([candidate]);
+  });
+
+  it("does not adopt cancel results or stale requestId messages", () => {
+    const staleCandidate = makeCandidate("candidate-old", 1, 252, 252, 252);
+    const currentCandidate = makeCandidate("candidate-new", 1, 4, 0, 0);
+    let state = createInitialSearchUiState();
+
+    state = searchUiReducer(state, { type: "start", requestId: "old-request" });
+    state = searchUiReducer(state, { type: "cancel", requestId: "old-request" });
+    state = searchUiReducer(state, {
+      type: "complete",
+      requestId: "old-request",
+      candidates: [staleCandidate],
+    });
+
+    expect(state.status).toBe("canceled");
+    expect(state.candidates).toEqual([]);
+
+    state = searchUiReducer(state, { type: "start", requestId: "new-request" });
+    state = searchUiReducer(state, {
+      type: "partialResult",
+      requestId: "old-request",
+      candidates: [staleCandidate],
+    });
+    state = searchUiReducer(state, {
+      type: "partialResult",
+      requestId: "new-request",
+      candidates: [currentCandidate],
+    });
+
+    expect(state.candidates).toEqual([currentCandidate]);
+  });
+});
+
+describe("startDefenceSearchFromUi", () => {
+  it("calls the Worker client and wires callbacks into UI state", () => {
+    const client = new FakeWorkerClient();
+    let state = createInitialSearchUiState();
+    const dispatch = (action: Parameters<typeof searchUiReducer>[1]) => {
+      state = searchUiReducer(state, action);
+    };
+    const candidate = makeCandidate("candidate-1", 1, 8, 0, 0);
+
+    const { request } = startDefenceSearchFromUi(
+      client,
+      createDefaultTargetForm(),
+      createDefaultScenarioForms(),
+      dispatch,
+      { requestId: "request-ui", maxResults: 3 },
+    );
+
+    expect(request.requestId).toBe("request-ui");
+    expect(state.status).toBe("running");
+    expect(client.build?.pokemon.canonicalName).toBe("Dragonite");
+    expect(client.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(client.options?.maxResults).toBe(3);
+
+    client.options?.callbacks?.onProgress?.({
+      type: "progress",
+      requestId: "request-ui",
+      searchedCandidates: 10,
+      totalCandidates: 40,
+      progress: 0.25,
+    });
+    client.options?.callbacks?.onPartialResult?.({
+      type: "partialResult",
+      requestId: "request-ui",
+      candidates: [candidate],
+    });
+    client.options?.callbacks?.onComplete?.({
+      type: "complete",
+      requestId: "request-ui",
+      candidates: [candidate],
+    });
+
+    expect(state.status).toBe("complete");
+    expect(state.searchedCandidates).toBe(10);
+    expect(state.candidates).toEqual([candidate]);
+  });
+});
+
+describe("applyTopCandidateToTarget", () => {
+  it("applies the first candidate H/B/D EVs to the target form", () => {
+    const target = createDefaultTargetForm();
+    const applied = applyTopCandidateToTarget(target, [
+      makeCandidate("candidate-1", 1, 12, 20, 28),
+      makeCandidate("candidate-2", 2, 252, 252, 252),
+    ]);
+
+    expect(applied.evs).toMatchObject({ hp: 12, def: 20, spd: 28 });
+    expect(applied.evs.atk).toBe(target.evs.atk);
+    expect(applied.evs.spa).toBe(target.evs.spa);
+    expect(applied.evs.spe).toBe(target.evs.spe);
+  });
+});
