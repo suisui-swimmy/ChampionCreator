@@ -43,9 +43,12 @@ const makeCandidate = (id: string, rank: number, hp: number, def: number, spd: n
   id,
   rank,
   candidate: { hp, def, spd },
+  appliedStatPoints: { hp, atk: 0, def, spa: 0, spd, spe: 0 },
   appliedEvs: { hp, atk: 0, def, spa: 0, spd, spe: 0 },
+  usedStatPointBudget: hp + def + spd,
+  remainingStatPointBudget: 66 - hp - def - spd,
   usedEvBudget: hp + def + spd,
-  remainingEvBudget: 508 - hp - def - spd,
+  remainingEvBudget: 66 - hp - def - spd,
   passed: true,
   scenarioResults: [],
   bottleneckLabel: "シナリオA +100.0%",
@@ -62,7 +65,11 @@ describe("buildDefenceSearchInput", () => {
     expect(input.build.pokemon.displayNameJa).toBe("カイリュー");
     expect(input.build.nature?.canonicalName).toBe("Modest");
     expect(input.build.teraType?.canonicalName).toBe("Dragon");
+    expect(input.build.statPoints).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
+    expect(input.build.evs).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
     expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Pikachu");
+    expect(input.scenarios[0].hits[0].attacker.statPoints?.spa).toBe(32);
+    expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
     expect(input.scenarios[1].hits[0].attacker.pokemon.canonicalName).toBe("Garchomp");
     expect(input.scenarios[1].hits[0].move.canonicalName).toBe("Outrage");
@@ -179,16 +186,16 @@ describe("startDefenceSearchFromUi", () => {
 });
 
 describe("applyTopCandidateToTarget", () => {
-  it("applies the first candidate H/B/D EVs to the target form", () => {
+  it("applies the first candidate H/B/D SP to the target form", () => {
     const target = createDefaultTargetForm();
     const applied = applyTopCandidateToTarget(target, [
       makeCandidate("candidate-1", 1, 12, 20, 28),
-      makeCandidate("candidate-2", 2, 252, 252, 252),
+      makeCandidate("candidate-2", 2, 32, 32, 32),
     ]);
 
-    expect(applied.evs).toMatchObject({ hp: 12, def: 20, spd: 28 });
-    expect(applied.evs.atk).toBe(target.evs.atk);
-    expect(applied.evs.spa).toBe(target.evs.spa);
-    expect(applied.evs.spe).toBe(target.evs.spe);
+    expect(applied.statPoints).toMatchObject({ hp: 12, def: 20, spd: 28 });
+    expect(applied.statPoints.atk).toBe(target.statPoints.atk);
+    expect(applied.statPoints.spa).toBe(target.statPoints.spa);
+    expect(applied.statPoints.spe).toBe(target.statPoints.spe);
   });
 });

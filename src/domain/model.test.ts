@@ -114,9 +114,12 @@ describe("domain model shape", () => {
       id: "candidate-1",
       rank: 1,
       candidate: { hp: 12, def: 4, spd: 0 },
+      appliedStatPoints: { ...zeroEvs, hp: 12, def: 4 },
       appliedEvs: defender.evs,
+      usedStatPointBudget: 16,
+      remainingStatPointBudget: 50,
       usedEvBudget: 16,
-      remainingEvBudget: 492,
+      remainingEvBudget: 50,
       passed: true,
       bottleneckLabel: "シナリオA +7.9%",
       scenarioResults: [

@@ -347,7 +347,7 @@ input {
 .ev-header,
 .ev-row {
   display: grid;
-  grid-template-columns: 48px 64px minmax(0, 1fr) 52px;
+  grid-template-columns: 48px 58px 64px minmax(0, 1fr) 52px;
   gap: 8px;
   align-items: center;
   min-height: 38px;
@@ -362,6 +362,13 @@ input {
 
 .ev-row strong {
   font-size: 14px;
+}
+
+.actual-stat {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .ev-row input {

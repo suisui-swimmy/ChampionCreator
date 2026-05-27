@@ -16,6 +16,11 @@ import type {
   Weather,
   Terrain,
 } from "../domain/model";
+import {
+  clampStatPointTable,
+  statPointTableToSmogonEvs,
+  type StatPointTable,
+} from "../domain/championsStats";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 
@@ -26,7 +31,7 @@ export interface TargetFormState {
   itemInput: string;
   teraTypeInput: string;
   level: number;
-  evs: StatTable;
+  statPoints: StatPointTable;
 }
 
 export interface ScenarioFormState {
@@ -38,7 +43,7 @@ export interface ScenarioFormState {
   attackerAbilityInput: string;
   attackerItemInput: string;
   attackerLevel: number;
-  attackerEvs: StatTable;
+  attackerStatPoints: StatPointTable;
   moveInput: string;
   repeat: number;
   critical: boolean;
@@ -104,7 +109,7 @@ export const createInitialSearchUiState = (): SearchUiState => ({
   errorMessage: null,
 });
 
-const zeroEvs: StatTable = {
+const zeroStatPoints: StatPointTable = {
   hp: 0,
   atk: 0,
   def: 0,
@@ -137,15 +142,6 @@ const clampInt = (value: number, min: number, max: number): number => {
 };
 
 const clampProbabilityPercent = (value: number): number => clampInt(value, 0, 100) / 100;
-
-const normalizeStatTable = (evs: StatTable): StatTable => ({
-  hp: clampInt(evs.hp, 0, 252),
-  atk: clampInt(evs.atk, 0, 252),
-  def: clampInt(evs.def, 0, 252),
-  spa: clampInt(evs.spa, 0, 252),
-  spd: clampInt(evs.spd, 0, 252),
-  spe: clampInt(evs.spe, 0, 252),
-});
 
 const mustResolve = <K extends EntityKind>(
   kind: K,
@@ -181,7 +177,7 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   itemInput: "",
   teraTypeInput: "ドラゴン",
   level: 50,
-  evs: { ...zeroEvs, atk: 0, spa: 0, spe: 0 },
+  statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
 });
 
 export const createDefaultScenarioForms = (): ScenarioFormState[] => [
@@ -194,7 +190,7 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
     attackerAbilityInput: "",
     attackerItemInput: "",
     attackerLevel: 50,
-    attackerEvs: { ...zeroEvs, spa: 252 },
+    attackerStatPoints: { ...zeroStatPoints, spa: 32 },
     moveInput: "10まんボルト",
     repeat: 1,
     critical: false,
@@ -216,7 +212,7 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
     attackerAbilityInput: "",
     attackerItemInput: "",
     attackerLevel: 1,
-    attackerEvs: { ...zeroEvs, atk: 0 },
+    attackerStatPoints: { ...zeroStatPoints, atk: 0 },
     moveInput: "げきりん",
     repeat: 1,
     critical: false,
@@ -231,17 +227,22 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
   },
 ];
 
-const toBuild = (form: TargetFormState, id: string): Build => ({
-  id,
-  pokemon: mustResolve("pokemon", form.pokemonInput, "ポケモン"),
-  level: clampInt(form.level, 1, 100),
-  nature: resolveOptional("nature", form.natureInput, "性格"),
-  ability: resolveOptional("ability", form.abilityInput, "特性"),
-  item: resolveOptional("item", form.itemInput, "持ち物"),
-  teraType: resolveOptional("type", form.teraTypeInput, "テラスタイプ"),
-  ivs: defaultIvs,
-  evs: normalizeStatTable(form.evs),
-});
+const toBuild = (form: TargetFormState, id: string): Build => {
+  const statPoints = clampStatPointTable(form.statPoints);
+
+  return {
+    id,
+    pokemon: mustResolve("pokemon", form.pokemonInput, "ポケモン"),
+    level: clampInt(form.level, 1, 100),
+    nature: resolveOptional("nature", form.natureInput, "性格"),
+    ability: resolveOptional("ability", form.abilityInput, "特性"),
+    item: resolveOptional("item", form.itemInput, "持ち物"),
+    teraType: resolveOptional("type", form.teraTypeInput, "テラスタイプ"),
+    ivs: defaultIvs,
+    statPoints,
+    evs: statPointTableToSmogonEvs(statPoints),
+  };
+};
 
 const toScenarioHit = (form: ScenarioFormState): ScenarioHit => {
   const attacker = toBuild(
@@ -252,7 +253,7 @@ const toScenarioHit = (form: ScenarioFormState): ScenarioHit => {
       itemInput: form.attackerItemInput,
       teraTypeInput: "",
       level: form.attackerLevel,
-      evs: form.attackerEvs,
+      statPoints: form.attackerStatPoints,
     },
     `${form.id}-attacker`,
   );
@@ -425,8 +426,8 @@ export const applyTopCandidateToTarget = (
 
   return {
     ...targetForm,
-    evs: {
-      ...targetForm.evs,
+    statPoints: {
+      ...targetForm.statPoints,
       hp: topCandidate.candidate.hp,
       def: topCandidate.candidate.def,
       spd: topCandidate.candidate.spd,

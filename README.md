@@ -67,14 +67,15 @@ M3 の本体実装は `src/calc/smogonAdapter.ts` に置いています。adapte
 
 ## M4 H/B/D search layer
 
-M4 の本体実装は `src/search/defenceSearch.ts` に置いています。UI や Worker へはまだ接続せず、`Build` と `Scenario[]` を受け取る純粋な search layer として追加しています。
+M4 の本体実装は `src/search/defenceSearch.ts` に置いています。UI や Worker へはまだ接続せず、`Build` と `Scenario[]` を受け取る純粋な search layer として追加しています。現在の探索単位は Pokemon Champions の SP 仕様に合わせ、各ステータス `0..32`、合計 `66` を上限にしています。
 
-- `enumerateDefenceEvCandidates(build)`: `hp` / `def` / `spd` を `0..252`、`4 EV` 刻みで列挙し、`atk` / `spa` / `spe` の固定済み努力値も `508` 予算に含める
+- `src/domain/championsStats.ts`: SP と Showdown EV 相当値の変換を扱う。`0SP => 0EV`、`1SP => 4EV`、以降 `+8EV`、`32SP => 252EV` として、Lv.50 の実数値が Champions 表示と合うようにする
+- `enumerateDefenceEvCandidates(build)`: `hp` / `def` / `spd` を `0..32` SP で列挙し、`atk` / `spa` / `spe` の固定済み SP も `66` 予算に含める
 - `evaluateScenario(build, scenario)`: `ScenarioHit.repeat` を同じ HP からの連続被弾として展開し、`requiredSurvivedHits` と `minSurvivalProbability` で pass / fail を判定する
 - `evaluateCandidate(build, scenarios, candidate)`: 1つの `H / B / D` 候補を全シナリオへ直接評価し、どれか1つでも fail なら候補全体を fail にする
 - `searchDefenceCandidates(build, scenarios, options)`: pass した候補だけを返し、返却前に final candidate を再評価する
 
-damage rolls は M3 の `calculateSmogonHit` 経由で取得します。search layer では独自のダメージ計算式、タイプ相性、乱数分布、ランク補正を実装せず、アプリ側では複数 hit の順序管理と確率集計だけを扱います。候補の並びは `H + B + D` が小さい順、残り努力値が多い順、最も厳しいシナリオへの余裕が大きい順、同点なら `H` が高い順です。
+damage rolls は M3 の `calculateSmogonHit` 経由で取得します。search layer では独自のダメージ計算式、タイプ相性、乱数分布、ランク補正を実装せず、アプリ側では複数 hit の順序管理と確率集計だけを扱います。候補の並びは `H + B + D` の SP が小さい順、残り SP が多い順、最も厳しいシナリオへの余裕が大きい順、同点なら `H` が高い順です。
 
 ## M5 worker layer
 
@@ -90,8 +91,8 @@ Worker runner は `iterateDefenceEvCandidates` / `evaluateCandidate` / `finalize
 
 M6 の本体実装は `src/App.tsx` と `src/ui/defenceSearchUi.ts` に置いています。既存の作業台型 UI を保ちつつ、固定モック候補ではなく Worker client から返る `partialResult` / `complete` の候補を表示します。
 
-- `src/App.tsx`: 調整対象フォーム、仮想敵シナリオの追加・削除・有効/無効、計算開始・キャンセル、進捗、候補一覧、選択候補詳細、1位候補適用を扱う UI
+- `src/App.tsx`: 調整対象フォーム、仮想敵シナリオの追加・削除・有効/無効、計算開始・キャンセル、進捗、候補一覧、選択候補詳細、1位候補適用を扱う UI。調整対象は SP `0..32` と実数値を表示し、合計 `66` を基準に扱う
 - `src/ui/defenceSearchUi.ts`: UI 入力を resolver 済み canonical name の `Build` / `Scenario` に変換し、Worker callbacks を UI state reducer へ流す接続層
 - `src/ui/defenceSearchUi.test.ts`: Worker client 呼び出し、progress / partialResult / complete の state 反映、cancel / stale requestId の破棄、1位候補適用、canonical name 変換を確認するテスト
 
-UI 入力文字列は直接 search / adapter へ渡さず、`resolveEntity` と `toEntityRef` で `exact` / `alias` として解決できたものだけを domain model に昇格します。adapter へ届く計算名は `EntityRef.canonicalName` です。候補詳細では scenario ごとの PASS / survivalProbability / damage range を表示し、候補一覧では順位、H/B/D、使用EV、残りEV、ボトルネックを横並びで比較できます。
+UI 入力文字列は直接 search / adapter へ渡さず、`resolveEntity` と `toEntityRef` で `exact` / `alias` として解決できたものだけを domain model に昇格します。adapter へ届く計算名は `EntityRef.canonicalName` です。SP は `src/domain/championsStats.ts` で Showdown EV 相当に変換してから `@smogon/calc` に渡します。候補詳細では scenario ごとの PASS / survivalProbability / damage range を表示し、候補一覧では順位、H/B/D、使用SP、残りSP、ボトルネックを横並びで比較できます。

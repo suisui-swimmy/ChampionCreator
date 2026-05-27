@@ -1,8 +1,17 @@
 import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
+import {
+  CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
+  CHAMPIONS_TOTAL_STAT_POINTS,
+  isLegalStatPointTable,
+  isLegalStatPointValue,
+  smogonEvTableToStatPoints,
+  statPointTableToSmogonEvs,
+  sumStatPoints,
+} from "../domain/championsStats";
 import type {
   Build,
   CandidateResult,
-  DefenceEvCandidate,
+  DefenceStatPointCandidate,
   FieldState,
   Scenario,
   ScenarioEvaluation,
@@ -12,15 +21,11 @@ import type {
   StatTable,
 } from "../domain/model";
 
-const TOTAL_EV_BUDGET = 508;
-const MAX_EV_PER_STAT = 252;
-const EV_STEP = 4;
 const DEFAULT_MAX_RESULTS = 20;
 const SURVIVAL_EPSILON = 1e-12;
 
 const DEFENCE_SEARCH_KEYS = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const FIXED_EV_KEYS = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
-const ALL_STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 
 export type CalculateHit = (
   defenderBuild: Build,
@@ -49,48 +54,85 @@ const sumNumbers = (values: Iterable<number>): number => {
 
 export const sumEvs = (evs: StatTable): number => sumNumbers(Object.values(evs));
 
-export const isLegalEvValue = (ev: number): boolean =>
-  Number.isInteger(ev) && ev >= 0 && ev <= MAX_EV_PER_STAT && ev % EV_STEP === 0;
+const smogonEvToPointForValidation = (ev: number): number | null => {
+  if (!Number.isInteger(ev) || ev < 0 || ev > 252) {
+    return null;
+  }
+
+  if (ev === 0) {
+    return 0;
+  }
+
+  if ((ev - 4) % 8 !== 0) {
+    return null;
+  }
+
+  const statPoints = ((ev - 4) / 8) + 1;
+  return isLegalStatPointValue(statPoints) ? statPoints : null;
+};
+
+export const isLegalEvValue = (ev: number): boolean => {
+  const convertedPoint = smogonEvToPointForValidation(ev);
+  return convertedPoint !== null;
+};
 
 export const isLegalEvTable = (evs: StatTable): boolean =>
-  ALL_STAT_KEYS.every((key) => isLegalEvValue(evs[key])) && sumEvs(evs) <= TOTAL_EV_BUDGET;
+  isLegalStatPointTable(smogonEvTableToStatPoints(evs));
 
-export const getFixedEvBudget = (build: Build): number => sumNumbers(FIXED_EV_KEYS.map((key) => build.evs[key]));
+export const getBuildStatPoints = (build: Build): StatTable =>
+  build.statPoints ?? smogonEvTableToStatPoints(build.evs);
 
-export const applyDefenceEvCandidate = (build: Build, candidate: DefenceEvCandidate): Build => ({
-  ...build,
-  evs: {
-    ...build.evs,
+export const getFixedEvBudget = (build: Build): number =>
+  sumNumbers(FIXED_EV_KEYS.map((key) => statPointTableToSmogonEvs(getBuildStatPoints(build))[key]));
+
+export const getFixedStatPointBudget = (build: Build): number =>
+  sumNumbers(FIXED_EV_KEYS.map((key) => getBuildStatPoints(build)[key]));
+
+export const applyDefenceStatPointCandidate = (
+  build: Build,
+  candidate: DefenceStatPointCandidate,
+): Build => {
+  const appliedStatPoints = {
+    ...getBuildStatPoints(build),
     hp: candidate.hp,
     def: candidate.def,
     spd: candidate.spd,
-  },
-});
+  };
 
-const isLegalFixedEvBudget = (build: Build): boolean => FIXED_EV_KEYS.every((key) => isLegalEvValue(build.evs[key]));
+  return {
+    ...build,
+    statPoints: appliedStatPoints,
+    evs: statPointTableToSmogonEvs(appliedStatPoints),
+  };
+};
 
-const isLegalDefenceCandidate = (candidate: DefenceEvCandidate): boolean =>
-  DEFENCE_SEARCH_KEYS.every((key) => isLegalEvValue(candidate[key]));
+export const applyDefenceEvCandidate = applyDefenceStatPointCandidate;
 
-const getCandidateDefenceBudget = (candidate: DefenceEvCandidate): number =>
+const isLegalFixedStatPointBudget = (build: Build): boolean =>
+  FIXED_EV_KEYS.every((key) => isLegalStatPointValue(getBuildStatPoints(build)[key]));
+
+const isLegalDefenceCandidate = (candidate: DefenceStatPointCandidate): boolean =>
+  DEFENCE_SEARCH_KEYS.every((key) => isLegalStatPointValue(candidate[key]));
+
+const getCandidateDefenceBudget = (candidate: DefenceStatPointCandidate): number =>
   candidate.hp + candidate.def + candidate.spd;
 
-export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceEvCandidate> {
-  if (!isLegalFixedEvBudget(build)) {
+export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceStatPointCandidate> {
+  if (!isLegalFixedStatPointBudget(build)) {
     return;
   }
 
-  const fixedBudget = getFixedEvBudget(build);
-  const remainingBudget = TOTAL_EV_BUDGET - fixedBudget;
+  const fixedBudget = getFixedStatPointBudget(build);
+  const remainingBudget = CHAMPIONS_TOTAL_STAT_POINTS - fixedBudget;
   if (remainingBudget < 0) {
     return;
   }
 
-  const maxSearchBudget = Math.min(remainingBudget, MAX_EV_PER_STAT * DEFENCE_SEARCH_KEYS.length);
+  const maxSearchBudget = Math.min(remainingBudget, CHAMPIONS_MAX_STAT_POINTS_PER_STAT * DEFENCE_SEARCH_KEYS.length);
 
-  for (let total = 0; total <= maxSearchBudget; total += EV_STEP) {
-    for (let hp = 0; hp <= Math.min(MAX_EV_PER_STAT, total); hp += EV_STEP) {
-      for (let def = 0; def <= Math.min(MAX_EV_PER_STAT, total - hp); def += EV_STEP) {
+  for (let total = 0; total <= maxSearchBudget; total += 1) {
+    for (let hp = 0; hp <= Math.min(CHAMPIONS_MAX_STAT_POINTS_PER_STAT, total); hp += 1) {
+      for (let def = 0; def <= Math.min(CHAMPIONS_MAX_STAT_POINTS_PER_STAT, total - hp); def += 1) {
         const spd = total - hp - def;
         const candidate = { hp, def, spd };
         if (isLegalDefenceCandidate(candidate)) {
@@ -101,7 +143,7 @@ export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceEvCa
   }
 }
 
-export const enumerateDefenceEvCandidates = (build: Build): DefenceEvCandidate[] =>
+export const enumerateDefenceEvCandidates = (build: Build): DefenceStatPointCandidate[] =>
   Array.from(iterateDefenceEvCandidates(build));
 
 export const countDefenceEvCandidates = (build: Build): number => {
@@ -249,8 +291,8 @@ export const compareCandidateResults = (left: CandidateResult, right: CandidateR
     return leftDefenceBudget - rightDefenceBudget;
   }
 
-  if (left.remainingEvBudget !== right.remainingEvBudget) {
-    return right.remainingEvBudget - left.remainingEvBudget;
+  if (left.remainingStatPointBudget !== right.remainingStatPointBudget) {
+    return right.remainingStatPointBudget - left.remainingStatPointBudget;
   }
 
   const leftWorstMargin = getScenarioMargin(getWorstScenarioEvaluation(left.scenarioResults) ?? {
@@ -288,24 +330,30 @@ export const rankCandidateResults = (results: CandidateResult[]): CandidateResul
 export const evaluateCandidate = (
   defenderBuild: Build,
   scenarios: Scenario[],
-  candidate: DefenceEvCandidate,
+  candidate: DefenceStatPointCandidate,
   options: DefenceSearchOptions = {},
 ): CandidateResult => {
-  const appliedBuild = applyDefenceEvCandidate(defenderBuild, candidate);
+  const appliedBuild = applyDefenceStatPointCandidate(defenderBuild, candidate);
   const scenarioResults = scenarios.map((scenario) => evaluateScenario(appliedBuild, scenario, options));
+  const appliedStatPoints = getBuildStatPoints(appliedBuild);
+  const usedStatPointBudget = sumStatPoints(appliedStatPoints);
+  const remainingStatPointBudget = CHAMPIONS_TOTAL_STAT_POINTS - usedStatPointBudget;
   const usedEvBudget = sumEvs(appliedBuild.evs);
-  const remainingEvBudget = TOTAL_EV_BUDGET - usedEvBudget;
+  const remainingEvBudget = remainingStatPointBudget;
   const worstScenario = getWorstScenarioEvaluation(scenarioResults);
-  const appliedEvsAreLegal = isLegalEvTable(appliedBuild.evs);
+  const appliedPointsAreLegal = isLegalStatPointTable(appliedStatPoints);
 
   return {
     id: "candidate-unranked",
     rank: 0,
     candidate,
+    appliedStatPoints,
     appliedEvs: appliedBuild.evs,
+    usedStatPointBudget,
+    remainingStatPointBudget,
     usedEvBudget,
     remainingEvBudget,
-    passed: appliedEvsAreLegal && scenarioResults.every((result) => result.passed),
+    passed: appliedPointsAreLegal && scenarioResults.every((result) => result.passed),
     scenarioResults,
     bottleneckLabel: worstScenario?.bottleneckLabel ?? "No active scenarios",
   };

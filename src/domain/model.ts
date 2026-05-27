@@ -42,6 +42,7 @@ export interface Build {
   level: number;
   nature?: NatureRef;
   ivs: StatTable;
+  statPoints?: StatTable;
   evs: StatTable;
   ability?: AbilityRef;
   item?: ItemRef;
@@ -114,17 +115,22 @@ export interface ScenarioEvaluation {
   bottleneckLabel: string;
 }
 
-export interface DefenceEvCandidate {
+export interface DefenceStatPointCandidate {
   hp: number;
   def: number;
   spd: number;
 }
 
+export type DefenceEvCandidate = DefenceStatPointCandidate;
+
 export interface CandidateResult {
   id: string;
   rank: number;
-  candidate: DefenceEvCandidate;
+  candidate: DefenceStatPointCandidate;
+  appliedStatPoints: StatTable;
   appliedEvs: StatTable;
+  usedStatPointBudget: number;
+  remainingStatPointBudget: number;
   usedEvBudget: number;
   remainingEvBudget: number;
   passed: boolean;

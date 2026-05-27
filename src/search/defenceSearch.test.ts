@@ -102,7 +102,7 @@ const makeScenario = (
 });
 
 describe("enumerateDefenceEvCandidates", () => {
-  it("enumerates only legal H/B/D candidates and counts fixed A/C/S EVs in the total budget", () => {
+  it("enumerates only legal H/B/D SP candidates and counts fixed A/C/S SP in the total budget", () => {
     const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
 
     const candidates = enumerateDefenceEvCandidates(defender);
@@ -110,15 +110,16 @@ describe("enumerateDefenceEvCandidates", () => {
     expect(candidates).toEqual(
       expect.arrayContaining([
         { hp: 0, def: 0, spd: 0 },
-        { hp: 4, def: 0, spd: 0 },
-        { hp: 0, def: 4, spd: 0 },
-        { hp: 0, def: 0, spd: 4 },
+        { hp: 1, def: 0, spd: 0 },
+        { hp: 0, def: 1, spd: 0 },
+        { hp: 0, def: 0, spd: 1 },
+        { hp: 2, def: 0, spd: 0 },
       ]),
     );
-    expect(candidates).toHaveLength(4);
+    expect(candidates).toHaveLength(10);
     expect(candidates.every((candidate) => (
-      [candidate.hp, candidate.def, candidate.spd].every((ev) => ev >= 0 && ev <= 252 && ev % 4 === 0)
-      && candidate.hp + candidate.def + candidate.spd + 504 <= 508
+      [candidate.hp, candidate.def, candidate.spd].every((sp) => sp >= 0 && sp <= 32)
+      && candidate.hp + candidate.def + candidate.spd + 64 <= 66
     ))).toBe(true);
   });
 });

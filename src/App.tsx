@@ -1,4 +1,9 @@
 import { type ChangeEvent, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
+  CHAMPIONS_TOTAL_STAT_POINTS,
+  sumStatPoints,
+} from "./domain/championsStats";
 import type { CandidateResult, StatKey, StatTable, Terrain, Weather } from "./domain/model";
 import {
   applyTopCandidateToTarget,
@@ -51,8 +56,6 @@ const toNumber = (value: string, fallback = 0): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const sumEvs = (evs: StatTable): number => statKeys.reduce((total, key) => total + evs[key], 0);
-
 const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 
 const formatDamageRange = (min: number, max: number): string =>
@@ -70,6 +73,7 @@ export function App() {
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [applyLabel, setApplyLabel] = useState("1位を適用");
+  const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
@@ -100,6 +104,31 @@ export function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let canceled = false;
+
+    if (!previewInput.input) {
+      setActualStats(null);
+      return () => {
+        canceled = true;
+      };
+    }
+
+    void import("./calc/smogonAdapter").then(({ toSmogonPokemon }) => {
+      if (!canceled && previewInput.input) {
+        setActualStats(toSmogonPokemon(previewInput.input.build).stats);
+      }
+    }).catch(() => {
+      if (!canceled) {
+        setActualStats(null);
+      }
+    });
+
+    return () => {
+      canceled = true;
+    };
+  }, [previewInput]);
+
   const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
     setTargetForm((current) => ({ ...current, [key]: value }));
   };
@@ -107,7 +136,7 @@ export function App() {
   const updateTargetEv = (key: StatKey, value: number) => {
     setTargetForm((current) => ({
       ...current,
-      evs: { ...current.evs, [key]: value },
+      statPoints: { ...current.statPoints, [key]: value },
     }));
   };
 
@@ -124,7 +153,7 @@ export function App() {
   const updateScenarioAttackerEv = (id: string, key: StatKey, value: number) => {
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === id
-        ? { ...scenario, attackerEvs: { ...scenario.attackerEvs, [key]: value } }
+        ? { ...scenario, attackerStatPoints: { ...scenario.attackerStatPoints, [key]: value } }
         : scenario
     )));
   };
@@ -222,7 +251,8 @@ export function App() {
           onUpdateField={updateTargetField}
           onUpdateEv={updateTargetEv}
           canonicalPokemon={previewInput.input?.build.pokemon.canonicalName}
-          totalEv={sumEvs(targetForm.evs)}
+          actualStats={actualStats}
+          totalStatPoints={sumStatPoints(targetForm.statPoints)}
         />
         <ScenarioPanel
           scenarios={scenarioForms}
@@ -252,12 +282,20 @@ export function App() {
 type TargetPanelProps = {
   targetForm: TargetFormState;
   canonicalPokemon?: string;
-  totalEv: number;
+  actualStats: StatTable | null;
+  totalStatPoints: number;
   onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
   onUpdateEv: (key: StatKey, value: number) => void;
 };
 
-function TargetPanel({ targetForm, canonicalPokemon, totalEv, onUpdateField, onUpdateEv }: TargetPanelProps) {
+function TargetPanel({
+  targetForm,
+  canonicalPokemon,
+  actualStats,
+  totalStatPoints,
+  onUpdateField,
+  onUpdateEv,
+}: TargetPanelProps) {
   return (
     <section className="target-panel" aria-labelledby="target-title">
       <div className="section-heading">
@@ -318,26 +356,28 @@ function TargetPanel({ targetForm, canonicalPokemon, totalEv, onUpdateField, onU
         </label>
       </div>
 
-      <div className="ev-table" aria-label="調整対象の努力値">
+      <div className="ev-table" aria-label="調整対象のSP">
         <div className="ev-header">
           <span>能力</span>
-          <span>EV</span>
-          <span>探索</span>
+          <span>実数値</span>
+          <span>現在SP</span>
+          <span>SP配分</span>
           <span>固定</span>
         </div>
         {statKeys.map((key) => (
           <div className={`ev-row ${key}`} key={key}>
             <strong>{statLabels[key]}</strong>
+            <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
             <input
               type="number"
               min="0"
-              max="252"
-              step="4"
-              value={targetForm.evs[key]}
-              aria-label={`${statLabels[key]} EV`}
+              max={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
+              step="1"
+              value={targetForm.statPoints[key]}
+              aria-label={`${statLabels[key]} SP`}
               onChange={(event) => onUpdateEv(key, toNumber(event.target.value))}
             />
-            <div className="bar"><i style={{ width: `${Math.min(100, (targetForm.evs[key] / 252) * 100)}%` }} /></div>
+            <div className="bar"><i style={{ width: `${Math.min(100, (targetForm.statPoints[key] / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100)}%` }} /></div>
             <span className={defenceStatKeySet.has(key) ? "search-chip" : "fixed-chip"}>
               {defenceStatKeySet.has(key) ? "HBD" : "固定"}
             </span>
@@ -346,8 +386,8 @@ function TargetPanel({ targetForm, canonicalPokemon, totalEv, onUpdateField, onU
       </div>
 
       <div className="sp-summary">
-        <span>合計EV</span>
-        <strong>{totalEv} / 508</strong>
+        <span>合計SP</span>
+        <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
       </div>
     </section>
   );
@@ -507,16 +547,16 @@ function ScenarioCard({
         </label>
       </div>
 
-      <div className="attacker-evs" aria-label={`${scenario.label} 攻撃側努力値`}>
+      <div className="attacker-evs" aria-label={`${scenario.label} 攻撃側SP`}>
         {fixedStatKeys.map((key) => (
           <label key={key}>
-            {statLabels[key]} EV
+            {statLabels[key]} SP
             <input
               type="number"
               min="0"
-              max="252"
-              step="4"
-              value={scenario.attackerEvs[key]}
+              max={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
+              step="1"
+              value={scenario.attackerStatPoints[key]}
               onChange={(event) => onUpdateAttackerEv(scenario.id, key, toNumber(event.target.value))}
             />
           </label>
@@ -574,7 +614,7 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
-          <span>順位</span><span>H/B/D</span><span>使用EV</span><span>残りEV</span><span>ボトルネック</span>
+          <span>順位</span><span>H/B/D</span><span>使用SP</span><span>残りSP</span><span>ボトルネック</span>
         </div>
         {candidates.length === 0 ? (
           <div className="empty-result">計算開始で Worker 経由の候補がここに出ます</div>
@@ -592,8 +632,8 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
               <b>{candidate.candidate.spd}</b>
               <i />
             </span>
-            <span>{candidate.usedEvBudget}</span>
-            <span>{candidate.remainingEvBudget}</span>
+            <span>{candidate.usedStatPointBudget}</span>
+            <span>{candidate.remainingStatPointBudget}</span>
             <span>{candidate.bottleneckLabel}</span>
           </button>
         ))}
@@ -627,7 +667,7 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
         <>
           <div className="detail-allocation">
             {statKeys.map((key) => <span key={key}>{statLabels[key]}</span>)}
-            {statKeys.map((key) => <strong key={key}>{candidate.appliedEvs[key]}</strong>)}
+            {statKeys.map((key) => <strong key={key}>{candidate.appliedStatPoints[key]}</strong>)}
           </div>
 
           <div className="check-list">
