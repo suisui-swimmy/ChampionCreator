@@ -2,7 +2,7 @@
 
 ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計算に準拠する自動耐久調整ツールです。複数の仮想敵シナリオを同時に満たす `H / B / D` 配分を探し、候補の理由を説明できる静的 Web アプリとして育てます。
 
-M0 では React + Vite + TypeScript の土台と、既存の軽量 UI プロトタイプを移植した作業画面を用意しました。M1 では、ダメージ計算 adapter や探索へ進みすぎず、日本語入力・表示を Showdown canonical name へ解決する localization / resolver layer の最小構成を追加しています。M2 では、UI 入力から独立した domain model layer を追加し、後続の `@smogon/calc` adapter と H/B/D 同時探索が受け取る型の境界を固めています。M3 では、`Build` / `ScenarioHit` / `FieldState` / `SideState` を `@smogon/calc` の `Pokemon` / `Move` / `Field` / `Side` へ変換する薄い adapter layer を追加しました。
+M0 では React + Vite + TypeScript の土台と、既存の軽量 UI プロトタイプを移植した作業画面を用意しました。M1 では、ダメージ計算 adapter や探索へ進みすぎず、日本語入力・表示を Showdown canonical name へ解決する localization / resolver layer の最小構成を追加しています。M2 では、UI 入力から独立した domain model layer を追加し、後続の `@smogon/calc` adapter と H/B/D 同時探索が受け取る型の境界を固めています。M3 では、`Build` / `ScenarioHit` / `FieldState` / `SideState` を `@smogon/calc` の `Pokemon` / `Move` / `Field` / `Side` へ変換する薄い adapter layer を追加しました。M4 では、合法な `H / B / D` 候補を全シナリオへ同時評価する search layer を追加しています。
 
 ## 開発コマンド
 
@@ -64,3 +64,14 @@ M3 の本体実装は `src/calc/smogonAdapter.ts` に置いています。adapte
 - `calculateSmogonHit(defenderBuild, hit, fieldState)`: `calculate` を呼び、damage rolls、damage range、description を `ScenarioHitEvaluation` として返す
 
 `src/calc/smogonAdapter.test.ts` では direct `@smogon/calc` 呼び出しと adapter 結果の damage rolls / range / description が一致することを確認しています。M3 では H/B/D 探索本体や生存確率集計は実装せず、M4 から呼びやすい 1 hit 評価の境界だけを作っています。
+
+## M4 H/B/D search layer
+
+M4 の本体実装は `src/search/defenceSearch.ts` に置いています。UI や Worker へはまだ接続せず、`Build` と `Scenario[]` を受け取る純粋な search layer として追加しています。
+
+- `enumerateDefenceEvCandidates(build)`: `hp` / `def` / `spd` を `0..252`、`4 EV` 刻みで列挙し、`atk` / `spa` / `spe` の固定済み努力値も `508` 予算に含める
+- `evaluateScenario(build, scenario)`: `ScenarioHit.repeat` を同じ HP からの連続被弾として展開し、`requiredSurvivedHits` と `minSurvivalProbability` で pass / fail を判定する
+- `evaluateCandidate(build, scenarios, candidate)`: 1つの `H / B / D` 候補を全シナリオへ直接評価し、どれか1つでも fail なら候補全体を fail にする
+- `searchDefenceCandidates(build, scenarios, options)`: pass した候補だけを返し、返却前に final candidate を再評価する
+
+damage rolls は M3 の `calculateSmogonHit` 経由で取得します。search layer では独自のダメージ計算式、タイプ相性、乱数分布、ランク補正を実装せず、アプリ側では複数 hit の順序管理と確率集計だけを扱います。候補の並びは `H + B + D` が小さい順、残り努力値が多い順、最も厳しいシナリオへの余裕が大きい順、同点なら `H` が高い順です。

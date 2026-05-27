@@ -1,0 +1,342 @@
+import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
+import type {
+  Build,
+  CandidateResult,
+  DefenceEvCandidate,
+  FieldState,
+  Scenario,
+  ScenarioEvaluation,
+  ScenarioHit,
+  ScenarioHitEvaluation,
+  StatKey,
+  StatTable,
+} from "../domain/model";
+
+const TOTAL_EV_BUDGET = 508;
+const MAX_EV_PER_STAT = 252;
+const EV_STEP = 4;
+const DEFAULT_MAX_RESULTS = 20;
+const SURVIVAL_EPSILON = 1e-12;
+
+const DEFENCE_SEARCH_KEYS = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
+const FIXED_EV_KEYS = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
+const ALL_STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
+
+export type CalculateHit = (
+  defenderBuild: Build,
+  hit: ScenarioHit,
+  fieldState: FieldState,
+) => ScenarioHitEvaluation;
+
+export interface DefenceSearchOptions {
+  maxResults?: number;
+  calculateHit?: CalculateHit;
+}
+
+interface ScenarioEvaluationOptions {
+  calculateHit?: CalculateHit;
+}
+
+const getCalculateHit = (calculateHit?: CalculateHit): CalculateHit => calculateHit ?? calculateSmogonHit;
+
+const sumNumbers = (values: Iterable<number>): number => {
+  let total = 0;
+  for (const value of values) {
+    total += value;
+  }
+  return total;
+};
+
+export const sumEvs = (evs: StatTable): number => sumNumbers(Object.values(evs));
+
+export const isLegalEvValue = (ev: number): boolean =>
+  Number.isInteger(ev) && ev >= 0 && ev <= MAX_EV_PER_STAT && ev % EV_STEP === 0;
+
+export const isLegalEvTable = (evs: StatTable): boolean =>
+  ALL_STAT_KEYS.every((key) => isLegalEvValue(evs[key])) && sumEvs(evs) <= TOTAL_EV_BUDGET;
+
+export const getFixedEvBudget = (build: Build): number => sumNumbers(FIXED_EV_KEYS.map((key) => build.evs[key]));
+
+export const applyDefenceEvCandidate = (build: Build, candidate: DefenceEvCandidate): Build => ({
+  ...build,
+  evs: {
+    ...build.evs,
+    hp: candidate.hp,
+    def: candidate.def,
+    spd: candidate.spd,
+  },
+});
+
+const isLegalFixedEvBudget = (build: Build): boolean => FIXED_EV_KEYS.every((key) => isLegalEvValue(build.evs[key]));
+
+const isLegalDefenceCandidate = (candidate: DefenceEvCandidate): boolean =>
+  DEFENCE_SEARCH_KEYS.every((key) => isLegalEvValue(candidate[key]));
+
+const getCandidateDefenceBudget = (candidate: DefenceEvCandidate): number =>
+  candidate.hp + candidate.def + candidate.spd;
+
+export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceEvCandidate> {
+  if (!isLegalFixedEvBudget(build)) {
+    return;
+  }
+
+  const fixedBudget = getFixedEvBudget(build);
+  const remainingBudget = TOTAL_EV_BUDGET - fixedBudget;
+  if (remainingBudget < 0) {
+    return;
+  }
+
+  const maxSearchBudget = Math.min(remainingBudget, MAX_EV_PER_STAT * DEFENCE_SEARCH_KEYS.length);
+
+  for (let total = 0; total <= maxSearchBudget; total += EV_STEP) {
+    for (let hp = 0; hp <= Math.min(MAX_EV_PER_STAT, total); hp += EV_STEP) {
+      for (let def = 0; def <= Math.min(MAX_EV_PER_STAT, total - hp); def += EV_STEP) {
+        const spd = total - hp - def;
+        const candidate = { hp, def, spd };
+        if (isLegalDefenceCandidate(candidate)) {
+          yield candidate;
+        }
+      }
+    }
+  }
+}
+
+export const enumerateDefenceEvCandidates = (build: Build): DefenceEvCandidate[] =>
+  Array.from(iterateDefenceEvCandidates(build));
+
+const getMaxHp = (build: Build): number => toSmogonPokemon(build).maxHP();
+
+const expandDamageSequence = (
+  scenario: Scenario,
+  hitEvaluations: ScenarioHitEvaluation[],
+): number[][] => {
+  const evaluationsByHitId = new Map(hitEvaluations.map((evaluation) => [evaluation.hitId, evaluation]));
+  const sequence: number[][] = [];
+
+  for (const hit of scenario.hits) {
+    const repeat = Math.max(0, Math.trunc(hit.repeat));
+    const evaluation = evaluationsByHitId.get(hit.id);
+    if (!evaluation) {
+      continue;
+    }
+
+    for (let index = 0; index < repeat; index += 1) {
+      sequence.push(evaluation.damageRolls);
+    }
+  }
+
+  return sequence;
+};
+
+export const calculateSurvivalProbability = (
+  maxHp: number,
+  damageRollsByHit: readonly (readonly number[])[],
+): number => {
+  let aliveDistribution = new Map<number, number>([[0, 1]]);
+
+  for (const damageRolls of damageRollsByHit) {
+    const finiteRolls = damageRolls.filter(Number.isFinite);
+    if (finiteRolls.length === 0) {
+      return 0;
+    }
+
+    const rollProbability = 1 / finiteRolls.length;
+    const nextDistribution = new Map<number, number>();
+
+    for (const [currentDamage, currentProbability] of aliveDistribution) {
+      for (const damage of finiteRolls) {
+        const nextDamage = currentDamage + damage;
+        if (nextDamage < maxHp) {
+          nextDistribution.set(
+            nextDamage,
+            (nextDistribution.get(nextDamage) ?? 0) + currentProbability * rollProbability,
+          );
+        }
+      }
+    }
+
+    aliveDistribution = nextDistribution;
+    if (aliveDistribution.size === 0) {
+      return 0;
+    }
+  }
+
+  return sumNumbers(aliveDistribution.values());
+};
+
+const formatMarginLabel = (label: string, margin: number): string => {
+  const sign = margin >= 0 ? "+" : "";
+  return `${label} ${sign}${(margin * 100).toFixed(1)}%`;
+};
+
+const getScenarioMargin = (evaluation: ScenarioEvaluation): number =>
+  evaluation.survivalProbability - evaluation.minSurvivalProbability;
+
+const getWorstScenarioEvaluation = (evaluations: ScenarioEvaluation[]): ScenarioEvaluation | undefined =>
+  evaluations.reduce<ScenarioEvaluation | undefined>((worst, evaluation) => {
+    if (!worst || getScenarioMargin(evaluation) < getScenarioMargin(worst)) {
+      return evaluation;
+    }
+    return worst;
+  }, undefined);
+
+export const evaluateScenario = (
+  defenderBuild: Build,
+  scenario: Scenario,
+  options: ScenarioEvaluationOptions = {},
+): ScenarioEvaluation => {
+  const requiredSurvivedHits = Math.max(0, Math.trunc(scenario.constraint.requiredSurvivedHits));
+  const minSurvivalProbability = scenario.constraint.minSurvivalProbability;
+  const label = scenario.label || scenario.id;
+
+  if (!scenario.enabled || !scenario.constraint.enabled) {
+    return {
+      scenarioId: scenario.id,
+      passed: true,
+      survivalProbability: 1,
+      requiredSurvivedHits,
+      minSurvivalProbability: 0,
+      hitEvaluations: [],
+      bottleneckLabel: `${label} disabled`,
+    };
+  }
+
+  const calculateHit = getCalculateHit(options.calculateHit);
+  const hitEvaluations = scenario.hits.map((hit) => calculateHit(defenderBuild, hit, scenario.field));
+  const damageSequence = expandDamageSequence(scenario, hitEvaluations);
+
+  if (requiredSurvivedHits > damageSequence.length) {
+    return {
+      scenarioId: scenario.id,
+      passed: false,
+      survivalProbability: 0,
+      requiredSurvivedHits,
+      minSurvivalProbability,
+      hitEvaluations,
+      bottleneckLabel: `${label} missing hits`,
+    };
+  }
+
+  const survivalProbability =
+    requiredSurvivedHits === 0
+      ? 1
+      : calculateSurvivalProbability(getMaxHp(defenderBuild), damageSequence.slice(0, requiredSurvivedHits));
+  const margin = survivalProbability - minSurvivalProbability;
+
+  return {
+    scenarioId: scenario.id,
+    passed: survivalProbability + SURVIVAL_EPSILON >= minSurvivalProbability,
+    survivalProbability,
+    requiredSurvivedHits,
+    minSurvivalProbability,
+    hitEvaluations,
+    bottleneckLabel: formatMarginLabel(label, margin),
+  };
+};
+
+const sortCandidateResults = (left: CandidateResult, right: CandidateResult): number => {
+  const leftDefenceBudget = getCandidateDefenceBudget(left.candidate);
+  const rightDefenceBudget = getCandidateDefenceBudget(right.candidate);
+  if (leftDefenceBudget !== rightDefenceBudget) {
+    return leftDefenceBudget - rightDefenceBudget;
+  }
+
+  if (left.remainingEvBudget !== right.remainingEvBudget) {
+    return right.remainingEvBudget - left.remainingEvBudget;
+  }
+
+  const leftWorstMargin = getScenarioMargin(getWorstScenarioEvaluation(left.scenarioResults) ?? {
+    scenarioId: "",
+    passed: true,
+    survivalProbability: 1,
+    requiredSurvivedHits: 0,
+    minSurvivalProbability: 0,
+    hitEvaluations: [],
+    bottleneckLabel: "",
+  });
+  const rightWorstMargin = getScenarioMargin(getWorstScenarioEvaluation(right.scenarioResults) ?? {
+    scenarioId: "",
+    passed: true,
+    survivalProbability: 1,
+    requiredSurvivedHits: 0,
+    minSurvivalProbability: 0,
+    hitEvaluations: [],
+    bottleneckLabel: "",
+  });
+  if (leftWorstMargin !== rightWorstMargin) {
+    return rightWorstMargin - leftWorstMargin;
+  }
+
+  return right.candidate.hp - left.candidate.hp;
+};
+
+const withRanks = (results: CandidateResult[]): CandidateResult[] =>
+  results.map((result, index) => ({
+    ...result,
+    id: `candidate-${index + 1}`,
+    rank: index + 1,
+  }));
+
+export const evaluateCandidate = (
+  defenderBuild: Build,
+  scenarios: Scenario[],
+  candidate: DefenceEvCandidate,
+  options: DefenceSearchOptions = {},
+): CandidateResult => {
+  const appliedBuild = applyDefenceEvCandidate(defenderBuild, candidate);
+  const scenarioResults = scenarios.map((scenario) => evaluateScenario(appliedBuild, scenario, options));
+  const usedEvBudget = sumEvs(appliedBuild.evs);
+  const remainingEvBudget = TOTAL_EV_BUDGET - usedEvBudget;
+  const worstScenario = getWorstScenarioEvaluation(scenarioResults);
+  const appliedEvsAreLegal = isLegalEvTable(appliedBuild.evs);
+
+  return {
+    id: "candidate-unranked",
+    rank: 0,
+    candidate,
+    appliedEvs: appliedBuild.evs,
+    usedEvBudget,
+    remainingEvBudget,
+    passed: appliedEvsAreLegal && scenarioResults.every((result) => result.passed),
+    scenarioResults,
+    bottleneckLabel: worstScenario?.bottleneckLabel ?? "No active scenarios",
+  };
+};
+
+export const searchDefenceCandidates = (
+  defenderBuild: Build,
+  scenarios: Scenario[],
+  options: DefenceSearchOptions = {},
+): CandidateResult[] => {
+  const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+  if (maxResults <= 0) {
+    return [];
+  }
+
+  const passingResults: CandidateResult[] = [];
+  let acceptedDefenceBudgetCeiling: number | null = null;
+
+  for (const candidate of iterateDefenceEvCandidates(defenderBuild)) {
+    const defenceBudget = getCandidateDefenceBudget(candidate);
+    if (acceptedDefenceBudgetCeiling !== null && defenceBudget > acceptedDefenceBudgetCeiling) {
+      break;
+    }
+
+    const result = evaluateCandidate(defenderBuild, scenarios, candidate, options);
+    if (result.passed) {
+      passingResults.push(result);
+      if (passingResults.length >= maxResults && acceptedDefenceBudgetCeiling === null) {
+        acceptedDefenceBudgetCeiling = defenceBudget;
+      }
+    }
+  }
+
+  const topCandidates = passingResults.sort(sortCandidateResults).slice(0, maxResults);
+  const revalidatedCandidates = topCandidates
+    .map((result) => evaluateCandidate(defenderBuild, scenarios, result.candidate, options))
+    .filter((result) => result.passed)
+    .sort(sortCandidateResults)
+    .slice(0, maxResults);
+
+  return withRanks(revalidatedCandidates);
+};
