@@ -11,6 +11,7 @@ npm install
 npm run dev
 npm run generate:localization-seed
 npm run validate:localization
+npm run validate:artwork-assets
 npm test
 npm run build
 ```
@@ -18,6 +19,7 @@ npm run build
 - `npm run dev`: ローカル開発サーバーを起動する
 - `npm run generate:localization-seed`: M1 用の小さな resolver seed catalog を再生成する
 - `npm run validate:localization`: generated catalog と manual override の整合性を検証する
+- `npm run validate:artwork-assets`: ポケモン画像 metadata と `public/assets/official-artwork/` の整合性を検証する
 - `npm test`: M0 の React 表示スモークテストを実行する
 - `npm run build`: TypeScript の型チェック後に Vite の production build を作る
 
@@ -96,3 +98,12 @@ M6 の本体実装は `src/App.tsx` と `src/ui/defenceSearchUi.ts` に置いて
 - `src/ui/defenceSearchUi.test.ts`: Worker client 呼び出し、progress / partialResult / complete の state 反映、cancel / stale requestId の破棄、1位候補適用、canonical name 変換を確認するテスト
 
 UI 入力文字列は直接 search / adapter へ渡さず、`resolveEntity` と `toEntityRef` で `exact` / `alias` として解決できたものだけを domain model に昇格します。adapter へ届く計算名は `EntityRef.canonicalName` です。SP は `src/domain/championsStats.ts` で Showdown EV 相当に変換してから `@smogon/calc` に渡します。候補詳細では scenario ごとの PASS / survivalProbability / damage range を表示し、候補一覧では順位、H/B/D、使用SP、残りSP、ボトルネックを横並びで比較できます。
+
+## M6.5 artwork-backed UI
+
+M6.5 では、参考実装の生成済み metadata と公式画像を本体へ昇格し、UI の調整対象・攻撃カードにポケモン画像を表示するようにしています。画像は `public/assets/official-artwork/` に置き、対応データは `src/data/generated/pokemon-options.gen.json` を参照します。
+
+- `src/ui/pokemonArtwork.ts`: 日本語名、Showdown canonical name、検索文字列から UI 表示用の画像 metadata を引く helper
+- `scripts/validate-artwork-assets.mjs`: `pokemon-options.gen.json` の `artwork` 参照と実ファイルの存在を確認する検証 script
+
+この画像表示は UI 専用です。`@smogon/calc` adapter や H/B/D 探索の合否判定は画像に依存しません。

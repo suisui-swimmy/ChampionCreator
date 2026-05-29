@@ -18,6 +18,7 @@ import {
   type ScenarioFormState,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
@@ -124,6 +125,11 @@ export function App() {
       return { input: null, error: error instanceof Error ? error.message : String(error) };
     }
   }, [targetForm, scenarioForms]);
+
+  const targetArtwork = useMemo(() => findPokemonArtwork({
+    input: targetForm.pokemonInput,
+    canonicalName: previewInput.input?.build.pokemon.canonicalName,
+  }), [targetForm.pokemonInput, previewInput.input?.build.pokemon.canonicalName]);
 
   useEffect(() => {
     return () => {
@@ -333,6 +339,7 @@ export function App() {
           onUpdateField={updateTargetField}
           onUpdateEv={updateTargetEv}
           canonicalPokemon={previewInput.input?.build.pokemon.canonicalName}
+          artwork={targetArtwork}
           actualStats={actualStats}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
         />
@@ -367,6 +374,7 @@ export function App() {
 type TargetPanelProps = {
   targetForm: TargetFormState;
   canonicalPokemon?: string;
+  artwork: PokemonArtworkMatch | null;
   actualStats: StatTable | null;
   totalStatPoints: number;
   onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
@@ -376,6 +384,7 @@ type TargetPanelProps = {
 function TargetPanel({
   targetForm,
   canonicalPokemon,
+  artwork,
   actualStats,
   totalStatPoints,
   onUpdateField,
@@ -390,55 +399,62 @@ function TargetPanel({
         </div>
       </div>
 
-      <div className="target-summary compact">
-        <label>
-          ポケモン
-          <input
-            value={targetForm.pokemonInput}
-            onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
-          />
-        </label>
-        <label>
-          性格
-          <input
-            value={targetForm.natureInput}
-            onChange={(event) => onUpdateField("natureInput", event.target.value)}
-          />
-        </label>
-        <label>
-          Lv.
-          <input
-            type="number"
-            min="1"
-            max="100"
-            value={targetForm.level}
-            onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
-          />
-        </label>
-        <label>
-          持ち物
-          <input
-            value={targetForm.itemInput}
-            placeholder="任意"
-            onChange={(event) => onUpdateField("itemInput", event.target.value)}
-          />
-        </label>
-        <label>
-          特性
-          <input
-            value={targetForm.abilityInput}
-            placeholder="任意"
-            onChange={(event) => onUpdateField("abilityInput", event.target.value)}
-          />
-        </label>
-        <label>
-          テラ
-          <input
-            value={targetForm.teraTypeInput}
-            placeholder="任意"
-            onChange={(event) => onUpdateField("teraTypeInput", event.target.value)}
-          />
-        </label>
+      <div className="target-identity">
+        <PokemonArtworkFrame
+          match={artwork}
+          fallbackLabel={targetForm.pokemonInput}
+          variant="target"
+        />
+        <div className="target-summary compact">
+          <label>
+            ポケモン
+            <input
+              value={targetForm.pokemonInput}
+              onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
+            />
+          </label>
+          <label>
+            性格
+            <input
+              value={targetForm.natureInput}
+              onChange={(event) => onUpdateField("natureInput", event.target.value)}
+            />
+          </label>
+          <label>
+            Lv.
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={targetForm.level}
+              onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
+            />
+          </label>
+          <label>
+            持ち物
+            <input
+              value={targetForm.itemInput}
+              placeholder="任意"
+              onChange={(event) => onUpdateField("itemInput", event.target.value)}
+            />
+          </label>
+          <label>
+            特性
+            <input
+              value={targetForm.abilityInput}
+              placeholder="任意"
+              onChange={(event) => onUpdateField("abilityInput", event.target.value)}
+            />
+          </label>
+          <label>
+            テラ
+            <input
+              value={targetForm.teraTypeInput}
+              placeholder="任意"
+              onChange={(event) => onUpdateField("teraTypeInput", event.target.value)}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="ev-table" aria-label="調整対象のSP">
@@ -475,6 +491,40 @@ function TargetPanel({
         <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
       </div>
     </section>
+  );
+}
+
+type PokemonArtworkFrameProps = {
+  match: PokemonArtworkMatch | null;
+  fallbackLabel: string;
+  variant: "target" | "attack";
+};
+
+function PokemonArtworkFrame({ match, fallbackLabel, variant }: PokemonArtworkFrameProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const canShowImage = match && failedSrc !== match.artworkUrl;
+  const fallbackInitial = (fallbackLabel.trim() || "?").slice(0, 1);
+
+  return (
+    <div className={`pokemon-artwork ${variant}`} aria-label={match?.label ?? fallbackLabel}>
+      {canShowImage ? (
+        <img
+          src={match.artworkUrl}
+          alt={match.label}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailedSrc(match.artworkUrl)}
+        />
+      ) : (
+        <strong>{fallbackInitial}</strong>
+      )}
+      {match ? (
+        <div className="pokemon-artwork-meta">
+          <span>{match.label}</span>
+          <small>{match.showdownName}</small>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -648,10 +698,16 @@ function AttackCard({
     event: ChangeEvent<HTMLInputElement>,
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const attackLabel = attack.label || `攻撃${String.fromCharCode(65 + attackIndex)}`;
+  const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
 
   return (
     <section className="attack-condition-card" aria-label={attackLabel}>
       <div className="attack-card-header">
+        <PokemonArtworkFrame
+          match={attackerArtwork}
+          fallbackLabel={attack.attackerPokemonInput}
+          variant="attack"
+        />
         <input
           className="inline-title-input"
           value={attack.label}
