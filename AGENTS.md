@@ -324,6 +324,33 @@ MVP UI の最低ライン:
 - JSON import/export または URL share の最低限の方針を決める
 - GitHub Pages など静的ホスティングで動く準備をする
 
+### M8: MVP 後の性能改善
+
+目的: `@smogon/calc` を計算の正にしたまま、探索体験を軽くする。
+
+前提:
+
+- M6 / M7 までは、計算精度・責務分離・説明可能性を優先する
+- 元実装より時間がかかる主因は、候補ごとに `@smogon/calc` へ渡して正確に再評価することと、`H / B / D` を同時探索すること
+- 速くするために独自ダメージ式へ戻したり、adapter / search / worker の境界を崩したりしない
+
+改善候補:
+
+- `Scenario` / `ScenarioHit` を探索前に compiled form へ正規化し、attacker / move / field / side 入力の再構築を減らす
+- 同一の候補・同一の hit 条件に対する `damage rolls` をキャッシュする
+- Worker 内で評価をバッチ化し、progress / partialResult の頻度を調整して UI 更新コストを抑える
+- 粗探索モードと精密探索モードを分け、まず早く候補を見せてから必要に応じて詰める
+- HP / B / D の単調性を使った安全な枝刈りを検討する
+- 代表シナリオで計測し、最適化前後の所要時間と候補一致をテストで確認する
+
+完了条件:
+
+- `@smogon/calc` ベースの最終合否判定を維持している
+- canonical name / domain model / adapter / search / worker の境界を維持している
+- 代表シナリオで候補結果が最適化前と一致する、または差分理由を説明できる
+- 計算時間または UI 応答性の改善を計測できる
+- `npm test` と `npm run build` が通る
+
 ## 検証方針
 
 優先して書くテスト:

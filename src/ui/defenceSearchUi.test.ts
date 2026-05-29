@@ -71,8 +71,98 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].attacker.statPoints?.spa).toBe(32);
     expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
-    expect(input.scenarios[1].hits[0].attacker.pokemon.canonicalName).toBe("Garchomp");
-    expect(input.scenarios[1].hits[0].move.canonicalName).toBe("Outrage");
+    expect(input.scenarios).toHaveLength(1);
+  });
+
+  it("ignores disabled blank scenarios before canonical name resolution", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const disabledBlankScenario = {
+      ...defaultScenario,
+      id: "disabled-blank",
+      enabled: false,
+      attacks: defaultScenario.attacks.map((attack) => ({
+        ...attack,
+        attackerPokemonInput: "",
+        moveInput: "",
+      })),
+    };
+
+    const input = buildDefenceSearchInput(target, [defaultScenario, disabledBlankScenario]);
+
+    expect(input.scenarios).toHaveLength(1);
+    expect(input.scenarios[0].id).toBe(defaultScenario.id);
+  });
+
+  it("keeps multiple attacks in one scenario as cumulative hits", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const multiAttackScenario = {
+      ...defaultScenario,
+      attacks: [
+        defaultScenario.attacks[0],
+        {
+          ...defaultScenario.attacks[0],
+          id: "attack-b",
+          label: "攻撃B",
+          attackerPokemonInput: "ガブリアス",
+          attackerNatureInput: "ようき",
+          attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+          moveInput: "げきりん",
+          requiredSurvivedHits: 2,
+          minSurvivalProbabilityPercent: 80,
+          weather: "rain" as const,
+          terrain: "electric" as const,
+        },
+      ],
+    };
+
+    const input = buildDefenceSearchInput(target, [multiAttackScenario]);
+
+    expect(input.scenarios).toHaveLength(1);
+    expect(input.scenarios[0].hits).toHaveLength(2);
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(input.scenarios[0].hits[1].attacker.pokemon.canonicalName).toBe("Garchomp");
+    expect(input.scenarios[0].hits[1].move.canonicalName).toBe("Outrage");
+    expect(input.scenarios[0].hits[1].field).toEqual({ weather: "rain", terrain: "electric" });
+    expect(input.scenarios[0].hits[1].constraint).toMatchObject({
+      requiredSurvivedHits: 2,
+      minSurvivalProbability: 0.8,
+    });
+    expect(input.scenarios[0].constraint.requiredSurvivedHits).toBe(2);
+  });
+
+  it("treats completely blank attack cards as drafts", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarioWithDraft = {
+      ...defaultScenario,
+      attacks: [
+        defaultScenario.attacks[0],
+        {
+          ...defaultScenario.attacks[0],
+          id: "attack-draft",
+          label: "攻撃B",
+          attackerPokemonInput: "",
+          moveInput: "",
+        },
+      ],
+    };
+
+    const input = buildDefenceSearchInput(target, [scenarioWithDraft]);
+
+    expect(input.scenarios[0].hits).toHaveLength(1);
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+  });
+
+  it("requires at least one enabled scenario", () => {
+    const target = createDefaultTargetForm();
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      enabled: false,
+    }));
+
+    expect(() => buildDefenceSearchInput(target, scenarios)).toThrow("有効な仮想敵シナリオがありません");
   });
 });
 

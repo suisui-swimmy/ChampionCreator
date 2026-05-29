@@ -68,6 +68,8 @@ export interface ScenarioHit {
   id: string;
   attacker: Build;
   move: MoveRef;
+  field?: FieldState;
+  constraint?: SurvivalConstraint;
   repeat: number;
   critical: boolean;
   attackerBoosts: StatBoostTable;

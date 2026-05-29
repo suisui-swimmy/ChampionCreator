@@ -79,8 +79,7 @@ button:disabled {
 }
 
 .topbar p,
-.section-heading span,
-.scenario-header small {
+.section-heading span {
   margin: 3px 0 0;
   color: var(--muted);
   font-size: 11px;
@@ -454,62 +453,55 @@ input {
   background: #fbfcfd;
 }
 
-.scenario-grid {
+.scenario-stack {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.scenario-row {
+  display: grid;
   gap: 10px;
-}
-
-.scenario-card {
   border: 1px solid var(--line);
-  border-left: 5px solid var(--teal);
-  border-radius: var(--radius);
+  border-radius: 7px;
   background: #fff;
-  box-shadow: var(--shadow-card);
-  padding: 10px;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  padding: 8px;
 }
 
-.scenario-card:hover,
-.scenario-card:focus-visible,
-.scenario-card.selected {
-  border-color: var(--teal);
-  outline: none;
-  transform: translateY(-1px);
-}
-
-.scenario-card.disabled {
-  opacity: 0.68;
-}
-
-.scenario-card:nth-child(2) {
-  border-left-color: var(--red);
-}
-
-.scenario-card:nth-child(3) {
-  border-left-color: var(--purple);
-}
-
-.scenario-header {
+.scenario-row-header {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 42px minmax(120px, 180px) 160px auto;
   gap: 8px;
   align-items: center;
-  margin-bottom: 9px;
+  min-height: 34px;
 }
 
-.scenario-header strong {
-  display: block;
-  font-size: 14px;
+.scenario-row.disabled {
+  background: #f8fafc;
+  opacity: 0.78;
+}
+
+.scenario-cell {
+  display: grid;
+  grid-template-rows: 14px 28px;
+  gap: 3px;
+  min-width: 0;
+}
+
+.row-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  white-space: nowrap;
 }
 
 .inline-title-input {
-  height: 24px;
+  height: 28px;
   border-color: transparent;
   background: transparent;
   padding: 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -524,6 +516,7 @@ input {
   width: 38px;
   height: 22px;
   cursor: pointer;
+  align-self: center;
 }
 
 .switch input {
@@ -559,132 +552,85 @@ input {
   transform: translateX(16px);
 }
 
-.attack-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.attack-pair.single {
-  grid-template-columns: 1fr 94px;
-}
-
-.attack-card {
-  display: grid;
-  grid-template-columns: 42px 1fr;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.thumb {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  min-height: 76px;
-  color: #fff;
-  font-weight: 800;
-  font-size: 18px;
-}
-
-.landorus {
-  background: #c47a45;
-}
-
-.garchomp,
-.dragapult {
-  background: #5060e1;
-}
-
-.blissey {
-  background: #ef70a5;
-}
-
-.gholdengo {
-  background: #d6a431;
-}
-
-.attack-fields {
-  display: grid;
-  gap: 6px;
-  padding: 7px 7px 7px 0;
-}
-
-.attack-fields select {
-  height: 27px;
-  padding: 0 6px;
+.scenario-row input,
+.scenario-row select,
+.attack-condition-card input {
+  height: 28px;
+  padding: 0 7px;
   font-size: 12px;
 }
 
-.mini-row,
-.check-row {
-  flex-wrap: wrap;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.mini-row span,
-.check-row label {
-  display: inline-flex;
-  min-height: 20px;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--surface-soft);
-  padding: 0 5px;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.check-row input {
-  width: 13px;
-  height: 13px;
-  margin-right: 3px;
-}
-
-.type-strip {
-  grid-column: 1 / -1;
-  min-height: 22px;
-  color: #fff;
+.scenario-attack-lane {
   display: flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: 11px;
-  font-weight: 800;
+  gap: 8px;
+  align-items: stretch;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
-.add-attack {
-  min-height: 100%;
-  border-style: dashed;
-  color: var(--muted);
-  background: #fbfcfd;
+.scenario-attack-lane > * {
+  flex: 0 0 300px;
 }
 
-.scenario-fields,
-.attacker-evs {
+.scenario-attack-lane > .attack-add-card {
+  flex-basis: 190px;
+}
+
+.attack-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.scenario-fields.short {
+.attack-condition-card,
+.attack-add-card,
+.scenario-add-row {
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.attack-condition-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 270px;
+  padding: 8px;
+}
+
+.attack-card-header {
+  display: grid;
+  grid-template-columns: 1fr 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.attack-card-fields,
+.attack-number-grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 8px;
+  gap: 6px;
 }
 
 .attacker-evs {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 8px;
+  gap: 6px;
+}
+
+.attacker-evs label,
+.compact-select-field {
+  display: grid;
+  grid-template-rows: 14px 28px;
+  gap: 3px;
 }
 
 .scenario-options {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 10px;
-  margin-top: 9px;
+  align-items: center;
+  min-height: 28px;
 }
 
 .scenario-options label {
@@ -700,6 +646,33 @@ input {
   width: 14px;
   height: 14px;
   accent-color: var(--teal);
+}
+
+.attack-add-card {
+  display: grid;
+  place-items: center;
+  min-height: 270px;
+}
+
+.attack-add-card span {
+  color: #555;
+  font-size: 56px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.scenario-add-row {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  border-style: dashed;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ghost-button.danger {
+  color: #9d2323;
 }
 
 .result-layout {
@@ -975,8 +948,22 @@ input {
     grid-column: 1;
   }
 
-  .scenario-grid {
+  .scenario-row {
     grid-template-columns: 1fr;
+  }
+
+  .scenario-row-header {
+    grid-template-columns: 42px 1fr;
+  }
+
+  .scenario-attack-lane {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-attack-lane > *,
+  .scenario-attack-lane > .attack-add-card {
+    flex-basis: auto;
   }
 
   .result-layout {

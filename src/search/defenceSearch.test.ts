@@ -148,6 +148,59 @@ describe("evaluateScenario", () => {
     expect(repeatedResult.survivalProbability).toBeLessThan(0.99);
     expect(repeatedResult.hitEvaluations[0].description).toContain("Thunderbolt");
   });
+
+  it("passes hit-specific field state to the damage adapter", () => {
+    const defender = makeBuild("target", "カイリュー");
+    const attacker = makeBuild("attacker", "ピカチュウ");
+    const hit = {
+      ...makeHit("field-hit", attacker, "10まんボルト"),
+      field: { weather: "rain", terrain: "electric" } as FieldState,
+    };
+    const scenario = makeScenario("field", [hit], 1, 1);
+    const fields: FieldState[] = [];
+
+    evaluateScenario(defender, scenario, {
+      calculateHit: (_build, currentHit, field) => {
+        fields.push(field);
+        return {
+          hitId: currentHit.id,
+          damageRolls: [1],
+          damageRange: { min: 1, max: 1, percentMin: 1, percentMax: 1 },
+        };
+      },
+    });
+
+    expect(fields).toEqual([{ weather: "rain", terrain: "electric" }]);
+  });
+
+  it("evaluates hit-specific survival constraints against cumulative damage", () => {
+    const defender = makeBuild("target", "カイリュー");
+    const attacker = makeBuild("attacker", "ピカチュウ");
+    const firstHit = {
+      ...makeHit("first-hit", attacker, "10まんボルト"),
+      constraint: { enabled: true, requiredSurvivedHits: 1, minSurvivalProbability: 1 },
+    };
+    const secondHit = {
+      ...makeHit("second-hit", attacker, "10まんボルト"),
+      constraint: { enabled: true, requiredSurvivedHits: 2, minSurvivalProbability: 1 },
+    };
+    const scenario = makeScenario("cumulative-cards", [firstHit, secondHit], 1, 1);
+
+    const result = evaluateScenario(defender, scenario, {
+      calculateHit: (_build, hit) => ({
+        hitId: hit.id,
+        damageRolls: hit.id === "first-hit" ? [1] : [999],
+        damageRange: { min: 1, max: 999, percentMin: 1, percentMax: 999 },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      passed: false,
+      requiredSurvivedHits: 2,
+      minSurvivalProbability: 1,
+      survivalProbability: 0,
+    });
+  });
 });
 
 describe("evaluateCandidate", () => {

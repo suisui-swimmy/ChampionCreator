@@ -178,6 +178,45 @@ const expandDamageSequence = (
   return sequence;
 };
 
+const expandDamageCheckpoints = (
+  scenario: Scenario,
+  hitEvaluations: ScenarioHitEvaluation[],
+): Array<{
+  requiredSurvivedHits: number;
+  minSurvivalProbability: number;
+  damageSequence: number[][];
+}> => {
+  const evaluationsByHitId = new Map(hitEvaluations.map((evaluation) => [evaluation.hitId, evaluation]));
+  const sequence: number[][] = [];
+  const checkpoints: Array<{
+    requiredSurvivedHits: number;
+    minSurvivalProbability: number;
+    damageSequence: number[][];
+  }> = [];
+
+  for (const hit of scenario.hits) {
+    const repeat = Math.max(0, Math.trunc(hit.repeat));
+    const evaluation = evaluationsByHitId.get(hit.id);
+    if (!evaluation) {
+      continue;
+    }
+
+    for (let index = 0; index < repeat; index += 1) {
+      sequence.push(evaluation.damageRolls);
+    }
+
+    if (hit.constraint?.enabled) {
+      checkpoints.push({
+        requiredSurvivedHits: Math.max(0, Math.trunc(hit.constraint.requiredSurvivedHits)),
+        minSurvivalProbability: hit.constraint.minSurvivalProbability,
+        damageSequence: [...sequence],
+      });
+    }
+  }
+
+  return checkpoints;
+};
+
 export const calculateSurvivalProbability = (
   maxHp: number,
   damageRollsByHit: readonly (readonly number[])[],
@@ -252,8 +291,49 @@ export const evaluateScenario = (
   }
 
   const calculateHit = getCalculateHit(options.calculateHit);
-  const hitEvaluations = scenario.hits.map((hit) => calculateHit(defenderBuild, hit, scenario.field));
+  const hitEvaluations = scenario.hits.map((hit) => calculateHit(defenderBuild, hit, hit.field ?? scenario.field));
+  const checkpoints = expandDamageCheckpoints(scenario, hitEvaluations);
   const damageSequence = expandDamageSequence(scenario, hitEvaluations);
+
+  if (checkpoints.length > 0) {
+    const checkpointResults = checkpoints.map((checkpoint) => {
+      if (checkpoint.requiredSurvivedHits > checkpoint.damageSequence.length) {
+        return {
+          ...checkpoint,
+          passed: false,
+          survivalProbability: 0,
+          margin: -checkpoint.minSurvivalProbability,
+        };
+      }
+
+      const survivalProbability = checkpoint.requiredSurvivedHits === 0
+        ? 1
+        : calculateSurvivalProbability(
+            getMaxHp(defenderBuild),
+            checkpoint.damageSequence.slice(0, checkpoint.requiredSurvivedHits),
+          );
+
+      return {
+        ...checkpoint,
+        survivalProbability,
+        passed: survivalProbability + SURVIVAL_EPSILON >= checkpoint.minSurvivalProbability,
+        margin: survivalProbability - checkpoint.minSurvivalProbability,
+      };
+    });
+    const worstCheckpoint = checkpointResults.reduce((worst, checkpoint) => (
+      checkpoint.margin < worst.margin ? checkpoint : worst
+    ));
+
+    return {
+      scenarioId: scenario.id,
+      passed: checkpointResults.every((checkpoint) => checkpoint.passed),
+      survivalProbability: worstCheckpoint.survivalProbability,
+      requiredSurvivedHits: worstCheckpoint.requiredSurvivedHits,
+      minSurvivalProbability: worstCheckpoint.minSurvivalProbability,
+      hitEvaluations,
+      bottleneckLabel: formatMarginLabel(label, worstCheckpoint.margin),
+    };
+  }
 
   if (requiredSurvivedHits > damageSequence.length) {
     return {

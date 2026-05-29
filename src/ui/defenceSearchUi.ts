@@ -34,10 +34,9 @@ export interface TargetFormState {
   statPoints: StatPointTable;
 }
 
-export interface ScenarioFormState {
+export interface ScenarioAttackFormState {
   id: string;
   label: string;
-  enabled: boolean;
   attackerPokemonInput: string;
   attackerNatureInput: string;
   attackerAbilityInput: string;
@@ -46,15 +45,22 @@ export interface ScenarioFormState {
   attackerStatPoints: StatPointTable;
   moveInput: string;
   repeat: number;
-  critical: boolean;
   requiredSurvivedHits: number;
   minSurvivalProbabilityPercent: number;
   weather: Weather;
   terrain: Terrain;
+  critical: boolean;
   reflect: boolean;
   lightScreen: boolean;
   auroraVeil: boolean;
   helpingHand: boolean;
+}
+
+export interface ScenarioFormState {
+  id: string;
+  label: string;
+  enabled: boolean;
+  attacks: ScenarioAttackFormState[];
 }
 
 export interface DefenceSearchInput {
@@ -180,50 +186,34 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
 });
 
+export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃A"): ScenarioAttackFormState => ({
+  id,
+  label,
+  attackerPokemonInput: "ピカチュウ",
+  attackerNatureInput: "ひかえめ",
+  attackerAbilityInput: "",
+  attackerItemInput: "",
+  attackerLevel: 50,
+  attackerStatPoints: { ...zeroStatPoints, spa: 32 },
+  moveInput: "10まんボルト",
+  repeat: 1,
+  requiredSurvivedHits: 1,
+  minSurvivalProbabilityPercent: 100,
+  weather: "none",
+  terrain: "none",
+  critical: false,
+  reflect: false,
+  lightScreen: false,
+  auroraVeil: false,
+  helpingHand: false,
+});
+
 export const createDefaultScenarioForms = (): ScenarioFormState[] => [
   {
     id: "scenario-special",
     label: "シナリオA",
     enabled: true,
-    attackerPokemonInput: "ピカチュウ",
-    attackerNatureInput: "ひかえめ",
-    attackerAbilityInput: "",
-    attackerItemInput: "",
-    attackerLevel: 50,
-    attackerStatPoints: { ...zeroStatPoints, spa: 32 },
-    moveInput: "10まんボルト",
-    repeat: 1,
-    critical: false,
-    requiredSurvivedHits: 1,
-    minSurvivalProbabilityPercent: 100,
-    weather: "none",
-    terrain: "none",
-    reflect: false,
-    lightScreen: false,
-    auroraVeil: false,
-    helpingHand: false,
-  },
-  {
-    id: "scenario-physical",
-    label: "シナリオB",
-    enabled: true,
-    attackerPokemonInput: "ガブリアス",
-    attackerNatureInput: "ようき",
-    attackerAbilityInput: "",
-    attackerItemInput: "",
-    attackerLevel: 1,
-    attackerStatPoints: { ...zeroStatPoints, atk: 0 },
-    moveInput: "げきりん",
-    repeat: 1,
-    critical: false,
-    requiredSurvivedHits: 1,
-    minSurvivalProbabilityPercent: 100,
-    weather: "none",
-    terrain: "none",
-    reflect: false,
-    lightScreen: false,
-    auroraVeil: false,
-    helpingHand: false,
+    attacks: [createDefaultScenarioAttackForm()],
   },
 ];
 
@@ -244,61 +234,94 @@ const toBuild = (form: TargetFormState, id: string): Build => {
   };
 };
 
-const toScenarioHit = (form: ScenarioFormState): ScenarioHit => {
+const toScenarioHit = (
+  scenarioForm: ScenarioFormState,
+  attackForm: ScenarioAttackFormState,
+  index: number,
+): ScenarioHit => {
   const attacker = toBuild(
     {
-      pokemonInput: form.attackerPokemonInput,
-      natureInput: form.attackerNatureInput,
-      abilityInput: form.attackerAbilityInput,
-      itemInput: form.attackerItemInput,
+      pokemonInput: attackForm.attackerPokemonInput,
+      natureInput: attackForm.attackerNatureInput,
+      abilityInput: attackForm.attackerAbilityInput,
+      itemInput: attackForm.attackerItemInput,
       teraTypeInput: "",
-      level: form.attackerLevel,
-      statPoints: form.attackerStatPoints,
+      level: attackForm.attackerLevel,
+      statPoints: attackForm.attackerStatPoints,
     },
-    `${form.id}-attacker`,
+    `${scenarioForm.id}-${attackForm.id}-attacker`,
   );
 
   return {
-    id: `${form.id}-hit-1`,
+    id: `${scenarioForm.id}-hit-${index + 1}`,
     attacker,
-    move: mustResolve("move", form.moveInput, "技"),
-    repeat: Math.max(1, clampInt(form.repeat, 1, 10)),
-    critical: form.critical,
+    move: mustResolve("move", attackForm.moveInput, "技"),
+    field: toFieldState(attackForm),
+    constraint: {
+      enabled: true,
+      requiredSurvivedHits: Math.max(1, clampInt(attackForm.requiredSurvivedHits, 1, 10)),
+      minSurvivalProbability: clampProbabilityPercent(attackForm.minSurvivalProbabilityPercent),
+    },
+    repeat: Math.max(1, clampInt(attackForm.repeat, 1, 10)),
+    critical: attackForm.critical,
     attackerBoosts: {},
     defenderBoosts: {},
-    attackerSide: { ...emptySide, helpingHand: form.helpingHand },
+    attackerSide: { ...emptySide, helpingHand: attackForm.helpingHand },
     defenderSide: {
       ...emptySide,
-      reflect: form.reflect,
-      lightScreen: form.lightScreen,
-      auroraVeil: form.auroraVeil,
+      reflect: attackForm.reflect,
+      lightScreen: attackForm.lightScreen,
+      auroraVeil: attackForm.auroraVeil,
     },
   };
 };
 
-const toFieldState = (form: ScenarioFormState): FieldState => ({
+const toFieldState = (form: { weather: Weather; terrain: Terrain }): FieldState => ({
   weather: form.weather,
   terrain: form.terrain,
 });
 
+const isBlankAttackForm = (form: ScenarioAttackFormState): boolean =>
+  !form.attackerPokemonInput.trim() && !form.moveInput.trim();
+
 export const buildDefenceSearchInput = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
-): DefenceSearchInput => ({
-  build: toBuild(targetForm, "target"),
-  scenarios: scenarioForms.map((form): Scenario => ({
-    id: form.id,
-    label: form.label,
-    enabled: form.enabled,
-    hits: [toScenarioHit(form)],
-    field: toFieldState(form),
-    constraint: {
-      enabled: form.enabled,
-      requiredSurvivedHits: Math.max(1, clampInt(form.requiredSurvivedHits, 1, 10)),
-      minSurvivalProbability: clampProbabilityPercent(form.minSurvivalProbabilityPercent),
-    },
-  })),
-});
+): DefenceSearchInput => {
+  const activeScenarioForms = scenarioForms.filter((form) => form.enabled);
+
+  if (activeScenarioForms.length === 0) {
+    throw new Error("有効な仮想敵シナリオがありません");
+  }
+
+  return {
+    build: toBuild(targetForm, "target"),
+    scenarios: activeScenarioForms.map((form): Scenario => {
+      const activeAttacks = form.attacks.filter((attack) => !isBlankAttackForm(attack));
+      if (activeAttacks.length === 0) {
+        throw new Error(`${form.label} に有効な攻撃条件がありません`);
+      }
+
+      return {
+        id: form.id,
+        label: form.label,
+        enabled: form.enabled,
+        hits: activeAttacks.map((attack, index) => toScenarioHit(form, attack, index)),
+        field: { weather: "none", terrain: "none" },
+        constraint: {
+          enabled: form.enabled,
+          requiredSurvivedHits: Math.max(
+            1,
+            ...activeAttacks.map((attack) => clampInt(attack.requiredSurvivedHits, 1, 10)),
+          ),
+          minSurvivalProbability: Math.min(
+            ...activeAttacks.map((attack) => clampProbabilityPercent(attack.minSurvivalProbabilityPercent)),
+          ),
+        },
+      };
+    }),
+  };
+};
 
 const isActiveRequest = (state: SearchUiState, requestId: string): boolean =>
   state.activeRequestId === requestId;

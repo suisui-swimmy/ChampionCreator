@@ -7,12 +7,14 @@ import {
 import type { CandidateResult, StatKey, StatTable, Terrain, Weather } from "./domain/model";
 import {
   applyTopCandidateToTarget,
+  createDefaultScenarioAttackForm,
   buildDefenceSearchInput,
   createDefaultScenarioForms,
   createDefaultTargetForm,
   createInitialSearchUiState,
   searchUiReducer,
   startDefenceSearchFromUi,
+  type ScenarioAttackFormState,
   type ScenarioFormState,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
@@ -61,8 +63,37 @@ const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
 
+const createBlankAttack = (index: number): ScenarioAttackFormState => ({
+  ...createDefaultScenarioAttackForm(`attack-${Date.now()}-${index}`, `攻撃${String.fromCharCode(65 + index)}`),
+  attackerPokemonInput: "",
+  attackerNatureInput: "",
+  attackerAbilityInput: "",
+  attackerItemInput: "",
+  attackerLevel: 50,
+  attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+  moveInput: "",
+  repeat: 1,
+  requiredSurvivedHits: 1,
+  minSurvivalProbabilityPercent: 100,
+  weather: "none",
+  terrain: "none",
+  critical: false,
+  reflect: false,
+  lightScreen: false,
+  auroraVeil: false,
+  helpingHand: false,
+});
+
+const createBlankScenario = (index: number): ScenarioFormState => ({
+  ...createDefaultScenarioForms()[0],
+  id: `scenario-${Date.now()}-${index}`,
+  label: `シナリオ${index + 1}`,
+  enabled: false,
+  attacks: [createBlankAttack(0)],
+});
+
 const createScenario = (index: number): ScenarioFormState => ({
-  ...createDefaultScenarioForms()[index % createDefaultScenarioForms().length],
+  ...createBlankScenario(index),
   id: `scenario-${Date.now()}-${index}`,
   label: `シナリオ${index + 1}`,
 });
@@ -151,15 +182,66 @@ export function App() {
   };
 
   const updateScenarioAttackerEv = (id: string, key: StatKey, value: number) => {
+    const [scenarioId, attackId] = id.split(":");
     setScenarioForms((current) => current.map((scenario) => (
-      scenario.id === id
-        ? { ...scenario, attackerStatPoints: { ...scenario.attackerStatPoints, [key]: value } }
+      scenario.id === scenarioId
+        ? {
+            ...scenario,
+            attacks: scenario.attacks.map((attack) => (
+              attack.id === attackId
+                ? { ...attack, attackerStatPoints: { ...attack.attackerStatPoints, [key]: value } }
+                : attack
+            )),
+          }
+        : scenario
+    )));
+  };
+
+  const updateScenarioAttack = <K extends keyof ScenarioAttackFormState>(
+    scenarioId: string,
+    attackId: string,
+    key: K,
+    value: ScenarioAttackFormState[K],
+  ) => {
+    setScenarioForms((current) => current.map((scenario) => (
+      scenario.id === scenarioId
+        ? {
+            ...scenario,
+            attacks: scenario.attacks.map((attack) => (
+              attack.id === attackId ? { ...attack, [key]: value } : attack
+            )),
+          }
+        : scenario
+    )));
+  };
+
+  const handleAddAttack = (scenarioId: string) => {
+    setScenarioForms((current) => current.map((scenario) => (
+      scenario.id === scenarioId
+        ? {
+            ...scenario,
+            attacks: [...scenario.attacks, createBlankAttack(scenario.attacks.length)],
+          }
+        : scenario
+    )));
+  };
+
+  const handleRemoveAttack = (scenarioId: string, attackId: string) => {
+    setScenarioForms((current) => current.map((scenario) => (
+      scenario.id === scenarioId
+        ? {
+            ...scenario,
+            attacks: scenario.attacks.length <= 1
+              ? scenario.attacks
+              : scenario.attacks.filter((attack) => attack.id !== attackId),
+          }
         : scenario
     )));
   };
 
   const handleAddScenario = () => {
-    setScenarioForms((current) => [...current, createScenario(current.length)]);
+    const nextScenario = createScenario(scenarioForms.length);
+    setScenarioForms((current) => [...current, nextScenario]);
   };
 
   const handleRemoveScenario = (id: string) => {
@@ -259,6 +341,9 @@ export function App() {
           onAddScenario={handleAddScenario}
           onRemoveScenario={handleRemoveScenario}
           onUpdateScenario={updateScenario}
+          onAddAttack={handleAddAttack}
+          onRemoveAttack={handleRemoveAttack}
+          onUpdateAttack={updateScenarioAttack}
           onUpdateAttackerEv={updateScenarioAttackerEv}
         />
         <ResultsPanel
@@ -402,6 +487,14 @@ type ScenarioPanelProps = {
     key: K,
     value: ScenarioFormState[K],
   ) => void;
+  onAddAttack: (scenarioId: string) => void;
+  onRemoveAttack: (scenarioId: string, attackId: string) => void;
+  onUpdateAttack: <K extends keyof ScenarioAttackFormState>(
+    scenarioId: string,
+    attackId: string,
+    key: K,
+    value: ScenarioAttackFormState[K],
+  ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
 
@@ -410,6 +503,9 @@ function ScenarioPanel({
   onAddScenario,
   onRemoveScenario,
   onUpdateScenario,
+  onAddAttack,
+  onRemoveAttack,
+  onUpdateAttack,
   onUpdateAttackerEv,
 }: ScenarioPanelProps) {
   return (
@@ -417,51 +513,64 @@ function ScenarioPanel({
       <div className="section-heading">
         <div>
           <h2 id="scenario-title">仮想敵シナリオ</h2>
-          <span>有効な条件を Worker で同時評価</span>
+          <span>1行の中で攻撃A+Bを累積条件として同時評価</span>
         </div>
         <button className="ghost-button" type="button" onClick={onAddScenario}>+ シナリオを追加</button>
       </div>
 
-      <div className="scenario-grid">
+      <div className="scenario-stack" aria-label="仮想敵シナリオ行">
         {scenarios.map((scenario) => (
-          <ScenarioCard
+          <ScenarioRow
             key={scenario.id}
             scenario={scenario}
+            onAddAttack={onAddAttack}
+            onRemoveAttack={onRemoveAttack}
             onRemoveScenario={onRemoveScenario}
             onUpdateScenario={onUpdateScenario}
+            onUpdateAttack={onUpdateAttack}
             onUpdateAttackerEv={onUpdateAttackerEv}
           />
         ))}
+        <button className="scenario-add-row" type="button" onClick={onAddScenario}>
+          ダメージ計算を追加
+        </button>
       </div>
     </section>
   );
 }
 
-type ScenarioCardProps = {
+type ScenarioRowProps = {
   scenario: ScenarioFormState;
+  onAddAttack: (scenarioId: string) => void;
+  onRemoveAttack: (scenarioId: string, attackId: string) => void;
   onRemoveScenario: (id: string) => void;
   onUpdateScenario: <K extends keyof ScenarioFormState>(
     id: string,
     key: K,
     value: ScenarioFormState[K],
   ) => void;
+  onUpdateAttack: <K extends keyof ScenarioAttackFormState>(
+    scenarioId: string,
+    attackId: string,
+    key: K,
+    value: ScenarioAttackFormState[K],
+  ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
 
-function ScenarioCard({
+function ScenarioRow({
   scenario,
+  onAddAttack,
+  onRemoveAttack,
   onRemoveScenario,
   onUpdateScenario,
+  onUpdateAttack,
   onUpdateAttackerEv,
-}: ScenarioCardProps) {
-  const onInput = <K extends keyof ScenarioFormState>(key: K) => (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => onUpdateScenario(scenario.id, key, event.target.value as ScenarioFormState[K]);
-
+}: ScenarioRowProps) {
   return (
-    <article className={`scenario-card${scenario.enabled ? "" : " disabled"}`}>
-      <div className="scenario-header">
-        <label className="switch">
+    <article className={`scenario-row${scenario.enabled ? "" : " disabled"}`} aria-label={scenario.label}>
+      <div className="scenario-row-header">
+        <label className="switch" aria-label={`${scenario.label}を有効化`}>
           <input
             type="checkbox"
             checked={scenario.enabled}
@@ -469,85 +578,161 @@ function ScenarioCard({
           />
           <span />
         </label>
-        <div>
-          <input
-            className="inline-title-input"
-            value={scenario.label}
-            aria-label="シナリオ名"
-            onChange={onInput("label")}
-          />
-          <small>{scenario.requiredSurvivedHits} hit / {scenario.minSurvivalProbabilityPercent}% 以上</small>
-        </div>
+        <input
+          className="inline-title-input"
+          value={scenario.label}
+          aria-label="シナリオ名"
+          onChange={(event) => onUpdateScenario(scenario.id, "label", event.target.value)}
+        />
         <button
-          className="icon-button"
+          className="ghost-button danger"
           type="button"
           aria-label={`${scenario.label}を削除`}
           onClick={() => onRemoveScenario(scenario.id)}
+        >
+          行を削除
+        </button>
+      </div>
+
+      <div className="scenario-attack-lane">
+        {scenario.attacks.map((attack, attackIndex) => (
+          <AttackCard
+            key={attack.id}
+            attack={attack}
+            attackIndex={attackIndex}
+            scenarioId={scenario.id}
+            canRemove={scenario.attacks.length > 1}
+            onRemoveAttack={onRemoveAttack}
+            onUpdateAttack={onUpdateAttack}
+            onUpdateAttackerEv={onUpdateAttackerEv}
+          />
+        ))}
+        <button
+          className="attack-add-card"
+          type="button"
+          aria-label={`${scenario.label}に攻撃を追加`}
+          onClick={() => onAddAttack(scenario.id)}
+        >
+          <span>+</span>
+        </button>
+      </div>
+    </article>
+  );
+}
+
+type AttackCardProps = {
+  attack: ScenarioAttackFormState;
+  attackIndex: number;
+  scenarioId: string;
+  canRemove: boolean;
+  onRemoveAttack: (scenarioId: string, attackId: string) => void;
+  onUpdateAttack: <K extends keyof ScenarioAttackFormState>(
+    scenarioId: string,
+    attackId: string,
+    key: K,
+    value: ScenarioAttackFormState[K],
+  ) => void;
+  onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
+};
+
+function AttackCard({
+  attack,
+  attackIndex,
+  scenarioId,
+  canRemove,
+  onRemoveAttack,
+  onUpdateAttack,
+  onUpdateAttackerEv,
+}: AttackCardProps) {
+  const onInput = <K extends keyof ScenarioAttackFormState>(key: K) => (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
+  const attackLabel = attack.label || `攻撃${String.fromCharCode(65 + attackIndex)}`;
+
+  return (
+    <section className="attack-condition-card" aria-label={attackLabel}>
+      <div className="attack-card-header">
+        <input
+          className="inline-title-input"
+          value={attack.label}
+          aria-label="攻撃名"
+          onChange={onInput("label")}
+        />
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={`${attackLabel}を削除`}
+          disabled={!canRemove}
+          onClick={() => onRemoveAttack(scenarioId, attack.id)}
         >
           ×
         </button>
       </div>
 
-      <div className="scenario-fields">
+      <div className="attack-card-fields">
+        <ScenarioTextField label="攻撃側" showLabel value={attack.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
+        <ScenarioTextField label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
+        <ScenarioTextField label="性格" showLabel value={attack.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
+        <ScenarioTextField label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
+      </div>
+
+      <div className="attack-number-grid">
+        <ScenarioNumberField
+          label="Lv."
+          showLabel
+          value={attack.attackerLevel}
+          min={1}
+          max={100}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
+        />
+        <ScenarioNumberField
+          label="回数"
+          showLabel
+          value={attack.repeat}
+          min={1}
+          max={10}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)}
+        />
+        <ScenarioNumberField
+          label="必要耐久"
+          showLabel
+          value={attack.requiredSurvivedHits}
+          min={1}
+          max={10}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "requiredSurvivedHits", value)}
+        />
+        <ScenarioNumberField
+          label="生存率%"
+          showLabel
+          value={attack.minSurvivalProbabilityPercent}
+          min={0}
+          max={100}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "minSurvivalProbabilityPercent", value)}
+        />
+      </div>
+
+      <div className="attack-field-grid">
         <label>
-          攻撃側
-          <input value={scenario.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
+          天候
+          <select
+            value={attack.weather}
+            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "weather", event.target.value as Weather)}
+          >
+            {weatherOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
         </label>
         <label>
-          技
-          <input value={scenario.moveInput} onChange={onInput("moveInput")} />
-        </label>
-        <label>
-          性格
-          <input value={scenario.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
-        </label>
-        <label>
-          持ち物
-          <input value={scenario.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
-        </label>
-        <label>
-          Lv.
-          <input
-            type="number"
-            min="1"
-            max="100"
-            value={scenario.attackerLevel}
-            onChange={(event) => onUpdateScenario(scenario.id, "attackerLevel", toNumber(event.target.value, 50))}
-          />
-        </label>
-        <label>
-          回数
-          <input
-            type="number"
-            min="1"
-            max="10"
-            value={scenario.repeat}
-            onChange={(event) => onUpdateScenario(scenario.id, "repeat", toNumber(event.target.value, 1))}
-          />
-        </label>
-        <label>
-          必要耐久
-          <input
-            type="number"
-            min="1"
-            max="10"
-            value={scenario.requiredSurvivedHits}
-            onChange={(event) => onUpdateScenario(scenario.id, "requiredSurvivedHits", toNumber(event.target.value, 1))}
-          />
-        </label>
-        <label>
-          生存率%
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={scenario.minSurvivalProbabilityPercent}
-            onChange={(event) => onUpdateScenario(scenario.id, "minSurvivalProbabilityPercent", toNumber(event.target.value, 100))}
-          />
+          フィールド
+          <select
+            value={attack.terrain}
+            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "terrain", event.target.value as Terrain)}
+          >
+            {terrainOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
         </label>
       </div>
 
-      <div className="attacker-evs" aria-label={`${scenario.label} 攻撃側SP`}>
+      <div className="attacker-evs" aria-label={`${attackLabel} 攻撃側SP`}>
         {fixedStatKeys.map((key) => (
           <label key={key}>
             {statLabels[key]} SP
@@ -556,42 +741,63 @@ function ScenarioCard({
               min="0"
               max={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
               step="1"
-              value={scenario.attackerStatPoints[key]}
-              onChange={(event) => onUpdateAttackerEv(scenario.id, key, toNumber(event.target.value))}
+              value={attack.attackerStatPoints[key]}
+              onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toNumber(event.target.value))}
             />
           </label>
         ))}
       </div>
 
       <div className="scenario-options">
-        <label><input type="checkbox" checked={scenario.critical} onChange={(event) => onUpdateScenario(scenario.id, "critical", event.target.checked)} /> 急所</label>
-        <label><input type="checkbox" checked={scenario.reflect} onChange={(event) => onUpdateScenario(scenario.id, "reflect", event.target.checked)} /> リフレクター</label>
-        <label><input type="checkbox" checked={scenario.lightScreen} onChange={(event) => onUpdateScenario(scenario.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
-        <label><input type="checkbox" checked={scenario.auroraVeil} onChange={(event) => onUpdateScenario(scenario.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
-        <label><input type="checkbox" checked={scenario.helpingHand} onChange={(event) => onUpdateScenario(scenario.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+        <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
+        <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
+        <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+        <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+        <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
       </div>
+    </section>
+  );
+}
 
-      <div className="scenario-fields short">
-        <label>
-          天候
-          <select
-            value={scenario.weather}
-            onChange={(event) => onUpdateScenario(scenario.id, "weather", event.target.value as Weather)}
-          >
-            {weatherOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          フィールド
-          <select
-            value={scenario.terrain}
-            onChange={(event) => onUpdateScenario(scenario.id, "terrain", event.target.value as Terrain)}
-          >
-            {terrainOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
-      </div>
-    </article>
+type ScenarioTextFieldProps = {
+  label: string;
+  showLabel: boolean;
+  value: string;
+  placeholder?: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+};
+
+function ScenarioTextField({ label, showLabel, value, placeholder, onChange }: ScenarioTextFieldProps) {
+  return (
+    <label className="scenario-cell">
+      {showLabel ? <span className="row-label">{label}</span> : null}
+      <input value={value} placeholder={showLabel ? placeholder : undefined} aria-label={label} onChange={onChange} />
+    </label>
+  );
+}
+
+type ScenarioNumberFieldProps = {
+  label: string;
+  showLabel: boolean;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+};
+
+function ScenarioNumberField({ label, showLabel, value, min, max, onChange }: ScenarioNumberFieldProps) {
+  return (
+    <label className="scenario-cell number-cell">
+      {showLabel ? <span className="row-label">{label}</span> : null}
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        aria-label={label}
+        onChange={(event) => onChange(toNumber(event.target.value, min))}
+      />
+    </label>
   );
 }
 
