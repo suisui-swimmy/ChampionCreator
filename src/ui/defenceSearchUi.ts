@@ -181,7 +181,7 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   natureInput: "ひかえめ",
   abilityInput: "",
   itemInput: "",
-  teraTypeInput: "ドラゴン",
+  teraTypeInput: "",
   level: 50,
   statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
 });

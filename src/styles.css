@@ -65,6 +65,11 @@ button:disabled {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 12px;
+  border-radius: var(--radius);
+  background: #05070a;
+  color: #fff;
+  padding: 12px 14px;
+  box-shadow: 0 8px 22px rgba(5, 7, 10, 0.16);
 }
 
 .topbar h1,
@@ -74,8 +79,25 @@ button:disabled {
 }
 
 .topbar h1 {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  font-size: 0;
   line-height: 1.1;
+}
+
+.brand-title {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.brand-title img {
+  display: block;
+  width: auto;
+  height: 58px;
+  max-width: min(390px, 46vw);
+  object-fit: contain;
+  object-position: left center;
 }
 
 .topbar p,
@@ -83,6 +105,10 @@ button:disabled {
   margin: 3px 0 0;
   color: var(--muted);
   font-size: 11px;
+}
+
+.topbar p {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .topbar-actions,
@@ -100,13 +126,13 @@ button:disabled {
   display: grid;
   min-width: 150px;
   gap: 2px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.66);
   font-size: 11px;
   text-align: right;
 }
 
 .run-meter strong {
-  color: var(--teal);
+  color: #58f1ff;
   font-size: 15px;
 }
 
@@ -383,7 +409,34 @@ input {
 }
 
 .ev-row strong {
+  display: grid;
+  place-items: center;
   font-size: 14px;
+}
+
+.stat-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.ev-row .stat-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.stat-label-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 14px;
+}
+
+.stat-label-with-icon .stat-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .actual-stat {
@@ -637,7 +690,7 @@ input {
 
 .attacker-evs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -856,6 +909,11 @@ input {
   font-weight: 800;
 }
 
+.detail-allocation span {
+  display: grid;
+  place-items: center;
+}
+
 .detail-allocation strong {
   border-radius: 5px;
   background: var(--surface-soft);
@@ -926,6 +984,13 @@ input {
   padding-left: 16px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.check-list li span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  line-height: 1.35;
 }
 
 .badge {

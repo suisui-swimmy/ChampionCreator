@@ -19,10 +19,19 @@ const fail = (messages) => {
 const catalog = await readJson("src/data/generated/localized-catalog.gen.json");
 const aliasOverrides = await readJson("src/data/overrides/ja-aliases.json");
 const labelOverrides = await readJson("src/data/overrides/ja-label-overrides.json");
+const optionFiles = [
+  "src/data/generated/pokemon-options.gen.json",
+  "src/data/generated/move-options.gen.json",
+  "src/data/generated/item-options.gen.json",
+  "src/data/generated/ability-options.gen.json",
+  "src/data/generated/nature-options.gen.json",
+  "src/data/generated/type-options.gen.json",
+];
 
 const errors = [];
 const warnings = [];
 const catalogKeys = new Set();
+const resolverKeys = new Set();
 const indexKeys = new Map();
 
 if (catalog.schemaVersion !== 1) {
@@ -35,6 +44,7 @@ for (const entry of catalog.entries ?? []) {
     errors.push(`duplicate catalog entry: ${key}`);
   }
   catalogKeys.add(key);
+  resolverKeys.add(key);
 
   for (const field of ["kind", "id", "canonicalName", "displayNameJa"]) {
     if (typeof entry[field] !== "string" || entry[field].trim() === "") {
@@ -59,6 +69,42 @@ for (const entry of catalog.entries ?? []) {
   }
 }
 
+for (const file of optionFiles) {
+  const payload = await readJson(file);
+  const kind = String(payload.kind ?? "").replace(/-options$/, "");
+
+  if (payload.schemaVersion !== 1) {
+    errors.push(`${file} schemaVersion must be 1`);
+  }
+
+  if (!["pokemon", "move", "item", "ability", "nature", "type"].includes(kind)) {
+    errors.push(`${file} kind must be an entity option kind`);
+    continue;
+  }
+
+  for (const entry of payload.entries ?? []) {
+    const key = `${kind}:${entry.id}`;
+    resolverKeys.add(key);
+
+    for (const field of ["id", "label", "showdownName", "searchText"]) {
+      if (typeof entry[field] !== "string" || entry[field].trim() === "") {
+        errors.push(`${file} ${key} has empty ${field}`);
+      }
+    }
+
+    for (const text of [entry.id, entry.showdownName, entry.label, ...(entry.searchText ?? "").split(/\s+/)]) {
+      const normalized = normalize(text);
+      if (!normalized) {
+        continue;
+      }
+      const indexKey = `${kind}:${normalized}`;
+      const current = indexKeys.get(indexKey) ?? new Set();
+      current.add(key);
+      indexKeys.set(indexKey, current);
+    }
+  }
+}
+
 const validateOverridePayload = (payload, label) => {
   if (payload.schemaVersion !== 1) {
     errors.push(`${label} schemaVersion must be 1`);
@@ -66,8 +112,8 @@ const validateOverridePayload = (payload, label) => {
 
   for (const entry of payload.entries ?? []) {
     const key = `${entry.kind}:${entry.id}`;
-    if (!catalogKeys.has(key)) {
-      errors.push(`${label} references missing catalog entry: ${key}`);
+    if (!resolverKeys.has(key)) {
+      errors.push(`${label} references missing resolver entry: ${key}`);
     }
   }
 };
@@ -102,7 +148,7 @@ for (const [indexKey, keys] of indexKeys) {
   }
 }
 
-console.log(`Validated ${catalogKeys.size} localization catalog entries.`);
+console.log(`Validated ${catalogKeys.size} localization catalog entries and ${resolverKeys.size} resolver entries.`);
 if (warnings.length > 0) {
   console.log(`Warnings: ${warnings.length}`);
   for (const warning of warnings.slice(0, 10)) {

@@ -2,6 +2,8 @@ import { type ChangeEvent, useEffect, useMemo, useReducer, useRef, useState } fr
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
+  clampStatPointValue,
+  smogonEvToStatPoints,
   sumStatPoints,
 } from "./domain/championsStats";
 import type { CandidateResult, StatKey, StatTable, Terrain, Weather } from "./domain/model";
@@ -33,9 +35,17 @@ const statLabels: Record<StatKey, string> = {
   spe: "S",
 };
 
+const statIconFiles: Record<StatKey, string> = {
+  hp: "H.svg",
+  atk: "A.svg",
+  def: "B.svg",
+  spa: "C.svg",
+  spd: "D.svg",
+  spe: "S.svg",
+};
+
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
-const fixedStatKeys = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
 const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
 
 const weatherOptions: Array<{ value: Weather; label: string }> = [
@@ -59,10 +69,44 @@ const toNumber = (value: string, fallback = 0): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toStatPointInput = (value: string): number => {
+  const parsed = toNumber(value, 0);
+  if (parsed > CHAMPIONS_MAX_STAT_POINTS_PER_STAT) {
+    return smogonEvToStatPoints(parsed);
+  }
+  return clampStatPointValue(parsed);
+};
+
 const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 
 const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
+
+const getStatIconSrc = (key: StatKey): string => {
+  const base = import.meta.env.BASE_URL.endsWith("/")
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`;
+  return `${base}assets/stat-icons/${statIconFiles[key]}`;
+};
+
+const getAssetSrc = (path: string): string => {
+  const base = import.meta.env.BASE_URL.endsWith("/")
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`;
+  return `${base}${path}`;
+};
+
+function StatIcon({ stat, className = "" }: { stat: StatKey; className?: string }) {
+  return (
+    <img
+      className={`stat-icon ${className}`.trim()}
+      src={getStatIconSrc(stat)}
+      alt={statLabels[stat]}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
 
 const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   ...createDefaultScenarioAttackForm(`attack-${Date.now()}-${index}`, `攻撃${String.fromCharCode(65 + index)}`),
@@ -297,8 +341,13 @@ export function App() {
   return (
     <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
       <header className="topbar">
-        <div>
-          <h1>ChampionCreator</h1>
+        <div className="brand-title">
+          <h1>
+            <img
+              src={getAssetSrc("assets/brand/championcreator-title.svg")}
+              alt="ChampionCreator"
+            />
+          </h1>
           <p>Pokemon Champions 自動耐久調整</p>
         </div>
         <div className="topbar-actions">
@@ -467,16 +516,17 @@ function TargetPanel({
         </div>
         {statKeys.map((key) => (
           <div className={`ev-row ${key}`} key={key}>
-            <strong>{statLabels[key]}</strong>
+            <strong><StatIcon stat={key} /></strong>
             <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
             <input
               type="number"
               min="0"
-              max={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
+              max="252"
               step="1"
               value={targetForm.statPoints[key]}
               aria-label={`${statLabels[key]} SP`}
-              onChange={(event) => onUpdateEv(key, toNumber(event.target.value))}
+              title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+              onChange={(event) => onUpdateEv(key, toStatPointInput(event.target.value))}
             />
             <div className="bar"><i style={{ width: `${Math.min(100, (targetForm.statPoints[key] / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100)}%` }} /></div>
             <span className={defenceStatKeySet.has(key) ? "search-chip" : "fixed-chip"}>
@@ -789,16 +839,17 @@ function AttackCard({
       </div>
 
       <div className="attacker-evs" aria-label={`${attackLabel} 攻撃側SP`}>
-        {fixedStatKeys.map((key) => (
+        {statKeys.map((key) => (
           <label key={key}>
-            {statLabels[key]} SP
+            <span className="stat-label-with-icon"><StatIcon stat={key} /> SP</span>
             <input
               type="number"
               min="0"
-              max={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
+              max="252"
               step="1"
               value={attack.attackerStatPoints[key]}
-              onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toNumber(event.target.value))}
+              title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+              onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
             />
           </label>
         ))}
@@ -879,7 +930,11 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
           <span>順位</span><span>H/B/D</span><span>使用SP</span><span>残りSP</span><span>ボトルネック</span>
         </div>
         {candidates.length === 0 ? (
-          <div className="empty-result">計算開始で Worker 経由の候補がここに出ます</div>
+          <div className="empty-result">
+            {status === "complete"
+              ? "条件を満たす候補がありません。必要耐久・生存率・固定SPをゆるめてください。"
+              : "計算開始で Worker 経由の候補がここに出ます"}
+          </div>
         ) : candidates.map((candidate) => (
           <button
             className={`candidate-row${selectedCandidate?.id === candidate.id ? " selected" : ""}`}
@@ -928,7 +983,7 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
       {candidate ? (
         <>
           <div className="detail-allocation">
-            {statKeys.map((key) => <span key={key}>{statLabels[key]}</span>)}
+            {statKeys.map((key) => <span key={key}><StatIcon stat={key} /></span>)}
             {statKeys.map((key) => <strong key={key}>{candidate.appliedStatPoints[key]}</strong>)}
           </div>
 
@@ -946,6 +1001,7 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
                       damage {formatDamageRange(hit.damageRange.min, hit.damageRange.max)}
                       {" / "}
                       {hit.damageRange.percentMin.toFixed(1)}-{hit.damageRange.percentMax.toFixed(1)}%
+                      {hit.description ? <span>{hit.description}</span> : null}
                     </li>
                   ))}
                 </ul>

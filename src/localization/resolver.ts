@@ -1,4 +1,10 @@
+import abilityOptionsJson from "../data/generated/ability-options.gen.json";
+import itemOptionsJson from "../data/generated/item-options.gen.json";
 import catalogJson from "../data/generated/localized-catalog.gen.json";
+import moveOptionsJson from "../data/generated/move-options.gen.json";
+import natureOptionsJson from "../data/generated/nature-options.gen.json";
+import pokemonOptionsJson from "../data/generated/pokemon-options.gen.json";
+import typeOptionsJson from "../data/generated/type-options.gen.json";
 import aliasOverridesJson from "../data/overrides/ja-aliases.json";
 import labelOverridesJson from "../data/overrides/ja-label-overrides.json";
 import type {
@@ -7,6 +13,7 @@ import type {
   JaLabelOverridePayload,
   LocalizedCatalogEntry,
   LocalizedCatalogPayload,
+  LocalizedOptionPayload,
   SourceStatus,
 } from "../data/localizationTypes";
 import { normalizeSearchText } from "./normalize";
@@ -43,6 +50,14 @@ interface SearchEntry {
 }
 
 const catalog = catalogJson as LocalizedCatalogPayload;
+const optionPayloads = [
+  pokemonOptionsJson,
+  moveOptionsJson,
+  itemOptionsJson,
+  abilityOptionsJson,
+  natureOptionsJson,
+  typeOptionsJson,
+] as LocalizedOptionPayload[];
 const aliasOverrides = aliasOverridesJson as JaAliasOverridePayload;
 const labelOverrides = labelOverridesJson as JaLabelOverridePayload;
 
@@ -66,6 +81,48 @@ const withLabelOverrides = (entry: LocalizedCatalogEntry): LocalizedCatalogEntry
     sourceStatus: override.sourceStatus,
   };
 };
+
+const splitSearchText = (searchText: string): string[] =>
+  searchText
+    .split(/\s+/)
+    .map((text) => text.trim())
+    .filter(Boolean);
+
+const optionKindToEntityKind = (kind: LocalizedOptionPayload["kind"]): EntityKind =>
+  kind.replace(/-options$/, "") as EntityKind;
+
+const optionPayloadToEntries = (payload: LocalizedOptionPayload): LocalizedCatalogEntry[] => {
+  const kind = optionKindToEntityKind(payload.kind);
+  return payload.entries.map((entry) => ({
+    kind,
+    id: entry.id,
+    canonicalName: entry.showdownName,
+    displayNameJa: entry.label,
+    searchText: splitSearchText(entry.searchText),
+    sourceStatus: entry.sourceStatus ?? "supported",
+  }));
+};
+
+const mergeResolverEntries = (): LocalizedCatalogEntry[] => {
+  const byKey = new Map<string, LocalizedCatalogEntry>();
+
+  for (const optionEntry of optionPayloads.flatMap(optionPayloadToEntries)) {
+    byKey.set(`${optionEntry.kind}:${optionEntry.id}`, optionEntry);
+  }
+
+  for (const catalogEntry of catalog.entries) {
+    const key = `${catalogEntry.kind}:${catalogEntry.id}`;
+    const existing = byKey.get(key);
+    byKey.set(key, {
+      ...catalogEntry,
+      searchText: Array.from(new Set([...(existing?.searchText ?? []), ...catalogEntry.searchText])),
+    });
+  }
+
+  return Array.from(byKey.values());
+};
+
+const resolverEntries = mergeResolverEntries();
 
 const addIndexValue = (
   index: Map<string, SearchEntry[]>,
@@ -119,7 +176,7 @@ const buildIndex = (entries: LocalizedCatalogEntry[]) => {
   return { exactIndex, aliasIndex };
 };
 
-const entriesByKind = catalog.entries.reduce(
+const entriesByKind = resolverEntries.reduce(
   (groups, entry) => {
     groups[entry.kind].push(entry);
     return groups;

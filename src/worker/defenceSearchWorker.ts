@@ -69,6 +69,7 @@ export type DefenceSearchWorkerCancelCheck = (requestId: string) => boolean;
 const DEFAULT_PROGRESS_INTERVAL = 250;
 const DEFAULT_PARTIAL_RESULT_INTERVAL = 1;
 const DEFAULT_YIELD_EVERY = 250;
+const DEFAULT_MAX_RESULTS = 20;
 
 const yieldToWorker = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -86,7 +87,7 @@ export const runDefenceSearchWorkerTask = async (
 ): Promise<void> => {
   const { requestId, build, scenarios } = request;
   const options = request.options ?? {};
-  const maxResults = options.maxResults;
+  const maxResults = Math.max(0, Math.trunc(options.maxResults ?? DEFAULT_MAX_RESULTS));
   const progressInterval = Math.max(1, Math.trunc(options.progressInterval ?? DEFAULT_PROGRESS_INTERVAL));
   const partialResultInterval = Math.max(1, Math.trunc(options.partialResultInterval ?? DEFAULT_PARTIAL_RESULT_INTERVAL));
   const yieldEvery = Math.max(1, Math.trunc(options.yieldEvery ?? DEFAULT_YIELD_EVERY));
@@ -94,13 +95,28 @@ export const runDefenceSearchWorkerTask = async (
 
   try {
     const totalCandidates = countDefenceEvCandidates(build);
+    if (maxResults <= 0) {
+      emit({
+        type: "complete",
+        requestId,
+        candidates: [],
+      });
+      return;
+    }
+
     const passingResults: CandidateResult[] = [];
     let searchedCandidates = 0;
     let partialResultCount = 0;
+    let acceptedDefenceBudgetCeiling: number | null = null;
 
     for (const candidate of iterateDefenceEvCandidates(build)) {
       if (isCanceled(requestId)) {
         return;
+      }
+
+      const defenceBudget = candidate.hp + candidate.def + candidate.spd;
+      if (acceptedDefenceBudgetCeiling !== null && defenceBudget > acceptedDefenceBudgetCeiling) {
+        break;
       }
 
       const result = evaluateCandidate(build, scenarios, candidate, searchOptions);
@@ -109,6 +125,9 @@ export const runDefenceSearchWorkerTask = async (
       if (result.passed) {
         passingResults.push(result);
         partialResultCount += 1;
+        if (passingResults.length >= maxResults && acceptedDefenceBudgetCeiling === null) {
+          acceptedDefenceBudgetCeiling = defenceBudget;
+        }
 
         if (partialResultCount % partialResultInterval === 0 && !isCanceled(requestId)) {
           emit({

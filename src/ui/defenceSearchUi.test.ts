@@ -64,7 +64,7 @@ describe("buildDefenceSearchInput", () => {
     expect(input.build.pokemon.canonicalName).toBe("Dragonite");
     expect(input.build.pokemon.displayNameJa).toBe("カイリュー");
     expect(input.build.nature?.canonicalName).toBe("Modest");
-    expect(input.build.teraType?.canonicalName).toBe("Dragon");
+    expect(input.build.teraType).toBeUndefined();
     expect(input.build.statPoints).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
     expect(input.build.evs).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
     expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Pikachu");
@@ -72,6 +72,52 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
     expect(input.scenarios).toHaveLength(1);
+  });
+
+  it("passes a Tera type only when the field is explicitly filled", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      teraTypeInput: "ドラゴン",
+    };
+
+    const input = buildDefenceSearchInput(target, createDefaultScenarioForms());
+
+    expect(input.build.teraType?.canonicalName).toBe("Dragon");
+  });
+
+  it("converts generated option data from all free-text UI fields", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "ガオガエン",
+      natureInput: "おくびょう",
+      abilityInput: "もうか",
+      itemInput: "とつげきチョッキ",
+      teraTypeInput: "あく",
+    };
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarios = [
+      {
+        ...defaultScenario,
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          attackerPokemonInput: "ガオガエン",
+          attackerNatureInput: "おくびょう",
+          attackerAbilityInput: "もうか",
+          attackerItemInput: "とつげきチョッキ",
+          moveInput: "インファイト",
+        })),
+      },
+    ];
+
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    expect(input.build.pokemon.canonicalName).toBe("Incineroar");
+    expect(input.build.nature?.canonicalName).toBe("Timid");
+    expect(input.build.ability?.canonicalName).toBe("Blaze");
+    expect(input.build.item?.canonicalName).toBe("Assault Vest");
+    expect(input.build.teraType?.canonicalName).toBe("Dark");
+    expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Incineroar");
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Close Combat");
   });
 
   it("ignores disabled blank scenarios before canonical name resolution", () => {

@@ -25,6 +25,46 @@ describe("resolveEntity", () => {
     });
   });
 
+  it("resolves generated option data for Pokemon beyond the seed catalog", () => {
+    const result = resolveEntity("pokemon", "ガオガエン");
+
+    expect(result.status).toBe("exact");
+    expect(result.canonicalName).toBe("Incineroar");
+    expect(result.candidates[0]).toMatchObject({
+      calcId: "incineroar",
+      displayNameJa: "ガオガエン",
+      matchedBy: "displayNameJa",
+    });
+  });
+
+  it("resolves generated option data for other UI entity fields", () => {
+    expect(resolveEntity("move", "インファイト")).toMatchObject({
+      status: "exact",
+      canonicalName: "Close Combat",
+      calcId: "closecombat",
+    });
+    expect(resolveEntity("item", "とつげきチョッキ")).toMatchObject({
+      status: "exact",
+      canonicalName: "Assault Vest",
+      calcId: "assaultvest",
+    });
+    expect(resolveEntity("ability", "もうか")).toMatchObject({
+      status: "exact",
+      canonicalName: "Blaze",
+      calcId: "blaze",
+    });
+    expect(resolveEntity("nature", "おくびょう")).toMatchObject({
+      status: "exact",
+      canonicalName: "Timid",
+      calcId: "timid",
+    });
+    expect(resolveEntity("type", "あく")).toMatchObject({
+      status: "exact",
+      canonicalName: "Dark",
+      calcId: "dark",
+    });
+  });
+
   it("keeps ambiguous aliases as candidates instead of choosing one", () => {
     const result = resolveEntity("pokemon", "ドラゴン");
 

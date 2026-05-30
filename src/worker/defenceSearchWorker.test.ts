@@ -151,6 +151,11 @@ describe("runDefenceSearchWorkerTask", () => {
 
     expect(messages.some((message) => message.type === "progress")).toBe(true);
     expect(messages.some((message) => message.type === "partialResult")).toBe(true);
+    expect(Math.max(
+      ...messages
+        .filter((message) => message.type === "progress")
+        .map((message) => message.type === "progress" ? message.searchedCandidates : 0),
+    )).toBeLessThan(10);
     expect(complete).toBeDefined();
     expect(complete?.type === "complete" ? complete.candidates : []).toEqual(
       searchDefenceCandidates(defender, scenarios, { maxResults: 1 }),

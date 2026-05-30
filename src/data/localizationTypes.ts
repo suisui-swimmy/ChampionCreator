@@ -1,6 +1,13 @@
 export type EntityKind = "pokemon" | "move" | "item" | "ability" | "nature" | "type";
 
-export type SourceStatus = "seed" | "manual" | "fallback" | "needs-confirmation";
+export type SourceStatus =
+  | "supported"
+  | "seed"
+  | "manual"
+  | "fallback"
+  | "needs-confirmation"
+  | "adapter-temporary"
+  | "unsupported-temporary";
 
 export interface LocalizedCatalogEntry {
   kind: EntityKind;
@@ -17,6 +24,30 @@ export interface LocalizedCatalogPayload {
   generatedBy: string;
   source: string;
   entries: LocalizedCatalogEntry[];
+}
+
+export type LocalizedOptionKind = `${EntityKind}-options`;
+
+export interface LocalizedOptionEntry {
+  id: string;
+  label: string;
+  showdownName: string;
+  searchText: string;
+  sourceStatus?: SourceStatus;
+  fallback?: {
+    from?: string;
+    reason?: string;
+    nameSourceStatus?: SourceStatus;
+    assetSourceStatus?: SourceStatus;
+  };
+}
+
+export interface LocalizedOptionPayload {
+  schemaVersion: 1;
+  dataVersion: string;
+  generatedBy: string;
+  kind: LocalizedOptionKind;
+  entries: LocalizedOptionEntry[];
 }
 
 export interface JaAliasOverrideEntry {
