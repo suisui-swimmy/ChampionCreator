@@ -6,7 +6,17 @@ import {
   smogonEvToStatPoints,
   sumStatPoints,
 } from "./domain/championsStats";
-import type { CandidateResult, StatKey, StatTable, Terrain, Weather } from "./domain/model";
+import type {
+  CandidateResult,
+  GameType,
+  PokemonStatus,
+  StatBoostTable,
+  StatKey,
+  StatTable,
+  Terrain,
+  Weather,
+} from "./domain/model";
+import { appVersionInfo } from "./appVersion";
 import {
   applyTopCandidateToTarget,
   createDefaultScenarioAttackForm,
@@ -21,6 +31,7 @@ import {
   type TargetFormState,
 } from "./ui/defenceSearchUi";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
+import { parseShareStateDocument, stringifyShareStateDocument } from "./ui/shareState";
 import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
@@ -47,6 +58,25 @@ const statIconFiles: Record<StatKey, string> = {
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
+const attackerBoostKeys = ["atk", "def", "spa"] as const satisfies readonly (keyof StatBoostTable)[];
+const defenderBoostKeys = ["def", "spd"] as const satisfies readonly (keyof StatBoostTable)[];
+
+const statusOptions: Array<{ value: PokemonStatus; label: string }> = [
+  { value: "none", label: "なし" },
+  { value: "brn", label: "やけど" },
+  { value: "psn", label: "どく" },
+  { value: "tox", label: "もうどく" },
+  { value: "par", label: "まひ" },
+  { value: "slp", label: "ねむり" },
+  { value: "frz", label: "こおり" },
+];
+
+const gameTypeOptions: Array<{ value: GameType; label: string }> = [
+  { value: "singles", label: "シングル" },
+  { value: "doubles", label: "ダブル" },
+];
+
+const rankOptions = Array.from({ length: 13 }, (_value, index) => index - 6);
 
 const weatherOptions: Array<{ value: Weather; label: string }> = [
   { value: "none", label: "なし" },
@@ -114,12 +144,18 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   attackerNatureInput: "",
   attackerAbilityInput: "",
   attackerItemInput: "",
+  attackerTeraTypeInput: "",
+  attackerTeraEnabled: false,
+  attackerStatus: "none",
   attackerLevel: 50,
   attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+  attackerBoosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+  defenderBoosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moveInput: "",
   repeat: 1,
-  requiredSurvivedHits: 1,
+  requiredSurvivedHits: Math.min(10, index + 1),
   minSurvivalProbabilityPercent: 100,
+  gameType: "singles",
   weather: "none",
   terrain: "none",
   critical: false,
@@ -150,6 +186,9 @@ export function App() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [applyLabel, setApplyLabel] = useState("1位を適用");
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareText, setShareText] = useState("");
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
@@ -268,10 +307,17 @@ export function App() {
   const handleAddAttack = (scenarioId: string) => {
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
-        ? {
-            ...scenario,
-            attacks: [...scenario.attacks, createBlankAttack(scenario.attacks.length)],
-          }
+        ? (() => {
+            const nextAttack = createBlankAttack(scenario.attacks.length);
+            const requiredSurvivedHits = Math.min(
+              10,
+              scenario.attacks.reduce((total, attack) => total + Math.max(1, Math.trunc(attack.repeat)), 0) + 1,
+            );
+            return {
+              ...scenario,
+              attacks: [...scenario.attacks, { ...nextAttack, requiredSurvivedHits }],
+            };
+          })()
         : scenario
     )));
   };
@@ -329,6 +375,40 @@ export function App() {
     activeRequestRef.current = null;
   };
 
+  const openSharePanel = () => {
+    setShareText(stringifyShareStateDocument(targetForm, scenarioForms));
+    setShareMessage(null);
+    setShareOpen((current) => !current);
+  };
+
+  const handleCopyShareJson = () => {
+    const json = stringifyShareStateDocument(targetForm, scenarioForms);
+    setShareText(json);
+    setShareOpen(true);
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(json)
+        .then(() => setShareMessage("条件JSONをクリップボードへコピーしました"))
+        .catch(() => setShareMessage("条件JSONを下の欄に出しました"));
+    } else {
+      setShareMessage("条件JSONを下の欄に出しました");
+    }
+  };
+
+  const handleImportShareJson = () => {
+    try {
+      const document = parseShareStateDocument(shareText);
+      activeRequestRef.current?.cancel();
+      activeRequestRef.current = null;
+      setTargetForm(document.target);
+      setScenarioForms(document.scenarios);
+      setSelectedCandidateId(null);
+      dispatchSearch({ type: "reset" });
+      setShareMessage("条件JSONを読み込みました");
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   const handleApplyTopCandidate = () => {
     setTargetForm((current) => applyTopCandidateToTarget(current, searchState.candidates));
     setApplyLabel("適用済み");
@@ -348,13 +428,27 @@ export function App() {
               alt="ChampionCreator"
             />
           </h1>
-          <p>Pokemon Champions 自動耐久調整</p>
+          <p>
+            Pokemon Champions 自動耐久調整
+            {" / "}
+            app v{appVersionInfo.appVersion}
+            {" / "}
+            calc {appVersionInfo.smogonCalcVersion}
+            {" / "}
+            data {appVersionInfo.localizationEntries}
+          </p>
         </div>
         <div className="topbar-actions">
           <div className="run-meter" aria-live="polite">
             <strong>{Math.round(searchState.progress * 100)}%</strong>
             <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} candidates</span>
           </div>
+          <button className="ghost-button" type="button" onClick={openSharePanel}>
+            条件JSON
+          </button>
+          <button className="ghost-button" type="button" onClick={handleCopyShareJson}>
+            コピー
+          </button>
           <button
             className="ghost-button"
             type="button"
@@ -380,6 +474,28 @@ export function App() {
       ) : null}
       {previewInput.error ? (
         <div className="status-banner warning" role="status">{previewInput.error}</div>
+      ) : null}
+      {shareOpen ? (
+        <section className="share-panel" aria-label="条件JSON">
+          <textarea
+            value={shareText}
+            onChange={(event) => setShareText(event.target.value)}
+            spellCheck={false}
+          />
+          <div>
+            <button className="primary-button small" type="button" onClick={handleImportShareJson}>
+              読込
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => setShareText(stringifyShareStateDocument(targetForm, scenarioForms))}
+            >
+              現在条件を反映
+            </button>
+            {shareMessage ? <span>{shareMessage}</span> : null}
+          </div>
+        </section>
       ) : null}
 
       <main className="workbench">
@@ -496,11 +612,30 @@ function TargetPanel({
             />
           </label>
           <label>
+            状態異常
+            <select
+              value={targetForm.status}
+              onChange={(event) => onUpdateField("status", event.target.value as PokemonStatus)}
+            >
+              {statusOptions.map((option) => (
+                <option value={option.value} key={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
             テラ
             <input
               value={targetForm.teraTypeInput}
               placeholder="任意"
               onChange={(event) => onUpdateField("teraTypeInput", event.target.value)}
+            />
+          </label>
+          <label className="checkbox-field">
+            <span>テラ発動</span>
+            <input
+              type="checkbox"
+              checked={targetForm.teraEnabled}
+              onChange={(event) => onUpdateField("teraEnabled", event.target.checked)}
             />
           </label>
         </div>
@@ -779,7 +914,9 @@ function AttackCard({
         <ScenarioTextField label="攻撃側" showLabel value={attack.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
         <ScenarioTextField label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
         <ScenarioTextField label="性格" showLabel value={attack.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
+        <ScenarioTextField label="特性" showLabel value={attack.attackerAbilityInput} placeholder="任意" onChange={onInput("attackerAbilityInput")} />
         <ScenarioTextField label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
+        <ScenarioTextField label="攻撃テラ" showLabel value={attack.attackerTeraTypeInput} placeholder="任意" onChange={onInput("attackerTeraTypeInput")} />
       </div>
 
       <div className="attack-number-grid">
@@ -819,6 +956,24 @@ function AttackCard({
 
       <div className="attack-field-grid">
         <label>
+          ルール
+          <select
+            value={attack.gameType}
+            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "gameType", event.target.value as GameType)}
+          >
+            {gameTypeOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
+          攻撃状態
+          <select
+            value={attack.attackerStatus}
+            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", event.target.value as PokemonStatus)}
+          >
+            {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
           天候
           <select
             value={attack.weather}
@@ -836,6 +991,37 @@ function AttackCard({
             {terrainOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
           </select>
         </label>
+      </div>
+
+      <div className="rank-grid" aria-label={`${attackLabel} ランク補正`}>
+        {attackerBoostKeys.map((key) => (
+          <label key={`attacker-${key}`}>
+            攻{statLabels[key]}
+            <select
+              value={attack.attackerBoosts[key] ?? 0}
+              onChange={(event) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+                ...attack.attackerBoosts,
+                [key]: toNumber(event.target.value, 0),
+              })}
+            >
+              {rankOptions.map((rank) => <option value={rank} key={rank}>{rank > 0 ? `+${rank}` : rank}</option>)}
+            </select>
+          </label>
+        ))}
+        {defenderBoostKeys.map((key) => (
+          <label key={`defender-${key}`}>
+            防{statLabels[key]}
+            <select
+              value={attack.defenderBoosts[key] ?? 0}
+              onChange={(event) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
+                ...attack.defenderBoosts,
+                [key]: toNumber(event.target.value, 0),
+              })}
+            >
+              {rankOptions.map((rank) => <option value={rank} key={rank}>{rank > 0 ? `+${rank}` : rank}</option>)}
+            </select>
+          </label>
+        ))}
       </div>
 
       <div className="attacker-evs" aria-label={`${attackLabel} 攻撃側SP`}>
@@ -856,6 +1042,7 @@ function AttackCard({
       </div>
 
       <div className="scenario-options">
+        <label><input type="checkbox" checked={attack.attackerTeraEnabled} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", event.target.checked)} /> 攻撃テラ発動</label>
         <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
         <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
         <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>

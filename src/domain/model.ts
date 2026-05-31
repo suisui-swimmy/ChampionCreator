@@ -35,6 +35,8 @@ export type DefenceSearchStatKey = "hp" | "def" | "spd";
 
 export type StatTable<T = number> = Record<StatKey, T>;
 export type StatBoostTable = Partial<Record<Exclude<StatKey, "hp">, number>>;
+export type PokemonStatus = "none" | "slp" | "psn" | "brn" | "frz" | "par" | "tox";
+export type GameType = "singles" | "doubles";
 
 export interface Build {
   id: string;
@@ -47,12 +49,14 @@ export interface Build {
   ability?: AbilityRef;
   item?: ItemRef;
   teraType?: TypeRef;
+  status?: Exclude<PokemonStatus, "none">;
 }
 
 export type Weather = "none" | "sun" | "rain" | "sand" | "snow";
 export type Terrain = "none" | "electric" | "grassy" | "misty" | "psychic";
 
 export interface FieldState {
+  gameType: GameType;
   weather: Weather;
   terrain: Terrain;
 }

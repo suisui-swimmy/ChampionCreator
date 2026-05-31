@@ -122,6 +122,11 @@ button:disabled {
   gap: 8px;
 }
 
+.topbar-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .run-meter {
   display: grid;
   min-width: 150px;
@@ -154,6 +159,27 @@ button:disabled {
   border-color: #ead197;
   background: #fff9e9;
   color: #7c5700;
+}
+
+.share-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.share-panel div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-panel span {
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .section-heading {
@@ -253,6 +279,18 @@ button:disabled {
   margin-bottom: 12px;
 }
 
+.checkbox-field {
+  grid-template-columns: 1fr 28px;
+  align-items: center;
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+  justify-self: end;
+  accent-color: var(--teal);
+}
+
 .target-identity {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
@@ -344,14 +382,28 @@ label {
 }
 
 select,
-input {
+input,
+textarea {
   width: 100%;
-  height: 31px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: #fff;
   color: var(--text);
   padding: 0 8px;
+}
+
+select,
+input {
+  height: 31px;
+}
+
+textarea {
+  min-height: 118px;
+  padding: 8px;
+  resize: vertical;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .type-row {
@@ -645,7 +697,7 @@ input {
 }
 
 .scenario-attack-lane > * {
-  flex: 0 0 300px;
+  flex: 0 0 340px;
 }
 
 .scenario-attack-lane > .attack-add-card {
@@ -656,6 +708,18 @@ input {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.rank-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rank-grid label {
+  display: grid;
+  grid-template-rows: 14px 28px;
+  gap: 3px;
 }
 
 .attack-condition-card,

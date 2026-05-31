@@ -47,6 +47,7 @@ const emptySide: SideState = {
 };
 
 const emptyField: FieldState = {
+  gameType: "singles",
   weather: "none",
   terrain: "none",
 };
@@ -154,7 +155,7 @@ describe("evaluateScenario", () => {
     const attacker = makeBuild("attacker", "ピカチュウ");
     const hit = {
       ...makeHit("field-hit", attacker, "10まんボルト"),
-      field: { weather: "rain", terrain: "electric" } as FieldState,
+      field: { gameType: "doubles", weather: "rain", terrain: "electric" } as FieldState,
     };
     const scenario = makeScenario("field", [hit], 1, 1);
     const fields: FieldState[] = [];
@@ -170,7 +171,7 @@ describe("evaluateScenario", () => {
       },
     });
 
-    expect(fields).toEqual([{ weather: "rain", terrain: "electric" }]);
+    expect(fields).toEqual([{ gameType: "doubles", weather: "rain", terrain: "electric" }]);
   });
 
   it("evaluates hit-specific survival constraints against cumulative damage", () => {

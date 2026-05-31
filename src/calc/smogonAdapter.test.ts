@@ -4,7 +4,7 @@ import type { EntityKind } from "../data/localizationTypes";
 import type { Build, EntityRef, FieldState, ScenarioHit, SideState, StatTable } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
-import { calculateSmogonHit, flattenDamageRolls } from "./smogonAdapter";
+import { calculateSmogonHit, flattenDamageRolls, toSmogonField, toSmogonPokemon } from "./smogonAdapter";
 
 const gen = Generations.get(9);
 
@@ -42,6 +42,7 @@ const emptySide: SideState = {
 };
 
 const fieldState: FieldState = {
+  gameType: "singles",
   weather: "sand",
   terrain: "electric",
 };
@@ -139,10 +140,18 @@ describe("calculateSmogonHit", () => {
           displayNameJa: "じしんではない表示名" as typeof hit.move.displayNameJa,
         },
       },
-      { weather: "none", terrain: "none" },
+      { gameType: "singles", weather: "none", terrain: "none" },
     );
 
     expect(adapterResult.damageRolls.length).toBeGreaterThan(0);
     expect(adapterResult.description).toContain("Earthquake");
+  });
+
+  it("passes status and game type through to @smogon/calc inputs", () => {
+    const burnedAttacker = toSmogonPokemon({ ...attacker, status: "brn" });
+    const doublesField = toSmogonField({ gameType: "doubles", weather: "none", terrain: "none" }, hit);
+
+    expect(burnedAttacker.status).toBe("brn");
+    expect(doublesField.gameType).toBe("Doubles");
   });
 });

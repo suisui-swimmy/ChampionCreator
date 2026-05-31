@@ -102,7 +102,7 @@ describe("domain model shape", () => {
           defenderSide: { reflect: false, lightScreen: false, auroraVeil: false, helpingHand: false },
         },
       ],
-      field: { weather: "none", terrain: "none" },
+      field: { gameType: "singles", weather: "none", terrain: "none" },
       constraint: {
         enabled: true,
         requiredSurvivedHits: 2,

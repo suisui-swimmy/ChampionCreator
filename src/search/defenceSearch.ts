@@ -23,6 +23,7 @@ import type {
 
 const DEFAULT_MAX_RESULTS = 20;
 const SURVIVAL_EPSILON = 1e-12;
+const LEGACY_SHOWDOWN_EV_BUDGET = 508;
 
 const DEFENCE_SEARCH_KEYS = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const FIXED_EV_KEYS = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
@@ -419,7 +420,7 @@ export const evaluateCandidate = (
   const usedStatPointBudget = sumStatPoints(appliedStatPoints);
   const remainingStatPointBudget = CHAMPIONS_TOTAL_STAT_POINTS - usedStatPointBudget;
   const usedEvBudget = sumEvs(appliedBuild.evs);
-  const remainingEvBudget = remainingStatPointBudget;
+  const remainingEvBudget = Math.max(0, LEGACY_SHOWDOWN_EV_BUDGET - usedEvBudget);
   const worstScenario = getWorstScenarioEvaluation(scenarioResults);
   const appliedPointsAreLegal = isLegalStatPointTable(appliedStatPoints);
 

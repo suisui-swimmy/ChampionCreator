@@ -49,6 +49,7 @@ const emptySide: SideState = {
 };
 
 const emptyField: FieldState = {
+  gameType: "singles",
   weather: "none",
   terrain: "none",
 };

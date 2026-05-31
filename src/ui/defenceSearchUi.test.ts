@@ -74,15 +74,28 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios).toHaveLength(1);
   });
 
-  it("passes a Tera type only when the field is explicitly filled", () => {
+  it("passes a Tera type only when the field is explicitly enabled", () => {
     const target = {
       ...createDefaultTargetForm(),
       teraTypeInput: "ドラゴン",
+      teraEnabled: true,
     };
 
     const input = buildDefenceSearchInput(target, createDefaultScenarioForms());
 
     expect(input.build.teraType?.canonicalName).toBe("Dragon");
+  });
+
+  it("does not treat a memoized Tera type as active until enabled", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      teraTypeInput: "ドラゴン",
+      teraEnabled: false,
+    };
+
+    const input = buildDefenceSearchInput(target, createDefaultScenarioForms());
+
+    expect(input.build.teraType).toBeUndefined();
   });
 
   it("converts generated option data from all free-text UI fields", () => {
@@ -93,6 +106,7 @@ describe("buildDefenceSearchInput", () => {
       abilityInput: "もうか",
       itemInput: "とつげきチョッキ",
       teraTypeInput: "あく",
+      teraEnabled: true,
     };
     const [defaultScenario] = createDefaultScenarioForms();
     const scenarios = [
@@ -104,7 +118,13 @@ describe("buildDefenceSearchInput", () => {
           attackerNatureInput: "おくびょう",
           attackerAbilityInput: "もうか",
           attackerItemInput: "とつげきチョッキ",
+          attackerTeraTypeInput: "あく",
+          attackerTeraEnabled: true,
+          attackerStatus: "brn" as const,
           moveInput: "インファイト",
+          attackerBoosts: { atk: 2, def: 0, spa: 0, spd: 0, spe: 0 },
+          defenderBoosts: { def: 1, spd: 0 },
+          gameType: "doubles" as const,
         })),
       },
     ];
@@ -117,6 +137,11 @@ describe("buildDefenceSearchInput", () => {
     expect(input.build.item?.canonicalName).toBe("Assault Vest");
     expect(input.build.teraType?.canonicalName).toBe("Dark");
     expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Incineroar");
+    expect(input.scenarios[0].hits[0].attacker.teraType?.canonicalName).toBe("Dark");
+    expect(input.scenarios[0].hits[0].attacker.status).toBe("brn");
+    expect(input.scenarios[0].hits[0].attackerBoosts.atk).toBe(2);
+    expect(input.scenarios[0].hits[0].defenderBoosts.def).toBe(1);
+    expect(input.scenarios[0].hits[0].field?.gameType).toBe("doubles");
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Close Combat");
   });
 
@@ -170,12 +195,36 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
     expect(input.scenarios[0].hits[1].attacker.pokemon.canonicalName).toBe("Garchomp");
     expect(input.scenarios[0].hits[1].move.canonicalName).toBe("Outrage");
-    expect(input.scenarios[0].hits[1].field).toEqual({ weather: "rain", terrain: "electric" });
+    expect(input.scenarios[0].hits[1].field).toEqual({ gameType: "singles", weather: "rain", terrain: "electric" });
     expect(input.scenarios[0].hits[1].constraint).toMatchObject({
       requiredSurvivedHits: 2,
       minSurvivalProbability: 0.8,
     });
     expect(input.scenarios[0].constraint.requiredSurvivedHits).toBe(2);
+  });
+
+  it("does not let a later attack card default ignore previous cumulative hits", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const multiAttackScenario = {
+      ...defaultScenario,
+      attacks: [
+        defaultScenario.attacks[0],
+        {
+          ...defaultScenario.attacks[0],
+          id: "attack-b",
+          label: "攻撃B",
+          attackerPokemonInput: "ガブリアス",
+          attackerNatureInput: "ようき",
+          moveInput: "げきりん",
+          requiredSurvivedHits: 1,
+        },
+      ],
+    };
+
+    const input = buildDefenceSearchInput(target, [multiAttackScenario]);
+
+    expect(input.scenarios[0].hits[1].constraint?.requiredSurvivedHits).toBe(2);
   });
 
   it("treats completely blank attack cards as drafts", () => {

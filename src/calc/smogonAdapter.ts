@@ -13,6 +13,7 @@ const SMOGON_GENERATION = Generations.get(9);
 type SmogonDamage = Result["damage"];
 type SmogonWeather = NonNullable<State.Field["weather"]>;
 type SmogonTerrain = NonNullable<State.Field["terrain"]>;
+type SmogonGameType = State.Field["gameType"];
 
 const weatherByFieldState = {
   none: undefined,
@@ -30,6 +31,11 @@ const terrainByFieldState = {
   psychic: "Psychic",
 } satisfies Record<FieldState["terrain"], SmogonTerrain | undefined>;
 
+const gameTypeByFieldState = {
+  singles: "Singles",
+  doubles: "Doubles",
+} satisfies Record<FieldState["gameType"], SmogonGameType>;
+
 export const toSmogonSide = (side: SideState): Side =>
   new Side({
     isReflect: side.reflect,
@@ -40,7 +46,7 @@ export const toSmogonSide = (side: SideState): Side =>
 
 export const toSmogonField = (field: FieldState, hit: ScenarioHit): Field =>
   new Field({
-    gameType: "Singles",
+    gameType: gameTypeByFieldState[field.gameType],
     weather: weatherByFieldState[field.weather],
     terrain: terrainByFieldState[field.terrain],
     attackerSide: toSmogonSide(hit.attackerSide),
@@ -56,6 +62,7 @@ export const toSmogonPokemon = (build: Build, boosts: StatBoostTable = {}): Poke
     ability: build.ability?.canonicalName,
     item: build.item?.canonicalName,
     teraType: build.teraType?.canonicalName as State.Pokemon["teraType"],
+    status: build.status,
     boosts,
   });
 

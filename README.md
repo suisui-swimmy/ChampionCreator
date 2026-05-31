@@ -4,6 +4,35 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計
 
 M0 では React + Vite + TypeScript の土台と、既存の軽量 UI プロトタイプを移植した作業画面を用意しました。M1 では、ダメージ計算 adapter や探索へ進みすぎず、日本語入力・表示を Showdown canonical name へ解決する localization / resolver layer の最小構成を追加しています。M2 では、UI 入力から独立した domain model layer を追加し、後続の `@smogon/calc` adapter と H/B/D 同時探索が受け取る型の境界を固めています。M3 では、`Build` / `ScenarioHit` / `FieldState` / `SideState` を `@smogon/calc` の `Pokemon` / `Move` / `Field` / `Side` へ変換する薄い adapter layer を追加しました。M4 では、合法な `H / B / D` 候補を全シナリオへ同時評価する search layer を追加しています。M5 では、M4 の探索を Web Worker から実行するための protocol / runner / client を追加しました。M6 では、調整対象と仮想敵シナリオの入力を Worker client に接続し、候補一覧と選択候補詳細を実データで表示する MVP UI に進めました。
 
+## 使い方
+
+1. `npm install` のあと `npm run dev` を実行し、表示されたローカル URL を開く
+2. 左の「調整対象」にポケモン、性格、特性、持ち物、状態異常、必要ならテラタイプと「テラ発動」を入れる
+3. 「仮想敵シナリオ」で攻撃側、技、持ち物、天候、フィールド、ランク、壁、急所などを設定する
+4. 1つのシナリオ行に攻撃カードを追加すると、攻撃A+Bのような累積被弾として評価する
+5. `計算開始` を押すと Worker で候補を探索し、候補一覧と選択候補詳細に PASS 条件、damage range、`@smogon/calc` description を表示する
+6. `1位を適用` で最上位候補の H/B/D SP を調整対象へ反映できる
+7. `条件JSON` / `コピー` で現在条件を保存し、JSON を貼り戻して `読込` すると条件を復元できる
+
+SP 入力欄は Pokemon Champions の `0..32` SP を基本にしています。`252` などの Showdown EV 値を入れた場合は、対応する SP へ丸めて変換します。
+
+## 現在できること
+
+- 日本語入力から Showdown canonical name へ resolver で変換する
+- 調整対象と攻撃側の公式画像を表示する
+- H/B/D を同時探索し、A/C/S など固定済み SP を予算に含める
+- 複数シナリオ、シナリオ内の複数攻撃、必要耐久回数、生存率条件を扱う
+- テラ発動 ON/OFF、状態異常、攻撃側 A/B/C ランク、対象側 B/D ランク、シングル/ダブル、天候、フィールド、壁、急所、てだすけを `@smogon/calc` に渡す
+- 代表シナリオの golden test で、UI 入力から候補と `@smogon/calc` description までを回帰確認する
+
+## 制限
+
+- ダメージ計算は `@smogon/calc` の Gen 9 に準拠します。Pokemon Champions 側の独自仕様がある場合は、追加確認が必要です
+- resolver は候補を網羅するため、同名フォームやメガシンカ等で ambiguous warning が出る入力があります。曖昧な入力は UI でエラー表示されます
+- 公式画像は UI 表示専用です。計算結果や候補判定には影響しません
+- 探索は正確性優先で、候補ごとに `@smogon/calc` で最終判定します。条件が重い場合は時間がかかることがあります
+- URL share は未実装です。現時点では JSON copy/import を共有・復元の最小導線にしています
+
 ## 開発コマンド
 
 ```powershell
@@ -12,16 +41,24 @@ npm run dev
 npm run generate:localization-seed
 npm run validate:localization
 npm run validate:artwork-assets
+npm run typecheck
 npm test
 npm run build
+npm run check
 ```
 
 - `npm run dev`: ローカル開発サーバーを起動する
 - `npm run generate:localization-seed`: M1 用の小さな resolver seed catalog を再生成する
 - `npm run validate:localization`: generated catalog と manual override の整合性を検証する
 - `npm run validate:artwork-assets`: ポケモン画像 metadata と `public/assets/official-artwork/` の整合性を検証する
+- `npm run typecheck`: TypeScript の型チェックだけを実行する
 - `npm test`: M0 の React 表示スモークテストを実行する
 - `npm run build`: TypeScript の型チェック後に Vite の production build を作る
+- `npm run check`: localization / artwork / test / build をまとめて実行する
+
+## 公開
+
+`vite.config.ts` は相対 `base: "./"` で、GitHub Pages などのサブパス配信でも動きやすい設定です。`.github/workflows/deploy-pages.yml` は `main` への push または手動実行で validation / test / build を通し、`dist/` を GitHub Pages artifact として公開します。リポジトリ側では Pages の source を GitHub Actions に設定してください。
 
 ## 方針
 

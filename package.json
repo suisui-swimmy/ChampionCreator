@@ -1,6 +1,6 @@
 {
   "name": "championcreator",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,8 @@
     "generate:localization-seed": "node scripts/generate-localization-seed.mjs",
     "validate:artwork-assets": "node scripts/validate-artwork-assets.mjs",
     "validate:localization": "node scripts/validate-localization.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run validate:localization && npm run validate:artwork-assets && npm test && npm run build",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run"
