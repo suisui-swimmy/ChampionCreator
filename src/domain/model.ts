@@ -49,6 +49,7 @@ export interface Build {
   ability?: AbilityRef;
   item?: ItemRef;
   teraType?: TypeRef;
+  isDynamaxed?: boolean;
   status?: Exclude<PokemonStatus, "none">;
 }
 

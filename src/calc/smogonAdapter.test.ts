@@ -154,4 +154,12 @@ describe("calculateSmogonHit", () => {
     expect(burnedAttacker.status).toBe("brn");
     expect(doublesField.gameType).toBe("Doubles");
   });
+
+  it("passes Dynamax state through so @smogon/calc doubles max HP", () => {
+    const normalAttacker = toSmogonPokemon(attacker);
+    const dynamaxedAttacker = toSmogonPokemon({ ...attacker, isDynamaxed: true });
+
+    expect(dynamaxedAttacker.isDynamaxed).toBe(true);
+    expect(dynamaxedAttacker.maxHP()).toBe(normalAttacker.maxHP() * 2);
+  });
 });

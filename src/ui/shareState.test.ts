@@ -13,6 +13,7 @@ describe("shareState", () => {
       pokemonInput: "オオニューラ",
       teraTypeInput: "かくとう",
       teraEnabled: true,
+      dmaxEnabled: true,
       status: "brn" as const,
     };
     const scenarios = createDefaultScenarioForms().map((scenario) => ({
@@ -24,6 +25,7 @@ describe("shareState", () => {
         moveInput: "インファイト",
         attackerTeraTypeInput: "かくとう",
         attackerTeraEnabled: true,
+        attackerDmaxEnabled: true,
         attackerBoosts: { ...attack.attackerBoosts, atk: 2 },
         gameType: "doubles" as const,
       })),
@@ -36,6 +38,7 @@ describe("shareState", () => {
       pokemonInput: "オオニューラ",
       teraTypeInput: "かくとう",
       teraEnabled: true,
+      dmaxEnabled: true,
       status: "brn",
     });
     expect(parsed.scenarios[0].label).toBe("対オオニューラ");
@@ -43,6 +46,7 @@ describe("shareState", () => {
       attackerPokemonInput: "オオニューラ",
       moveInput: "インファイト",
       attackerTeraEnabled: true,
+      attackerDmaxEnabled: true,
       gameType: "doubles",
     });
   });

@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
@@ -16,7 +16,9 @@ import type {
   Terrain,
   Weather,
 } from "./domain/model";
+import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo } from "./appVersion";
+import { getMatchingEntityInputOptions } from "./localization/resolver";
 import {
   applyTopCandidateToTarget,
   createDefaultScenarioAttackForm,
@@ -31,6 +33,13 @@ import {
   type TargetFormState,
 } from "./ui/defenceSearchUi";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
+import {
+  getPokemonBaseFormValue,
+  getPokemonFormVariantOptions,
+  isPokemonFormVariant,
+  type PokemonFormVariantKind,
+  type PokemonFormVariantOption,
+} from "./ui/pokemonFormVariants";
 import { parseShareStateDocument, stringifyShareStateDocument } from "./ui/shareState";
 import {
   DefenceSearchWorkerClient,
@@ -126,6 +135,8 @@ const getAssetSrc = (path: string): string => {
   return `${base}${path}`;
 };
 
+const getBattleIconSrc = (name: string): string => getAssetSrc(`assets/battle-icons/${name}.svg`);
+
 function StatIcon({ stat, className = "" }: { stat: StatKey; className?: string }) {
   return (
     <img
@@ -146,6 +157,7 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   attackerItemInput: "",
   attackerTeraTypeInput: "",
   attackerTeraEnabled: false,
+  attackerDmaxEnabled: false,
   attackerStatus: "none",
   attackerLevel: 50,
   attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
@@ -236,7 +248,8 @@ export function App() {
 
     void import("./calc/smogonAdapter").then(({ toSmogonPokemon }) => {
       if (!canceled && previewInput.input) {
-        setActualStats(toSmogonPokemon(previewInput.input.build).stats);
+        const pokemon = toSmogonPokemon(previewInput.input.build);
+        setActualStats({ ...pokemon.stats, hp: pokemon.maxHP() });
       }
     }).catch(() => {
       if (!canceled) {
@@ -536,6 +549,226 @@ export function App() {
   );
 }
 
+type EntityTextFieldProps = {
+  kind: EntityKind;
+  label: string;
+  value: string;
+  placeholder?: string;
+  className?: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+};
+
+function EntityTextField({
+  kind,
+  label,
+  value,
+  placeholder,
+  className,
+  onChange,
+}: EntityTextFieldProps) {
+  const datalistId = `entity-options-${kind}-${useId()}`;
+  const options = getMatchingEntityInputOptions(kind, value);
+
+  return (
+    <label className={className}>
+      {label}
+      <input
+        value={value}
+        placeholder={placeholder}
+        list={datalistId}
+        autoComplete="off"
+        onChange={onChange}
+      />
+      <datalist id={datalistId}>
+        {options.map((option) => (
+          <option
+            value={option.value}
+            key={option.value}
+          />
+        ))}
+      </datalist>
+    </label>
+  );
+}
+
+type MechanicControlsProps = {
+  pokemonInput: string;
+  teraEnabled: boolean;
+  dmaxEnabled: boolean;
+  teraTypeInput: string;
+  teraLabel: string;
+  onPokemonInputChange: (value: string) => void;
+  onTeraEnabledChange: (value: boolean) => void;
+  onDmaxEnabledChange: (value: boolean) => void;
+  onTeraTypeInputChange: (value: string) => void;
+};
+
+function MechanicControls({
+  pokemonInput,
+  teraEnabled,
+  dmaxEnabled,
+  teraTypeInput,
+  teraLabel,
+  onPokemonInputChange,
+  onTeraEnabledChange,
+  onDmaxEnabledChange,
+  onTeraTypeInputChange,
+}: MechanicControlsProps) {
+  const [choiceKind, setChoiceKind] = useState<PokemonFormVariantKind | null>(null);
+  const megaOptions = getPokemonFormVariantOptions(pokemonInput, "mega");
+  const gmaxOptions = getPokemonFormVariantOptions(pokemonInput, "gmax");
+  const megaActive = isPokemonFormVariant(pokemonInput, "mega");
+  const gmaxActive = isPokemonFormVariant(pokemonInput, "gmax");
+  const dmaxActive = dmaxEnabled || gmaxActive;
+  const activeChoices = choiceKind === "mega" ? megaOptions : choiceKind === "gmax" ? gmaxOptions : [];
+
+  const applyBaseForm = () => {
+    const baseValue = getPokemonBaseFormValue(pokemonInput);
+    if (baseValue) {
+      onPokemonInputChange(baseValue);
+    }
+    setChoiceKind(null);
+  };
+
+  const applyVariant = (kind: PokemonFormVariantKind, option: PokemonFormVariantOption) => {
+    onPokemonInputChange(option.value);
+    setChoiceKind(null);
+    if (kind === "mega") {
+      onTeraEnabledChange(false);
+      onDmaxEnabledChange(false);
+    } else {
+      onDmaxEnabledChange(true);
+      onTeraEnabledChange(false);
+    }
+  };
+
+  const handleVariantClick = (kind: PokemonFormVariantKind, options: PokemonFormVariantOption[]) => {
+    const isActive = kind === "mega" ? megaActive : gmaxActive;
+    if (isActive) {
+      applyBaseForm();
+      if (kind === "gmax") {
+        onDmaxEnabledChange(false);
+      }
+      return;
+    }
+    if (options.length === 0) {
+      setChoiceKind(null);
+      return;
+    }
+    if (options.length === 1) {
+      applyVariant(kind, options[0]);
+      return;
+    }
+    setChoiceKind((current) => (current === kind ? null : kind));
+  };
+
+  const handleTeraClick = () => {
+    const nextTeraEnabled = !teraEnabled;
+    onTeraEnabledChange(nextTeraEnabled);
+    if (nextTeraEnabled) {
+      if (dmaxEnabled || gmaxActive) {
+        onDmaxEnabledChange(false);
+        if (gmaxActive) {
+          applyBaseForm();
+        }
+      }
+      setChoiceKind(null);
+    }
+  };
+
+  const handleDmaxClick = () => {
+    if (dmaxEnabled || gmaxActive) {
+      onDmaxEnabledChange(false);
+      if (gmaxActive) {
+        applyBaseForm();
+      } else {
+        setChoiceKind(null);
+      }
+      return;
+    }
+
+    onDmaxEnabledChange(true);
+    onTeraEnabledChange(false);
+    if (megaActive) {
+      applyBaseForm();
+    }
+    setChoiceKind(gmaxOptions.length > 0 ? "gmax" : null);
+  };
+
+  return (
+    <div className="mechanic-block">
+      <div className="mechanic-toggle-row" aria-label="特殊フォーム">
+        <IconToggleButton
+          active={teraEnabled}
+          iconName={teraEnabled ? "tera" : "tera-off"}
+          label={teraLabel}
+          onClick={handleTeraClick}
+        />
+        <IconToggleButton
+          active={megaActive}
+          disabled={!megaActive && megaOptions.length === 0}
+          iconName={megaActive ? "mega" : "mega-off"}
+          label={megaActive ? "メガ解除" : "メガ候補"}
+          onClick={() => handleVariantClick("mega", megaOptions)}
+        />
+        <IconToggleButton
+          active={dmaxActive}
+          iconName={dmaxActive ? "dmax" : "dmax-off"}
+          label={dmaxActive ? "ダイマックス解除" : "ダイマックス"}
+          onClick={handleDmaxClick}
+        />
+      </div>
+      {teraEnabled ? (
+        <EntityTextField
+          className="tera-type-field"
+          kind="type"
+          label="テラタイプ"
+          value={teraTypeInput}
+          placeholder="タイプ"
+          onChange={(event) => onTeraTypeInputChange(event.target.value)}
+        />
+      ) : null}
+      {activeChoices.length > 0 ? (
+        <div className="variant-choice-row" aria-label={`${choiceKind === "mega" ? "メガ" : "キョダイマックス"}候補`}>
+          {activeChoices.map((option) => (
+            <button
+              className="variant-choice"
+              type="button"
+              key={option.id}
+              onClick={() => choiceKind && applyVariant(choiceKind, option)}
+            >
+              {option.value}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type IconToggleButtonProps = {
+  active: boolean;
+  disabled?: boolean;
+  iconName: string;
+  label: string;
+  onClick: () => void;
+};
+
+function IconToggleButton({ active, disabled = false, iconName, label, onClick }: IconToggleButtonProps) {
+  return (
+    <button
+      className={`mechanic-icon-button${active ? " active" : ""}`}
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <img src={getBattleIconSrc(iconName)} alt="" aria-hidden="true" />
+    </button>
+  );
+}
+
 type TargetPanelProps = {
   targetForm: TargetFormState;
   canonicalPokemon?: string;
@@ -571,20 +804,18 @@ function TargetPanel({
           variant="target"
         />
         <div className="target-summary compact">
-          <label>
-            ポケモン
-            <input
-              value={targetForm.pokemonInput}
-              onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
-            />
-          </label>
-          <label>
-            性格
-            <input
-              value={targetForm.natureInput}
-              onChange={(event) => onUpdateField("natureInput", event.target.value)}
-            />
-          </label>
+          <EntityTextField
+            kind="pokemon"
+            label="ポケモン"
+            value={targetForm.pokemonInput}
+            onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
+          />
+          <EntityTextField
+            kind="nature"
+            label="性格"
+            value={targetForm.natureInput}
+            onChange={(event) => onUpdateField("natureInput", event.target.value)}
+          />
           <label>
             Lv.
             <input
@@ -595,22 +826,20 @@ function TargetPanel({
               onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
             />
           </label>
-          <label>
-            持ち物
-            <input
-              value={targetForm.itemInput}
-              placeholder="任意"
-              onChange={(event) => onUpdateField("itemInput", event.target.value)}
-            />
-          </label>
-          <label>
-            特性
-            <input
-              value={targetForm.abilityInput}
-              placeholder="任意"
-              onChange={(event) => onUpdateField("abilityInput", event.target.value)}
-            />
-          </label>
+          <EntityTextField
+            kind="item"
+            label="持ち物"
+            value={targetForm.itemInput}
+            placeholder="任意"
+            onChange={(event) => onUpdateField("itemInput", event.target.value)}
+          />
+          <EntityTextField
+            kind="ability"
+            label="特性"
+            value={targetForm.abilityInput}
+            placeholder="任意"
+            onChange={(event) => onUpdateField("abilityInput", event.target.value)}
+          />
           <label>
             状態異常
             <select
@@ -622,22 +851,17 @@ function TargetPanel({
               ))}
             </select>
           </label>
-          <label>
-            テラ
-            <input
-              value={targetForm.teraTypeInput}
-              placeholder="任意"
-              onChange={(event) => onUpdateField("teraTypeInput", event.target.value)}
-            />
-          </label>
-          <label className="checkbox-field">
-            <span>テラ発動</span>
-            <input
-              type="checkbox"
-              checked={targetForm.teraEnabled}
-              onChange={(event) => onUpdateField("teraEnabled", event.target.checked)}
-            />
-          </label>
+          <MechanicControls
+            pokemonInput={targetForm.pokemonInput}
+            teraEnabled={targetForm.teraEnabled}
+            dmaxEnabled={targetForm.dmaxEnabled}
+            teraTypeInput={targetForm.teraTypeInput}
+            teraLabel={targetForm.teraEnabled ? "テラスタル解除" : "テラスタル"}
+            onPokemonInputChange={(value) => onUpdateField("pokemonInput", value)}
+            onTeraEnabledChange={(value) => onUpdateField("teraEnabled", value)}
+            onDmaxEnabledChange={(value) => onUpdateField("dmaxEnabled", value)}
+            onTeraTypeInputChange={(value) => onUpdateField("teraTypeInput", value)}
+          />
         </div>
       </div>
 
@@ -911,13 +1135,24 @@ function AttackCard({
       </div>
 
       <div className="attack-card-fields">
-        <ScenarioTextField label="攻撃側" showLabel value={attack.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
-        <ScenarioTextField label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
-        <ScenarioTextField label="性格" showLabel value={attack.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
-        <ScenarioTextField label="特性" showLabel value={attack.attackerAbilityInput} placeholder="任意" onChange={onInput("attackerAbilityInput")} />
-        <ScenarioTextField label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
-        <ScenarioTextField label="攻撃テラ" showLabel value={attack.attackerTeraTypeInput} placeholder="任意" onChange={onInput("attackerTeraTypeInput")} />
+        <ScenarioTextField kind="pokemon" label="攻撃側" showLabel value={attack.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
+        <ScenarioTextField kind="move" label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
+        <ScenarioTextField kind="nature" label="性格" showLabel value={attack.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
+        <ScenarioTextField kind="ability" label="特性" showLabel value={attack.attackerAbilityInput} placeholder="任意" onChange={onInput("attackerAbilityInput")} />
+        <ScenarioTextField kind="item" label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
       </div>
+
+      <MechanicControls
+        pokemonInput={attack.attackerPokemonInput}
+        teraEnabled={attack.attackerTeraEnabled}
+        dmaxEnabled={attack.attackerDmaxEnabled}
+        teraTypeInput={attack.attackerTeraTypeInput}
+        teraLabel={attack.attackerTeraEnabled ? "攻撃テラ解除" : "攻撃テラ"}
+        onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+        onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
+        onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
+        onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
+      />
 
       <div className="attack-number-grid">
         <ScenarioNumberField
@@ -1042,7 +1277,6 @@ function AttackCard({
       </div>
 
       <div className="scenario-options">
-        <label><input type="checkbox" checked={attack.attackerTeraEnabled} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", event.target.checked)} /> 攻撃テラ発動</label>
         <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
         <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
         <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
@@ -1054,6 +1288,7 @@ function AttackCard({
 }
 
 type ScenarioTextFieldProps = {
+  kind?: EntityKind;
   label: string;
   showLabel: boolean;
   value: string;
@@ -1061,11 +1296,31 @@ type ScenarioTextFieldProps = {
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
-function ScenarioTextField({ label, showLabel, value, placeholder, onChange }: ScenarioTextFieldProps) {
+function ScenarioTextField({ kind, label, showLabel, value, placeholder, onChange }: ScenarioTextFieldProps) {
+  const datalistId = `entity-options-${kind ?? "text"}-${useId()}`;
+  const options = kind ? getMatchingEntityInputOptions(kind, value) : [];
+
   return (
     <label className="scenario-cell">
       {showLabel ? <span className="row-label">{label}</span> : null}
-      <input value={value} placeholder={showLabel ? placeholder : undefined} aria-label={label} onChange={onChange} />
+      <input
+        value={value}
+        placeholder={showLabel ? placeholder : undefined}
+        list={kind ? datalistId : undefined}
+        autoComplete={kind ? "off" : undefined}
+        aria-label={label}
+        onChange={onChange}
+      />
+      {kind ? (
+        <datalist id={datalistId}>
+          {options.map((option) => (
+            <option
+              value={option.value}
+              key={option.value}
+            />
+          ))}
+        </datalist>
+      ) : null}
     </label>
   );
 }

@@ -42,6 +42,13 @@ export interface ResolveResult {
   candidates: ResolveCandidate[];
 }
 
+export interface EntityInputOption {
+  kind: EntityKind;
+  value: string;
+  canonicalName: string;
+  displayNameJa: string;
+}
+
 interface SearchEntry {
   entry: LocalizedCatalogEntry;
   matchedBy: ResolveMatchedBy;
@@ -195,6 +202,39 @@ const searchByKind = Object.fromEntries(
   Object.entries(entriesByKind).map(([kind, entries]) => [kind, buildIndex(entries)]),
 ) as Record<EntityKind, ReturnType<typeof buildIndex>>;
 
+const entityKinds = ["pokemon", "move", "item", "ability", "nature", "type"] as const satisfies readonly EntityKind[];
+
+const addInputOption = (
+  optionsByKey: Map<string, EntityInputOption>,
+  option: EntityInputOption,
+) => {
+  const key = normalizeSearchText(option.value);
+  if (key && !optionsByKey.has(key)) {
+    optionsByKey.set(key, option);
+  }
+};
+
+const buildInputOptions = (entries: LocalizedCatalogEntry[]): EntityInputOption[] => {
+  const optionsByKey = new Map<string, EntityInputOption>();
+
+  for (const entry of entries.map(withLabelOverrides)) {
+    addInputOption(optionsByKey, {
+      kind: entry.kind,
+      value: entry.displayNameJa,
+      canonicalName: entry.canonicalName,
+      displayNameJa: entry.displayNameJa,
+    });
+  }
+
+  return Array.from(optionsByKey.values()).sort((a, b) => (
+    a.value.localeCompare(b.value, "ja") || a.canonicalName.localeCompare(b.canonicalName, "en")
+  ));
+};
+
+const inputOptionsByKind = Object.fromEntries(
+  entityKinds.map((kind) => [kind, buildInputOptions(entriesByKind[kind])]),
+) as Record<EntityKind, EntityInputOption[]>;
+
 const toCandidate = ({ entry, matchedBy, matchText, sourceStatus }: SearchEntry): ResolveCandidate => ({
   kind: entry.kind,
   canonicalName: entry.canonicalName,
@@ -257,4 +297,22 @@ export const resolveEntity = (kind: EntityKind, input: string): ResolveResult =>
 export const getDisplayNameJa = (kind: EntityKind, canonicalName: string): string => {
   const result = resolveEntity(kind, canonicalName);
   return result.displayNameJa ?? canonicalName;
+};
+
+export const getEntityInputOptions = (kind: EntityKind): EntityInputOption[] => inputOptionsByKind[kind];
+
+export const getMatchingEntityInputOptions = (
+  kind: EntityKind,
+  input: string,
+  limit = 40,
+): EntityInputOption[] => {
+  const normalizedInput = normalizeSearchText(input);
+  const options = inputOptionsByKind[kind];
+  if (!normalizedInput) {
+    return options.slice(0, limit);
+  }
+
+  return options
+    .filter((option) => normalizeSearchText(option.value).startsWith(normalizedInput))
+    .slice(0, limit);
 };

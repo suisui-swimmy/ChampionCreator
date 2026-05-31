@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveEntity } from "./resolver";
+import { getEntityInputOptions, getMatchingEntityInputOptions, resolveEntity } from "./resolver";
 
 describe("resolveEntity", () => {
   it("resolves a Japanese exact label to a Showdown canonical name", () => {
@@ -91,5 +91,37 @@ describe("resolveEntity", () => {
       kind: "item",
       candidates: [],
     });
+  });
+
+  it("exposes UI input options as Japanese labels only", () => {
+    const pokemonOptions = getEntityInputOptions("pokemon");
+
+    expect(pokemonOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: "ピカチュウ",
+          canonicalName: "Pikachu",
+        }),
+      ]),
+    );
+    expect(pokemonOptions.some((option) => option.value === "Pikachu")).toBe(false);
+    expect(pokemonOptions.filter((option) => option.value === "ピカチュウ")).toHaveLength(1);
+    expect(getEntityInputOptions("nature")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: "おくびょう",
+          canonicalName: "Timid",
+        }),
+      ]),
+    );
+  });
+
+  it("weakens UI input suggestions to prefix matches", () => {
+    const options = getMatchingEntityInputOptions("pokemon", "リザー");
+    const values = options.map((option) => option.value);
+
+    expect(values).toEqual(expect.arrayContaining(["リザード", "リザードン"]));
+    expect(values).not.toContain("フリーザー");
+    expect(values.every((value) => value.startsWith("リザー"))).toBe(true);
   });
 });

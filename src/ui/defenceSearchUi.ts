@@ -34,6 +34,7 @@ export interface TargetFormState {
   itemInput: string;
   teraTypeInput: string;
   teraEnabled: boolean;
+  dmaxEnabled: boolean;
   status: PokemonStatus;
   level: number;
   statPoints: StatPointTable;
@@ -48,6 +49,7 @@ export interface ScenarioAttackFormState {
   attackerItemInput: string;
   attackerTeraTypeInput: string;
   attackerTeraEnabled: boolean;
+  attackerDmaxEnabled: boolean;
   attackerStatus: PokemonStatus;
   attackerLevel: number;
   attackerStatPoints: StatPointTable;
@@ -213,6 +215,7 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   itemInput: "",
   teraTypeInput: "",
   teraEnabled: false,
+  dmaxEnabled: false,
   status: "none",
   level: 50,
   statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
@@ -227,6 +230,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerItemInput: "",
   attackerTeraTypeInput: "",
   attackerTeraEnabled: false,
+  attackerDmaxEnabled: false,
   attackerStatus: "none",
   attackerLevel: 50,
   attackerStatPoints: { ...zeroStatPoints, spa: 32 },
@@ -260,15 +264,18 @@ const toBuild = (form: TargetFormState, id: string): Build => {
   const teraType = form.teraEnabled
     ? mustResolve("type", form.teraTypeInput, "テラスタイプ")
     : undefined;
+  const pokemon = mustResolve("pokemon", form.pokemonInput, "ポケモン");
+  const isGmaxForm = pokemon.canonicalName.endsWith("-Gmax");
 
   return {
     id,
-    pokemon: mustResolve("pokemon", form.pokemonInput, "ポケモン"),
+    pokemon,
     level: clampInt(form.level, 1, 100),
     nature: resolveOptional("nature", form.natureInput, "性格"),
     ability: resolveOptional("ability", form.abilityInput, "特性"),
     item: resolveOptional("item", form.itemInput, "持ち物"),
     teraType,
+    isDynamaxed: form.dmaxEnabled || isGmaxForm || undefined,
     status: form.status === "none" ? undefined : form.status,
     ivs: defaultIvs,
     statPoints,
@@ -295,6 +302,7 @@ const toScenarioHit = (
       itemInput: attackForm.attackerItemInput,
       teraTypeInput: attackForm.attackerTeraTypeInput,
       teraEnabled: attackForm.attackerTeraEnabled,
+      dmaxEnabled: attackForm.attackerDmaxEnabled,
       status: attackForm.attackerStatus,
       level: attackForm.attackerLevel,
       statPoints: attackForm.attackerStatPoints,

@@ -98,6 +98,40 @@ describe("buildDefenceSearchInput", () => {
     expect(input.build.teraType).toBeUndefined();
   });
 
+  it("passes Dynamax state for target and attacker builds", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      dmaxEnabled: true,
+    };
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarios = [
+      {
+        ...defaultScenario,
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          attackerDmaxEnabled: true,
+        })),
+      },
+    ];
+
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    expect(input.build.isDynamaxed).toBe(true);
+    expect(input.scenarios[0].hits[0].attacker.isDynamaxed).toBe(true);
+  });
+
+  it("treats explicit Gmax forms as Dynamaxed builds", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "フシギバナ キョダイマックスのすがた",
+    };
+
+    const input = buildDefenceSearchInput(target, createDefaultScenarioForms());
+
+    expect(input.build.pokemon.canonicalName).toBe("Venusaur-Gmax");
+    expect(input.build.isDynamaxed).toBe(true);
+  });
+
   it("converts generated option data from all free-text UI fields", () => {
     const target = {
       ...createDefaultTargetForm(),

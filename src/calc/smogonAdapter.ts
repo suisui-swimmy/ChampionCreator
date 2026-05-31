@@ -62,6 +62,7 @@ export const toSmogonPokemon = (build: Build, boosts: StatBoostTable = {}): Poke
     ability: build.ability?.canonicalName,
     item: build.item?.canonicalName,
     teraType: build.teraType?.canonicalName as State.Pokemon["teraType"],
+    isDynamaxed: build.isDynamaxed,
     status: build.status,
     boosts,
   });
