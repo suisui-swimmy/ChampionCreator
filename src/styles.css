@@ -387,8 +387,7 @@ button:disabled {
 }
 
 .tera-type-field {
-  grid-template-columns: 72px minmax(0, 1fr);
-  align-items: center;
+  display: block;
 }
 
 .variant-choice-row {
@@ -556,12 +555,26 @@ button:disabled {
 
 label {
   display: grid;
-  grid-template-columns: minmax(42px, max-content) minmax(0, 1fr);
-  gap: 6px;
-  align-items: center;
+  gap: 4px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.placeholder-field {
+  display: block;
+  min-width: 0;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6f7878;
+  opacity: 1;
+}
+
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: transparent;
 }
 
 select,
@@ -848,16 +861,23 @@ textarea {
 }
 
 .scenario-cell {
-  display: grid;
-  grid-template-columns: minmax(46px, max-content) minmax(0, 1fr);
-  gap: 6px;
-  align-items: center;
   min-width: 0;
 }
 
 .row-label {
-  color: var(--muted);
   font-size: 10px;
+}
+
+.number-labeled-field {
+  display: grid;
+  grid-template-columns: minmax(52px, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.number-labeled-field .row-label {
+  color: #8fa09f;
+  font-size: 11px;
   font-weight: 800;
   line-height: 14px;
   white-space: nowrap;
@@ -958,9 +978,7 @@ textarea {
 
 .rank-grid label {
   display: grid;
-  grid-template-columns: minmax(28px, max-content) minmax(0, 1fr);
-  gap: 4px;
-  align-items: center;
+  gap: 3px;
 }
 
 .attack-condition-card,
@@ -1001,10 +1019,7 @@ textarea {
 
 .attacker-evs label,
 .compact-select-field {
-  display: grid;
-  grid-template-columns: minmax(42px, max-content) minmax(0, 1fr);
-  gap: 5px;
-  align-items: center;
+  display: block;
 }
 
 .scenario-options {

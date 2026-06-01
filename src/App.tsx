@@ -1,4 +1,4 @@
-import { type ChangeEvent, type KeyboardEvent, type PointerEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
@@ -122,6 +122,14 @@ const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
 
 const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
+
+const selectInputValueOnFocus = (event: FocusEvent<HTMLInputElement>) => {
+  try {
+    event.currentTarget.select();
+  } catch {
+    // Some input types do not expose text selection consistently.
+  }
+};
 
 export const clampTargetStatPointChange = (statPoints: StatTable, key: StatKey, value: number): number => {
   const usedByOtherStats = sumStatPoints(statPoints) - clampStatPointValue(statPoints[key]);
@@ -564,7 +572,6 @@ type EntityTextFieldProps = {
   kind: EntityKind;
   label: string;
   value: string;
-  placeholder?: string;
   className?: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 };
@@ -573,21 +580,21 @@ function EntityTextField({
   kind,
   label,
   value,
-  placeholder,
   className,
   onChange,
 }: EntityTextFieldProps) {
   const datalistId = `entity-options-${kind}-${useId()}`;
   const options = getMatchingEntityInputOptions(kind, value);
+  const labelClassName = ["placeholder-field", className].filter(Boolean).join(" ");
 
   return (
-    <label className={className}>
-      {label}
+    <label className={labelClassName}>
       <input
         value={value}
-        placeholder={placeholder}
+        placeholder={label}
         list={datalistId}
         autoComplete="off"
+        onFocus={selectInputValueOnFocus}
         onChange={onChange}
       />
       <datalist id={datalistId}>
@@ -735,7 +742,6 @@ function MechanicControls({
           kind="type"
           label="テラタイプ"
           value={teraTypeInput}
-          placeholder="タイプ"
           onChange={(event) => onTeraTypeInputChange(event.target.value)}
         />
       ) : null}
@@ -830,13 +836,14 @@ function TargetPanel({
             value={targetForm.natureInput}
             onChange={(event) => onUpdateField("natureInput", event.target.value)}
           />
-          <label>
-            Lv.
+          <label className="placeholder-field">
             <input
               type="number"
               min="1"
               max="100"
               value={targetForm.level}
+              placeholder="Lv."
+              onFocus={selectInputValueOnFocus}
               onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
             />
           </label>
@@ -844,14 +851,12 @@ function TargetPanel({
             kind="item"
             label="持ち物"
             value={targetForm.itemInput}
-            placeholder="任意"
             onChange={(event) => onUpdateField("itemInput", event.target.value)}
           />
           <EntityTextField
             kind="ability"
             label="特性"
             value={targetForm.abilityInput}
-            placeholder="任意"
             onChange={(event) => onUpdateField("abilityInput", event.target.value)}
           />
           <label>
@@ -1370,15 +1375,16 @@ function AttackCard({
 
       <div className="attacker-evs" aria-label={`${attackLabel} 攻撃側SP`}>
         {statKeys.map((key) => (
-          <label key={key}>
-            <span className="stat-label-with-icon"><StatIcon stat={key} /> SP</span>
+          <label className="placeholder-field" key={key}>
             <input
               type="number"
               min="0"
               max="252"
               step="1"
               value={attack.attackerStatPoints[key]}
+              placeholder={`${statLabels[key]} SP`}
               title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+              onFocus={selectInputValueOnFocus}
               onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
             />
           </label>
@@ -1410,14 +1416,14 @@ function ScenarioTextField({ kind, label, showLabel, value, placeholder, onChang
   const options = kind ? getMatchingEntityInputOptions(kind, value) : [];
 
   return (
-    <label className="scenario-cell">
-      {showLabel ? <span className="row-label">{label}</span> : null}
+    <label className="scenario-cell placeholder-field">
       <input
         value={value}
-        placeholder={showLabel ? placeholder : undefined}
+        placeholder={showLabel ? label : placeholder}
         list={kind ? datalistId : undefined}
         autoComplete={kind ? "off" : undefined}
         aria-label={label}
+        onFocus={selectInputValueOnFocus}
         onChange={onChange}
       />
       {kind ? (
@@ -1445,7 +1451,7 @@ type ScenarioNumberFieldProps = {
 
 function ScenarioNumberField({ label, showLabel, value, min, max, onChange }: ScenarioNumberFieldProps) {
   return (
-    <label className="scenario-cell number-cell">
+    <label className="scenario-cell number-cell number-labeled-field">
       {showLabel ? <span className="row-label">{label}</span> : null}
       <input
         type="number"
@@ -1453,6 +1459,7 @@ function ScenarioNumberField({ label, showLabel, value, min, max, onChange }: Sc
         max={max}
         value={value}
         aria-label={label}
+        onFocus={selectInputValueOnFocus}
         onChange={(event) => onChange(toNumber(event.target.value, min))}
       />
     </label>
