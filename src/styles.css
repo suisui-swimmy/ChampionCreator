@@ -556,7 +556,9 @@ button:disabled {
 
 label {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(42px, max-content) minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
@@ -847,8 +849,9 @@ textarea {
 
 .scenario-cell {
   display: grid;
-  grid-template-rows: 14px 28px;
-  gap: 3px;
+  grid-template-columns: minmax(46px, max-content) minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
   min-width: 0;
 }
 
@@ -955,8 +958,9 @@ textarea {
 
 .rank-grid label {
   display: grid;
-  grid-template-rows: 14px 28px;
-  gap: 3px;
+  grid-template-columns: minmax(28px, max-content) minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
 }
 
 .attack-condition-card,
@@ -991,15 +995,16 @@ textarea {
 
 .attacker-evs {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 
 .attacker-evs label,
 .compact-select-field {
   display: grid;
-  grid-template-rows: 14px 28px;
-  gap: 3px;
+  grid-template-columns: minmax(42px, max-content) minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
 }
 
 .scenario-options {

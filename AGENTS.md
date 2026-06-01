@@ -394,6 +394,28 @@ npm run build
 - ユーザーが「PROGRESS 更新いらない」と言った場合は更新しない。
 - サブエージェントが使える環境では、データ収集、日本語対応、Showdown adapter 調査、UI 実装調査を分担してよい。
 
+## in-app Browser / node_repl 復旧メモ
+
+Codex in-app Browser や Browser plugin が `windows sandbox failed: spawn setup refresh` で起動できない場合は、ページやアプリの不具合と決めつけず、まず `node_repl` の最小実行を確認する。
+
+復旧方針:
+
+- 個人用 skill `fix-in-app-browser-node-repl` を使う。
+- まず `node_repl` で `1 + 1` 相当の最小実行を試す。
+- Codex 設定を触る場合は、必ず `%USERPROFILE%\.codex\config.toml` を timestamp 付きでバックアップする。
+- `[mcp_servers.node_repl]` は `args = ["--disable-sandbox"]` を使う。
+- Codex Desktop が `args` を実プロセスへ反映しない場合は、`node_repl_disable_sandbox.cmd` のような wrapper で `node_repl.exe --disable-sandbox %*` を起動する。
+- `[mcp_servers.node_repl.env]` に `CODEX_CLI_PATH = ...` が残っていると sandbox launcher 経由になる場合があるため、fallback 時はこの行だけを外す。他の env や他 MCP 設定は触らない。
+- この変更は `node_repl` の sandbox 隔離を弱めるため、ユーザーの明示承認がある場合だけ行う。
+- 復旧後は Codex Desktop の再起動が必要になることがある。
+
+復旧後の確認:
+
+- `node_repl` の最小実行が成功する。
+- in-app Browser で `http://127.0.0.1:5173/` を開ける。
+- スクリーンショット取得、DOM evaluate、簡単なクリック操作を確認する。
+- 実施内容と検証結果は `PROGRESS.md` に残す。
+
 ## ユーザー追記
 - ドキュメントに絶対パス、ユーザー名を含めないでください
 - 個人用の汎用 skill `progress-update` を使い、`PROGRESS.md`に作業内容に記録してください。プロジェクトの進捗は`PROGRESS.md`を参照してください。汎用 skill `progress-update` は `~/.agents/skills` に配置されています。
