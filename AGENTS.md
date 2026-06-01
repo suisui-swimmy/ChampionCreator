@@ -396,5 +396,4 @@ npm run build
 
 ## ユーザー追記
 - ドキュメントに絶対パス、ユーザー名を含めないでください
-- ユーザーの判断が必要な場合は approval で確認し、できる限り自走してください
 - 個人用の汎用 skill `progress-update` を使い、`PROGRESS.md`に作業内容に記録してください。プロジェクトの進捗は`PROGRESS.md`を参照してください。汎用 skill `progress-update` は `~/.agents/skills` に配置されています。

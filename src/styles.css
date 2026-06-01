@@ -815,11 +815,29 @@ textarea {
 }
 
 .scenario-row-header {
-  display: grid;
-  grid-template-columns: 42px minmax(120px, 180px) 160px auto;
-  gap: 8px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-height: 34px;
+}
+
+.scenario-row-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.scenario-row-title .inline-title-input {
+  width: min(180px, 42vw);
+  min-width: 96px;
+}
+
+.scenario-row-header .ghost-button.danger {
+  margin-left: auto;
+  min-width: 96px;
+  white-space: nowrap;
 }
 
 .scenario-row.disabled {
@@ -1338,8 +1356,8 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .scenario-row-header {
-    grid-template-columns: 42px 1fr;
+  .scenario-row-title .inline-title-input {
+    width: min(180px, 100%);
   }
 
   .scenario-attack-lane {

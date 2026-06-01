@@ -1135,20 +1135,22 @@ function ScenarioRow({
   return (
     <article className={`scenario-row${scenario.enabled ? "" : " disabled"}`} aria-label={scenario.label}>
       <div className="scenario-row-header">
-        <label className="switch" aria-label={`${scenario.label}を有効化`}>
+        <div className="scenario-row-title">
+          <label className="switch" aria-label={`${scenario.label}を有効化`}>
+            <input
+              type="checkbox"
+              checked={scenario.enabled}
+              onChange={(event) => onUpdateScenario(scenario.id, "enabled", event.target.checked)}
+            />
+            <span />
+          </label>
           <input
-            type="checkbox"
-            checked={scenario.enabled}
-            onChange={(event) => onUpdateScenario(scenario.id, "enabled", event.target.checked)}
+            className="inline-title-input"
+            value={scenario.label}
+            aria-label="シナリオ名"
+            onChange={(event) => onUpdateScenario(scenario.id, "label", event.target.value)}
           />
-          <span />
-        </label>
-        <input
-          className="inline-title-input"
-          value={scenario.label}
-          aria-label="シナリオ名"
-          onChange={(event) => onUpdateScenario(scenario.id, "label", event.target.value)}
-        />
+        </div>
         <button
           className="ghost-button danger"
           type="button"
