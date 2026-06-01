@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { type ChangeEvent, type KeyboardEvent, type PointerEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
@@ -120,6 +120,14 @@ const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 
 const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
+
+const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
+
+export const clampTargetStatPointChange = (statPoints: StatTable, key: StatKey, value: number): number => {
+  const usedByOtherStats = sumStatPoints(statPoints) - clampStatPointValue(statPoints[key]);
+  const maxForStat = Math.max(0, CHAMPIONS_TOTAL_STAT_POINTS - usedByOtherStats);
+  return Math.min(clampStatPointValue(value), maxForStat);
+};
 
 const getStatIconSrc = (key: StatKey): string => {
   const base = import.meta.env.BASE_URL.endsWith("/")
@@ -267,10 +275,13 @@ export function App() {
   };
 
   const updateTargetEv = (key: StatKey, value: number) => {
-    setTargetForm((current) => ({
-      ...current,
-      statPoints: { ...current.statPoints, [key]: value },
-    }));
+    setTargetForm((current) => {
+      const nextValue = clampTargetStatPointChange(current.statPoints, key, value);
+      return {
+        ...current,
+        statPoints: { ...current.statPoints, [key]: nextValue },
+      };
+    });
   };
 
   const updateScenario = <K extends keyof ScenarioFormState>(
@@ -788,6 +799,8 @@ function TargetPanel({
   onUpdateField,
   onUpdateEv,
 }: TargetPanelProps) {
+  const isSpLimitReached = totalStatPoints >= CHAMPIONS_TOTAL_STAT_POINTS;
+
   return (
     <section className="target-panel" aria-labelledby="target-title">
       <div className="section-heading">
@@ -802,6 +815,7 @@ function TargetPanel({
           match={artwork}
           fallbackLabel={targetForm.pokemonInput}
           variant="target"
+          dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
         />
         <div className="target-summary compact">
           <EntityTextField
@@ -865,7 +879,7 @@ function TargetPanel({
         </div>
       </div>
 
-      <div className="ev-table" aria-label="調整対象のSP">
+      <div className={`ev-table${isSpLimitReached ? " is-sp-max" : ""}`} aria-label="調整対象のSP">
         <div className="ev-header">
           <span>能力</span>
           <span>実数値</span>
@@ -887,7 +901,11 @@ function TargetPanel({
               title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
               onChange={(event) => onUpdateEv(key, toStatPointInput(event.target.value))}
             />
-            <div className="bar"><i style={{ width: `${Math.min(100, (targetForm.statPoints[key] / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100)}%` }} /></div>
+            <StatPointCellBar
+              stat={key}
+              value={targetForm.statPoints[key]}
+              onChange={(value) => onUpdateEv(key, value)}
+            />
             <span className={defenceStatKeySet.has(key) ? "search-chip" : "fixed-chip"}>
               {defenceStatKeySet.has(key) ? "HBD" : "固定"}
             </span>
@@ -895,7 +913,7 @@ function TargetPanel({
         ))}
       </div>
 
-      <div className="sp-summary">
+      <div className={`sp-summary${isSpLimitReached ? " is-sp-max" : ""}`}>
         <span>合計SP</span>
         <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
       </div>
@@ -903,19 +921,107 @@ function TargetPanel({
   );
 }
 
+type StatPointCellBarProps = {
+  stat: StatKey;
+  value: number;
+  onChange: (value: number) => void;
+};
+
+function StatPointCellBar({ stat, value, onChange }: StatPointCellBarProps) {
+  const pointerIdRef = useRef<number | null>(null);
+  const normalizedValue = clampStatPointValue(value);
+
+  const updateFromPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
+    const nextValue = clampStatPointValue(Math.ceil(ratio * CHAMPIONS_MAX_STAT_POINTS_PER_STAT));
+    onChange(nextValue);
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    pointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updateFromPointer(event);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== event.pointerId) {
+      return;
+    }
+    updateFromPointer(event);
+  };
+
+  const handlePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current === event.pointerId) {
+      pointerIdRef.current = null;
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+      event.preventDefault();
+      onChange(clampStatPointValue(normalizedValue + 1));
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+      event.preventDefault();
+      onChange(clampStatPointValue(normalizedValue - 1));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      onChange(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      onChange(CHAMPIONS_MAX_STAT_POINTS_PER_STAT);
+    }
+  };
+
+  return (
+    <div
+      className={`sp-cell-bar ${stat}`}
+      role="slider"
+      tabIndex={0}
+      aria-label={`${statLabels[stat]} SP配分`}
+      aria-valuemin={0}
+      aria-valuemax={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
+      aria-valuenow={normalizedValue}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onLostPointerCapture={handlePointerEnd}
+      onKeyDown={handleKeyDown}
+    >
+      {statPointCells.map((cellValue) => (
+        <span
+          className={cellValue <= normalizedValue ? "active" : ""}
+          key={cellValue}
+          aria-hidden="true"
+        />
+      ))}
+    </div>
+  );
+}
+
 type PokemonArtworkFrameProps = {
   match: PokemonArtworkMatch | null;
   fallbackLabel: string;
   variant: "target" | "attack";
+  dynamaxEffect?: boolean;
 };
 
-function PokemonArtworkFrame({ match, fallbackLabel, variant }: PokemonArtworkFrameProps) {
+function PokemonArtworkFrame({
+  match,
+  fallbackLabel,
+  variant,
+  dynamaxEffect = false,
+}: PokemonArtworkFrameProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const canShowImage = match && failedSrc !== match.artworkUrl;
   const fallbackInitial = (fallbackLabel.trim() || "?").slice(0, 1);
 
   return (
-    <div className={`pokemon-artwork ${variant}`} aria-label={match?.label ?? fallbackLabel}>
+    <div
+      className={`pokemon-artwork ${variant}${dynamaxEffect ? " is-dynamax" : ""}`}
+      aria-label={match?.label ?? fallbackLabel}
+    >
       {canShowImage ? (
         <img
           src={match.artworkUrl}
@@ -1116,6 +1222,7 @@ function AttackCard({
           match={attackerArtwork}
           fallbackLabel={attack.attackerPokemonInput}
           variant="attack"
+          dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
         />
         <input
           className="inline-title-input"

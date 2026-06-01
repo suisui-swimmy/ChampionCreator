@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { App } from "./App";
+import { App, clampTargetStatPointChange } from "./App";
 
 describe("App", () => {
   it("renders the M0 workbench sections", () => {
@@ -12,6 +12,35 @@ describe("App", () => {
     expect(html).toContain("シナリオを追加");
     expect(html).toContain("候補一覧");
     expect(html).toContain("選択候補詳細");
+  });
+
+  it("renders exact 32-cell SP allocation sliders", () => {
+    const html = renderToStaticMarkup(<App />);
+
+    expect(html).toContain('role="slider"');
+    expect(html).toContain('aria-valuemax="32"');
+    expect(html).toContain('aria-label="H SP配分"');
+    expect(html).toContain('class="sp-cell-bar hp"');
+  });
+
+  it("caps target SP edits at the total 66 budget", () => {
+    expect(clampTargetStatPointChange({
+      hp: 10,
+      atk: 20,
+      def: 20,
+      spa: 0,
+      spd: 0,
+      spe: 0,
+    }, "hp", 32)).toBe(26);
+
+    expect(clampTargetStatPointChange({
+      hp: 26,
+      atk: 20,
+      def: 20,
+      spa: 0,
+      spd: 0,
+      spe: 0,
+    }, "atk", 5)).toBe(5);
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {
