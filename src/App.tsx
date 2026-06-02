@@ -41,6 +41,7 @@ import {
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
 import { parseShareStateDocument, stringifyShareStateDocument } from "./ui/shareState";
+import { Button, SelectField, StatusBadge } from "./ui/primitives";
 import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
@@ -86,6 +87,11 @@ const gameTypeOptions: Array<{ value: GameType; label: string }> = [
 ];
 
 const rankOptions = Array.from({ length: 13 }, (_value, index) => index - 6);
+
+const rankSelectOptions = rankOptions.map((rank) => ({
+  value: String(rank),
+  label: rank > 0 ? `+${rank}` : String(rank),
+}));
 
 const weatherOptions: Array<{ value: Weather; label: string }> = [
   { value: "none", label: "なし" },
@@ -475,29 +481,27 @@ export function App() {
             <strong>{Math.round(searchState.progress * 100)}%</strong>
             <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} candidates</span>
           </div>
-          <button className="ghost-button" type="button" onClick={openSharePanel}>
+          <Button variant="ghost" onClick={openSharePanel}>
             条件JSON
-          </button>
-          <button className="ghost-button" type="button" onClick={handleCopyShareJson}>
+          </Button>
+          <Button variant="ghost" onClick={handleCopyShareJson}>
             コピー
-          </button>
-          <button
-            className="ghost-button"
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
             onClick={handleCancel}
             disabled={searchState.status !== "running"}
           >
             キャンセル
-          </button>
-          <button
-            className="primary-button"
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
             id="runButton"
             onClick={handleRun}
             disabled={searchState.status === "running"}
           >
             {searchState.status === "running" ? "計算中..." : "計算開始"}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -515,16 +519,15 @@ export function App() {
             spellCheck={false}
           />
           <div>
-            <button className="primary-button small" type="button" onClick={handleImportShareJson}>
+            <Button variant="primary" size="small" onClick={handleImportShareJson}>
               読込
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => setShareText(stringifyShareStateDocument(targetForm, scenarioForms))}
             >
               現在条件を反映
-            </button>
+            </Button>
             {shareMessage ? <span>{shareMessage}</span> : null}
           </div>
         </section>
@@ -859,17 +862,12 @@ function TargetPanel({
             value={targetForm.abilityInput}
             onChange={(event) => onUpdateField("abilityInput", event.target.value)}
           />
-          <label>
-            状態異常
-            <select
-              value={targetForm.status}
-              onChange={(event) => onUpdateField("status", event.target.value as PokemonStatus)}
-            >
-              {statusOptions.map((option) => (
-                <option value={option.value} key={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="状態異常"
+            value={targetForm.status}
+            options={statusOptions}
+            onChange={(value) => onUpdateField("status", value)}
+          />
           <MechanicControls
             pokemonInput={targetForm.pokemonInput}
             teraEnabled={targetForm.teraEnabled}
@@ -1085,7 +1083,7 @@ function ScenarioPanel({
           <h2 id="scenario-title">仮想敵シナリオ</h2>
           <span>1行の中で攻撃A+Bを累積条件として同時評価</span>
         </div>
-        <button className="ghost-button" type="button" onClick={onAddScenario}>+ シナリオを追加</button>
+        <Button variant="ghost" onClick={onAddScenario}>+ シナリオを追加</Button>
       </div>
 
       <div className="scenario-stack" aria-label="仮想敵シナリオ行">
@@ -1101,7 +1099,7 @@ function ScenarioPanel({
             onUpdateAttackerEv={onUpdateAttackerEv}
           />
         ))}
-        <button className="scenario-add-row" type="button" onClick={onAddScenario}>
+        <button className="scenario-add-row ui-button" type="button" onClick={onAddScenario}>
           ダメージ計算を追加
         </button>
       </div>
@@ -1156,14 +1154,13 @@ function ScenarioRow({
             onChange={(event) => onUpdateScenario(scenario.id, "label", event.target.value)}
           />
         </div>
-        <button
-          className="ghost-button danger"
-          type="button"
+        <Button
+          variant="danger"
           aria-label={`${scenario.label}を削除`}
           onClick={() => onRemoveScenario(scenario.id)}
         >
           行を削除
-        </button>
+        </Button>
       </div>
 
       <div className="scenario-attack-lane">
@@ -1180,7 +1177,7 @@ function ScenarioRow({
           />
         ))}
         <button
-          className="attack-add-card"
+          className="attack-add-card ui-button"
           type="button"
           aria-label={`${scenario.label}に攻撃を追加`}
           onClick={() => onAddAttack(scenario.id)}
@@ -1237,15 +1234,16 @@ function AttackCard({
           aria-label="攻撃名"
           onChange={onInput("label")}
         />
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           className="icon-button"
-          type="button"
           aria-label={`${attackLabel}を削除`}
           disabled={!canRemove}
           onClick={() => onRemoveAttack(scenarioId, attack.id)}
         >
           ×
-        </button>
+        </Button>
       </div>
 
       <div className="attack-card-fields">
@@ -1304,72 +1302,58 @@ function AttackCard({
       </div>
 
       <div className="attack-field-grid">
-        <label>
-          ルール
-          <select
-            value={attack.gameType}
-            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "gameType", event.target.value as GameType)}
-          >
-            {gameTypeOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          攻撃状態
-          <select
-            value={attack.attackerStatus}
-            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", event.target.value as PokemonStatus)}
-          >
-            {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          天候
-          <select
-            value={attack.weather}
-            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "weather", event.target.value as Weather)}
-          >
-            {weatherOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          フィールド
-          <select
-            value={attack.terrain}
-            onChange={(event) => onUpdateAttack(scenarioId, attack.id, "terrain", event.target.value as Terrain)}
-          >
-            {terrainOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
+        <SelectField
+          label="ルール"
+          value={attack.gameType}
+          options={gameTypeOptions}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
+        />
+        <SelectField
+          label="攻撃状態"
+          value={attack.attackerStatus}
+          options={statusOptions}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
+        />
+        <SelectField
+          label="天候"
+          value={attack.weather}
+          options={weatherOptions}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
+        />
+        <SelectField
+          label="フィールド"
+          value={attack.terrain}
+          options={terrainOptions}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
+        />
       </div>
 
       <div className="rank-grid" aria-label={`${attackLabel} ランク補正`}>
         {attackerBoostKeys.map((key) => (
-          <label key={`attacker-${key}`}>
-            攻{statLabels[key]}
-            <select
-              value={attack.attackerBoosts[key] ?? 0}
-              onChange={(event) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+          <SelectField
+            compact
+            label={`攻${statLabels[key]}`}
+            value={String(attack.attackerBoosts[key] ?? 0)}
+            options={rankSelectOptions}
+            key={`attacker-${key}`}
+            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
                 ...attack.attackerBoosts,
-                [key]: toNumber(event.target.value, 0),
+                [key]: toNumber(value, 0),
               })}
-            >
-              {rankOptions.map((rank) => <option value={rank} key={rank}>{rank > 0 ? `+${rank}` : rank}</option>)}
-            </select>
-          </label>
+          />
         ))}
         {defenderBoostKeys.map((key) => (
-          <label key={`defender-${key}`}>
-            防{statLabels[key]}
-            <select
-              value={attack.defenderBoosts[key] ?? 0}
-              onChange={(event) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
+          <SelectField
+            compact
+            label={`防${statLabels[key]}`}
+            value={String(attack.defenderBoosts[key] ?? 0)}
+            options={rankSelectOptions}
+            key={`defender-${key}`}
+            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
                 ...attack.defenderBoosts,
-                [key]: toNumber(event.target.value, 0),
+                [key]: toNumber(value, 0),
               })}
-            >
-              {rankOptions.map((rank) => <option value={rank} key={rank}>{rank > 0 ? `+${rank}` : rank}</option>)}
-            </select>
-          </label>
+          />
         ))}
       </div>
 
@@ -1535,7 +1519,7 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
           <h2>選択候補詳細 {candidate ? <span>#{candidate.rank}</span> : null}</h2>
           <span>{candidate?.bottleneckLabel ?? "候補未選択"}</span>
         </div>
-        <button className="primary-button small" type="button" onClick={onApply} disabled={!canApply}>{applyLabel}</button>
+        <Button variant="primary" size="small" onClick={onApply} disabled={!canApply}>{applyLabel}</Button>
       </div>
 
       {candidate ? (
@@ -1548,7 +1532,7 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
           <div className="check-list">
             {candidate.scenarioResults.map((result) => (
               <div key={result.scenarioId}>
-                <span className={`badge ${result.passed ? "green" : "red"}`} />
+                <StatusBadge tone={result.passed ? "green" : "red"} />
                 <strong>{scenarioLabels.get(result.scenarioId) ?? result.scenarioId}</strong>
                 <span>{formatPercent(result.survivalProbability)}</span>
                 <em className={result.passed ? "" : "fail-badge"}>{result.passed ? "PASS" : "FAIL"}</em>
