@@ -7,6 +7,43 @@ import {
 } from "./defenceSearchUi";
 
 describe("golden UI scenario", () => {
+  it("finds the Mega Starmie bulk that survives Adamant Kingambit Sucker Punch", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "メガスターミー",
+      natureInput: "ひかえめ",
+      abilityInput: "",
+      statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    };
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      label: "対ドドゲザン",
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        attackerPokemonInput: "ドドゲザン",
+        attackerNatureInput: "いじっぱり",
+        attackerAbilityInput: "まけんき",
+        attackerItemInput: "",
+        moveInput: "ふいうち",
+        requiredSurvivedHits: 1,
+        minSurvivalProbabilityPercent: 100,
+      })),
+    }));
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    const results = searchDefenceCandidates(input.build, input.scenarios, { maxResults: 20 });
+
+    expect(input.build.pokemon.canonicalName).toBe("Starmie-Mega");
+    expect(input.scenarios[0].hits[0].attacker.evs.atk).toBe(252);
+    expect(results[0].candidate).toEqual({ hp: 12, def: 7, spd: 0 });
+    expect(results.map((result) => result.candidate)).not.toContainEqual({ hp: 0, def: 0, spd: 0 });
+    expect(results.map((result) => result.candidate)).toContainEqual({ hp: 0, def: 19, spd: 0 });
+    expect(results[0].scenarioResults[0].hitEvaluations[0].description).toContain(
+      "252+ Atk Kingambit Sucker Punch vs. 92 HP / 52 Def Starmie-Mega: 122-146",
+    );
+    expect(results.every((result) => result.passed)).toBe(true);
+  });
+
   it("keeps the Oonyuura Close Combat fixture stable from UI input to ranked candidates", () => {
     const target = {
       ...createDefaultTargetForm(),

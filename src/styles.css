@@ -1134,7 +1134,33 @@ textarea {
   gap: 6px;
 }
 
-.attacker-evs label,
+.attacker-stat-field {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.attacker-stat-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #101314;
+}
+
+.attacker-stat-label .stat-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.attacker-stat-field input {
+  min-width: 0;
+}
+
 .compact-select-field {
   display: block;
 }
@@ -1273,6 +1299,27 @@ textarea {
   font-weight: 700;
 }
 
+.empty-result.impossible-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-color: rgba(230, 40, 41, 0.42);
+  background: var(--red-soft);
+  color: #f4d2d2;
+}
+
+.impossible-result strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  min-height: 28px;
+  border-radius: 6px;
+  background: rgba(230, 40, 41, 0.22);
+  color: #ffb4b4;
+  font-size: 14px;
+}
+
 .candidate-row.header {
   min-height: 26px;
   border: 0;
@@ -1322,10 +1369,36 @@ textarea {
   grid-template-columns: repeat(3, 38px) 1fr;
 }
 
-.allocation i {
+.candidate-allocation-meter {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(30px, 1fr));
+  gap: 4px;
+  min-width: 120px;
+}
+
+.candidate-meter-track {
   height: 11px;
+  overflow: hidden;
   border-radius: 4px;
-  background: linear-gradient(90deg, rgba(0, 255, 114, 0.74) 0 15%, #3a4143 15% 28%, rgba(251, 168, 47, 0.74) 28% 38%, rgba(255, 0, 215, 0.68) 38% 74%, #3a4143 74% 82%, rgba(0, 216, 240, 0.72) 82% 100%);
+  background: #30383a;
+}
+
+.candidate-meter-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.candidate-meter-track.hp > span {
+  background: rgba(0, 255, 114, 0.72);
+}
+
+.candidate-meter-track.def > span {
+  background: rgba(251, 168, 47, 0.72);
+}
+
+.candidate-meter-track.spd > span {
+  background: rgba(235, 254, 61, 0.72);
 }
 
 .pass {

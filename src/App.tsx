@@ -8,6 +8,7 @@ import {
 } from "./domain/championsStats";
 import type {
   CandidateResult,
+  DefenceStatPointCandidate,
   GameType,
   PokemonStatus,
   StatBoostTable,
@@ -21,6 +22,7 @@ import { appVersionInfo } from "./appVersion";
 import { getMatchingEntityInputOptions } from "./localization/resolver";
 import {
   applyTopCandidateToTarget,
+  createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
   buildDefenceSearchInput,
   createDefaultScenarioForms,
@@ -129,6 +131,15 @@ const formatDamageRange = (min: number, max: number): string =>
 
 const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
 
+export const getCandidateAllocationFillPercent = (value: number): string =>
+  `${((clampStatPointValue(value) / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100).toFixed(2)}%`;
+
+export const formatScenarioResultStatusLabel = (passed: boolean): "PASS" | "不可" =>
+  passed ? "PASS" : "不可";
+
+const formatCandidateAllocationLabel = (candidate: DefenceStatPointCandidate): string =>
+  `H ${candidate.hp} / B ${candidate.def} / D ${candidate.spd} SP`;
+
 const selectInputValueOnFocus = (event: FocusEvent<HTMLInputElement>) => {
   try {
     event.currentTarget.select();
@@ -182,7 +193,7 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   attackerDmaxEnabled: false,
   attackerStatus: "none",
   attackerLevel: 50,
-  attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+  attackerStatPoints: createDefaultAttackerStatPoints(),
   attackerBoosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   defenderBoosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moveInput: "",
@@ -1359,13 +1370,15 @@ function AttackCard({
 
       <div className="attacker-evs" aria-label={`${attackLabel} 攻撃側SP`}>
         {statKeys.map((key) => (
-          <label className="placeholder-field" key={key}>
+          <label className="attacker-stat-field" key={key}>
+            <span className="attacker-stat-label"><StatIcon stat={key} /></span>
             <input
               type="number"
               min="0"
               max="252"
               step="1"
               value={attack.attackerStatPoints[key]}
+              aria-label={`${attackLabel} ${statLabels[key]} SP`}
               placeholder={`${statLabels[key]} SP`}
               title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
               onFocus={selectInputValueOnFocus}
@@ -1472,10 +1485,15 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
           <span>順位</span><span>H/B/D</span><span>使用SP</span><span>残りSP</span><span>ボトルネック</span>
         </div>
         {candidates.length === 0 ? (
-          <div className="empty-result">
-            {status === "complete"
-              ? "条件を満たす候補がありません。必要耐久・生存率・固定SPをゆるめてください。"
-              : "計算開始で Worker 経由の候補がここに出ます"}
+          <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
+            {status === "complete" ? (
+              <>
+                <strong>不可</strong>
+                <span>条件を満たす候補がありません。必要耐久・生存率・固定SPをゆるめてください。</span>
+              </>
+            ) : (
+              "計算開始で Worker 経由の候補がここに出ます"
+            )}
           </div>
         ) : candidates.map((candidate) => (
           <button
@@ -1489,7 +1507,7 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
               <b>{candidate.candidate.hp}</b>
               <b>{candidate.candidate.def}</b>
               <b>{candidate.candidate.spd}</b>
-              <i />
+              <CandidateAllocationMeter candidate={candidate.candidate} />
             </span>
             <span>{candidate.usedStatPointBudget}</span>
             <span>{candidate.remainingStatPointBudget}</span>
@@ -1498,6 +1516,22 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
         ))}
       </div>
     </section>
+  );
+}
+
+export function CandidateAllocationMeter({ candidate }: { candidate: DefenceStatPointCandidate }) {
+  return (
+    <span
+      className="candidate-allocation-meter"
+      aria-label={formatCandidateAllocationLabel(candidate)}
+      title={formatCandidateAllocationLabel(candidate)}
+    >
+      {defenceStatKeys.map((key) => (
+        <span className={`candidate-meter-track ${key}`} key={key} aria-hidden="true">
+          <span style={{ width: getCandidateAllocationFillPercent(candidate[key]) }} />
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -1535,7 +1569,7 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
                 <StatusBadge tone={result.passed ? "green" : "red"} />
                 <strong>{scenarioLabels.get(result.scenarioId) ?? result.scenarioId}</strong>
                 <span>{formatPercent(result.survivalProbability)}</span>
-                <em className={result.passed ? "" : "fail-badge"}>{result.passed ? "PASS" : "FAIL"}</em>
+                <em className={result.passed ? "" : "fail-badge"}>{formatScenarioResultStatusLabel(result.passed)}</em>
                 <small>{result.bottleneckLabel}</small>
                 <ul>
                   {result.hitEvaluations.map((hit) => (

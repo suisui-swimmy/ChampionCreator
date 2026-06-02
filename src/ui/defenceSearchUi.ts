@@ -138,6 +138,12 @@ const zeroStatPoints: StatPointTable = {
   spe: 0,
 };
 
+export const createDefaultAttackerStatPoints = (): StatPointTable => ({
+  ...zeroStatPoints,
+  atk: 32,
+  spa: 32,
+});
+
 const defaultIvs: StatTable = {
   hp: 31,
   atk: 31,
@@ -233,7 +239,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerDmaxEnabled: false,
   attackerStatus: "none",
   attackerLevel: 50,
-  attackerStatPoints: { ...zeroStatPoints, spa: 32 },
+  attackerStatPoints: createDefaultAttackerStatPoints(),
   attackerBoosts: { ...zeroBoosts },
   defenderBoosts: { ...zeroBoosts },
   moveInput: "10まんボルト",

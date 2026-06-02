@@ -1,6 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { App, clampTargetStatPointChange } from "./App";
+import {
+  App,
+  CandidateAllocationMeter,
+  clampTargetStatPointChange,
+  getCandidateAllocationFillPercent,
+  formatScenarioResultStatusLabel,
+} from "./App";
 
 describe("App", () => {
   it("renders the M0 workbench sections", () => {
@@ -41,6 +47,25 @@ describe("App", () => {
       spd: 0,
       spe: 0,
     }, "atk", 5)).toBe(5);
+  });
+
+  it("renders candidate allocation meter from the candidate H/B/D values", () => {
+    expect(getCandidateAllocationFillPercent(0)).toBe("0.00%");
+    expect(getCandidateAllocationFillPercent(16)).toBe("50.00%");
+    expect(getCandidateAllocationFillPercent(32)).toBe("100.00%");
+
+    const html = renderToStaticMarkup(<CandidateAllocationMeter candidate={{ hp: 0, def: 16, spd: 32 }} />);
+
+    expect(html).toContain('aria-label="H 0 / B 16 / D 32 SP"');
+    expect(html).toContain('class="candidate-meter-track hp"');
+    expect(html).toContain('style="width:0.00%"');
+    expect(html).toContain('style="width:50.00%"');
+    expect(html).toContain('style="width:100.00%"');
+  });
+
+  it("labels failed scenario results as unavailable", () => {
+    expect(formatScenarioResultStatusLabel(true)).toBe("PASS");
+    expect(formatScenarioResultStatusLabel(false)).toBe("不可");
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {

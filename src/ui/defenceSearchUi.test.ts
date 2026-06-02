@@ -68,7 +68,9 @@ describe("buildDefenceSearchInput", () => {
     expect(input.build.statPoints).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
     expect(input.build.evs).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
     expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Pikachu");
+    expect(input.scenarios[0].hits[0].attacker.statPoints?.atk).toBe(32);
     expect(input.scenarios[0].hits[0].attacker.statPoints?.spa).toBe(32);
+    expect(input.scenarios[0].hits[0].attacker.evs.atk).toBe(252);
     expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
     expect(input.scenarios).toHaveLength(1);
