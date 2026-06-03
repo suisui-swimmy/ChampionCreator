@@ -5,6 +5,7 @@ import {
   CandidateAllocationMeter,
   clampTargetStatPointChange,
   getCandidateAllocationFillPercent,
+  formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
 } from "./App";
 
@@ -68,12 +69,18 @@ describe("App", () => {
     expect(formatScenarioResultStatusLabel(false)).toBe("不可");
   });
 
+  it("localizes Smogon damage descriptions for the selected candidate detail", () => {
+    expect(formatLocalizedDamageDescription(
+      "252+ Atk Kingambit Sucker Punch vs. 92 HP / 52 Def Starmie-Mega: 122-146 (82.9 - 99.3%) -- guaranteed 2HKO",
+    )).toBe("A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+  });
+
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {
     const html = renderToStaticMarkup(<App />);
 
     expect(html).toContain('<datalist id="entity-options-pokemon-');
-    expect(html).toContain('value="ピカチュウ"');
-    expect(html).toContain('value="カイリュー"');
+    expect(html).toContain('value="ドドゲザン"');
+    expect(html).toContain('value="メガスターミー"');
     expect(html).not.toContain('value="Dragonite"');
     expect(html).not.toContain('label="Dragonite"');
     expect(html).toContain('list="entity-options-pokemon');

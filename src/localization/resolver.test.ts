@@ -37,6 +37,27 @@ describe("resolveEntity", () => {
     });
   });
 
+  it("uses concise display labels for mega Pokemon while keeping long generated labels searchable", () => {
+    expect(resolveEntity("pokemon", "メガスターミー")).toMatchObject({
+      status: "exact",
+      canonicalName: "Starmie-Mega",
+      displayNameJa: "メガスターミー",
+    });
+    expect(resolveEntity("pokemon", "スターミー メガスターミー")).toMatchObject({
+      status: "alias",
+      canonicalName: "Starmie-Mega",
+      displayNameJa: "メガスターミー",
+    });
+    expect(getEntityInputOptions("pokemon")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: "メガスターミー",
+          canonicalName: "Starmie-Mega",
+        }),
+      ]),
+    );
+  });
+
   it("resolves generated option data for other UI entity fields", () => {
     expect(resolveEntity("move", "インファイト")).toMatchObject({
       status: "exact",

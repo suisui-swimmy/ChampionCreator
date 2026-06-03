@@ -19,7 +19,7 @@ import type {
 } from "./domain/model";
 import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo } from "./appVersion";
-import { getMatchingEntityInputOptions } from "./localization/resolver";
+import { getEntityInputOptions, getMatchingEntityInputOptions } from "./localization/resolver";
 import {
   applyTopCandidateToTarget,
   createDefaultAttackerStatPoints,
@@ -128,6 +128,97 @@ const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 
 const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
+
+const damageDescriptionEntityKinds = ["pokemon", "move", "item", "ability", "type"] as const satisfies readonly EntityKind[];
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const damageDescriptionNameReplacements = damageDescriptionEntityKinds
+  .flatMap((kind) => getEntityInputOptions(kind))
+  .filter((option) => option.canonicalName !== option.displayNameJa)
+  .sort((a, b) => b.canonicalName.length - a.canonicalName.length)
+  .map((option) => ({
+    pattern: new RegExp(`(^|[^A-Za-z0-9-])(${escapeRegExp(option.canonicalName)})(?=$|[^A-Za-z0-9-])`, "g"),
+    label: option.displayNameJa,
+  }));
+
+const damageDescriptionStatCodes = {
+  HP: "H",
+  Atk: "A",
+  Def: "B",
+  SpA: "C",
+  SpD: "D",
+  Spe: "S",
+} satisfies Record<string, string>;
+
+type DamageDescriptionStat = keyof typeof damageDescriptionStatCodes;
+
+const damageDescriptionPattern = /^(\d+)([+-]?)\s+(Atk|Def|SpA|SpD|Spe)\s+(.+?)\s+vs\.\s+(\d+)\s+HP\s+\/\s+(\d+)([+-]?)\s+(Def|SpD|Atk|SpA|Spe)\s+([^:]+):\s+(.+)$/u;
+
+const formatDamageDescriptionStatCode = (stat: string): string =>
+  damageDescriptionStatCodes[stat as DamageDescriptionStat] ?? stat;
+
+const formatKoPhraseJa = (count: string): string => (
+  count === "O" ? "1発" : `${count}発`
+);
+
+const localizeDamageDescriptionNames = (description: string): string =>
+  damageDescriptionNameReplacements.reduce(
+    (current, replacement) => current.replace(replacement.pattern, (_match, prefix: string) => `${prefix}${replacement.label}`),
+    description,
+  );
+
+const formatLocalizedDamageResult = (resultText: string): string =>
+  resultText
+    .replace(/\s+-\s+/g, "-")
+    .replace(/\s+--\s+guaranteed\s+(O|\d+)HKO/gi, (_match, count: string) => ` / 確定${formatKoPhraseJa(count)}`)
+    .replace(/\s+--\s+possible\s+(O|\d+)HKO/gi, (_match, count: string) => ` / ${formatKoPhraseJa(count)}の可能性`)
+    .replace(/\s+--\s+(\d+(?:\.\d+)?)%\s+chance\s+to\s+(O|\d+)HKO/gi, (_match, chance: string, count: string) => (
+      ` / ${chance}%で${formatKoPhraseJa(count)}`
+    ));
+
+const formatFallbackLocalizedDamageDescription = (description: string): string =>
+  Object.entries(damageDescriptionStatCodes)
+    .reduce(
+      (current, [english, japanese]) => current.replace(new RegExp(`\\b${english}\\b`, "g"), japanese),
+      localizeDamageDescriptionNames(description),
+    )
+    .replace(/\s+vs\.\s+/g, " → ")
+    .replace(/:\s+/g, " : ")
+    .replace(/\s+-\s+/g, "-");
+
+export const formatLocalizedDamageDescription = (description: string): string => {
+  const match = damageDescriptionPattern.exec(description);
+  if (!match) {
+    return formatLocalizedDamageResult(formatFallbackLocalizedDamageDescription(description));
+  }
+
+  const [
+    ,
+    attackInvestment,
+    attackNature,
+    attackStat,
+    attackerAndMove,
+    defenderHpInvestment,
+    defenderInvestment,
+    defenderNature,
+    defenderStat,
+    defenderPokemon,
+    resultText,
+  ] = match;
+
+  return [
+    `${formatDamageDescriptionStatCode(attackStat)}${attackInvestment}${attackNature}`,
+    localizeDamageDescriptionNames(attackerAndMove),
+    "→",
+    `H${defenderHpInvestment}`,
+    "/",
+    `${formatDamageDescriptionStatCode(defenderStat)}${defenderInvestment}${defenderNature}`,
+    localizeDamageDescriptionNames(defenderPokemon.trim()),
+    ":",
+    formatLocalizedDamageResult(resultText),
+  ].join(" ");
+};
 
 const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
 
@@ -1574,10 +1665,10 @@ function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: De
                 <ul>
                   {result.hitEvaluations.map((hit) => (
                     <li key={hit.hitId}>
-                      damage {formatDamageRange(hit.damageRange.min, hit.damageRange.max)}
+                      被ダメージ {formatDamageRange(hit.damageRange.min, hit.damageRange.max)}
                       {" / "}
                       {hit.damageRange.percentMin.toFixed(1)}-{hit.damageRange.percentMax.toFixed(1)}%
-                      {hit.description ? <span>{hit.description}</span> : null}
+                      {hit.description ? <span>{formatLocalizedDamageDescription(hit.description)}</span> : null}
                     </li>
                   ))}
                 </ul>

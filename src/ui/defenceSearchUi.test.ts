@@ -61,18 +61,20 @@ describe("buildDefenceSearchInput", () => {
 
     const input = buildDefenceSearchInput(target, scenarios);
 
-    expect(input.build.pokemon.canonicalName).toBe("Dragonite");
-    expect(input.build.pokemon.displayNameJa).toBe("カイリュー");
+    expect(input.build.pokemon.canonicalName).toBe("Starmie-Mega");
+    expect(input.build.pokemon.displayNameJa).toBe("メガスターミー");
     expect(input.build.nature?.canonicalName).toBe("Modest");
     expect(input.build.teraType).toBeUndefined();
     expect(input.build.statPoints).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
     expect(input.build.evs).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
-    expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Pikachu");
+    expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Kingambit");
+    expect(input.scenarios[0].hits[0].attacker.nature?.canonicalName).toBe("Adamant");
+    expect(input.scenarios[0].hits[0].attacker.ability?.canonicalName).toBe("Defiant");
     expect(input.scenarios[0].hits[0].attacker.statPoints?.atk).toBe(32);
     expect(input.scenarios[0].hits[0].attacker.statPoints?.spa).toBe(32);
     expect(input.scenarios[0].hits[0].attacker.evs.atk).toBe(252);
     expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
-    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
     expect(input.scenarios).toHaveLength(1);
   });
 
@@ -228,7 +230,7 @@ describe("buildDefenceSearchInput", () => {
 
     expect(input.scenarios).toHaveLength(1);
     expect(input.scenarios[0].hits).toHaveLength(2);
-    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
     expect(input.scenarios[0].hits[1].attacker.pokemon.canonicalName).toBe("Garchomp");
     expect(input.scenarios[0].hits[1].move.canonicalName).toBe("Outrage");
     expect(input.scenarios[0].hits[1].field).toEqual({ gameType: "singles", weather: "rain", terrain: "electric" });
@@ -283,7 +285,7 @@ describe("buildDefenceSearchInput", () => {
     const input = buildDefenceSearchInput(target, [scenarioWithDraft]);
 
     expect(input.scenarios[0].hits).toHaveLength(1);
-    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
   });
 
   it("requires at least one enabled scenario", () => {
@@ -378,8 +380,8 @@ describe("startDefenceSearchFromUi", () => {
 
     expect(request.requestId).toBe("request-ui");
     expect(state.status).toBe("running");
-    expect(client.build?.pokemon.canonicalName).toBe("Dragonite");
-    expect(client.scenarios[0].hits[0].move.canonicalName).toBe("Thunderbolt");
+    expect(client.build?.pokemon.canonicalName).toBe("Starmie-Mega");
+    expect(client.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
     expect(client.options?.maxResults).toBe(3);
 
     client.options?.callbacks?.onProgress?.({

@@ -1,4 +1,5 @@
 import pokemonOptionsPayload from "../data/generated/pokemon-options.gen.json";
+import { applyDisplayNameRules } from "../localization/displayNameRules";
 import { normalizeSearchText } from "../localization/normalize";
 
 type PokemonOptionEntry = {
@@ -40,7 +41,7 @@ const toMatch = (entry: PokemonOptionEntry): PokemonArtworkMatch | null => {
 
   return {
     id: entry.id,
-    label: entry.label,
+    label: applyDisplayNameRules("pokemon", entry.showdownName, entry.label),
     showdownName: entry.showdownName,
     artworkUrl: toArtworkUrl(entry.artwork),
     types: entry.types ?? [],
@@ -50,9 +51,11 @@ const toMatch = (entry: PokemonOptionEntry): PokemonArtworkMatch | null => {
 const artworkByExactKey = new Map<string, PokemonOptionEntry>();
 
 for (const option of pokemonOptions) {
+  const displayLabel = applyDisplayNameRules("pokemon", option.showdownName, option.label);
   const keys = [
     option.id,
     option.label,
+    displayLabel,
     option.showdownName,
     ...option.searchText.split(/\s+/u),
   ];

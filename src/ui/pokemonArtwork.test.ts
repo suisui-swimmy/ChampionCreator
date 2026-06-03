@@ -17,6 +17,13 @@ describe("pokemonArtwork", () => {
     expect(match?.artworkUrl).toContain("assets/official-artwork/445.png");
   });
 
+  it("uses concise labels for mega Pokemon artwork", () => {
+    const match = findPokemonArtwork({ input: "スターミー メガスターミー", canonicalName: "Starmie-Mega" });
+
+    expect(match?.showdownName).toBe("Starmie-Mega");
+    expect(match?.label).toBe("メガスターミー");
+  });
+
   it("keeps the copied artwork catalog broad enough for UI lookup", () => {
     expect(pokemonArtworkSummary.totalOptions).toBeGreaterThan(1000);
     expect(pokemonArtworkSummary.withArtwork).toBe(pokemonArtworkSummary.totalOptions);

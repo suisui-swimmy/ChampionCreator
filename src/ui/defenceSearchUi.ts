@@ -215,7 +215,7 @@ const resolveOptional = <K extends EntityKind>(
 };
 
 export const createDefaultTargetForm = (): TargetFormState => ({
-  pokemonInput: "カイリュー",
+  pokemonInput: "メガスターミー",
   natureInput: "ひかえめ",
   abilityInput: "",
   itemInput: "",
@@ -230,9 +230,9 @@ export const createDefaultTargetForm = (): TargetFormState => ({
 export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃A"): ScenarioAttackFormState => ({
   id,
   label,
-  attackerPokemonInput: "ピカチュウ",
-  attackerNatureInput: "ひかえめ",
-  attackerAbilityInput: "",
+  attackerPokemonInput: "ドドゲザン",
+  attackerNatureInput: "いじっぱり",
+  attackerAbilityInput: "まけんき",
   attackerItemInput: "",
   attackerTeraTypeInput: "",
   attackerTeraEnabled: false,
@@ -242,7 +242,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerStatPoints: createDefaultAttackerStatPoints(),
   attackerBoosts: { ...zeroBoosts },
   defenderBoosts: { ...zeroBoosts },
-  moveInput: "10まんボルト",
+  moveInput: "ふいうち",
   repeat: 1,
   requiredSurvivedHits: 1,
   minSurvivalProbabilityPercent: 100,

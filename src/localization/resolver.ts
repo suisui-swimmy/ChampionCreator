@@ -16,6 +16,7 @@ import type {
   LocalizedOptionPayload,
   SourceStatus,
 } from "../data/localizationTypes";
+import { applyDisplayNameRules } from "./displayNameRules";
 import { normalizeSearchText } from "./normalize";
 
 export type ResolveStatus = "exact" | "alias" | "ambiguous" | "not-found";
@@ -76,7 +77,7 @@ const aliasOverridesByKey = new Map(
   aliasOverrides.entries.map((entry) => [`${entry.kind}:${entry.id}`, entry]),
 );
 
-const withLabelOverrides = (entry: LocalizedCatalogEntry): LocalizedCatalogEntry => {
+const applyLabelOverrides = (entry: LocalizedCatalogEntry): LocalizedCatalogEntry => {
   const override = labelOverridesByKey.get(`${entry.kind}:${entry.id}`);
   if (!override) {
     return entry;
@@ -88,6 +89,14 @@ const withLabelOverrides = (entry: LocalizedCatalogEntry): LocalizedCatalogEntry
     sourceStatus: override.sourceStatus,
   };
 };
+
+const withDisplayNameRules = (entry: LocalizedCatalogEntry): LocalizedCatalogEntry => ({
+  ...entry,
+  displayNameJa: applyDisplayNameRules(entry.kind, entry.canonicalName, entry.displayNameJa),
+});
+
+const withLabelOverrides = (entry: LocalizedCatalogEntry): LocalizedCatalogEntry =>
+  withDisplayNameRules(applyLabelOverrides(entry));
 
 const splitSearchText = (searchText: string): string[] =>
   searchText
@@ -152,12 +161,22 @@ const buildIndex = (entries: LocalizedCatalogEntry[]) => {
   const exactIndex = new Map<string, SearchEntry[]>();
   const aliasIndex = new Map<string, SearchEntry[]>();
 
-  for (const entry of entries.map(withLabelOverrides)) {
+  for (const rawEntry of entries) {
+    const labeledEntry = applyLabelOverrides(rawEntry);
+    const entry = withDisplayNameRules(labeledEntry);
+
     addIndexValue(exactIndex, entry.displayNameJa, {
       entry,
       matchedBy: "displayNameJa",
       matchText: entry.displayNameJa,
     });
+    if (labeledEntry.displayNameJa !== entry.displayNameJa) {
+      addIndexValue(aliasIndex, labeledEntry.displayNameJa, {
+        entry,
+        matchedBy: "searchText",
+        matchText: labeledEntry.displayNameJa,
+      });
+    }
     addIndexValue(exactIndex, entry.canonicalName, {
       entry,
       matchedBy: "canonicalName",
