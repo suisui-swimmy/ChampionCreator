@@ -43,7 +43,8 @@ import {
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
 import { parseShareStateDocument, stringifyShareStateDocument } from "./ui/shareState";
-import { Button, SelectField, StatusBadge } from "./ui/primitives";
+import natureOptionsData from "./data/generated/nature-options.gen.json";
+import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
@@ -72,6 +73,24 @@ const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey
 const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
 const attackerBoostKeys = ["atk", "def", "spa"] as const satisfies readonly (keyof StatBoostTable)[];
 const defenderBoostKeys = ["def", "spd"] as const satisfies readonly (keyof StatBoostTable)[];
+const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
+
+type NatureMatrixStatKey = (typeof natureMatrixKeys)[number];
+
+type NatureOption = {
+  id: string;
+  label: string;
+  showdownName: string;
+  plus: NatureMatrixStatKey;
+  minus: NatureMatrixStatKey;
+};
+
+const natureOptions = natureOptionsData.entries as NatureOption[];
+const natureOptionsByLabel = new Map(natureOptions.map((option) => [option.label, option]));
+const natureOptionsByCell = new Map(natureOptions.map((option) => [`${option.plus}:${option.minus}`, option]));
+
+const getNatureCellOption = (plus: NatureMatrixStatKey, minus: NatureMatrixStatKey): NatureOption | undefined =>
+  natureOptionsByCell.get(`${plus}:${minus}`);
 
 const statusOptions: Array<{ value: PokemonStatus; label: string }> = [
   { value: "none", label: "なし" },
@@ -714,6 +733,88 @@ function EntityTextField({
   );
 }
 
+type NatureMatrixFieldProps = {
+  label: string;
+  value: string;
+  className?: string;
+  onChange: (value: string) => void;
+};
+
+function NatureMatrixField({ label, value, className, onChange }: NatureMatrixFieldProps) {
+  const labelId = useId();
+  const selectedOption = natureOptionsByLabel.get(value);
+  const labelClassName = ["nature-field", className].filter(Boolean).join(" ");
+  const selectedSummary = selectedOption
+    ? selectedOption.plus === selectedOption.minus
+      ? "補正なし"
+      : `${statLabels[selectedOption.plus]}↑ / ${statLabels[selectedOption.minus]}↓`
+    : "未選択";
+
+  return (
+    <div className={labelClassName}>
+      <span className="nature-field-label" id={labelId}>{label}</span>
+      <UiPopover.Root>
+        <UiPopover.Trigger asChild>
+          <button className="nature-trigger" type="button" aria-labelledby={labelId}>
+            <span className="nature-trigger-main">{value || label}</span>
+            <span className="nature-trigger-meta">{selectedSummary}</span>
+            <span className="nature-trigger-icon" aria-hidden="true">▾</span>
+          </button>
+        </UiPopover.Trigger>
+        <UiPopover.Portal>
+          <UiPopover.Content className="nature-popover" sideOffset={6} align="start">
+            <div className="nature-popover-heading">
+              <strong>能力補正</strong>
+              <span>行が上昇、列が下降</span>
+            </div>
+            <div className="nature-matrix" role="grid" aria-label={`${label}を能力補正表から選択`}>
+              <div className="nature-matrix-corner" aria-hidden="true" />
+              {natureMatrixKeys.map((minusKey) => (
+                <div className="nature-matrix-header" role="columnheader" key={`minus-${minusKey}`}>
+                  <span className="nature-axis-label">下降</span>
+                  <StatIcon stat={minusKey} />
+                </div>
+              ))}
+              {natureMatrixKeys.map((plusKey) => (
+                <div className="nature-matrix-row" role="row" key={`plus-${plusKey}`}>
+                  <div className="nature-matrix-side" role="rowheader">
+                    <span className="nature-axis-label">上昇</span>
+                    <StatIcon stat={plusKey} />
+                  </div>
+                  {natureMatrixKeys.map((minusKey) => {
+                    const option = getNatureCellOption(plusKey, minusKey);
+                    const selected = option?.label === value;
+
+                    return (
+                      <div className="nature-matrix-cell" role="gridcell" key={`${plusKey}-${minusKey}`}>
+                        {option ? (
+                          <UiPopover.Close asChild>
+                            <button
+                              className={`nature-option${selected ? " selected" : ""}${plusKey === minusKey ? " neutral" : ""}`}
+                              type="button"
+                              aria-pressed={selected}
+                              aria-label={`${option.label}: ${plusKey === minusKey ? "補正なし" : `${statLabels[plusKey]}上昇 ${statLabels[minusKey]}下降`}`}
+                              onClick={() => onChange(option.label)}
+                            >
+                              {option.label}
+                            </button>
+                          </UiPopover.Close>
+                        ) : (
+                          <span className="nature-option empty" aria-hidden="true" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </UiPopover.Content>
+        </UiPopover.Portal>
+      </UiPopover.Root>
+    </div>
+  );
+}
+
 type MechanicControlsProps = {
   pokemonInput: string;
   teraEnabled: boolean;
@@ -935,11 +1036,10 @@ function TargetPanel({
             value={targetForm.pokemonInput}
             onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
           />
-          <EntityTextField
-            kind="nature"
+          <NatureMatrixField
             label="性格"
             value={targetForm.natureInput}
-            onChange={(event) => onUpdateField("natureInput", event.target.value)}
+            onChange={(value) => onUpdateField("natureInput", value)}
           />
           <label className="placeholder-field">
             <input
@@ -1351,7 +1451,12 @@ function AttackCard({
       <div className="attack-card-fields">
         <ScenarioTextField kind="pokemon" label="攻撃側" showLabel value={attack.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
         <ScenarioTextField kind="move" label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
-        <ScenarioTextField kind="nature" label="性格" showLabel value={attack.attackerNatureInput} onChange={onInput("attackerNatureInput")} />
+        <NatureMatrixField
+          className="scenario-cell"
+          label="性格"
+          value={attack.attackerNatureInput}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
+        />
         <ScenarioTextField kind="ability" label="特性" showLabel value={attack.attackerAbilityInput} placeholder="任意" onChange={onInput("attackerAbilityInput")} />
         <ScenarioTextField kind="item" label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
       </div>

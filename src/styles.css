@@ -67,7 +67,8 @@ button:disabled {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
-.select-trigger:focus-visible {
+.select-trigger:focus-visible,
+.nature-trigger:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 2px var(--focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -720,6 +721,189 @@ input {
   text-align: right;
 }
 
+.nature-field {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.nature-field-label {
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.nature-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content 14px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 31px;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #111617 0%, #0b0f10 100%);
+  color: var(--text);
+  padding: 0 9px;
+  text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.nature-trigger:hover,
+.nature-trigger[data-state="open"] {
+  border-color: var(--gold-line);
+  background: linear-gradient(180deg, #151a1b 0%, #0f1314 100%);
+}
+
+.nature-trigger-main,
+.nature-trigger-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nature-trigger-main {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nature-trigger-meta {
+  color: #8fa09f;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.nature-trigger-icon {
+  color: #a8b0ad;
+  font-size: 12px;
+  text-align: right;
+}
+
+.nature-popover {
+  z-index: 45;
+  width: min(640px, calc(100vw - 32px));
+  border: 1px solid rgba(245, 197, 66, 0.34);
+  border-radius: 8px;
+  background: #0c1212;
+  padding: 8px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(245, 197, 66, 0.05);
+}
+
+.nature-popover-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  border-bottom: 1px solid rgba(245, 197, 66, 0.16);
+  padding: 0 2px 7px;
+}
+
+.nature-popover-heading strong {
+  color: var(--gold);
+  font-size: 13px;
+}
+
+.nature-popover-heading span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.nature-matrix {
+  display: grid;
+  grid-template-columns: 72px repeat(5, minmax(88px, 1fr));
+  gap: 3px;
+}
+
+.nature-matrix-row {
+  display: contents;
+}
+
+.nature-matrix-corner,
+.nature-matrix-header,
+.nature-matrix-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid rgba(245, 197, 66, 0.13);
+  border-radius: 5px;
+  background: #111817;
+}
+
+.nature-matrix-header,
+.nature-matrix-side {
+  gap: 5px;
+  color: #c2cbc5;
+}
+
+.nature-axis-label {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.nature-matrix-header .stat-icon,
+.nature-matrix-side .stat-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.nature-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: #0d1414;
+  color: #dbe0dc;
+  padding: 0 22px 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  outline: 0;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.nature-option:hover {
+  border-color: rgba(245, 197, 66, 0.24);
+  background: rgba(245, 197, 66, 0.12);
+  color: #ffe08a;
+}
+
+.nature-option.selected {
+  border-color: rgba(245, 197, 66, 0.46);
+  background: rgba(245, 197, 66, 0.13);
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.12);
+}
+
+.nature-option.selected::after {
+  position: absolute;
+  right: 8px;
+  color: var(--gold);
+  font-size: 11px;
+  content: "✓";
+}
+
+.nature-option.neutral {
+  background: #101716;
+  color: #b9c2bd;
+}
+
+.nature-option.empty {
+  display: block;
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.025);
+}
+
 textarea {
   min-height: 118px;
   padding: 8px;
@@ -1058,10 +1242,19 @@ textarea {
 .scenario-row input,
 .scenario-row select,
 .attack-condition-card input,
-.attack-condition-card .select-trigger {
+.attack-condition-card .select-trigger,
+.attack-condition-card .nature-trigger {
   height: 28px;
   padding: 0 7px;
   font-size: 12px;
+}
+
+.attack-condition-card .nature-field {
+  gap: 3px;
+}
+
+.attack-condition-card .nature-trigger-meta {
+  display: none;
 }
 
 .scenario-attack-lane {

@@ -1,4 +1,5 @@
 import * as Select from "@radix-ui/react-select";
+import * as Popover from "@radix-ui/react-popover";
 import { type ButtonHTMLAttributes, type ReactNode, useId } from "react";
 
 type ButtonVariant = "primary" | "ghost" | "danger";
@@ -89,3 +90,5 @@ export function SelectField<TValue extends string>({
 export function StatusBadge({ tone }: { tone: "green" | "red" | "blue" | "purple" }) {
   return <span className={`status-dot badge ${tone}`} aria-hidden="true" />;
 }
+
+export const UiPopover = Popover;

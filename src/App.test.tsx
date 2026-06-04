@@ -85,7 +85,9 @@ describe("App", () => {
     expect(html).not.toContain('label="Dragonite"');
     expect(html).toContain('list="entity-options-pokemon');
     expect(html).toContain('list="entity-options-move');
-    expect(html).toContain('list="entity-options-nature');
+    expect(html).toContain('class="nature-trigger"');
+    expect(html).toContain("C↑ / A↓");
+    expect(html).toContain("A↑ / C↓");
     expect(html).toContain('list="entity-options-ability');
     expect(html).toContain('list="entity-options-item');
     expect(html).toContain('aria-label="テラスタル"');
