@@ -659,6 +659,10 @@ input {
   gap: 3px;
 }
 
+.select-field-placeholder {
+  display: block;
+}
+
 .select-trigger {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 14px;
@@ -686,6 +690,10 @@ input {
   color: #a8b0ad;
   font-size: 12px;
   text-align: right;
+}
+
+.select-trigger-placeholder {
+  color: #6f7878;
 }
 
 .select-content {
@@ -733,22 +741,16 @@ input {
 }
 
 .nature-field {
-  display: grid;
+  display: block;
   min-width: 0;
-  gap: 4px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
 }
 
-.nature-field-label {
-  line-height: 14px;
-  white-space: nowrap;
-}
-
 .nature-trigger {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content 14px;
+  grid-template-columns: minmax(0, 1fr) 14px;
   align-items: center;
   gap: 6px;
   width: 100%;
@@ -770,8 +772,7 @@ input {
   background: linear-gradient(180deg, #151a1b 0%, #0f1314 100%);
 }
 
-.nature-trigger-main,
-.nature-trigger-meta {
+.nature-trigger-main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -783,10 +784,8 @@ input {
   font-weight: 800;
 }
 
-.nature-trigger-meta {
-  color: #8fa09f;
-  font-size: 10px;
-  font-weight: 800;
+.nature-trigger-main.placeholder {
+  color: #6f7878;
 }
 
 .nature-trigger-icon {
@@ -803,27 +802,6 @@ input {
   background: #0c1212;
   padding: 8px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(245, 197, 66, 0.05);
-}
-
-.nature-popover-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 7px;
-  border-bottom: 1px solid rgba(245, 197, 66, 0.16);
-  padding: 0 2px 7px;
-}
-
-.nature-popover-heading strong {
-  color: var(--gold);
-  font-size: 13px;
-}
-
-.nature-popover-heading span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 750;
 }
 
 .nature-matrix {
@@ -854,8 +832,11 @@ input {
   color: #c2cbc5;
 }
 
-.nature-axis-label {
-  font-size: 10px;
+.nature-matrix-corner {
+  border-color: transparent;
+  background: transparent;
+  color: #6f7878;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -863,6 +844,15 @@ input {
 .nature-matrix-side .stat-icon {
   width: 18px;
   height: 18px;
+}
+
+.nature-modifier-icon {
+  display: block;
+  flex: 0 0 18px;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .nature-option {
@@ -1377,10 +1367,6 @@ textarea {
 
 .attack-condition-card .nature-field {
   gap: 3px;
-}
-
-.attack-condition-card .nature-trigger-meta {
-  display: none;
 }
 
 .scenario-attack-lane {

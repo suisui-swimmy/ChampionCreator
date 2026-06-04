@@ -86,11 +86,15 @@ describe("App", () => {
     expect(html).toContain('list="entity-options-pokemon');
     expect(html).toContain('list="entity-options-move');
     expect(html).toContain('class="nature-trigger"');
-    expect(html).toContain("C↑ / A↓");
-    expect(html).toContain("A↑ / C↓");
+    expect(html).toContain('aria-label="性格: ひかえめ"');
+    expect(html).not.toContain("C↑ / A↓");
+    expect(html).not.toContain("A↑ / C↓");
     expect(html).toContain('list="entity-options-ability');
     expect(html).toContain('class="ability-menu-trigger"');
     expect(html).toContain('aria-label="特性候補を開く"');
+    expect(html).toContain('class="select-field select-field-placeholder"');
+    expect(html).toContain('class="select-trigger select-trigger-placeholder"');
+    expect(html).toContain('aria-label="状態異常: なし"');
     expect(html).toContain('value="まけんき"');
     expect(html).not.toContain('value="もうか"');
     expect(html).toContain('list="entity-options-item');

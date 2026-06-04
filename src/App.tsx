@@ -290,6 +290,8 @@ const getAssetSrc = (path: string): string => {
 };
 
 const getBattleIconSrc = (name: string): string => getAssetSrc(`assets/battle-icons/${name}.svg`);
+const getNatureModifierIconSrc = (name: "up" | "down"): string =>
+  getAssetSrc(`assets/nature-modifiers/nature-${name}.svg`);
 
 function StatIcon({ stat, className = "" }: { stat: StatKey; className?: string }) {
   return (
@@ -297,6 +299,18 @@ function StatIcon({ stat, className = "" }: { stat: StatKey; className?: string 
       className={`stat-icon ${className}`.trim()}
       src={getStatIconSrc(stat)}
       alt={statLabels[stat]}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+function NatureModifierIcon({ direction }: { direction: "up" | "down" }) {
+  return (
+    <img
+      className="nature-modifier-icon"
+      src={getNatureModifierIconSrc(direction)}
+      alt={direction === "up" ? "上昇" : "下降"}
       loading="lazy"
       decoding="async"
     />
@@ -837,45 +851,32 @@ type NatureMatrixFieldProps = {
 };
 
 function NatureMatrixField({ label, value, className, onChange }: NatureMatrixFieldProps) {
-  const labelId = useId();
-  const selectedOption = natureOptionsByLabel.get(value);
   const labelClassName = ["nature-field", className].filter(Boolean).join(" ");
-  const selectedSummary = selectedOption
-    ? selectedOption.plus === selectedOption.minus
-      ? "補正なし"
-      : `${statLabels[selectedOption.plus]}↑ / ${statLabels[selectedOption.minus]}↓`
-    : "未選択";
 
   return (
     <div className={labelClassName}>
-      <span className="nature-field-label" id={labelId}>{label}</span>
       <UiPopover.Root>
         <UiPopover.Trigger asChild>
-          <button className="nature-trigger" type="button" aria-labelledby={labelId}>
-            <span className="nature-trigger-main">{value || label}</span>
-            <span className="nature-trigger-meta">{selectedSummary}</span>
+          <button className="nature-trigger" type="button" aria-label={`${label}: ${value || "未選択"}`}>
+            <span className={`nature-trigger-main${value ? "" : " placeholder"}`}>{value || label}</span>
             <span className="nature-trigger-icon" aria-hidden="true">▾</span>
           </button>
         </UiPopover.Trigger>
         <UiPopover.Portal>
           <UiPopover.Content className="nature-popover" sideOffset={6} align="start">
-            <div className="nature-popover-heading">
-              <strong>能力補正</strong>
-              <span>行が上昇、列が下降</span>
-            </div>
             <div className="nature-matrix" role="grid" aria-label={`${label}を能力補正表から選択`}>
-              <div className="nature-matrix-corner" aria-hidden="true" />
+              <div className="nature-matrix-corner" aria-hidden="true">性格</div>
               {natureMatrixKeys.map((minusKey) => (
-                <div className="nature-matrix-header" role="columnheader" key={`minus-${minusKey}`}>
-                  <span className="nature-axis-label">下降</span>
+                <div className="nature-matrix-header" role="columnheader" key={`minus-${minusKey}`} aria-label={`${statLabels[minusKey]}下降`}>
                   <StatIcon stat={minusKey} />
+                  <NatureModifierIcon direction="down" />
                 </div>
               ))}
               {natureMatrixKeys.map((plusKey) => (
                 <div className="nature-matrix-row" role="row" key={`plus-${plusKey}`}>
-                  <div className="nature-matrix-side" role="rowheader">
-                    <span className="nature-axis-label">上昇</span>
+                  <div className="nature-matrix-side" role="rowheader" aria-label={`${statLabels[plusKey]}上昇`}>
                     <StatIcon stat={plusKey} />
+                    <NatureModifierIcon direction="up" />
                   </div>
                   {natureMatrixKeys.map((minusKey) => {
                     const option = getNatureCellOption(plusKey, minusKey);
@@ -1165,6 +1166,8 @@ function TargetPanel({
             onSelectAbility={(value) => onUpdateField("abilityInput", value)}
           />
           <SelectField
+            placeholderLabel
+            placeholderValue="none"
             label="状態異常"
             value={targetForm.status}
             options={statusOptions}

@@ -48,6 +48,8 @@ type SelectFieldProps<TValue extends string> = {
   className?: string;
   compact?: boolean;
   disabled?: boolean;
+  placeholderLabel?: boolean;
+  placeholderValue?: TValue;
 };
 
 export function SelectField<TValue extends string>({
@@ -58,16 +60,25 @@ export function SelectField<TValue extends string>({
   className,
   compact = false,
   disabled = false,
+  placeholderLabel = false,
+  placeholderValue,
 }: SelectFieldProps<TValue>) {
   const labelId = useId();
   const selectedOption = options.find((option) => option.value === value);
+  const selectedLabel = typeof selectedOption?.label === "string" ? selectedOption.label : value;
+  const showPlaceholderLabel = placeholderLabel && placeholderValue !== undefined && value === placeholderValue;
+  const displayLabel = showPlaceholderLabel ? label : selectedOption?.label;
 
   return (
-    <div className={joinClassNames("select-field", compact && "select-field-compact", className)}>
-      <span className="select-field-label" id={labelId}>{label}</span>
+    <div className={joinClassNames("select-field", compact && "select-field-compact", placeholderLabel && "select-field-placeholder", className)}>
+      {placeholderLabel ? null : <span className="select-field-label" id={labelId}>{label}</span>}
       <Select.Root value={value} onValueChange={(nextValue) => onChange(nextValue as TValue)} disabled={disabled}>
-        <Select.Trigger className="select-trigger" aria-labelledby={labelId}>
-          <Select.Value>{selectedOption?.label}</Select.Value>
+        <Select.Trigger
+          className={joinClassNames("select-trigger", showPlaceholderLabel && "select-trigger-placeholder")}
+          aria-label={placeholderLabel ? `${label}: ${selectedLabel}` : undefined}
+          aria-labelledby={placeholderLabel ? undefined : labelId}
+        >
+          <Select.Value>{displayLabel}</Select.Value>
           <Select.Icon className="select-trigger-icon">▾</Select.Icon>
         </Select.Trigger>
         <Select.Portal>
