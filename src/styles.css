@@ -68,7 +68,8 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 .select-trigger:focus-visible,
-.nature-trigger:focus-visible {
+.nature-trigger:focus-visible,
+.ability-menu-trigger:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 2px var(--focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -591,6 +592,16 @@ label {
   min-width: 0;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: #6f7878;
@@ -902,6 +913,111 @@ input {
   display: block;
   border-color: transparent;
   background: rgba(255, 255, 255, 0.025);
+}
+
+.ability-text-field {
+  min-width: 0;
+}
+
+.ability-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.ability-input-row.has-ability-menu {
+  grid-template-columns: minmax(0, 1fr) 31px;
+}
+
+.ability-input-row input {
+  min-width: 0;
+}
+
+.ability-input-row.has-ability-menu input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ability-menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid var(--line-strong);
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(180deg, #111617 0%, #0b0f10 100%);
+  color: #c7cfcb;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ability-menu-trigger:hover,
+.ability-menu-trigger[data-state="open"] {
+  border-color: var(--gold-line);
+  background: linear-gradient(180deg, #151a1b 0%, #0f1314 100%);
+  color: var(--gold);
+}
+
+.ability-popover {
+  z-index: 46;
+  width: min(260px, calc(100vw - 32px));
+  border: 1px solid rgba(245, 197, 66, 0.34);
+  border-radius: 7px;
+  background: #0c1212;
+  padding: 5px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(245, 197, 66, 0.05);
+}
+
+.ability-option-list {
+  display: grid;
+  gap: 3px;
+}
+
+.ability-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: #0d1414;
+  color: #dbe0dc;
+  padding: 4px 8px;
+  text-align: left;
+  outline: 0;
+}
+
+.ability-option:hover,
+.ability-option:focus-visible {
+  border-color: rgba(245, 197, 66, 0.24);
+  background: rgba(245, 197, 66, 0.12);
+  color: #ffe08a;
+}
+
+.ability-option.selected {
+  border-color: rgba(245, 197, 66, 0.46);
+  background: rgba(245, 197, 66, 0.13);
+  color: var(--gold);
+}
+
+.ability-option span,
+.ability-option small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ability-option span {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.ability-option small {
+  color: #8fa09f;
+  font-size: 10px;
+  font-weight: 750;
 }
 
 textarea {
@@ -1243,10 +1359,20 @@ textarea {
 .scenario-row select,
 .attack-condition-card input,
 .attack-condition-card .select-trigger,
-.attack-condition-card .nature-trigger {
+.attack-condition-card .nature-trigger,
+.attack-condition-card .ability-menu-trigger {
   height: 28px;
   padding: 0 7px;
   font-size: 12px;
+}
+
+.attack-condition-card .ability-input-row.has-ability-menu {
+  grid-template-columns: minmax(0, 1fr) 28px;
+}
+
+.attack-condition-card .ability-menu-trigger {
+  width: 28px;
+  padding: 0;
 }
 
 .attack-condition-card .nature-field {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getEntityInputOptions, getMatchingEntityInputOptions, resolveEntity } from "./resolver";
+import {
+  getEntityInputOptions,
+  getMatchingEntityInputOptions,
+  getMatchingPokemonAbilityInputOptions,
+  getPokemonAbilityInputOptions,
+  resolveEntity,
+} from "./resolver";
 
 describe("resolveEntity", () => {
   it("resolves a Japanese exact label to a Showdown canonical name", () => {
@@ -144,5 +150,42 @@ describe("resolveEntity", () => {
     expect(values).toEqual(expect.arrayContaining(["リザード", "リザードン"]));
     expect(values).not.toContain("フリーザー");
     expect(values.every((value) => value.startsWith("リザー"))).toBe(true);
+  });
+
+  it("exposes all generated ability suggestions for a resolved Pokemon", () => {
+    const kingambitOptions = getPokemonAbilityInputOptions("Kingambit");
+    expect(kingambitOptions).toEqual([
+      expect.objectContaining({ value: "まけんき", canonicalName: "Defiant" }),
+      expect.objectContaining({ value: "そうだいしょう", canonicalName: "Supreme Overlord" }),
+      expect.objectContaining({ value: "プレッシャー", canonicalName: "Pressure" }),
+    ]);
+
+    const garchompOptions = getPokemonAbilityInputOptions("Garchomp");
+    expect(garchompOptions).toEqual([
+      expect.objectContaining({ value: "すながくれ", canonicalName: "Sand Veil" }),
+      expect.objectContaining({ value: "さめはだ", canonicalName: "Rough Skin" }),
+    ]);
+
+    const starmieMegaOptions = getPokemonAbilityInputOptions("Starmie-Mega");
+    expect(starmieMegaOptions).toEqual([
+      expect.objectContaining({
+        value: "はっこう",
+        canonicalName: "Illuminate",
+      }),
+    ]);
+    expect(starmieMegaOptions?.some((option) => option.value === "もうか")).toBe(false);
+    expect(getPokemonAbilityInputOptions(undefined)).toBeUndefined();
+  });
+
+  it("keeps Pokemon ability dropdown options unfiltered while free-text completion can still narrow", () => {
+    expect(getPokemonAbilityInputOptions("Kingambit")?.map((option) => option.value)).toEqual([
+      "まけんき",
+      "そうだいしょう",
+      "プレッシャー",
+    ]);
+
+    expect(getMatchingPokemonAbilityInputOptions("Kingambit", "まけんき")).toEqual([
+      expect.objectContaining({ value: "まけんき", canonicalName: "Defiant" }),
+    ]);
   });
 });

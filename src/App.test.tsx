@@ -89,6 +89,10 @@ describe("App", () => {
     expect(html).toContain("C↑ / A↓");
     expect(html).toContain("A↑ / C↓");
     expect(html).toContain('list="entity-options-ability');
+    expect(html).toContain('class="ability-menu-trigger"');
+    expect(html).toContain('aria-label="特性候補を開く"');
+    expect(html).toContain('value="まけんき"');
+    expect(html).not.toContain('value="もうか"');
     expect(html).toContain('list="entity-options-item');
     expect(html).toContain('aria-label="テラスタル"');
     expect(html).toContain('aria-label="攻撃テラ"');

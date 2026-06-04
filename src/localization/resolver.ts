@@ -2,6 +2,7 @@ import abilityOptionsJson from "../data/generated/ability-options.gen.json";
 import itemOptionsJson from "../data/generated/item-options.gen.json";
 import catalogJson from "../data/generated/localized-catalog.gen.json";
 import moveOptionsJson from "../data/generated/move-options.gen.json";
+import pokemonAbilitiesJson from "../data/generated/pokemon-abilities.gen.json";
 import natureOptionsJson from "../data/generated/nature-options.gen.json";
 import pokemonOptionsJson from "../data/generated/pokemon-options.gen.json";
 import typeOptionsJson from "../data/generated/type-options.gen.json";
@@ -55,6 +56,18 @@ interface SearchEntry {
   matchedBy: ResolveMatchedBy;
   matchText: string;
   sourceStatus?: SourceStatus;
+}
+
+interface PokemonAbilityPayload {
+  entries: Array<{
+    id: string;
+    showdownName: string;
+    abilities: Array<{
+      id: string;
+      label: string;
+      showdownName: string;
+    }>;
+  }>;
 }
 
 const catalog = catalogJson as LocalizedCatalogPayload;
@@ -254,6 +267,20 @@ const inputOptionsByKind = Object.fromEntries(
   entityKinds.map((kind) => [kind, buildInputOptions(entriesByKind[kind])]),
 ) as Record<EntityKind, EntityInputOption[]>;
 
+const pokemonAbilityPayload = pokemonAbilitiesJson as PokemonAbilityPayload;
+
+const pokemonAbilityOptionsByCanonicalName = new Map(
+  pokemonAbilityPayload.entries.map((entry) => [
+    entry.showdownName,
+    entry.abilities.map((ability): EntityInputOption => ({
+      kind: "ability",
+      value: ability.label,
+      canonicalName: ability.showdownName,
+      displayNameJa: ability.label,
+    })),
+  ]),
+);
+
 const toCandidate = ({ entry, matchedBy, matchText, sourceStatus }: SearchEntry): ResolveCandidate => ({
   kind: entry.kind,
   canonicalName: entry.canonicalName,
@@ -334,4 +361,35 @@ export const getMatchingEntityInputOptions = (
   return options
     .filter((option) => normalizeSearchText(option.value).startsWith(normalizedInput))
     .slice(0, limit);
+};
+
+export const getMatchingPokemonAbilityInputOptions = (
+  pokemonCanonicalName: string | undefined,
+  input: string,
+  limit = 40,
+): EntityInputOption[] | undefined => {
+  if (!pokemonCanonicalName) {
+    return undefined;
+  }
+
+  const options = pokemonAbilityOptionsByCanonicalName.get(pokemonCanonicalName) ?? [];
+  const normalizedInput = normalizeSearchText(input);
+  if (!normalizedInput) {
+    return options.slice(0, limit);
+  }
+
+  return options
+    .filter((option) => normalizeSearchText(option.value).startsWith(normalizedInput))
+    .slice(0, limit);
+};
+
+export const getPokemonAbilityInputOptions = (
+  pokemonCanonicalName: string | undefined,
+  limit = 40,
+): EntityInputOption[] | undefined => {
+  if (!pokemonCanonicalName) {
+    return undefined;
+  }
+
+  return (pokemonAbilityOptionsByCanonicalName.get(pokemonCanonicalName) ?? []).slice(0, limit);
 };

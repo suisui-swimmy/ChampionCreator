@@ -19,7 +19,13 @@ import type {
 } from "./domain/model";
 import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo } from "./appVersion";
-import { getEntityInputOptions, getMatchingEntityInputOptions } from "./localization/resolver";
+import {
+  getEntityInputOptions,
+  getMatchingEntityInputOptions,
+  getPokemonAbilityInputOptions,
+  resolveEntity,
+  type EntityInputOption,
+} from "./localization/resolver";
 import {
   applyTopCandidateToTarget,
   createDefaultAttackerStatPoints,
@@ -129,6 +135,11 @@ const terrainOptions: Array<{ value: Terrain; label: string }> = [
   { value: "misty", label: "ミスト" },
   { value: "psychic", label: "サイコ" },
 ];
+
+const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | undefined => {
+  const result = resolveEntity(kind, input);
+  return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
+};
 
 const toNumber = (value: string, fallback = 0): number => {
   const parsed = Number(value);
@@ -697,6 +708,7 @@ type EntityTextFieldProps = {
   label: string;
   value: string;
   className?: string;
+  options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
@@ -705,10 +717,11 @@ function EntityTextField({
   label,
   value,
   className,
+  options: suggestedOptions,
   onChange,
 }: EntityTextFieldProps) {
   const datalistId = `entity-options-${kind}-${useId()}`;
-  const options = getMatchingEntityInputOptions(kind, value);
+  const options = suggestedOptions ?? getMatchingEntityInputOptions(kind, value);
   const labelClassName = ["placeholder-field", className].filter(Boolean).join(" ");
 
   return (
@@ -730,6 +743,89 @@ function EntityTextField({
         ))}
       </datalist>
     </label>
+  );
+}
+
+type AbilityTextFieldProps = {
+  label: string;
+  value: string;
+  className?: string;
+  pokemonAbilityOptions?: EntityInputOption[];
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSelectAbility: (value: string) => void;
+};
+
+function AbilityTextField({
+  label,
+  value,
+  className,
+  pokemonAbilityOptions = [],
+  onChange,
+  onSelectAbility,
+}: AbilityTextFieldProps) {
+  const datalistId = `entity-options-ability-${useId()}`;
+  const labelId = useId();
+  const globalAbilityOptions = getMatchingEntityInputOptions("ability", value);
+  const fieldClassName = ["ability-text-field", "placeholder-field", className].filter(Boolean).join(" ");
+  const hasPokemonAbilityOptions = pokemonAbilityOptions.length > 0;
+
+  return (
+    <div className={fieldClassName}>
+      <span className="visually-hidden" id={labelId}>{label}</span>
+      <div className={`ability-input-row${hasPokemonAbilityOptions ? " has-ability-menu" : ""}`}>
+        <input
+          value={value}
+          placeholder={label}
+          list={datalistId}
+          autoComplete="off"
+          aria-labelledby={labelId}
+          onFocus={selectInputValueOnFocus}
+          onChange={onChange}
+        />
+        {hasPokemonAbilityOptions ? (
+          <UiPopover.Root>
+            <UiPopover.Trigger asChild>
+              <button
+                className="ability-menu-trigger"
+                type="button"
+                aria-label={`${label}候補を開く`}
+                title={`${label}候補`}
+              >
+                ▾
+              </button>
+            </UiPopover.Trigger>
+            <UiPopover.Portal>
+              <UiPopover.Content className="ability-popover" sideOffset={5} align="end">
+                <div className="ability-option-list" role="listbox" aria-label={`${label}候補`}>
+                  {pokemonAbilityOptions.map((option) => (
+                    <UiPopover.Close asChild key={`${option.canonicalName}:${option.value}`}>
+                      <button
+                        className={`ability-option${option.value === value ? " selected" : ""}`}
+                        type="button"
+                        role="option"
+                        aria-selected={option.value === value}
+                        onClick={() => onSelectAbility(option.value)}
+                      >
+                        <span>{option.value}</span>
+                        <small>{option.canonicalName}</small>
+                      </button>
+                    </UiPopover.Close>
+                  ))}
+                </div>
+              </UiPopover.Content>
+            </UiPopover.Portal>
+          </UiPopover.Root>
+        ) : null}
+      </div>
+      <datalist id={datalistId}>
+        {globalAbilityOptions.map((option) => (
+          <option
+            value={option.value}
+            key={option.value}
+          />
+        ))}
+      </datalist>
+    </div>
   );
 }
 
@@ -1012,6 +1108,9 @@ function TargetPanel({
   onUpdateEv,
 }: TargetPanelProps) {
   const isSpLimitReached = totalStatPoints >= CHAMPIONS_TOTAL_STAT_POINTS;
+  const abilityOptions = getPokemonAbilityInputOptions(
+    canonicalPokemon ?? resolveCanonicalEntityName("pokemon", targetForm.pokemonInput),
+  );
 
   return (
     <section className="target-panel" aria-labelledby="target-title">
@@ -1058,11 +1157,12 @@ function TargetPanel({
             value={targetForm.itemInput}
             onChange={(event) => onUpdateField("itemInput", event.target.value)}
           />
-          <EntityTextField
-            kind="ability"
+          <AbilityTextField
             label="特性"
             value={targetForm.abilityInput}
+            pokemonAbilityOptions={abilityOptions}
             onChange={(event) => onUpdateField("abilityInput", event.target.value)}
+            onSelectAbility={(value) => onUpdateField("abilityInput", value)}
           />
           <SelectField
             label="状態異常"
@@ -1420,6 +1520,10 @@ function AttackCard({
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const attackLabel = attack.label || `攻撃${String.fromCharCode(65 + attackIndex)}`;
   const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
+  const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
+  const attackerAbilityOptions = getPokemonAbilityInputOptions(
+    attackerCanonicalPokemon,
+  );
 
   return (
     <section className="attack-condition-card" aria-label={attackLabel}>
@@ -1457,7 +1561,14 @@ function AttackCard({
           value={attack.attackerNatureInput}
           onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
         />
-        <ScenarioTextField kind="ability" label="特性" showLabel value={attack.attackerAbilityInput} placeholder="任意" onChange={onInput("attackerAbilityInput")} />
+        <AbilityTextField
+          className="scenario-cell"
+          label="特性"
+          value={attack.attackerAbilityInput}
+          pokemonAbilityOptions={attackerAbilityOptions}
+          onChange={onInput("attackerAbilityInput")}
+          onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
+        />
         <ScenarioTextField kind="item" label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
       </div>
 
@@ -1601,12 +1712,13 @@ type ScenarioTextFieldProps = {
   showLabel: boolean;
   value: string;
   placeholder?: string;
+  options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
-function ScenarioTextField({ kind, label, showLabel, value, placeholder, onChange }: ScenarioTextFieldProps) {
+function ScenarioTextField({ kind, label, showLabel, value, placeholder, options: suggestedOptions, onChange }: ScenarioTextFieldProps) {
   const datalistId = `entity-options-${kind ?? "text"}-${useId()}`;
-  const options = kind ? getMatchingEntityInputOptions(kind, value) : [];
+  const options = kind ? suggestedOptions ?? getMatchingEntityInputOptions(kind, value) : [];
 
   return (
     <label className="scenario-cell placeholder-field">

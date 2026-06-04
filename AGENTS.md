@@ -373,6 +373,18 @@ npm run build
 
 まだ scripts がない段階では、M0 でこれらを整える。
 
+### 一時的な in-app Browser 確認方針
+
+現在の環境では Codex in-app Browser / Browser plugin が `windows sandbox failed: spawn setup refresh` で失敗することが多いため、復旧するまでは通常の UI 修正ごとに in-app Browser 確認を必須にしない。
+
+方針:
+
+- UI 修正後は、まず `npm run typecheck`、対象テスト、`npm run build`、必要に応じて `npm run check` を優先する。
+- in-app Browser 確認ができないことだけを理由に、UI 修正を blocked 扱いにしない。
+- Browser 確認を省略した場合は、最終報告や `PROGRESS.md` に「in-app Browser は既知の `node_repl` 起動失敗により未実施」と明記する。
+- in-app Browser / `node_repl` 復旧そのものを依頼された場合だけ、下の復旧メモに沿って診断・修正する。
+- 外部のブラウザ自動操作や追加ツールによる代替確認は、必要性が高い場合だけ検討し、承認や安全レビューが必要なら無理に迂回しない。
+
 ## 長期保守ルール
 
 - 基本は静的 Web アプリとして完結させる。runtime backend / DB / scraping に依存しない。

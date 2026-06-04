@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "generate:localization-seed": "node scripts/generate-localization-seed.mjs",
+    "generate:pokemon-abilities": "node scripts/generate-pokemon-abilities.mjs",
     "validate:artwork-assets": "node scripts/validate-artwork-assets.mjs",
     "validate:localization": "node scripts/validate-localization.mjs",
+    "validate:pokemon-abilities": "node scripts/validate-pokemon-abilities.mjs",
     "typecheck": "tsc --noEmit",
-    "check": "npm run validate:localization && npm run validate:artwork-assets && npm test && npm run build",
+    "check": "npm run validate:localization && npm run validate:pokemon-abilities && npm run validate:artwork-assets && npm test && npm run build",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run"
