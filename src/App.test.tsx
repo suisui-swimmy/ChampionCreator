@@ -8,6 +8,8 @@ import {
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
+  getNatureModifierDirection,
+  isUnresolvedEntityInput,
 } from "./App";
 
 describe("App", () => {
@@ -38,6 +40,28 @@ describe("App", () => {
     expect(html).toContain('aria-valuemax="32"');
     expect(html).toContain('aria-label="H SP配分"');
     expect(html).toContain('class="sp-cell-bar hp"');
+  });
+
+  it("renders nature stat modifiers beside target and attacker SP fields", () => {
+    expect(getNatureModifierDirection("ひかえめ", "spa")).toBe("up");
+    expect(getNatureModifierDirection("ひかえめ", "atk")).toBe("down");
+    expect(getNatureModifierDirection("いじっぱり", "atk")).toBe("up");
+    expect(getNatureModifierDirection("いじっぱり", "spa")).toBe("down");
+    expect(getNatureModifierDirection("ひかえめ", "hp")).toBeNull();
+    expect(getNatureModifierDirection("がんばりや", "atk")).toBeNull();
+
+    const html = renderToStaticMarkup(<App />);
+
+    expect(html).toContain('class="nature-stat-modifier up" aria-label="C 上昇"');
+    expect(html).toContain('class="nature-stat-modifier down" aria-label="A 下降"');
+    expect(html).toContain('class="nature-stat-modifier up" aria-label="A 上昇"');
+    expect(html).toContain('class="nature-stat-modifier down" aria-label="C 下降"');
+  });
+
+  it("marks only non-empty unresolved entity inputs as invalid", () => {
+    expect(isUnresolvedEntityInput("pokemon", "テラスタイプ")).toBe(true);
+    expect(isUnresolvedEntityInput("pokemon", "メガスターミー")).toBe(false);
+    expect(isUnresolvedEntityInput("item", "")).toBe(false);
   });
 
   it("caps target SP edits at the total 66 budget", () => {
@@ -92,23 +116,29 @@ describe("App", () => {
     expect(html).toContain('value="メガスターミー"');
     expect(html).not.toContain('value="Dragonite"');
     expect(html).not.toContain('label="Dragonite"');
+    expect(html).not.toContain("calc: Starmie-Mega");
+    expect(html).not.toContain("名前を解決できません");
+    expect(html).not.toContain(">Starmie-Mega<");
+    expect(html).not.toContain(">Illuminate<");
     expect(html).not.toContain('list="entity-options-pokemon');
     expect(html).toContain('role="combobox"');
     expect(html).toContain('aria-autocomplete="list"');
-    expect(html).toContain('list="entity-options-move');
+    expect(html).not.toContain('list="entity-options-move');
     expect(html).toContain('class="nature-trigger"');
     expect(html).toContain('aria-label="性格: ひかえめ"');
     expect(html).not.toContain("C↑ / A↓");
     expect(html).not.toContain("A↑ / C↓");
-    expect(html).toContain('list="entity-options-ability');
-    expect(html).toContain('class="ability-menu-trigger"');
+    expect(html).not.toContain('list="entity-options-ability');
+    expect(html).toContain('class="dropdown-menu-trigger"');
     expect(html).toContain('aria-label="特性候補を開く"');
+    expect(html).toContain('aria-label="持ち物候補を開く"');
+    expect(html).toContain('aria-label="技候補を開く"');
     expect(html).toContain('class="select-field select-field-placeholder"');
     expect(html).toContain('class="select-trigger select-trigger-placeholder"');
     expect(html).toContain('aria-label="状態異常: なし"');
     expect(html).toContain('value="まけんき"');
     expect(html).not.toContain('value="もうか"');
-    expect(html).toContain('list="entity-options-item');
+    expect(html).not.toContain('list="entity-options-item');
     expect(html).toContain('aria-label="テラスタル"');
     expect(html).toContain('aria-label="攻撃テラ"');
     expect(html).toContain("tera-off.svg");

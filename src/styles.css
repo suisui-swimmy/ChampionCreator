@@ -69,7 +69,8 @@ input:focus-visible,
 textarea:focus-visible,
 .select-trigger:focus-visible,
 .nature-trigger:focus-visible,
-.ability-menu-trigger:focus-visible {
+.ability-menu-trigger:focus-visible,
+.dropdown-menu-trigger:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 2px var(--focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -524,7 +525,7 @@ textarea:focus-visible,
 }
 
 .pokemon-artwork.target img {
-  padding: 8px 8px 26px;
+  padding: 8px 8px 22px;
 }
 
 .pokemon-artwork strong {
@@ -541,13 +542,11 @@ textarea:focus-visible,
   bottom: 0;
   left: 0;
   display: grid;
-  gap: 1px;
   background: rgba(11, 13, 14, 0.86);
   padding: 4px 6px;
 }
 
-.pokemon-artwork-meta span,
-.pokemon-artwork-meta small {
+.pokemon-artwork-meta span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -557,11 +556,6 @@ textarea:focus-visible,
   color: var(--text);
   font-size: 11px;
   font-weight: 800;
-}
-
-.pokemon-artwork-meta small {
-  color: var(--muted);
-  font-size: 9px;
 }
 
 .pokemon-artwork.attack .pokemon-artwork-meta {
@@ -632,6 +626,27 @@ textarea:focus {
   outline: none;
 }
 
+input.is-invalid,
+.is-invalid input,
+.nature-field.is-invalid .nature-trigger {
+  border-color: rgba(230, 40, 41, 0.9);
+  background: linear-gradient(180deg, rgba(75, 18, 20, 0.72), rgba(42, 13, 15, 0.78));
+  box-shadow: inset 0 0 0 1px rgba(230, 40, 41, 0.12);
+}
+
+input.is-invalid:focus,
+.is-invalid input:focus,
+.nature-field.is-invalid .nature-trigger:focus-visible,
+.nature-field.is-invalid .nature-trigger[data-state="open"] {
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgba(230, 40, 41, 0.2), inset 0 0 0 1px rgba(230, 40, 41, 0.12);
+}
+
+.is-invalid .dropdown-menu-trigger,
+.nature-field.is-invalid .nature-trigger-icon {
+  color: #ff8585;
+}
+
 select {
   color-scheme: dark;
 }
@@ -687,9 +702,12 @@ input {
 }
 
 .select-trigger-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
   color: #a8b0ad;
   font-size: 12px;
-  text-align: right;
+  line-height: 1;
 }
 
 .select-trigger-placeholder {
@@ -698,7 +716,9 @@ input {
 
 .select-content {
   z-index: 40;
+  width: var(--radix-select-trigger-width);
   min-width: var(--radix-select-trigger-width);
+  max-width: var(--radix-select-trigger-width);
   overflow: hidden;
   border: 1px solid rgba(245, 197, 66, 0.28);
   border-radius: 7px;
@@ -789,9 +809,12 @@ input {
 }
 
 .nature-trigger-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
   color: #a8b0ad;
   font-size: 12px;
-  text-align: right;
+  line-height: 1;
 }
 
 .nature-popover {
@@ -855,6 +878,18 @@ input {
   object-fit: contain;
 }
 
+.nature-stat-modifier {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 24px;
+}
+
+.nature-stat-modifier .nature-modifier-icon {
+  width: 14px;
+  height: 14px;
+}
+
 .nature-option {
   position: relative;
   display: inline-flex;
@@ -910,44 +945,40 @@ input {
 }
 
 .ability-input-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  position: relative;
   min-width: 0;
 }
 
-.ability-input-row.has-ability-menu {
-  grid-template-columns: minmax(0, 1fr) 31px;
-}
-
 .ability-input-row input {
+  width: 100%;
   min-width: 0;
 }
 
 .ability-input-row.has-ability-menu input {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+  padding-right: 36px;
 }
 
 .ability-menu-trigger {
-  display: grid;
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: inline-grid;
   place-items: center;
-  width: 31px;
-  height: 31px;
-  border: 1px solid var(--line-strong);
-  border-left: 0;
-  border-radius: 0 6px 6px 0;
-  background: linear-gradient(180deg, #111617 0%, #0b0f10 100%);
-  color: #c7cfcb;
+  width: 32px;
+  height: 29px;
+  border: 0;
+  border-radius: 0 5px 5px 0;
+  background: transparent;
+  color: #a8b0ad;
   padding: 0;
-  font-size: 13px;
-  font-weight: 900;
+  font-size: 12px;
+  font-weight: 800;
   line-height: 1;
 }
 
 .ability-menu-trigger:hover,
 .ability-menu-trigger[data-state="open"] {
-  border-color: var(--gold-line);
-  background: linear-gradient(180deg, #151a1b 0%, #0f1314 100%);
+  background: rgba(245, 197, 66, 0.08);
   color: var(--gold);
 }
 
@@ -967,8 +998,7 @@ input {
 }
 
 .ability-option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: block;
   min-height: 30px;
   border: 1px solid transparent;
   border-radius: 5px;
@@ -992,8 +1022,7 @@ input {
   color: var(--gold);
 }
 
-.ability-option span,
-.ability-option small {
+.ability-option span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1004,17 +1033,100 @@ input {
   font-weight: 850;
 }
 
-.ability-option small {
-  color: #8fa09f;
-  font-size: 10px;
-  font-weight: 750;
+.dropdown-text-field {
+  position: relative;
+  min-width: 0;
+}
+
+.dropdown-input-row {
+  position: relative;
+  min-width: 0;
+}
+
+.dropdown-input-row input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 36px;
+}
+
+.dropdown-menu-trigger {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 29px;
+  border: 0;
+  border-radius: 0 5px 5px 0;
+  background: transparent;
+  color: #a8b0ad;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dropdown-menu-trigger:hover,
+.dropdown-menu-trigger[data-state="open"] {
+  background: rgba(245, 197, 66, 0.08);
+  color: var(--gold);
+}
+
+.dropdown-options-popover {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  z-index: 46;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  border: 1px solid rgba(245, 197, 66, 0.34);
+  border-radius: 7px;
+  background: #0c1212;
+  padding: 5px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(245, 197, 66, 0.05);
+}
+
+.dropdown-option-list {
+  display: grid;
+  max-height: 260px;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.dropdown-option {
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: #0d1414;
+  color: #dbe0dc;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: left;
+  outline: 0;
+}
+
+.dropdown-option:hover,
+.dropdown-option:focus-visible,
+.dropdown-option.active {
+  border-color: rgba(245, 197, 66, 0.28);
+  background: rgba(245, 197, 66, 0.12);
+  color: #ffe08a;
+}
+
+.dropdown-option.selected {
+  border-color: rgba(245, 197, 66, 0.46);
+  color: var(--gold);
 }
 
 .pokemon-suggestion-popover {
   z-index: 47;
   width: var(--radix-popover-trigger-width);
-  min-width: 220px;
-  max-width: min(360px, calc(100vw - 32px));
+  min-width: var(--radix-popover-trigger-width);
+  max-width: var(--radix-popover-trigger-width);
   border: 1px solid rgba(245, 197, 66, 0.34);
   border-radius: 7px;
   background: #0c1212;
@@ -1030,10 +1142,8 @@ input {
 }
 
 .pokemon-suggestion-option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
+  display: block;
   align-items: center;
-  gap: 8px;
   min-height: 32px;
   border: 1px solid transparent;
   border-radius: 5px;
@@ -1052,8 +1162,7 @@ input {
   color: #ffe08a;
 }
 
-.pokemon-suggestion-option span,
-.pokemon-suggestion-option small {
+.pokemon-suggestion-option span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1064,11 +1173,6 @@ input {
   font-weight: 850;
 }
 
-.pokemon-suggestion-option small {
-  color: #8fa09f;
-  font-size: 10px;
-  font-weight: 750;
-}
 
 textarea {
   min-height: 118px;
@@ -1121,8 +1225,8 @@ textarea {
 .ev-header,
 .ev-row {
   display: grid;
-  grid-template-columns: 48px 58px 64px minmax(0, 1fr) 52px;
-  gap: 8px;
+  grid-template-columns: 42px 16px 58px 64px minmax(0, 1fr) 52px;
+  gap: 6px;
   align-items: center;
   min-height: 38px;
   border-bottom: 1px solid var(--line);
@@ -1410,19 +1514,30 @@ textarea {
 .attack-condition-card input,
 .attack-condition-card .select-trigger,
 .attack-condition-card .nature-trigger,
-.attack-condition-card .ability-menu-trigger {
+.attack-condition-card .ability-menu-trigger,
+.attack-condition-card .dropdown-menu-trigger {
   height: 28px;
   padding: 0 7px;
   font-size: 12px;
 }
 
-.attack-condition-card .ability-input-row.has-ability-menu {
-  grid-template-columns: minmax(0, 1fr) 28px;
+.attack-condition-card .ability-menu-trigger {
+  width: 30px;
+  height: 26px;
+  padding: 0;
 }
 
-.attack-condition-card .ability-menu-trigger {
-  width: 28px;
-  padding: 0;
+.attack-condition-card .ability-input-row.has-ability-menu input {
+  padding-right: 34px;
+}
+
+.attack-condition-card .dropdown-menu-trigger {
+  width: 30px;
+  height: 26px;
+}
+
+.attack-condition-card .dropdown-input-row input {
+  padding-right: 34px;
 }
 
 .attack-condition-card .nature-field {
@@ -1501,7 +1616,7 @@ textarea {
 
 .attacker-stat-field {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 24px 16px minmax(48px, 1fr);
   align-items: center;
   gap: 4px;
 }
@@ -1512,9 +1627,6 @@ textarea {
   justify-content: center;
   min-width: 24px;
   height: 28px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #101314;
 }
 
 .attacker-stat-label .stat-icon {

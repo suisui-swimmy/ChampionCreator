@@ -98,6 +98,27 @@ const natureOptionsByCell = new Map(natureOptions.map((option) => [`${option.plu
 const getNatureCellOption = (plus: NatureMatrixStatKey, minus: NatureMatrixStatKey): NatureOption | undefined =>
   natureOptionsByCell.get(`${plus}:${minus}`);
 
+export const getNatureModifierDirection = (
+  natureLabel: string,
+  stat: StatKey,
+): "up" | "down" | null => {
+  if (stat === "hp") {
+    return null;
+  }
+
+  const nature = natureOptionsByLabel.get(natureLabel);
+  if (!nature || nature.plus === nature.minus) {
+    return null;
+  }
+  if (nature.plus === stat) {
+    return "up";
+  }
+  if (nature.minus === stat) {
+    return "down";
+  }
+  return null;
+};
+
 const statusOptions: Array<{ value: PokemonStatus; label: string }> = [
   { value: "none", label: "なし" },
   { value: "brn", label: "やけど" },
@@ -140,6 +161,17 @@ const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | u
   const result = resolveEntity(kind, input);
   return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
 };
+
+export const isUnresolvedEntityInput = (kind: EntityKind, input: string): boolean => {
+  if (!input.trim()) {
+    return false;
+  }
+  const result = resolveEntity(kind, input);
+  return result.status !== "exact" && result.status !== "alias";
+};
+
+const isCanonicalResolutionMessage = (message: string | null): boolean =>
+  Boolean(message?.includes("canonical name に解決できません"));
 
 const toNumber = (value: string, fallback = 0): number => {
   const parsed = Number(value);
@@ -314,6 +346,26 @@ function NatureModifierIcon({ direction }: { direction: "up" | "down" }) {
       loading="lazy"
       decoding="async"
     />
+  );
+}
+
+function NatureStatModifier({
+  natureLabel,
+  stat,
+}: {
+  natureLabel: string;
+  stat: StatKey;
+}) {
+  const direction = getNatureModifierDirection(natureLabel, stat);
+
+  return (
+    <span
+      className={`nature-stat-modifier${direction ? ` ${direction}` : ""}`}
+      aria-label={direction ? `${statLabels[stat]} ${direction === "up" ? "上昇" : "下降"}` : undefined}
+      aria-hidden={direction ? undefined : true}
+    >
+      {direction ? <NatureModifierIcon direction={direction} /> : null}
+    </span>
   );
 }
 
@@ -651,10 +703,10 @@ export function App() {
         </div>
       </header>
 
-      {searchState.errorMessage ? (
+      {searchState.errorMessage && !isCanonicalResolutionMessage(searchState.errorMessage) ? (
         <div className="status-banner error" role="alert">{searchState.errorMessage}</div>
       ) : null}
-      {previewInput.error ? (
+      {previewInput.error && !isCanonicalResolutionMessage(previewInput.error) ? (
         <div className="status-banner warning" role="status">{previewInput.error}</div>
       ) : null}
       {shareOpen ? (
@@ -737,6 +789,7 @@ function EntityTextField({
   onSelectValue,
 }: EntityTextFieldProps) {
   const datalistId = `entity-options-${kind}-${useId()}`;
+  const invalid = isUnresolvedEntityInput(kind, value);
 
   if (kind === "pokemon" && onSelectValue) {
     return (
@@ -744,6 +797,21 @@ function EntityTextField({
         className={className}
         label={label}
         value={value}
+        invalid={invalid}
+        onChange={onChange}
+        onSelectValue={onSelectValue}
+      />
+    );
+  }
+
+  if (kind === "item" && onSelectValue) {
+    return (
+      <DropdownTextField
+        className={className}
+        label={label}
+        value={value}
+        kind={kind}
+        options={suggestedOptions ?? getMatchingEntityInputOptions("item", value)}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -751,7 +819,7 @@ function EntityTextField({
   }
 
   const options = suggestedOptions ?? getMatchingEntityInputOptions(kind, value);
-  const labelClassName = ["placeholder-field", className].filter(Boolean).join(" ");
+  const labelClassName = ["placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
 
   return (
     <label className={labelClassName}>
@@ -779,6 +847,7 @@ type PokemonAutocompleteFieldProps = {
   label: string;
   value: string;
   className?: string;
+  invalid?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectValue: (value: string) => void;
 };
@@ -821,6 +890,7 @@ function PokemonAutocompleteField({
   label,
   value,
   className,
+  invalid = false,
   onChange,
   onSelectValue,
 }: PokemonAutocompleteFieldProps) {
@@ -833,7 +903,7 @@ function PokemonAutocompleteField({
   );
   const open = focused && options.length > 0;
   const activeOption = options[Math.min(activeIndex, options.length - 1)];
-  const fieldClassName = ["pokemon-autocomplete-field", "placeholder-field", className].filter(Boolean).join(" ");
+  const fieldClassName = ["pokemon-autocomplete-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
 
   const selectOption = (option: EntityInputOption) => {
     onSelectValue(option.value);
@@ -916,13 +986,135 @@ function PokemonAutocompleteField({
                 onClick={() => selectOption(option)}
               >
                 <span>{option.value}</span>
-                <small>{option.canonicalName}</small>
               </button>
             ))}
           </div>
         </UiPopover.Content>
       </UiPopover.Portal>
     </UiPopover.Root>
+  );
+}
+
+type DropdownTextFieldProps = {
+  kind: EntityKind;
+  label: string;
+  value: string;
+  options: EntityInputOption[];
+  className?: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSelectValue: (value: string) => void;
+};
+
+function DropdownTextField({
+  kind,
+  label,
+  value,
+  options,
+  className,
+  onChange,
+  onSelectValue,
+}: DropdownTextFieldProps) {
+  const listboxId = `dropdown-options-${useId()}`;
+  const labelId = useId();
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const activeOption = options[Math.min(activeIndex, options.length - 1)];
+  const listOpen = open && options.length > 0;
+  const invalid = isUnresolvedEntityInput(kind, value);
+  const fieldClassName = ["dropdown-text-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
+
+  const selectOption = (option: EntityInputOption) => {
+    onSelectValue(option.value);
+    setActiveIndex(0);
+    setOpen(false);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    const action = getPokemonSuggestionKeyAction(event.key, activeIndex, listOpen ? options.length : 0);
+    if (action.type === "move") {
+      event.preventDefault();
+      setActiveIndex(action.index);
+    } else if (action.type === "select" && activeOption) {
+      event.preventDefault();
+      selectOption(activeOption);
+    } else if (action.type === "close") {
+      event.preventDefault();
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div
+      className={fieldClassName}
+      ref={fieldRef}
+      onBlur={(event) => {
+        const nextTarget = event.relatedTarget as Node | null;
+        if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <span className="visually-hidden" id={labelId}>{label}</span>
+      <div className="dropdown-input-row">
+        <input
+          ref={inputRef}
+          value={value}
+          placeholder={label}
+          autoComplete="off"
+          role="combobox"
+          aria-labelledby={labelId}
+          aria-autocomplete="list"
+          aria-expanded={listOpen}
+          aria-controls={listOpen ? listboxId : undefined}
+          onFocus={(event) => {
+            selectInputValueOnFocus(event);
+            setOpen(true);
+          }}
+          onChange={(event) => {
+            setActiveIndex(0);
+            setOpen(true);
+            onChange(event);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          className="dropdown-menu-trigger"
+          type="button"
+          aria-label={`${label}候補を開く`}
+          title={`${label}候補`}
+          aria-expanded={listOpen}
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={() => {
+            setOpen((current) => !current);
+            inputRef.current?.focus();
+          }}
+        >
+          ▾
+        </button>
+      </div>
+      {listOpen ? (
+        <div className="dropdown-options-popover">
+          <div className="dropdown-option-list" id={listboxId} role="listbox" aria-label={`${label}候補`}>
+            {options.map((option, index) => (
+              <button
+                className={`dropdown-option${index === activeIndex ? " active" : ""}${option.value === value ? " selected" : ""}`}
+                type="button"
+                role="option"
+                aria-selected={option.value === value}
+                key={option.canonicalName}
+                onPointerDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => selectOption(option)}
+              >
+                {option.value}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -943,69 +1135,23 @@ function AbilityTextField({
   onChange,
   onSelectAbility,
 }: AbilityTextFieldProps) {
-  const datalistId = `entity-options-ability-${useId()}`;
-  const labelId = useId();
-  const globalAbilityOptions = getMatchingEntityInputOptions("ability", value);
-  const fieldClassName = ["ability-text-field", "placeholder-field", className].filter(Boolean).join(" ");
-  const hasPokemonAbilityOptions = pokemonAbilityOptions.length > 0;
+  const matchingPokemonOptions = pokemonAbilityOptions.filter((option) =>
+    !value.trim() || option.value.startsWith(value.trim()),
+  );
+  const options = matchingPokemonOptions.length > 0
+    ? matchingPokemonOptions
+    : getMatchingEntityInputOptions("ability", value);
 
   return (
-    <div className={fieldClassName}>
-      <span className="visually-hidden" id={labelId}>{label}</span>
-      <div className={`ability-input-row${hasPokemonAbilityOptions ? " has-ability-menu" : ""}`}>
-        <input
-          value={value}
-          placeholder={label}
-          list={datalistId}
-          autoComplete="off"
-          aria-labelledby={labelId}
-          onFocus={selectInputValueOnFocus}
-          onChange={onChange}
-        />
-        {hasPokemonAbilityOptions ? (
-          <UiPopover.Root>
-            <UiPopover.Trigger asChild>
-              <button
-                className="ability-menu-trigger"
-                type="button"
-                aria-label={`${label}候補を開く`}
-                title={`${label}候補`}
-              >
-                ▾
-              </button>
-            </UiPopover.Trigger>
-            <UiPopover.Portal>
-              <UiPopover.Content className="ability-popover" sideOffset={5} align="end">
-                <div className="ability-option-list" role="listbox" aria-label={`${label}候補`}>
-                  {pokemonAbilityOptions.map((option) => (
-                    <UiPopover.Close asChild key={`${option.canonicalName}:${option.value}`}>
-                      <button
-                        className={`ability-option${option.value === value ? " selected" : ""}`}
-                        type="button"
-                        role="option"
-                        aria-selected={option.value === value}
-                        onClick={() => onSelectAbility(option.value)}
-                      >
-                        <span>{option.value}</span>
-                        <small>{option.canonicalName}</small>
-                      </button>
-                    </UiPopover.Close>
-                  ))}
-                </div>
-              </UiPopover.Content>
-            </UiPopover.Portal>
-          </UiPopover.Root>
-        ) : null}
-      </div>
-      <datalist id={datalistId}>
-        {globalAbilityOptions.map((option) => (
-          <option
-            value={option.value}
-            key={option.value}
-          />
-        ))}
-      </datalist>
-    </div>
+    <DropdownTextField
+      kind="ability"
+      className={className}
+      label={label}
+      value={value}
+      options={options}
+      onChange={onChange}
+      onSelectValue={onSelectAbility}
+    />
   );
 }
 
@@ -1017,7 +1163,7 @@ type NatureMatrixFieldProps = {
 };
 
 function NatureMatrixField({ label, value, className, onChange }: NatureMatrixFieldProps) {
-  const labelClassName = ["nature-field", className].filter(Boolean).join(" ");
+  const labelClassName = ["nature-field", isUnresolvedEntityInput("nature", value) && "is-invalid", className].filter(Boolean).join(" ");
 
   return (
     <div className={labelClassName}>
@@ -1284,7 +1430,6 @@ function TargetPanel({
       <div className="section-heading">
         <div>
           <h2 id="target-title">調整対象</h2>
-          <span>{canonicalPokemon ? `calc: ${canonicalPokemon}` : "resolver 未確定"}</span>
         </div>
       </div>
 
@@ -1324,6 +1469,7 @@ function TargetPanel({
             label="持ち物"
             value={targetForm.itemInput}
             onChange={(event) => onUpdateField("itemInput", event.target.value)}
+            onSelectValue={(value) => onUpdateField("itemInput", value)}
           />
           <AbilityTextField
             label="特性"
@@ -1357,6 +1503,7 @@ function TargetPanel({
       <div className={`ev-table${isSpLimitReached ? " is-sp-max" : ""}`} aria-label="調整対象のSP">
         <div className="ev-header">
           <span>能力</span>
+          <span aria-hidden="true" />
           <span>実数値</span>
           <span>現在SP</span>
           <span>SP配分</span>
@@ -1365,6 +1512,7 @@ function TargetPanel({
         {statKeys.map((key) => (
           <div className={`ev-row ${key}`} key={key}>
             <strong><StatIcon stat={key} /></strong>
+            <NatureStatModifier natureLabel={targetForm.natureInput} stat={key} />
             <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
             <input
               type="number"
@@ -1511,7 +1659,6 @@ function PokemonArtworkFrame({
       {match ? (
         <div className="pokemon-artwork-meta">
           <span>{match.label}</span>
-          <small>{match.showdownName}</small>
         </div>
       ) : null}
     </div>
@@ -1731,7 +1878,14 @@ function AttackCard({
           onChange={onInput("attackerPokemonInput")}
           onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
         />
-        <ScenarioTextField kind="move" label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
+        <ScenarioTextField
+          kind="move"
+          label="技"
+          showLabel
+          value={attack.moveInput}
+          onChange={onInput("moveInput")}
+          onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
+        />
         <NatureMatrixField
           className="scenario-cell"
           label="性格"
@@ -1746,7 +1900,15 @@ function AttackCard({
           onChange={onInput("attackerAbilityInput")}
           onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
         />
-        <ScenarioTextField kind="item" label="持ち物" showLabel value={attack.attackerItemInput} placeholder="任意" onChange={onInput("attackerItemInput")} />
+        <ScenarioTextField
+          kind="item"
+          label="持ち物"
+          showLabel
+          value={attack.attackerItemInput}
+          placeholder="任意"
+          onChange={onInput("attackerItemInput")}
+          onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
+        />
       </div>
 
       <MechanicControls
@@ -1856,6 +2018,7 @@ function AttackCard({
         {statKeys.map((key) => (
           <label className="attacker-stat-field" key={key}>
             <span className="attacker-stat-label"><StatIcon stat={key} /></span>
+            <NatureStatModifier natureLabel={attack.attackerNatureInput} stat={key} />
             <input
               type="number"
               min="0"
@@ -1912,6 +2075,21 @@ function ScenarioTextField({
         className="scenario-cell"
         label={label}
         value={value}
+        invalid={isUnresolvedEntityInput("pokemon", value)}
+        onChange={onChange}
+        onSelectValue={onSelectValue}
+      />
+    );
+  }
+
+  if ((kind === "item" || kind === "move") && onSelectValue) {
+    return (
+      <DropdownTextField
+        kind={kind}
+        className="scenario-cell"
+        label={label}
+        value={value}
+        options={suggestedOptions ?? getMatchingEntityInputOptions(kind, value)}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -1921,7 +2099,7 @@ function ScenarioTextField({
   const options = kind ? suggestedOptions ?? getMatchingEntityInputOptions(kind, value) : [];
 
   return (
-    <label className="scenario-cell placeholder-field">
+    <label className={`scenario-cell placeholder-field${kind && isUnresolvedEntityInput(kind, value) ? " is-invalid" : ""}`}>
       <input
         value={value}
         placeholder={showLabel ? label : placeholder}
