@@ -40,6 +40,30 @@ describe("App", () => {
     expect(html).toContain('aria-valuemax="32"');
     expect(html).toContain('aria-label="H SP配分"');
     expect(html).toContain('class="sp-cell-bar hp"');
+    expect(html).toContain(">ランク<");
+    expect(html).toContain('aria-label="Bランク: 0"');
+    expect(html).toContain('aria-label="Dランク: 0"');
+  });
+
+  it("renders only A and C parameter rows for each virtual attacker", () => {
+    const html = renderToStaticMarkup(<App />);
+
+    expect(html).toContain('aria-label="攻撃A 参照能力"');
+    expect(html).toContain('aria-label="攻撃A A SP"');
+    expect(html).toContain('aria-label="攻撃A Aランク: 0"');
+    expect(html).not.toContain('aria-label="攻撃A C SP"');
+    expect(html).not.toContain('aria-label="攻撃A Cランク: 0"');
+    expect(html).not.toContain('aria-label="攻撃A H SP"');
+    expect(html).not.toContain('aria-label="攻撃A B SP"');
+    expect(html).not.toContain('aria-label="攻撃A D SP"');
+    expect(html).not.toContain('aria-label="攻撃A S SP"');
+    expect(html).not.toContain('aria-label="攻撃A Bランク: 0"');
+    expect(html).not.toContain('aria-label="攻撃A Dランク: 0"');
+    expect(html).toContain('aria-label="攻撃A 調整対象ランク"');
+    expect(html).toContain('aria-label="攻撃A 調整対象Bランク: 0"');
+    expect(html).toContain('aria-label="攻撃A 調整対象Dランク: 0"');
+    expect(html).toContain(">調整対象ランク<");
+    expect(html).not.toContain("（この攻撃のみ）");
   });
 
   it("renders nature stat modifiers beside target and attacker SP fields", () => {
@@ -55,7 +79,7 @@ describe("App", () => {
     expect(html).toContain('class="nature-stat-modifier up" aria-label="C 上昇"');
     expect(html).toContain('class="nature-stat-modifier down" aria-label="A 下降"');
     expect(html).toContain('class="nature-stat-modifier up" aria-label="A 上昇"');
-    expect(html).toContain('class="nature-stat-modifier down" aria-label="C 下降"');
+    expect(html).not.toContain('class="nature-stat-modifier down" aria-label="C 下降"');
   });
 
   it("marks only non-empty unresolved entity inputs as invalid", () => {

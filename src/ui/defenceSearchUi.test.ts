@@ -145,6 +145,7 @@ describe("buildDefenceSearchInput", () => {
       itemInput: "とつげきチョッキ",
       teraTypeInput: "あく",
       teraEnabled: true,
+      boosts: { atk: 0, def: 2, spa: 0, spd: -6, spe: 0 },
     };
     const [defaultScenario] = createDefaultScenarioForms();
     const scenarios = [
@@ -178,7 +179,8 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].attacker.teraType?.canonicalName).toBe("Dark");
     expect(input.scenarios[0].hits[0].attacker.status).toBe("brn");
     expect(input.scenarios[0].hits[0].attackerBoosts.atk).toBe(2);
-    expect(input.scenarios[0].hits[0].defenderBoosts.def).toBe(1);
+    expect(input.scenarios[0].hits[0].defenderBoosts.def).toBe(3);
+    expect(input.scenarios[0].hits[0].defenderBoosts.spd).toBe(-6);
     expect(input.scenarios[0].hits[0].field?.gameType).toBe("doubles");
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Close Combat");
   });

@@ -15,6 +15,7 @@ describe("shareState", () => {
       teraEnabled: true,
       dmaxEnabled: true,
       status: "brn" as const,
+      boosts: { atk: 0, def: 2, spa: 0, spd: -1, spe: 0 },
     };
     const scenarios = createDefaultScenarioForms().map((scenario) => ({
       ...scenario,
@@ -40,6 +41,7 @@ describe("shareState", () => {
       teraEnabled: true,
       dmaxEnabled: true,
       status: "brn",
+      boosts: { def: 2, spd: -1 },
     });
     expect(parsed.scenarios[0].label).toBe("対オオニューラ");
     expect(parsed.scenarios[0].attacks[0]).toMatchObject({
@@ -57,5 +59,23 @@ describe("shareState", () => {
       target: {},
       scenarios: [],
     }))).toThrow("対応していない条件JSON");
+  });
+
+  it("fills missing target boosts from defaults when importing older JSON", () => {
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: {
+        pokemonInput: "メガスターミー",
+      },
+      scenarios: createDefaultScenarioForms(),
+    }));
+
+    expect(parsed.target.boosts).toEqual({
+      atk: 0,
+      def: 0,
+      spa: 0,
+      spd: 0,
+      spe: 0,
+    });
   });
 });

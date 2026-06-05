@@ -38,6 +38,7 @@ export interface TargetFormState {
   status: PokemonStatus;
   level: number;
   statPoints: StatPointTable;
+  boosts: StatBoostTable;
 }
 
 export interface ScenarioAttackFormState {
@@ -225,6 +226,7 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   status: "none",
   level: 50,
   statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
+  boosts: { ...zeroBoosts },
 });
 
 export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃A"): ScenarioAttackFormState => ({
@@ -294,6 +296,7 @@ const toScenarioHit = (
   attackForm: ScenarioAttackFormState,
   index: number,
   hitsBefore: number,
+  targetBoosts: StatBoostTable,
 ): ScenarioHit => {
   const repeat = Math.max(1, clampInt(attackForm.repeat, 1, 10));
   const requiredSurvivedHits = Math.max(
@@ -312,6 +315,7 @@ const toScenarioHit = (
       status: attackForm.attackerStatus,
       level: attackForm.attackerLevel,
       statPoints: attackForm.attackerStatPoints,
+      boosts: { ...zeroBoosts },
     },
     `${scenarioForm.id}-${attackForm.id}-attacker`,
   );
@@ -329,7 +333,13 @@ const toScenarioHit = (
     repeat,
     critical: attackForm.critical,
     attackerBoosts: normalizeBoosts(attackForm.attackerBoosts),
-    defenderBoosts: normalizeBoosts(attackForm.defenderBoosts),
+    defenderBoosts: normalizeBoosts({
+      atk: (targetBoosts.atk ?? 0) + (attackForm.defenderBoosts.atk ?? 0),
+      def: (targetBoosts.def ?? 0) + (attackForm.defenderBoosts.def ?? 0),
+      spa: (targetBoosts.spa ?? 0) + (attackForm.defenderBoosts.spa ?? 0),
+      spd: (targetBoosts.spd ?? 0) + (attackForm.defenderBoosts.spd ?? 0),
+      spe: (targetBoosts.spe ?? 0) + (attackForm.defenderBoosts.spe ?? 0),
+    }),
     attackerSide: { ...emptySide, helpingHand: attackForm.helpingHand },
     defenderSide: {
       ...emptySide,
@@ -352,10 +362,11 @@ const isBlankAttackForm = (form: ScenarioAttackFormState): boolean =>
 const toScenarioHits = (
   scenarioForm: ScenarioFormState,
   activeAttacks: ScenarioAttackFormState[],
+  targetBoosts: StatBoostTable,
 ): ScenarioHit[] => {
   let hitsBefore = 0;
   return activeAttacks.map((attack, index) => {
-    const hit = toScenarioHit(scenarioForm, attack, index, hitsBefore);
+    const hit = toScenarioHit(scenarioForm, attack, index, hitsBefore, targetBoosts);
     hitsBefore += hit.repeat;
     return hit;
   });
@@ -378,7 +389,7 @@ export const buildDefenceSearchInput = (
       if (activeAttacks.length === 0) {
         throw new Error(`${form.label} に有効な攻撃条件がありません`);
       }
-      const hits = toScenarioHits(form, activeAttacks);
+      const hits = toScenarioHits(form, activeAttacks, normalizeBoosts(targetForm.boosts));
 
       return {
         id: form.id,

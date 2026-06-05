@@ -29,6 +29,7 @@ const normalizeTarget = (value: unknown): TargetFormState => {
     ...defaults,
     ...input,
     statPoints: mergeObject(defaults.statPoints, input.statPoints),
+    boosts: mergeObject(defaults.boosts, input.boosts),
   } as TargetFormState;
 };
 

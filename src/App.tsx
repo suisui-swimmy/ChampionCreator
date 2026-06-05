@@ -40,6 +40,7 @@ import {
   type ScenarioFormState,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import { getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import {
   getPokemonBaseFormValue,
@@ -77,8 +78,6 @@ const statIconFiles: Record<StatKey, string> = {
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
-const attackerBoostKeys = ["atk", "def", "spa"] as const satisfies readonly (keyof StatBoostTable)[];
-const defenderBoostKeys = ["def", "spd"] as const satisfies readonly (keyof StatBoostTable)[];
 const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 
 type NatureMatrixStatKey = (typeof natureMatrixKeys)[number];
@@ -418,6 +417,7 @@ export function App() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [applyLabel, setApplyLabel] = useState("1位を適用");
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
+  const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [shareOpen, setShareOpen] = useState(false);
   const [shareText, setShareText] = useState("");
   const [shareMessage, setShareMessage] = useState<string | null>(null);
@@ -461,6 +461,7 @@ export function App() {
 
     if (!previewInput.input) {
       setActualStats(null);
+      setAttackerActualStats({});
       return () => {
         canceled = true;
       };
@@ -470,10 +471,19 @@ export function App() {
       if (!canceled && previewInput.input) {
         const pokemon = toSmogonPokemon(previewInput.input.build);
         setActualStats({ ...pokemon.stats, hp: pokemon.maxHP() });
+        setAttackerActualStats(Object.fromEntries(
+          previewInput.input.scenarios.flatMap((scenario) =>
+            scenario.hits.map((hit) => {
+              const attacker = toSmogonPokemon(hit.attacker);
+              return [hit.attacker.id, { ...attacker.stats, hp: attacker.maxHP() }];
+            }),
+          ),
+        ));
       }
     }).catch(() => {
       if (!canceled) {
         setActualStats(null);
+        setAttackerActualStats({});
       }
     });
 
@@ -743,6 +753,9 @@ export function App() {
         />
         <ScenarioPanel
           scenarios={scenarioForms}
+          attackerActualStats={attackerActualStats}
+          targetForm={targetForm}
+          targetActualStats={actualStats}
           onAddScenario={handleAddScenario}
           onRemoveScenario={handleRemoveScenario}
           onUpdateScenario={updateScenario}
@@ -1507,6 +1520,7 @@ function TargetPanel({
           <span>実数値</span>
           <span>現在SP</span>
           <span>SP配分</span>
+          <span>ランク</span>
           <span>固定</span>
         </div>
         {statKeys.map((key) => (
@@ -1529,6 +1543,23 @@ function TargetPanel({
               value={targetForm.statPoints[key]}
               onChange={(value) => onUpdateEv(key, value)}
             />
+            {key === "hp" ? (
+              <span className="target-rank-placeholder" aria-hidden="true" />
+            ) : (
+              <SelectField
+                compact
+                placeholderLabel
+                placeholderValue=""
+                className="target-rank-field"
+                label={`${statLabels[key]}ランク`}
+                value={String(targetForm.boosts[key] ?? 0)}
+                options={rankSelectOptions}
+                onChange={(value) => onUpdateField("boosts", {
+                  ...targetForm.boosts,
+                  [key]: toNumber(value, 0),
+                })}
+              />
+            )}
             <span className={defenceStatKeySet.has(key) ? "search-chip" : "fixed-chip"}>
               {defenceStatKeySet.has(key) ? "HBD" : "固定"}
             </span>
@@ -1667,6 +1698,9 @@ function PokemonArtworkFrame({
 
 type ScenarioPanelProps = {
   scenarios: ScenarioFormState[];
+  attackerActualStats: Record<string, StatTable>;
+  targetForm: TargetFormState;
+  targetActualStats: StatTable | null;
   onAddScenario: () => void;
   onRemoveScenario: (id: string) => void;
   onUpdateScenario: <K extends keyof ScenarioFormState>(
@@ -1687,6 +1721,9 @@ type ScenarioPanelProps = {
 
 function ScenarioPanel({
   scenarios,
+  attackerActualStats,
+  targetForm,
+  targetActualStats,
   onAddScenario,
   onRemoveScenario,
   onUpdateScenario,
@@ -1710,6 +1747,9 @@ function ScenarioPanel({
           <ScenarioRow
             key={scenario.id}
             scenario={scenario}
+            attackerActualStats={attackerActualStats}
+            targetForm={targetForm}
+            targetActualStats={targetActualStats}
             onAddAttack={onAddAttack}
             onRemoveAttack={onRemoveAttack}
             onRemoveScenario={onRemoveScenario}
@@ -1728,6 +1768,9 @@ function ScenarioPanel({
 
 type ScenarioRowProps = {
   scenario: ScenarioFormState;
+  attackerActualStats: Record<string, StatTable>;
+  targetForm: TargetFormState;
+  targetActualStats: StatTable | null;
   onAddAttack: (scenarioId: string) => void;
   onRemoveAttack: (scenarioId: string, attackId: string) => void;
   onRemoveScenario: (id: string) => void;
@@ -1747,6 +1790,9 @@ type ScenarioRowProps = {
 
 function ScenarioRow({
   scenario,
+  attackerActualStats,
+  targetForm,
+  targetActualStats,
   onAddAttack,
   onRemoveAttack,
   onRemoveScenario,
@@ -1789,6 +1835,9 @@ function ScenarioRow({
             attack={attack}
             attackIndex={attackIndex}
             scenarioId={scenario.id}
+            actualStats={attackerActualStats[`${scenario.id}-${attack.id}-attacker`]}
+            targetForm={targetForm}
+            targetActualStats={targetActualStats}
             canRemove={scenario.attacks.length > 1}
             onRemoveAttack={onRemoveAttack}
             onUpdateAttack={onUpdateAttack}
@@ -1812,6 +1861,9 @@ type AttackCardProps = {
   attack: ScenarioAttackFormState;
   attackIndex: number;
   scenarioId: string;
+  actualStats?: StatTable;
+  targetForm: TargetFormState;
+  targetActualStats: StatTable | null;
   canRemove: boolean;
   onRemoveAttack: (scenarioId: string, attackId: string) => void;
   onUpdateAttack: <K extends keyof ScenarioAttackFormState>(
@@ -1827,6 +1879,9 @@ function AttackCard({
   attack,
   attackIndex,
   scenarioId,
+  actualStats,
+  targetForm,
+  targetActualStats,
   canRemove,
   onRemoveAttack,
   onUpdateAttack,
@@ -1841,6 +1896,17 @@ function AttackCard({
   const attackerAbilityOptions = getPokemonAbilityInputOptions(
     attackerCanonicalPokemon,
   );
+  const statReferencePlan = getMoveStatReferencePlan(attack.moveInput, {
+    teraEnabled: attack.attackerTeraEnabled,
+  });
+  const targetReferenceKeys = statReferencePlan.references
+    .filter((reference) => reference.owner === "target")
+    .map((reference) => reference.stat);
+  const defenderRankKeys = Array.from(new Set<Exclude<StatKey, "hp">>([
+    "def",
+    "spd",
+    ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
+  ]));
 
   return (
     <section className="attack-condition-card" aria-label={attackLabel}>
@@ -1985,53 +2051,93 @@ function AttackCard({
         />
       </div>
 
-      <div className="rank-grid" aria-label={`${attackLabel} ランク補正`}>
-        {attackerBoostKeys.map((key) => (
-          <SelectField
-            compact
-            label={`攻${statLabels[key]}`}
-            value={String(attack.attackerBoosts[key] ?? 0)}
-            options={rankSelectOptions}
-            key={`attacker-${key}`}
-            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
-                ...attack.attackerBoosts,
-                [key]: toNumber(value, 0),
-              })}
-          />
-        ))}
-        {defenderBoostKeys.map((key) => (
-          <SelectField
-            compact
-            label={`防${statLabels[key]}`}
-            value={String(attack.defenderBoosts[key] ?? 0)}
-            options={rankSelectOptions}
-            key={`defender-${key}`}
-            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
+      <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} 参照能力`}>
+        <div className="ev-header attacker-stat-header">
+          <span>能力</span>
+          <span>実数値</span>
+          <span>SP</span>
+          <span>ランク</span>
+        </div>
+        {statReferencePlan.references.map((reference) => {
+          const key = reference.stat;
+          const isAttacker = reference.owner === "attacker";
+          const sourceLabel = isAttacker ? "仮想敵" : "調整対象";
+          const statPoints = isAttacker ? attack.attackerStatPoints : targetForm.statPoints;
+          const stats = isAttacker ? actualStats : targetActualStats;
+          const nature = isAttacker ? attack.attackerNatureInput : targetForm.natureInput;
+
+          return (
+            <div
+              className={`ev-row attacker-stat-row ${key}${isAttacker ? "" : " target-reference"}`}
+              key={`${reference.owner}-${key}-${reference.role}`}
+            >
+              <strong>
+                <StatIcon stat={key} />
+                <span>{sourceLabel}</span>
+              </strong>
+              <span className="actual-stat-with-modifier">
+                <NatureStatModifier natureLabel={nature} stat={key} />
+                <span className="actual-stat">{stats?.[key] ?? "-"}</span>
+              </span>
+              {isAttacker ? (
+                <input
+                  type="number"
+                  min="0"
+                  max="252"
+                  step="1"
+                  value={statPoints[key]}
+                  aria-label={`${attackLabel} ${statLabels[key]} SP`}
+                  placeholder={`${statLabels[key]} SP`}
+                  title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+                  onFocus={selectInputValueOnFocus}
+                  onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
+                />
+              ) : (
+                <span className="attacker-reference-sp">{statPoints[key]}</span>
+              )}
+              {isAttacker && key !== "hp" ? (
+                <SelectField
+                  compact
+                  placeholderLabel
+                  placeholderValue=""
+                  className="target-rank-field"
+                  label={`${attackLabel} ${statLabels[key]}ランク`}
+                  value={String(attack.attackerBoosts[key] ?? 0)}
+                  options={rankSelectOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+                    ...attack.attackerBoosts,
+                    [key]: toNumber(value, 0),
+                  })}
+                />
+              ) : (
+                <span className="attacker-stat-role">
+                  {reference.role === "power" ? "威力参照" : sourceLabel}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="scenario-defender-ranks" aria-label={`${attackLabel} 調整対象ランク`}>
+        <span className="scenario-defender-ranks-title">調整対象ランク</span>
+        {defenderRankKeys.map((key) => (
+          <div className="scenario-defender-rank" key={key}>
+            <StatIcon stat={key} />
+            <SelectField
+              compact
+              placeholderLabel
+              placeholderValue=""
+              className="target-rank-field"
+              label={`${attackLabel} 調整対象${statLabels[key]}ランク`}
+              value={String(attack.defenderBoosts[key] ?? 0)}
+              options={rankSelectOptions}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
                 ...attack.defenderBoosts,
                 [key]: toNumber(value, 0),
               })}
-          />
-        ))}
-      </div>
-
-      <div className="attacker-evs" aria-label={`${attackLabel} 攻撃側SP`}>
-        {statKeys.map((key) => (
-          <label className="attacker-stat-field" key={key}>
-            <span className="attacker-stat-label"><StatIcon stat={key} /></span>
-            <NatureStatModifier natureLabel={attack.attackerNatureInput} stat={key} />
-            <input
-              type="number"
-              min="0"
-              max="252"
-              step="1"
-              value={attack.attackerStatPoints[key]}
-              aria-label={`${attackLabel} ${statLabels[key]} SP`}
-              placeholder={`${statLabels[key]} SP`}
-              title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
-              onFocus={selectInputValueOnFocus}
-              onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
             />
-          </label>
+          </div>
         ))}
       </div>
 

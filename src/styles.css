@@ -1225,7 +1225,7 @@ textarea {
 .ev-header,
 .ev-row {
   display: grid;
-  grid-template-columns: 42px 16px 58px 64px minmax(0, 1fr) 52px;
+  grid-template-columns: 42px 16px 58px 64px minmax(0, 1fr) 54px 52px;
   gap: 6px;
   align-items: center;
   min-height: 38px;
@@ -1280,6 +1280,20 @@ textarea {
 .ev-row input {
   height: 28px;
   text-align: center;
+}
+
+.target-rank-field {
+  min-width: 0;
+}
+
+.target-rank-field .select-trigger {
+  height: 28px;
+  padding: 0 5px 0 7px;
+}
+
+.target-rank-placeholder {
+  width: 100%;
+  height: 28px;
 }
 
 .ev-row input[type="checkbox"] {
@@ -1566,18 +1580,6 @@ textarea {
   gap: 8px;
 }
 
-.rank-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.rank-grid label,
-.rank-grid .select-field {
-  display: grid;
-  gap: 3px;
-}
-
 .attack-condition-card,
 .attack-add-card,
 .scenario-add-row {
@@ -1608,34 +1610,83 @@ textarea {
   gap: 6px;
 }
 
-.attacker-evs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.attacker-stat-table {
+  margin-top: 2px;
+}
+
+.attacker-stat-header,
+.attacker-stat-row {
+  grid-template-columns: minmax(76px, 1fr) 72px 54px 58px;
+}
+
+.attacker-stat-header {
+  font-size: 10px;
+}
+
+.attacker-stat-row {
+  min-height: 36px;
+}
+
+.attacker-stat-row .stat-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.attacker-stat-row strong {
+  display: flex;
+  justify-content: flex-start;
   gap: 6px;
+  font-size: 10px;
 }
 
-.attacker-stat-field {
-  display: grid;
-  grid-template-columns: 24px 16px minmax(48px, 1fr);
-  align-items: center;
-  gap: 4px;
-}
-
-.attacker-stat-label {
-  display: inline-flex;
-  align-items: center;
+.actual-stat-with-modifier {
+  display: flex;
   justify-content: center;
-  min-width: 24px;
-  height: 28px;
+  gap: 4px;
+  align-items: center;
 }
 
-.attacker-stat-label .stat-icon {
-  width: 17px;
-  height: 17px;
+.attacker-reference-sp {
+  text-align: center;
+  font-weight: 700;
 }
 
-.attacker-stat-field input {
-  min-width: 0;
+.attacker-stat-role {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.attacker-stat-row.target-reference {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.scenario-defender-ranks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(auto-fit, minmax(64px, 72px));
+  gap: 8px;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 0;
+}
+
+.scenario-defender-ranks-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.scenario-defender-rank {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+}
+
+.scenario-defender-rank .stat-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .compact-select-field {
