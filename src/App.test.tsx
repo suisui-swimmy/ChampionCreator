@@ -5,11 +5,21 @@ import {
   CandidateAllocationMeter,
   clampTargetStatPointChange,
   getCandidateAllocationFillPercent,
+  getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
 } from "./App";
 
 describe("App", () => {
+  it("supports keyboard navigation and Tab selection for Pokemon suggestions", () => {
+    expect(getPokemonSuggestionKeyAction("ArrowDown", 0, 2)).toEqual({ type: "move", index: 1 });
+    expect(getPokemonSuggestionKeyAction("ArrowDown", 1, 2)).toEqual({ type: "move", index: 0 });
+    expect(getPokemonSuggestionKeyAction("ArrowUp", 0, 2)).toEqual({ type: "move", index: 1 });
+    expect(getPokemonSuggestionKeyAction("Tab", 0, 2)).toEqual({ type: "select" });
+    expect(getPokemonSuggestionKeyAction("Enter", 0, 2)).toEqual({ type: "select" });
+    expect(getPokemonSuggestionKeyAction("Escape", 0, 2)).toEqual({ type: "close" });
+  });
+
   it("renders the M0 workbench sections", () => {
     const html = renderToStaticMarkup(<App />);
 
@@ -78,12 +88,13 @@ describe("App", () => {
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {
     const html = renderToStaticMarkup(<App />);
 
-    expect(html).toContain('<datalist id="entity-options-pokemon-');
     expect(html).toContain('value="ドドゲザン"');
     expect(html).toContain('value="メガスターミー"');
     expect(html).not.toContain('value="Dragonite"');
     expect(html).not.toContain('label="Dragonite"');
-    expect(html).toContain('list="entity-options-pokemon');
+    expect(html).not.toContain('list="entity-options-pokemon');
+    expect(html).toContain('role="combobox"');
+    expect(html).toContain('aria-autocomplete="list"');
     expect(html).toContain('list="entity-options-move');
     expect(html).toContain('class="nature-trigger"');
     expect(html).toContain('aria-label="性格: ひかえめ"');

@@ -724,6 +724,7 @@ type EntityTextFieldProps = {
   className?: string;
   options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSelectValue?: (value: string) => void;
 };
 
 function EntityTextField({
@@ -733,8 +734,22 @@ function EntityTextField({
   className,
   options: suggestedOptions,
   onChange,
+  onSelectValue,
 }: EntityTextFieldProps) {
   const datalistId = `entity-options-${kind}-${useId()}`;
+
+  if (kind === "pokemon" && onSelectValue) {
+    return (
+      <PokemonAutocompleteField
+        className={className}
+        label={label}
+        value={value}
+        onChange={onChange}
+        onSelectValue={onSelectValue}
+      />
+    );
+  }
+
   const options = suggestedOptions ?? getMatchingEntityInputOptions(kind, value);
   const labelClassName = ["placeholder-field", className].filter(Boolean).join(" ");
 
@@ -757,6 +772,157 @@ function EntityTextField({
         ))}
       </datalist>
     </label>
+  );
+}
+
+type PokemonAutocompleteFieldProps = {
+  label: string;
+  value: string;
+  className?: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSelectValue: (value: string) => void;
+};
+
+type PokemonSuggestionKeyAction =
+  | { type: "move"; index: number }
+  | { type: "select" }
+  | { type: "close" }
+  | { type: "none" };
+
+export const getPokemonSuggestionKeyAction = (
+  key: string,
+  activeIndex: number,
+  optionCount: number,
+): PokemonSuggestionKeyAction => {
+  if (optionCount <= 0) {
+    return { type: "none" };
+  }
+
+  if (key === "ArrowDown") {
+    return { type: "move", index: (activeIndex + 1) % optionCount };
+  }
+
+  if (key === "ArrowUp") {
+    return { type: "move", index: (activeIndex - 1 + optionCount) % optionCount };
+  }
+
+  if (key === "Tab" || key === "Enter") {
+    return { type: "select" };
+  }
+
+  if (key === "Escape") {
+    return { type: "close" };
+  }
+
+  return { type: "none" };
+};
+
+function PokemonAutocompleteField({
+  label,
+  value,
+  className,
+  onChange,
+  onSelectValue,
+}: PokemonAutocompleteFieldProps) {
+  const listboxId = `pokemon-suggestions-${useId()}`;
+  const [focused, setFocused] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const options = useMemo(
+    () => value.trim() ? getMatchingEntityInputOptions("pokemon", value, 8) : [],
+    [value],
+  );
+  const open = focused && options.length > 0;
+  const activeOption = options[Math.min(activeIndex, options.length - 1)];
+  const fieldClassName = ["pokemon-autocomplete-field", "placeholder-field", className].filter(Boolean).join(" ");
+
+  const selectOption = (option: EntityInputOption) => {
+    onSelectValue(option.value);
+    setActiveIndex(0);
+    setFocused(false);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    const action = getPokemonSuggestionKeyAction(event.key, activeIndex, open ? options.length : 0);
+    if (action.type === "none") {
+      return;
+    }
+
+    if (action.type === "move") {
+      event.preventDefault();
+      setActiveIndex(action.index);
+      return;
+    }
+
+    if (action.type === "select" && activeOption) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+      }
+      selectOption(activeOption);
+      return;
+    }
+
+    if (action.type === "close") {
+      event.preventDefault();
+      setFocused(false);
+    }
+  };
+
+  return (
+    <UiPopover.Root open={open}>
+      <UiPopover.Anchor asChild>
+        <input
+          className={fieldClassName}
+          value={value}
+          placeholder={label}
+          autoComplete="off"
+          role="combobox"
+          aria-label={label}
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={open ? listboxId : undefined}
+          aria-activedescendant={open && activeOption ? `${listboxId}-${Math.min(activeIndex, options.length - 1)}` : undefined}
+          onFocus={(event) => {
+            selectInputValueOnFocus(event);
+            setFocused(true);
+          }}
+          onBlur={() => setFocused(false)}
+          onChange={(event) => {
+            setActiveIndex(0);
+            setFocused(true);
+            onChange(event);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+      </UiPopover.Anchor>
+      <UiPopover.Portal>
+        <UiPopover.Content
+          className="pokemon-suggestion-popover"
+          sideOffset={4}
+          align="start"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+        >
+          <div className="pokemon-suggestion-list" id={listboxId} role="listbox" aria-label={`${label}候補`}>
+            {options.map((option, index) => (
+              <button
+                className={`pokemon-suggestion-option${index === activeIndex ? " active" : ""}`}
+                id={`${listboxId}-${index}`}
+                type="button"
+                role="option"
+                aria-selected={index === activeIndex}
+                key={option.canonicalName}
+                onPointerDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => selectOption(option)}
+              >
+                <span>{option.value}</span>
+                <small>{option.canonicalName}</small>
+              </button>
+            ))}
+          </div>
+        </UiPopover.Content>
+      </UiPopover.Portal>
+    </UiPopover.Root>
   );
 }
 
@@ -1135,6 +1301,7 @@ function TargetPanel({
             label="ポケモン"
             value={targetForm.pokemonInput}
             onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
+            onSelectValue={(value) => onUpdateField("pokemonInput", value)}
           />
           <NatureMatrixField
             label="性格"
@@ -1556,7 +1723,14 @@ function AttackCard({
       </div>
 
       <div className="attack-card-fields">
-        <ScenarioTextField kind="pokemon" label="攻撃側" showLabel value={attack.attackerPokemonInput} onChange={onInput("attackerPokemonInput")} />
+        <ScenarioTextField
+          kind="pokemon"
+          label="攻撃側"
+          showLabel
+          value={attack.attackerPokemonInput}
+          onChange={onInput("attackerPokemonInput")}
+          onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+        />
         <ScenarioTextField kind="move" label="技" showLabel value={attack.moveInput} onChange={onInput("moveInput")} />
         <NatureMatrixField
           className="scenario-cell"
@@ -1717,10 +1891,33 @@ type ScenarioTextFieldProps = {
   placeholder?: string;
   options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSelectValue?: (value: string) => void;
 };
 
-function ScenarioTextField({ kind, label, showLabel, value, placeholder, options: suggestedOptions, onChange }: ScenarioTextFieldProps) {
+function ScenarioTextField({
+  kind,
+  label,
+  showLabel,
+  value,
+  placeholder,
+  options: suggestedOptions,
+  onChange,
+  onSelectValue,
+}: ScenarioTextFieldProps) {
   const datalistId = `entity-options-${kind ?? "text"}-${useId()}`;
+
+  if (kind === "pokemon" && onSelectValue) {
+    return (
+      <PokemonAutocompleteField
+        className="scenario-cell"
+        label={label}
+        value={value}
+        onChange={onChange}
+        onSelectValue={onSelectValue}
+      />
+    );
+  }
+
   const options = kind ? suggestedOptions ?? getMatchingEntityInputOptions(kind, value) : [];
 
   return (

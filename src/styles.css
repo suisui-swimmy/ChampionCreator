@@ -1010,6 +1010,66 @@ input {
   font-weight: 750;
 }
 
+.pokemon-suggestion-popover {
+  z-index: 47;
+  width: var(--radix-popover-trigger-width);
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 32px));
+  border: 1px solid rgba(245, 197, 66, 0.34);
+  border-radius: 7px;
+  background: #0c1212;
+  padding: 5px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(245, 197, 66, 0.05);
+}
+
+.pokemon-suggestion-list {
+  display: grid;
+  max-height: 260px;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.pokemon-suggestion-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: #0d1414;
+  color: #dbe0dc;
+  padding: 4px 8px;
+  text-align: left;
+  outline: 0;
+}
+
+.pokemon-suggestion-option:hover,
+.pokemon-suggestion-option:focus-visible,
+.pokemon-suggestion-option.active {
+  border-color: rgba(245, 197, 66, 0.28);
+  background: rgba(245, 197, 66, 0.12);
+  color: #ffe08a;
+}
+
+.pokemon-suggestion-option span,
+.pokemon-suggestion-option small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pokemon-suggestion-option span {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.pokemon-suggestion-option small {
+  color: #8fa09f;
+  font-size: 10px;
+  font-weight: 750;
+}
+
 textarea {
   min-height: 118px;
   padding: 8px;
