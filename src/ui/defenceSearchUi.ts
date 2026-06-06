@@ -323,6 +323,16 @@ const toScenarioHit = (
   return {
     id: `${scenarioForm.id}-hit-${index + 1}`,
     attacker,
+    allyAbilities: attackForm.gameType === "doubles"
+      ? scenarioForm.attacks
+        .filter((allyForm) => allyForm.id !== attackForm.id)
+        .map((allyForm) => resolveOptional(
+          "ability",
+          allyForm.attackerAbilityInput,
+          `${allyForm.label || "味方"}の特性`,
+        ))
+        .filter((ability): ability is NonNullable<typeof ability> => Boolean(ability))
+      : undefined,
     move: mustResolve("move", attackForm.moveInput, "技"),
     field: toFieldState(attackForm),
     constraint: {
@@ -356,8 +366,8 @@ const toFieldState = (form: { gameType?: GameType; weather: Weather; terrain: Te
   terrain: form.terrain,
 });
 
-const isBlankAttackForm = (form: ScenarioAttackFormState): boolean =>
-  !form.attackerPokemonInput.trim() && !form.moveInput.trim();
+const hasDamageMove = (form: ScenarioAttackFormState): boolean =>
+  Boolean(form.moveInput.trim());
 
 const toScenarioHits = (
   scenarioForm: ScenarioFormState,
@@ -385,7 +395,7 @@ export const buildDefenceSearchInput = (
   return {
     build: toBuild(targetForm, "target"),
     scenarios: activeScenarioForms.map((form): Scenario => {
-      const activeAttacks = form.attacks.filter((attack) => !isBlankAttackForm(attack));
+      const activeAttacks = form.attacks.filter(hasDamageMove);
       if (activeAttacks.length === 0) {
         throw new Error(`${form.label} に有効な攻撃条件がありません`);
       }

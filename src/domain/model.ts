@@ -72,6 +72,7 @@ export interface SideState {
 export interface ScenarioHit {
   id: string;
   attacker: Build;
+  allyAbilities?: AbilityRef[];
   move: MoveRef;
   field?: FieldState;
   constraint?: SurvivalConstraint;

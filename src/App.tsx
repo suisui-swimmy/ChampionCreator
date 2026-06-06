@@ -561,7 +561,14 @@ export function App() {
             );
             return {
               ...scenario,
-              attacks: [...scenario.attacks, { ...nextAttack, requiredSurvivedHits }],
+              attacks: [
+                ...scenario.attacks,
+                {
+                  ...nextAttack,
+                  requiredSurvivedHits,
+                  gameType: scenario.attacks[0]?.gameType ?? nextAttack.gameType,
+                },
+              ],
             };
           })()
         : scenario
@@ -1737,7 +1744,7 @@ function ScenarioPanel({
       <div className="section-heading">
         <div>
           <h2 id="scenario-title">仮想敵シナリオ</h2>
-          <span>1行の中で攻撃A+Bを累積条件として同時評価</span>
+          <span>攻撃A+Bを累積評価。ダブルでは同じ行の特性を味方効果として自動反映</span>
         </div>
         <Button variant="ghost" onClick={onAddScenario}>+ シナリオを追加</Button>
       </div>
@@ -1891,6 +1898,9 @@ function AttackCard({
     event: ChangeEvent<HTMLInputElement>,
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const attackLabel = attack.label || `攻撃${String.fromCharCode(65 + attackIndex)}`;
+  const isAbilitySupport = Boolean(
+    !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
+  );
   const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
   const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
   const attackerAbilityOptions = getPokemonAbilityInputOptions(
@@ -1935,7 +1945,7 @@ function AttackCard({
         </Button>
       </div>
 
-      <div className="attack-card-fields">
+      <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
         <ScenarioTextField
           kind="pokemon"
           label="攻撃側"
@@ -1952,12 +1962,14 @@ function AttackCard({
           onChange={onInput("moveInput")}
           onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
         />
-        <NatureMatrixField
-          className="scenario-cell"
-          label="性格"
-          value={attack.attackerNatureInput}
-          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
-        />
+        {!isAbilitySupport ? (
+          <NatureMatrixField
+            className="scenario-cell"
+            label="性格"
+            value={attack.attackerNatureInput}
+            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
+          />
+        ) : null}
         <AbilityTextField
           className="scenario-cell"
           label="特性"
@@ -1966,30 +1978,39 @@ function AttackCard({
           onChange={onInput("attackerAbilityInput")}
           onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
         />
-        <ScenarioTextField
-          kind="item"
-          label="持ち物"
-          showLabel
-          value={attack.attackerItemInput}
-          placeholder="任意"
-          onChange={onInput("attackerItemInput")}
-          onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
-        />
+        {!isAbilitySupport ? (
+          <ScenarioTextField
+            kind="item"
+            label="持ち物"
+            showLabel
+            value={attack.attackerItemInput}
+            placeholder="任意"
+            onChange={onInput("attackerItemInput")}
+            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
+          />
+        ) : null}
       </div>
 
-      <MechanicControls
-        pokemonInput={attack.attackerPokemonInput}
-        teraEnabled={attack.attackerTeraEnabled}
-        dmaxEnabled={attack.attackerDmaxEnabled}
-        teraTypeInput={attack.attackerTeraTypeInput}
-        teraLabel={attack.attackerTeraEnabled ? "攻撃テラ解除" : "攻撃テラ"}
-        onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
-        onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
-        onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
-        onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
-      />
+      {isAbilitySupport ? (
+        <div className="attack-support-note" role="status">
+          <strong>特性サポート</strong>
+          <span>技なしでも、同じ行のダブル攻撃で影響する特性なら自動反映します</span>
+        </div>
+      ) : (
+        <>
+          <MechanicControls
+            pokemonInput={attack.attackerPokemonInput}
+            teraEnabled={attack.attackerTeraEnabled}
+            dmaxEnabled={attack.attackerDmaxEnabled}
+            teraTypeInput={attack.attackerTeraTypeInput}
+            teraLabel={attack.attackerTeraEnabled ? "攻撃テラ解除" : "攻撃テラ"}
+            onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+            onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
+            onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
+            onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
+          />
 
-      <div className="attack-number-grid">
+          <div className="attack-number-grid">
         <ScenarioNumberField
           label="Lv."
           showLabel
@@ -2022,9 +2043,9 @@ function AttackCard({
           max={100}
           onChange={(value) => onUpdateAttack(scenarioId, attack.id, "minSurvivalProbabilityPercent", value)}
         />
-      </div>
+          </div>
 
-      <div className="attack-field-grid">
+          <div className="attack-field-grid">
         <SelectField
           label="ルール"
           value={attack.gameType}
@@ -2049,9 +2070,9 @@ function AttackCard({
           options={terrainOptions}
           onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
         />
-      </div>
+          </div>
 
-      <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} 参照能力`}>
+          <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} 参照能力`}>
         <div className="ev-header attacker-stat-header">
           <span>能力</span>
           <span>実数値</span>
@@ -2117,9 +2138,9 @@ function AttackCard({
             </div>
           );
         })}
-      </div>
+          </div>
 
-      <div className="scenario-defender-ranks" aria-label={`${attackLabel} 調整対象ランク`}>
+          <div className="scenario-defender-ranks" aria-label={`${attackLabel} 調整対象ランク`}>
         <span className="scenario-defender-ranks-title">調整対象ランク</span>
         {defenderRankKeys.map((key) => (
           <div className="scenario-defender-rank" key={key}>
@@ -2139,15 +2160,17 @@ function AttackCard({
             />
           </div>
         ))}
-      </div>
+          </div>
 
-      <div className="scenario-options">
-        <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
-        <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
-        <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
-        <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
-        <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
-      </div>
+          <div className="scenario-options">
+            <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
+            <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
+            <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+            <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+            <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+          </div>
+        </>
+      )}
     </section>
   );
 }

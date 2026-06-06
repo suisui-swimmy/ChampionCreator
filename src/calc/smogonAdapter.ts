@@ -36,24 +36,56 @@ const gameTypeByFieldState = {
   doubles: "Doubles",
 } satisfies Record<FieldState["gameType"], SmogonGameType>;
 
-export const toSmogonSide = (side: SideState): Side =>
+export const toSmogonSide = (
+  side: SideState,
+  allyAbilityNames: Set<string> = new Set(),
+): Side =>
   new Side({
     isReflect: side.reflect,
     isLightScreen: side.lightScreen,
     isAuroraVeil: side.auroraVeil,
     isHelpingHand: side.helpingHand,
+    isFlowerGift: allyAbilityNames.has("Flower Gift"),
+    isBattery: allyAbilityNames.has("Battery"),
+    isPowerSpot: allyAbilityNames.has("Power Spot"),
+    isSteelySpirit: allyAbilityNames.has("Steely Spirit"),
   });
 
-export const toSmogonField = (field: FieldState, hit: ScenarioHit): Field =>
-  new Field({
+const getAllyAbilityNames = (hit: ScenarioHit): Set<string> =>
+  new Set(hit.allyAbilities?.map((ability) => ability.canonicalName) ?? []);
+
+const hasPlusMinusSynergy = (hit: ScenarioHit, allyAbilityNames: Set<string>): boolean =>
+  Boolean(
+    hit.attacker.ability &&
+    ["Plus", "Minus"].includes(hit.attacker.ability.canonicalName) &&
+    (allyAbilityNames.has("Plus") || allyAbilityNames.has("Minus")),
+  );
+
+export const toSmogonField = (field: FieldState, hit: ScenarioHit): Field => {
+  const allyAbilityNames = getAllyAbilityNames(hit);
+
+  return new Field({
     gameType: gameTypeByFieldState[field.gameType],
     weather: weatherByFieldState[field.weather],
     terrain: terrainByFieldState[field.terrain],
-    attackerSide: toSmogonSide(hit.attackerSide),
+    isAuraBreak: allyAbilityNames.has("Aura Break"),
+    isFairyAura: allyAbilityNames.has("Fairy Aura"),
+    isDarkAura: allyAbilityNames.has("Dark Aura"),
+    isBeadsOfRuin: allyAbilityNames.has("Beads of Ruin"),
+    isSwordOfRuin: allyAbilityNames.has("Sword of Ruin"),
+    isTabletsOfRuin: allyAbilityNames.has("Tablets of Ruin"),
+    isVesselOfRuin: allyAbilityNames.has("Vessel of Ruin"),
+    attackerSide: toSmogonSide(hit.attackerSide, allyAbilityNames),
+    // Friend Guard protects the attacker-side ally, not the current defender target.
     defenderSide: toSmogonSide(hit.defenderSide),
   });
+};
 
-export const toSmogonPokemon = (build: Build, boosts: StatBoostTable = {}): Pokemon =>
+export const toSmogonPokemon = (
+  build: Build,
+  boosts: StatBoostTable = {},
+  abilityOn = false,
+): Pokemon =>
   new Pokemon(SMOGON_GENERATION, build.pokemon.canonicalName, {
     level: build.level,
     nature: build.nature?.canonicalName,
@@ -65,6 +97,7 @@ export const toSmogonPokemon = (build: Build, boosts: StatBoostTable = {}): Poke
     isDynamaxed: build.isDynamaxed,
     status: build.status,
     boosts,
+    abilityOn,
   });
 
 export const toSmogonMove = (hit: ScenarioHit): Move =>
@@ -86,7 +119,12 @@ export const calculateSmogonHit = (
   hit: ScenarioHit,
   fieldState: FieldState,
 ): ScenarioHitEvaluation => {
-  const attacker = toSmogonPokemon(hit.attacker, hit.attackerBoosts);
+  const allyAbilityNames = getAllyAbilityNames(hit);
+  const attacker = toSmogonPokemon(
+    hit.attacker,
+    hit.attackerBoosts,
+    hasPlusMinusSynergy(hit, allyAbilityNames),
+  );
   const defender = toSmogonPokemon(defenderBuild, hit.defenderBoosts);
   const move = toSmogonMove(hit);
   const field = toSmogonField(fieldState, hit);

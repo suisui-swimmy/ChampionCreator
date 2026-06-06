@@ -279,6 +279,7 @@ describe("buildDefenceSearchInput", () => {
           id: "attack-draft",
           label: "攻撃B",
           attackerPokemonInput: "",
+          attackerAbilityInput: "",
           moveInput: "",
         },
       ],
@@ -288,6 +289,91 @@ describe("buildDefenceSearchInput", () => {
 
     expect(input.scenarios[0].hits).toHaveLength(1);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
+  });
+
+  it("uses a move-less attack card as an active ally ability in doubles", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarioWithBatterySupport = {
+      ...defaultScenario,
+      attacks: [
+        {
+          ...defaultScenario.attacks[0],
+          gameType: "doubles" as const,
+        },
+        {
+          ...defaultScenario.attacks[0],
+          id: "attack-b",
+          label: "攻撃B",
+          attackerPokemonInput: "デンヂムシ",
+          attackerNatureInput: "",
+          attackerAbilityInput: "バッテリー",
+          attackerItemInput: "",
+          moveInput: "",
+          gameType: "doubles" as const,
+        },
+      ],
+    };
+
+    const input = buildDefenceSearchInput(target, [scenarioWithBatterySupport]);
+
+    expect(input.scenarios[0].hits).toHaveLength(1);
+    expect(input.scenarios[0].hits[0].allyAbilities?.map((ability) => ability.canonicalName)).toEqual([
+      "Battery",
+    ]);
+  });
+
+  it("lets two attacking cards supply their abilities to each other in doubles", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarioWithTwoAttackers = {
+      ...defaultScenario,
+      attacks: [
+        {
+          ...defaultScenario.attacks[0],
+          attackerAbilityInput: "プラス",
+          gameType: "doubles" as const,
+        },
+        {
+          ...defaultScenario.attacks[0],
+          id: "attack-b",
+          label: "攻撃B",
+          attackerPokemonInput: "デンヂムシ",
+          attackerAbilityInput: "バッテリー",
+          moveInput: "10まんボルト",
+          gameType: "doubles" as const,
+        },
+      ],
+    };
+
+    const input = buildDefenceSearchInput(target, [scenarioWithTwoAttackers]);
+
+    expect(input.scenarios[0].hits).toHaveLength(2);
+    expect(input.scenarios[0].hits[0].allyAbilities?.[0].canonicalName).toBe("Battery");
+    expect(input.scenarios[0].hits[1].allyAbilities?.[0].canonicalName).toBe("Plus");
+  });
+
+  it("does not apply another attack card's ability to a singles hit", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const singlesScenarioWithSupport = {
+      ...defaultScenario,
+      attacks: [
+        defaultScenario.attacks[0],
+        {
+          ...defaultScenario.attacks[0],
+          id: "attack-b",
+          label: "攻撃B",
+          attackerPokemonInput: "デンヂムシ",
+          attackerAbilityInput: "バッテリー",
+          moveInput: "",
+        },
+      ],
+    };
+
+    const input = buildDefenceSearchInput(target, [singlesScenarioWithSupport]);
+
+    expect(input.scenarios[0].hits[0].allyAbilities).toBeUndefined();
   });
 
   it("requires at least one enabled scenario", () => {

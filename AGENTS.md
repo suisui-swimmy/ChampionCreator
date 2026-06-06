@@ -375,15 +375,16 @@ npm run build
 
 ### in-app Browser 確認方針
 
-Codex in-app Browser / Browser plugin は環境依存の起動失敗や localhost URL ポリシー拒否が再発しているため、当面は UI 修正後の in-app Browser 確認を必須にせず、一時的にスルーする。
+Codex in-app Browser / Browser plugin は復旧済み。UI 修正後は、静的検証に加えて実画面の表示と操作を通常の検証工程として確認する。
 
 方針:
 
-- UI 修正後は、`npm run typecheck`、対象テスト、`npm run build`、必要に応じて `npm run check` を優先し、DOM/CSS の静的確認、HTTP 200、既存テストなどで代替検証する。
-- in-app Browser がその場で正常に利用できる場合だけ、DOM snapshot、対象操作、表示状態、必要に応じたスクリーンショット確認を追加する。
-- `windows sandbox failed: spawn setup refresh` や localhost URL ポリシー拒否が発生した場合は深追いせず、ページやアプリの不具合と切り分けたうえで代替検証へ進む。
+- UI 修正後は、`npm run typecheck`、対象テスト、`npm run build`、必要に応じて `npm run check` を実行する。
+- in-app Browser で対象ページを開き、DOM snapshot、対象操作、表示状態、必要に応じたスクリーンショットを確認する。
+- localhost が表示できない場合は、先に HTTP 200 と dev / preview server の状態を確認し、ページ側と Browser runtime 側を切り分ける。
+- `windows sandbox failed: spawn setup refresh` が再発した場合は、個人用 skill `fix-in-app-browser-node-repl` を使い、最小実行、完全再起動、wrapper / watcher / scheduled task の順に確認する。
+- Browser runtime の復旧に設定変更が必要な場合は、sandbox 隔離を弱めるためユーザーの明示承認を得る。
 - Browser 確認を実施できなかった場合は、その理由と代替確認の結果を最終報告および `PROGRESS.md` に明記する。
-- in-app Browser の起動と localhost 操作が安定して利用できることを確認できた時点で、この一時スルー方針を見直す。
 
 ## 長期保守ルール
 

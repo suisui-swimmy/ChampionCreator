@@ -155,6 +155,98 @@ describe("calculateSmogonHit", () => {
     expect(doublesField.gameType).toBe("Doubles");
   });
 
+  it("maps an active ally's direct damage abilities to @smogon/calc field flags", () => {
+    const doublesField = toSmogonField(
+      { gameType: "doubles", weather: "sun", terrain: "none" },
+      {
+        ...hit,
+        allyAbilities: [
+          mustResolve("ability", "バッテリー"),
+          mustResolve("ability", "パワースポット"),
+          mustResolve("ability", "はがねのせいしん"),
+          mustResolve("ability", "フラワーギフト"),
+          mustResolve("ability", "ダークオーラ"),
+          mustResolve("ability", "フェアリーオーラ"),
+          mustResolve("ability", "オーラブレイク"),
+          mustResolve("ability", "わざわいのつるぎ"),
+          mustResolve("ability", "わざわいのたま"),
+          mustResolve("ability", "わざわいのおふだ"),
+          mustResolve("ability", "わざわいのうつわ"),
+        ],
+      },
+    );
+
+    expect(doublesField.attackerSide).toMatchObject({
+      isBattery: true,
+      isPowerSpot: true,
+      isSteelySpirit: true,
+      isFlowerGift: true,
+    });
+    expect(doublesField).toMatchObject({
+      isDarkAura: true,
+      isFairyAura: true,
+      isAuraBreak: true,
+      isSwordOfRuin: true,
+      isBeadsOfRuin: true,
+      isTabletsOfRuin: true,
+      isVesselOfRuin: true,
+    });
+  });
+
+  it("applies Battery supplied by an ally to a special attack", () => {
+    const specialHit = {
+      ...hit,
+      move: mustResolve("move", "りゅうせいぐん"),
+      attackerBoosts: {},
+      defenderBoosts: {},
+    };
+    const withoutBattery = calculateSmogonHit(
+      defender,
+      specialHit,
+      { gameType: "doubles", weather: "none", terrain: "none" },
+    );
+    const withBattery = calculateSmogonHit(
+      defender,
+      {
+        ...specialHit,
+        allyAbilities: [mustResolve("ability", "バッテリー")],
+      },
+      { gameType: "doubles", weather: "none", terrain: "none" },
+    );
+
+    expect(withBattery.damageRange.max).toBeGreaterThan(withoutBattery.damageRange.max);
+    expect(withBattery.description).toContain("Battery boosted");
+  });
+
+  it("activates Plus or Minus only when the attacker has a matching active ally", () => {
+    const plusHit = {
+      ...hit,
+      attacker: {
+        ...attacker,
+        ability: mustResolve("ability", "プラス"),
+      },
+      move: mustResolve("move", "りゅうせいぐん"),
+      attackerBoosts: {},
+      defenderBoosts: {},
+    };
+    const withoutPartner = calculateSmogonHit(
+      defender,
+      plusHit,
+      { gameType: "doubles", weather: "none", terrain: "none" },
+    );
+    const withMinusPartner = calculateSmogonHit(
+      defender,
+      {
+        ...plusHit,
+        allyAbilities: [mustResolve("ability", "マイナス")],
+      },
+      { gameType: "doubles", weather: "none", terrain: "none" },
+    );
+
+    expect(withMinusPartner.damageRange.max).toBeGreaterThan(withoutPartner.damageRange.max);
+    expect(withMinusPartner.description).toContain("Plus");
+  });
+
   it("passes Dynamax state through so @smogon/calc doubles max HP", () => {
     const normalAttacker = toSmogonPokemon(attacker);
     const dynamaxedAttacker = toSmogonPokemon({ ...attacker, isDynamaxed: true });

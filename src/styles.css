@@ -1610,6 +1610,27 @@ textarea {
   gap: 6px;
 }
 
+.attack-card-fields.support-mode {
+  align-items: start;
+}
+
+.attack-support-note {
+  display: grid;
+  gap: 2px;
+  border: 1px solid #52694f;
+  border-radius: 5px;
+  background: #182019;
+  padding: 8px;
+  color: #b7c8b4;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.attack-support-note strong {
+  color: #ebfe3d;
+  font-size: 12px;
+}
+
 .attacker-stat-table {
   margin-top: 2px;
 }
