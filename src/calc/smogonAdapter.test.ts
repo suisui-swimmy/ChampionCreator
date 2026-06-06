@@ -221,6 +221,94 @@ describe("calculateSmogonHit", () => {
     expect(withFriendGuard.description).toContain("Friend Guard");
   });
 
+  it("increases physical damage when an ally has Sword of Ruin", () => {
+    const kingambit = {
+      ...attacker,
+      pokemon: mustResolve("pokemon", "ドドゲザン"),
+      nature: mustResolve("nature", "いじっぱり"),
+      ability: mustResolve("ability", "まけんき"),
+      item: undefined,
+      teraType: undefined,
+      level: 50,
+      evs: { ...zeroEvs, atk: 252 },
+    };
+    const megaStarmie = {
+      ...defender,
+      pokemon: mustResolve("pokemon", "メガスターミー"),
+      nature: mustResolve("nature", "ひかえめ"),
+      ability: undefined,
+      item: undefined,
+      teraType: undefined,
+      level: 50,
+      evs: zeroEvs,
+    };
+    const suckerPunch = {
+      ...hit,
+      attacker: kingambit,
+      move: mustResolve("move", "ふいうち"),
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+    };
+    const doublesField = { gameType: "doubles", weather: "none", terrain: "none" } as const;
+    const withoutSwordOfRuin = calculateSmogonHit(megaStarmie, suckerPunch, doublesField);
+    const withSwordOfRuin = calculateSmogonHit(
+      megaStarmie,
+      {
+        ...suckerPunch,
+        allyAbilities: [mustResolve("ability", "わざわいのつるぎ")],
+      },
+      doublesField,
+    );
+
+    expect(withoutSwordOfRuin.damageRange).toMatchObject({ min: 132, max: 156 });
+    expect(withSwordOfRuin.damageRange).toMatchObject({ min: 174, max: 206 });
+    expect(withSwordOfRuin.description).toContain("Sword of Ruin");
+  });
+
+  it("applies all four Ruin abilities in the correct damage direction", () => {
+    const doublesField = { gameType: "doubles", weather: "none", terrain: "none" } as const;
+    const physicalHit = {
+      ...hit,
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+    };
+    const specialHit = {
+      ...physicalHit,
+      move: mustResolve("move", "りゅうせいぐん"),
+    };
+    const physicalBaseline = calculateSmogonHit(defender, physicalHit, doublesField);
+    const specialBaseline = calculateSmogonHit(defender, specialHit, doublesField);
+    const swordOfRuin = calculateSmogonHit(defender, {
+      ...physicalHit,
+      allyAbilities: [mustResolve("ability", "わざわいのつるぎ")],
+    }, doublesField);
+    const beadsOfRuin = calculateSmogonHit(defender, {
+      ...specialHit,
+      allyAbilities: [mustResolve("ability", "わざわいのたま")],
+    }, doublesField);
+    const tabletsOfRuin = calculateSmogonHit(defender, {
+      ...physicalHit,
+      allyAbilities: [mustResolve("ability", "わざわいのおふだ")],
+    }, doublesField);
+    const vesselOfRuin = calculateSmogonHit(defender, {
+      ...specialHit,
+      allyAbilities: [mustResolve("ability", "わざわいのうつわ")],
+    }, doublesField);
+
+    expect(swordOfRuin.damageRange.max).toBeGreaterThan(physicalBaseline.damageRange.max);
+    expect(beadsOfRuin.damageRange.max).toBeGreaterThan(specialBaseline.damageRange.max);
+    expect(tabletsOfRuin.damageRange.max).toBeLessThan(physicalBaseline.damageRange.max);
+    expect(vesselOfRuin.damageRange.max).toBeLessThan(specialBaseline.damageRange.max);
+    expect(swordOfRuin.description).toContain("Sword of Ruin");
+    expect(beadsOfRuin.description).toContain("Beads of Ruin");
+    expect(tabletsOfRuin.description).toContain("Tablets of Ruin");
+    expect(vesselOfRuin.description).toContain("Vessel of Ruin");
+  });
+
   it("applies Battery supplied by an ally to a special attack", () => {
     const specialHit = {
       ...hit,

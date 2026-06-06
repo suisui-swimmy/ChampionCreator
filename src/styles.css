@@ -1614,6 +1614,87 @@ textarea {
   align-items: start;
 }
 
+.attack-setting-section {
+  display: grid;
+  gap: 6px;
+}
+
+.attack-setting-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #9fb1af;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.attack-setting-section h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.attack-advanced-settings {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+}
+
+.attack-advanced-settings summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  cursor: pointer;
+  color: #c7d3d1;
+  font-size: 11px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.attack-advanced-settings summary::-webkit-details-marker {
+  display: none;
+}
+
+.attack-advanced-settings summary::before {
+  content: "›";
+  color: var(--gold);
+  font-size: 18px;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+
+.attack-advanced-settings[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.active-adjustment-count,
+.active-adjustment-empty {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.active-adjustment-count {
+  background: rgba(245, 197, 66, 0.12);
+  color: var(--gold);
+}
+
+.active-adjustment-empty {
+  color: var(--muted);
+}
+
+.attack-advanced-content {
+  display: grid;
+  gap: 8px;
+  padding: 2px 0 4px;
+}
+
 .attack-support-note {
   display: grid;
   gap: 2px;
@@ -1629,6 +1710,16 @@ textarea {
 .attack-support-note strong {
   color: #ebfe3d;
   font-size: 12px;
+}
+
+.attack-support-note.inactive {
+  border-color: #796b43;
+  background: #211e16;
+  color: #c7bda0;
+}
+
+.attack-support-note.inactive strong {
+  color: #fba82f;
 }
 
 .attacker-stat-table {

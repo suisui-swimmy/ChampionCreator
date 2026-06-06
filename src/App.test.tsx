@@ -48,6 +48,11 @@ describe("App", () => {
   it("renders only A and C parameter rows for each virtual attacker", () => {
     const html = renderToStaticMarkup(<App />);
 
+    expect(html).toContain(">基本条件<");
+    expect(html).toContain(">バトル環境<");
+    expect(html).toContain("<summary><span>詳細補正</span>");
+    expect(html).toContain(">補正なし<");
+    expect(html).toContain(">攻撃回数<");
     expect(html).toContain('aria-label="攻撃A 参照能力"');
     expect(html).toContain('aria-label="攻撃A A SP"');
     expect(html).toContain('aria-label="攻撃A Aランク: 0"');

@@ -402,6 +402,37 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].allyAbilities).toBeUndefined();
   });
 
+  it("passes Sword of Ruin from a move-less Chien-Pao only to a doubles hit", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const supportCard = {
+      ...defaultScenario.attacks[0],
+      id: "attack-b",
+      label: "攻撃B",
+      attackerPokemonInput: "パオジアン",
+      attackerNatureInput: "",
+      attackerAbilityInput: "わざわいのつるぎ",
+      attackerItemInput: "",
+      moveInput: "",
+    };
+    const singlesInput = buildDefenceSearchInput(target, [{
+      ...defaultScenario,
+      attacks: [defaultScenario.attacks[0], supportCard],
+    }]);
+    const doublesInput = buildDefenceSearchInput(target, [{
+      ...defaultScenario,
+      attacks: [
+        { ...defaultScenario.attacks[0], gameType: "doubles" as const },
+        { ...supportCard, gameType: "doubles" as const },
+      ],
+    }]);
+
+    expect(singlesInput.scenarios[0].hits[0].allyAbilities).toBeUndefined();
+    expect(doublesInput.scenarios[0].hits[0].allyAbilities?.map((ability) => ability.canonicalName)).toEqual([
+      "Sword of Ruin",
+    ]);
+  });
+
   it("requires at least one enabled scenario", () => {
     const target = createDefaultTargetForm();
     const scenarios = createDefaultScenarioForms().map((scenario) => ({
