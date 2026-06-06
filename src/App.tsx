@@ -777,7 +777,6 @@ export function App() {
           onSelectCandidate={handleSelectCandidate}
           onApplyCandidate={handleApplyCandidate}
         />
-        <aside className="detail-panel detail-panel-reserved" aria-label="将来の詳細パネル用空き領域" />
       </main>
     </div>
   );

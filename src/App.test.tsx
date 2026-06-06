@@ -33,7 +33,7 @@ describe("App", () => {
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain("シナリオを追加");
     expect(html).toContain("候補一覧");
-    expect(html).toContain('aria-label="将来の詳細パネル用空き領域"');
+    expect(html).not.toContain("将来の詳細パネル用空き領域");
   });
 
   it("renders exact 32-cell SP allocation sliders", () => {
