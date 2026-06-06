@@ -5,6 +5,7 @@ import type {
   StartDefenceSearchWorkerOptions,
 } from "../worker/defenceSearchWorkerClient";
 import {
+  applyCandidateToTarget,
   applyTopCandidateToTarget,
   buildDefenceSearchInput,
   createDefaultScenarioForms,
@@ -562,6 +563,19 @@ describe("applyTopCandidateToTarget", () => {
     ]);
 
     expect(applied.statPoints).toMatchObject({ hp: 12, def: 20, spd: 28 });
+    expect(applied.statPoints.atk).toBe(target.statPoints.atk);
+    expect(applied.statPoints.spa).toBe(target.statPoints.spa);
+    expect(applied.statPoints.spe).toBe(target.statPoints.spe);
+  });
+
+  it("applies a selected candidate H/B/D SP to the target form", () => {
+    const target = createDefaultTargetForm();
+    const applied = applyCandidateToTarget(
+      target,
+      makeCandidate("candidate-3", 3, 4, 18, 7),
+    );
+
+    expect(applied.statPoints).toMatchObject({ hp: 4, def: 18, spd: 7 });
     expect(applied.statPoints.atk).toBe(target.statPoints.atk);
     expect(applied.statPoints.spa).toBe(target.statPoints.spa);
     expect(applied.statPoints.spe).toBe(target.statPoints.spe);

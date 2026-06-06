@@ -347,6 +347,10 @@ textarea:focus-visible,
   grid-column: 3;
 }
 
+.detail-panel-reserved {
+  min-height: 280px;
+}
+
 .target-summary {
   display: grid;
   grid-template-columns: 128px 1fr;
@@ -1913,19 +1917,15 @@ textarea {
 .candidate-table {
   display: grid;
   gap: 6px;
+  overflow-x: auto;
 }
 
 .candidate-row {
   display: grid;
-  grid-template-columns: 54px minmax(180px, 1fr) 84px 84px minmax(160px, 1fr);
+  grid-template-columns: minmax(700px, 1fr) 68px;
   align-items: center;
   gap: 10px;
   min-height: 48px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #141819;
-  color: var(--text);
-  text-align: left;
   padding: 0 10px;
 }
 
@@ -1961,6 +1961,7 @@ textarea {
 }
 
 .candidate-row.header {
+  grid-template-columns: 54px minmax(180px, 1fr) 84px 84px minmax(160px, 1fr) 28px 68px;
   min-height: 26px;
   border: 0;
   color: var(--muted);
@@ -1969,7 +1970,15 @@ textarea {
   font-weight: 800;
 }
 
-.candidate-row.selected {
+.candidate-entry {
+  min-width: 790px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #141819;
+}
+
+.candidate-entry.selected {
   border-color: rgba(245, 197, 66, 0.62);
   background:
     linear-gradient(90deg, rgba(245, 197, 66, 0.08), transparent 42%),
@@ -1977,10 +1986,99 @@ textarea {
   box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.18);
 }
 
-.candidate-row.selected:hover {
+.candidate-entry.selected:hover {
   background:
     linear-gradient(90deg, rgba(245, 197, 66, 0.1), transparent 42%),
     #1a1e1f;
+}
+
+.candidate-row-toggle {
+  display: grid;
+  grid-template-columns: 54px minmax(180px, 1fr) 84px 84px minmax(160px, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 46px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0;
+}
+
+.candidate-row-toggle:hover {
+  color: #fff7d6;
+}
+
+.candidate-disclosure {
+  color: var(--muted);
+  text-align: center;
+}
+
+.candidate-apply-button {
+  min-width: 62px;
+}
+
+.candidate-expanded-detail {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  background: rgba(6, 9, 10, 0.38);
+  padding: 10px 14px 12px 68px;
+}
+
+.candidate-scenario-detail {
+  display: grid;
+  gap: 7px;
+}
+
+.candidate-scenario-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.candidate-scenario-status strong {
+  color: var(--text);
+}
+
+.candidate-scenario-status em {
+  border: 1px solid rgba(32, 168, 90, 0.5);
+  border-radius: 5px;
+  background: rgba(32, 168, 90, 0.12);
+  color: var(--green);
+  padding: 2px 6px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.candidate-scenario-status em.fail-badge {
+  border-color: rgba(230, 40, 41, 0.58);
+  background: var(--red-soft);
+  color: #ff8585;
+}
+
+.candidate-scenario-detail ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.candidate-scenario-detail li {
+  display: flex;
+  gap: 10px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.candidate-scenario-detail li strong {
+  flex: 0 0 auto;
+  color: #d7b84b;
 }
 
 .candidate-row.warning {
@@ -2232,7 +2330,6 @@ textarea {
   }
 
   .candidate-row {
-    grid-template-columns: 44px minmax(220px, 1fr) 70px 60px 120px;
-    overflow-x: auto;
+    grid-template-columns: minmax(700px, 1fr) 68px;
   }
 }

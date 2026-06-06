@@ -543,12 +543,11 @@ export const startDefenceSearchFromUi = (
   return { request, input };
 };
 
-export const applyTopCandidateToTarget = (
+export const applyCandidateToTarget = (
   targetForm: TargetFormState,
-  candidates: CandidateResult[],
+  candidate: CandidateResult | undefined,
 ): TargetFormState => {
-  const [topCandidate] = candidates;
-  if (!topCandidate) {
+  if (!candidate) {
     return targetForm;
   }
 
@@ -556,9 +555,14 @@ export const applyTopCandidateToTarget = (
     ...targetForm,
     statPoints: {
       ...targetForm.statPoints,
-      hp: topCandidate.candidate.hp,
-      def: topCandidate.candidate.def,
-      spd: topCandidate.candidate.spd,
+      hp: candidate.candidate.hp,
+      def: candidate.candidate.def,
+      spd: candidate.candidate.spd,
     },
   };
 };
+
+export const applyTopCandidateToTarget = (
+  targetForm: TargetFormState,
+  candidates: CandidateResult[],
+): TargetFormState => applyCandidateToTarget(targetForm, candidates[0]);

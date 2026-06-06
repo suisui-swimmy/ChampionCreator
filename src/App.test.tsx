@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import type { CandidateResult } from "./domain/model";
 import {
   App,
   CandidateAllocationMeter,
+  ResultsPanel,
   clampTargetStatPointChange,
   getCandidateAllocationFillPercent,
   getPokemonSuggestionKeyAction,
@@ -11,6 +13,7 @@ import {
   getNatureModifierDirection,
   isUnresolvedEntityInput,
 } from "./App";
+import { createDefaultScenarioForms } from "./ui/defenceSearchUi";
 
 describe("App", () => {
   it("supports keyboard navigation and Tab selection for Pokemon suggestions", () => {
@@ -30,7 +33,7 @@ describe("App", () => {
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain("シナリオを追加");
     expect(html).toContain("候補一覧");
-    expect(html).toContain("選択候補詳細");
+    expect(html).toContain('aria-label="将来の詳細パネル用空き領域"');
   });
 
   it("renders exact 32-cell SP allocation sliders", () => {
@@ -136,6 +139,66 @@ describe("App", () => {
     expect(formatLocalizedDamageDescription(
       "252+ Atk Kingambit Sucker Punch vs. 92 HP / 52 Def Starmie-Mega: 122-146 (82.9 - 99.3%) -- guaranteed 2HKO",
     )).toBe("A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+  });
+
+  it("integrates the selected candidate detail into the candidate list", () => {
+    const candidate: CandidateResult = {
+      id: "candidate-2",
+      rank: 2,
+      candidate: { hp: 6, def: 13, spd: 0 },
+      appliedStatPoints: { hp: 6, atk: 0, def: 13, spa: 0, spd: 0, spe: 0 },
+      appliedEvs: { hp: 44, atk: 0, def: 100, spa: 0, spd: 0, spe: 0 },
+      usedStatPointBudget: 19,
+      remainingStatPointBudget: 47,
+      usedEvBudget: 144,
+      remainingEvBudget: 366,
+      passed: true,
+      bottleneckLabel: "シナリオA +0.0%",
+      scenarioResults: [{
+        scenarioId: "scenario-a",
+        passed: true,
+        survivalProbability: 1,
+        requiredSurvivedHits: 1,
+        minSurvivalProbability: 1,
+        bottleneckLabel: "シナリオA +0.0%",
+        hitEvaluations: [{
+          hitId: "hit-a",
+          damageRolls: [122, 146],
+          damageRange: { min: 122, max: 146, percentMin: 82.9, percentMax: 99.3 },
+          description: "252+ Atk Kingambit Sucker Punch vs. 92 HP / 52 Def Starmie-Mega: 122-146 (82.9 - 99.3%) -- guaranteed 2HKO",
+        }],
+      }],
+    };
+    const [scenario] = createDefaultScenarioForms();
+    const closedHtml = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[candidate]}
+        selectedCandidateId={null}
+        appliedCandidateId={null}
+        scenarios={[{ ...scenario, id: "scenario-a", label: "シナリオA" }]}
+        status="complete"
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[candidate]}
+        selectedCandidateId={candidate.id}
+        appliedCandidateId={null}
+        scenarios={[{ ...scenario, id: "scenario-a", label: "シナリオA" }]}
+        status="complete"
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain(">最厳条件<");
+    expect(html).toContain(">適応<");
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain("シナリオA</strong><span>A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    expect(closedHtml).toContain('aria-expanded="false"');
+    expect(closedHtml).not.toContain("A252+ ドドゲザン ふいうち");
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {

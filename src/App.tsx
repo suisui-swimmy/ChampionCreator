@@ -27,7 +27,7 @@ import {
   type EntityInputOption,
 } from "./localization/resolver";
 import {
-  applyTopCandidateToTarget,
+  applyCandidateToTarget,
   createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
   buildDefenceSearchInput,
@@ -416,7 +416,7 @@ export function App() {
   const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(() => createDefaultScenarioForms());
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-  const [applyLabel, setApplyLabel] = useState("1位を適用");
+  const [appliedCandidateId, setAppliedCandidateId] = useState<string | null>(null);
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [shareOpen, setShareOpen] = useState(false);
@@ -425,14 +425,6 @@ export function App() {
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
-
-  const selectedCandidate = useMemo(() => {
-    if (searchState.candidates.length === 0) {
-      return null;
-    }
-    return searchState.candidates.find((candidate) => candidate.id === selectedCandidateId)
-      ?? searchState.candidates[0];
-  }, [searchState.candidates, selectedCandidateId]);
 
   const previewInput = useMemo(() => {
     try {
@@ -663,13 +655,17 @@ export function App() {
     }
   };
 
-  const handleApplyTopCandidate = () => {
-    setTargetForm((current) => applyTopCandidateToTarget(current, searchState.candidates));
-    setApplyLabel("適用済み");
+  const handleSelectCandidate = (id: string) => {
+    setSelectedCandidateId((current) => current === id ? null : id);
+  };
+
+  const handleApplyCandidate = (candidate: CandidateResult) => {
+    setTargetForm((current) => applyCandidateToTarget(current, candidate));
+    setAppliedCandidateId(candidate.id);
     if (applyTimerRef.current !== null) {
       window.clearTimeout(applyTimerRef.current);
     }
-    applyTimerRef.current = window.setTimeout(() => setApplyLabel("1位を適用"), 1200);
+    applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
   };
 
   return (
@@ -774,17 +770,14 @@ export function App() {
         />
         <ResultsPanel
           candidates={searchState.candidates}
-          selectedCandidate={selectedCandidate}
-          status={searchState.status}
-          onSelectCandidate={setSelectedCandidateId}
-        />
-        <DetailPanel
-          candidate={selectedCandidate}
+          selectedCandidateId={selectedCandidateId}
+          appliedCandidateId={appliedCandidateId}
           scenarios={scenarioForms}
-          applyLabel={applyLabel}
-          canApply={searchState.candidates.length > 0}
-          onApply={handleApplyTopCandidate}
+          status={searchState.status}
+          onSelectCandidate={handleSelectCandidate}
+          onApplyCandidate={handleApplyCandidate}
         />
+        <aside className="detail-panel detail-panel-reserved" aria-label="将来の詳細パネル用空き領域" />
       </main>
     </div>
   );
@@ -2323,12 +2316,28 @@ function ScenarioNumberField({ label, showLabel, value, min, max, onChange }: Sc
 
 type ResultsPanelProps = {
   candidates: CandidateResult[];
-  selectedCandidate: CandidateResult | null;
+  selectedCandidateId: string | null;
+  appliedCandidateId: string | null;
+  scenarios: ScenarioFormState[];
   status: string;
   onSelectCandidate: (id: string) => void;
+  onApplyCandidate: (candidate: CandidateResult) => void;
 };
 
-function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate }: ResultsPanelProps) {
+export function ResultsPanel({
+  candidates,
+  selectedCandidateId,
+  appliedCandidateId,
+  scenarios,
+  status,
+  onSelectCandidate,
+  onApplyCandidate,
+}: ResultsPanelProps) {
+  const scenarioLabels = useMemo(
+    () => new Map(scenarios.map((scenario) => [scenario.id, scenario.label])),
+    [scenarios],
+  );
+
   return (
     <section className="results-panel" aria-labelledby="results-title">
       <div className="section-heading">
@@ -2340,7 +2349,7 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
-          <span>順位</span><span>H/B/D</span><span>使用SP</span><span>残りSP</span><span>ボトルネック</span>
+          <span>順位</span><span>H/B/D</span><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
         </div>
         {candidates.length === 0 ? (
           <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
@@ -2353,25 +2362,79 @@ function ResultsPanel({ candidates, selectedCandidate, status, onSelectCandidate
               "計算開始で Worker 経由の候補がここに出ます"
             )}
           </div>
-        ) : candidates.map((candidate) => (
-          <button
-            className={`candidate-row${selectedCandidate?.id === candidate.id ? " selected" : ""}`}
-            type="button"
-            key={candidate.id}
-            onClick={() => onSelectCandidate(candidate.id)}
-          >
-            <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
-            <span className="allocation compact-allocation">
-              <b>{candidate.candidate.hp}</b>
-              <b>{candidate.candidate.def}</b>
-              <b>{candidate.candidate.spd}</b>
-              <CandidateAllocationMeter candidate={candidate.candidate} />
-            </span>
-            <span>{candidate.usedStatPointBudget}</span>
-            <span>{candidate.remainingStatPointBudget}</span>
-            <span>{candidate.bottleneckLabel}</span>
-          </button>
-        ))}
+        ) : candidates.map((candidate) => {
+          const expanded = selectedCandidateId === candidate.id;
+          return (
+            <div
+              className={`candidate-entry${expanded ? " selected" : ""}`}
+              role="rowgroup"
+              key={candidate.id}
+            >
+              <div className="candidate-row" role="row">
+                <button
+                  className="candidate-row-toggle"
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={`${candidate.id}-details`}
+                  onClick={() => onSelectCandidate(candidate.id)}
+                >
+                  <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
+                  <span className="allocation compact-allocation">
+                    <b>{candidate.candidate.hp}</b>
+                    <b>{candidate.candidate.def}</b>
+                    <b>{candidate.candidate.spd}</b>
+                    <CandidateAllocationMeter candidate={candidate.candidate} />
+                  </span>
+                  <span>{candidate.usedStatPointBudget}</span>
+                  <span>{candidate.remainingStatPointBudget}</span>
+                  <span>{candidate.bottleneckLabel}</span>
+                  <span className="candidate-disclosure" aria-hidden="true">{expanded ? "▲" : "▼"}</span>
+                </button>
+                <Button
+                  variant="primary"
+                  size="small"
+                  className="candidate-apply-button"
+                  onClick={() => onApplyCandidate(candidate)}
+                >
+                  {appliedCandidateId === candidate.id ? "適応済み" : "適応"}
+                </Button>
+              </div>
+              {expanded ? (
+                <div className="candidate-expanded-detail" id={`${candidate.id}-details`}>
+                  {candidate.scenarioResults.map((result) => {
+                    const scenarioLabel = scenarioLabels.get(result.scenarioId) ?? result.scenarioId;
+                    return (
+                      <section className="candidate-scenario-detail" key={result.scenarioId}>
+                        <div className="candidate-scenario-status">
+                          <StatusBadge tone={result.passed ? "green" : "red"} />
+                          <strong>{scenarioLabel}</strong>
+                          <span>生存率 {formatPercent(result.survivalProbability)}</span>
+                          <em className={result.passed ? "" : "fail-badge"}>
+                            {formatScenarioResultStatusLabel(result.passed)}
+                          </em>
+                        </div>
+                        {result.hitEvaluations.length > 0 ? (
+                          <ul>
+                            {result.hitEvaluations.map((hit) => (
+                              <li key={hit.hitId}>
+                                <strong>{scenarioLabel}</strong>
+                                <span>
+                                  {hit.description
+                                    ? formatLocalizedDamageDescription(hit.description)
+                                    : `被ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </section>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -2390,62 +2453,5 @@ export function CandidateAllocationMeter({ candidate }: { candidate: DefenceStat
         </span>
       ))}
     </span>
-  );
-}
-
-type DetailPanelProps = {
-  candidate: CandidateResult | null;
-  scenarios: ScenarioFormState[];
-  applyLabel: string;
-  canApply: boolean;
-  onApply: () => void;
-};
-
-function DetailPanel({ candidate, scenarios, applyLabel, canApply, onApply }: DetailPanelProps) {
-  const scenarioLabels = new Map(scenarios.map((scenario) => [scenario.id, scenario.label]));
-
-  return (
-    <aside className="detail-panel" aria-live="polite">
-      <div className="section-heading">
-        <div>
-          <h2>選択候補詳細 {candidate ? <span>#{candidate.rank}</span> : null}</h2>
-          <span>{candidate?.bottleneckLabel ?? "候補未選択"}</span>
-        </div>
-        <Button variant="primary" size="small" onClick={onApply} disabled={!canApply}>{applyLabel}</Button>
-      </div>
-
-      {candidate ? (
-        <>
-          <div className="detail-allocation">
-            {statKeys.map((key) => <span key={key}><StatIcon stat={key} /></span>)}
-            {statKeys.map((key) => <strong key={key}>{candidate.appliedStatPoints[key]}</strong>)}
-          </div>
-
-          <div className="check-list">
-            {candidate.scenarioResults.map((result) => (
-              <div key={result.scenarioId}>
-                <StatusBadge tone={result.passed ? "green" : "red"} />
-                <strong>{scenarioLabels.get(result.scenarioId) ?? result.scenarioId}</strong>
-                <span>{formatPercent(result.survivalProbability)}</span>
-                <em className={result.passed ? "" : "fail-badge"}>{formatScenarioResultStatusLabel(result.passed)}</em>
-                <small>{result.bottleneckLabel}</small>
-                <ul>
-                  {result.hitEvaluations.map((hit) => (
-                    <li key={hit.hitId}>
-                      被ダメージ {formatDamageRange(hit.damageRange.min, hit.damageRange.max)}
-                      {" / "}
-                      {hit.damageRange.percentMin.toFixed(1)}-{hit.damageRange.percentMax.toFixed(1)}%
-                      {hit.description ? <span>{formatLocalizedDamageDescription(hit.description)}</span> : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="empty-detail">候補を計算すると scenario ごとの pass / survivalProbability / damage range を確認できます</div>
-      )}
-    </aside>
   );
 }
