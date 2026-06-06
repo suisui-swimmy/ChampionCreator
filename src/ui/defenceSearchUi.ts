@@ -68,6 +68,7 @@ export interface ScenarioAttackFormState {
   lightScreen: boolean;
   auroraVeil: boolean;
   helpingHand: boolean;
+  friendGuard: boolean;
 }
 
 export interface ScenarioFormState {
@@ -159,6 +160,7 @@ const emptySide: SideState = {
   lightScreen: false,
   auroraVeil: false,
   helpingHand: false,
+  friendGuard: false,
 };
 
 const zeroBoosts: Required<StatBoostTable> = {
@@ -256,6 +258,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   lightScreen: false,
   auroraVeil: false,
   helpingHand: false,
+  friendGuard: false,
 });
 
 export const createDefaultScenarioForms = (): ScenarioFormState[] => [
@@ -356,6 +359,7 @@ const toScenarioHit = (
       reflect: attackForm.reflect,
       lightScreen: attackForm.lightScreen,
       auroraVeil: attackForm.auroraVeil,
+      friendGuard: attackForm.gameType === "doubles" && attackForm.friendGuard,
     },
   };
 };

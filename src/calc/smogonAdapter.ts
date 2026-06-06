@@ -45,6 +45,7 @@ export const toSmogonSide = (
     isLightScreen: side.lightScreen,
     isAuroraVeil: side.auroraVeil,
     isHelpingHand: side.helpingHand,
+    isFriendGuard: side.friendGuard,
     isFlowerGift: allyAbilityNames.has("Flower Gift"),
     isBattery: allyAbilityNames.has("Battery"),
     isPowerSpot: allyAbilityNames.has("Power Spot"),

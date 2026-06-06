@@ -323,6 +323,32 @@ describe("buildDefenceSearchInput", () => {
     ]);
   });
 
+  it("passes Friend Guard as a defender-side effect only in doubles", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const [defaultAttack] = defaultScenario.attacks;
+
+    const doublesInput = buildDefenceSearchInput(target, [{
+      ...defaultScenario,
+      attacks: [{
+        ...defaultAttack,
+        gameType: "doubles" as const,
+        friendGuard: true,
+      }],
+    }]);
+    const singlesInput = buildDefenceSearchInput(target, [{
+      ...defaultScenario,
+      attacks: [{
+        ...defaultAttack,
+        gameType: "singles" as const,
+        friendGuard: true,
+      }],
+    }]);
+
+    expect(doublesInput.scenarios[0].hits[0].defenderSide.friendGuard).toBe(true);
+    expect(singlesInput.scenarios[0].hits[0].defenderSide.friendGuard).toBe(false);
+  });
+
   it("lets two attacking cards supply their abilities to each other in doubles", () => {
     const target = createDefaultTargetForm();
     const [defaultScenario] = createDefaultScenarioForms();

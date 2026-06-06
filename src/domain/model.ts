@@ -67,6 +67,7 @@ export interface SideState {
   lightScreen: boolean;
   auroraVeil: boolean;
   helpingHand: boolean;
+  friendGuard?: boolean;
 }
 
 export interface ScenarioHit {

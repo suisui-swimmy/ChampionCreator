@@ -394,6 +394,7 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   lightScreen: false,
   auroraVeil: false,
   helpingHand: false,
+  friendGuard: false,
 });
 
 const createBlankScenario = (index: number): ScenarioFormState => ({
@@ -2168,6 +2169,7 @@ function AttackCard({
             <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
             <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
             <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+            <label><input type="checkbox" checked={attack.friendGuard} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "friendGuard", event.target.checked)} /> フレンドガード</label>
           </div>
         </>
       )}

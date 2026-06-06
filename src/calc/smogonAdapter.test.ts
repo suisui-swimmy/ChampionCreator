@@ -193,6 +193,34 @@ describe("calculateSmogonHit", () => {
     });
   });
 
+  it("maps defender-side Friend Guard to @smogon/calc", () => {
+    const friendGuardField = toSmogonField(
+      { gameType: "doubles", weather: "none", terrain: "none" },
+      {
+        ...hit,
+        defenderSide: { ...emptySide, friendGuard: true },
+      },
+    );
+
+    expect(friendGuardField.defenderSide.isFriendGuard).toBe(true);
+  });
+
+  it("reduces damage when the defender has an ally's Friend Guard", () => {
+    const doublesField = { gameType: "doubles", weather: "none", terrain: "none" } as const;
+    const withoutFriendGuard = calculateSmogonHit(defender, hit, doublesField);
+    const withFriendGuard = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        defenderSide: { ...hit.defenderSide, friendGuard: true },
+      },
+      doublesField,
+    );
+
+    expect(withFriendGuard.damageRange.max).toBeLessThan(withoutFriendGuard.damageRange.max);
+    expect(withFriendGuard.description).toContain("Friend Guard");
+  });
+
   it("applies Battery supplied by an ally to a special attack", () => {
     const specialHit = {
       ...hit,
