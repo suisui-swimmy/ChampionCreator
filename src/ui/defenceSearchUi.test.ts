@@ -176,6 +176,7 @@ describe("buildDefenceSearchInput", () => {
     expect(input.build.ability?.canonicalName).toBe("Blaze");
     expect(input.build.item?.canonicalName).toBe("Assault Vest");
     expect(input.build.teraType?.canonicalName).toBe("Dark");
+    expect(input.build.status).toBeUndefined();
     expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Incineroar");
     expect(input.scenarios[0].hits[0].attacker.teraType?.canonicalName).toBe("Dark");
     expect(input.scenarios[0].hits[0].attacker.status).toBe("brn");
@@ -184,6 +185,22 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].defenderBoosts.spd).toBe(-6);
     expect(input.scenarios[0].hits[0].field?.gameType).toBe("doubles");
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Close Combat");
+  });
+
+  it("passes the scenario-specific target status to each hit", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarios = [{
+      ...defaultScenario,
+      attacks: defaultScenario.attacks.map((attack) => ({
+        ...attack,
+        defenderStatus: "psn" as const,
+      })),
+    }];
+
+    const input = buildDefenceSearchInput(createDefaultTargetForm(), scenarios);
+
+    expect(input.build.status).toBeUndefined();
+    expect(input.scenarios[0].hits[0].defenderStatus).toBe("psn");
   });
 
   it("ignores disabled blank scenarios before canonical name resolution", () => {

@@ -14,7 +14,6 @@ describe("shareState", () => {
       teraTypeInput: "かくとう",
       teraEnabled: true,
       dmaxEnabled: true,
-      status: "brn" as const,
       boosts: { atk: 0, def: 2, spa: 0, spd: -1, spe: 0 },
     };
     const scenarios = createDefaultScenarioForms().map((scenario) => ({
@@ -27,6 +26,7 @@ describe("shareState", () => {
         attackerTeraTypeInput: "かくとう",
         attackerTeraEnabled: true,
         attackerDmaxEnabled: true,
+        defenderStatus: "brn" as const,
         attackerBoosts: { ...attack.attackerBoosts, atk: 2 },
         gameType: "doubles" as const,
       })),
@@ -40,7 +40,6 @@ describe("shareState", () => {
       teraTypeInput: "かくとう",
       teraEnabled: true,
       dmaxEnabled: true,
-      status: "brn",
       boosts: { def: 2, spd: -1 },
     });
     expect(parsed.scenarios[0].label).toBe("対オオニューラ");
@@ -49,6 +48,7 @@ describe("shareState", () => {
       moveInput: "インファイト",
       attackerTeraEnabled: true,
       attackerDmaxEnabled: true,
+      defenderStatus: "brn",
       gameType: "doubles",
     });
   });
@@ -77,5 +77,22 @@ describe("shareState", () => {
       spd: 0,
       spe: 0,
     });
+  });
+
+  it("moves the legacy target status into scenario attacks when importing older JSON", () => {
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: {
+        ...createDefaultTargetForm(),
+        status: "par",
+      },
+      scenarios: createDefaultScenarioForms().map((scenario) => ({
+        ...scenario,
+        attacks: scenario.attacks.map(({ defenderStatus: _defenderStatus, ...attack }) => attack),
+      })),
+    }));
+
+    expect("status" in parsed.target).toBe(false);
+    expect(parsed.scenarios[0].attacks[0].defenderStatus).toBe("par");
   });
 });

@@ -73,6 +73,7 @@ export interface SideState {
 export interface ScenarioHit {
   id: string;
   attacker: Build;
+  defenderStatus?: Exclude<PokemonStatus, "none">;
   allyAbilities?: AbilityRef[];
   move: MoveRef;
   field?: FieldState;

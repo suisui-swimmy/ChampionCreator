@@ -1,4 +1,6 @@
 import { type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import * as Collapsible from "@radix-ui/react-collapsible";
+import { ChevronRightIcon } from "@radix-ui/react-icons";
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
@@ -689,30 +691,11 @@ export function App() {
           </p>
         </div>
         <div className="topbar-actions">
-          <div className="run-meter" aria-live="polite">
-            <strong>{Math.round(searchState.progress * 100)}%</strong>
-            <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} candidates</span>
-          </div>
           <Button variant="ghost" onClick={openSharePanel}>
             条件JSON
           </Button>
           <Button variant="ghost" onClick={handleCopyShareJson}>
             コピー
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={handleCancel}
-            disabled={searchState.status !== "running"}
-          >
-            キャンセル
-          </Button>
-          <Button
-            variant="primary"
-            id="runButton"
-            onClick={handleRun}
-            disabled={searchState.status === "running"}
-          >
-            {searchState.status === "running" ? "計算中..." : "計算開始"}
           </Button>
         </div>
       </header>
@@ -768,6 +751,41 @@ export function App() {
           onUpdateAttack={updateScenarioAttack}
           onUpdateAttackerEv={updateScenarioAttackerEv}
         />
+        <section className="search-control-bar" aria-label="探索操作">
+          <div
+            className="search-progress"
+            role="progressbar"
+            aria-label="探索進捗"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(searchState.progress * 100)}
+          >
+            <span
+              className="search-progress-fill"
+              style={{ width: `${Math.round(searchState.progress * 100)}%` }}
+              aria-hidden="true"
+            />
+            <span className="search-progress-label" aria-live="polite">
+              <strong>{Math.round(searchState.progress * 100)}%</strong>
+              <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} candidates</span>
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={handleCancel}
+            disabled={searchState.status !== "running"}
+          >
+            キャンセル
+          </Button>
+          <Button
+            variant="primary"
+            id="runButton"
+            onClick={handleRun}
+            disabled={searchState.status === "running"}
+          >
+            {searchState.status === "running" ? "計算中..." : "計算開始"}
+          </Button>
+        </section>
         <ResultsPanel
           candidates={searchState.candidates}
           selectedCandidateId={selectedCandidateId}
@@ -791,6 +809,14 @@ type EntityTextFieldProps = {
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectValue?: (value: string) => void;
 };
+
+export function getDropdownEntityOptions(
+  kind: EntityKind,
+  value: string,
+  suggestedOptions?: EntityInputOption[],
+): EntityInputOption[] {
+  return suggestedOptions ?? getMatchingEntityInputOptions(kind, value);
+}
 
 function EntityTextField({
   kind,
@@ -817,14 +843,14 @@ function EntityTextField({
     );
   }
 
-  if (kind === "item" && onSelectValue) {
+  if ((kind === "item" || kind === "type") && onSelectValue) {
     return (
       <DropdownTextField
         className={className}
         label={label}
         value={value}
         kind={kind}
-        options={suggestedOptions ?? getMatchingEntityInputOptions("item", value)}
+        options={getDropdownEntityOptions(kind, value, suggestedOptions)}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -1095,6 +1121,7 @@ function DropdownTextField({
         <button
           className="dropdown-menu-trigger"
           type="button"
+          data-state={listOpen ? "open" : "closed"}
           aria-label={`${label}候補を開く`}
           title={`${label}候補`}
           aria-expanded={listOpen}
@@ -1104,7 +1131,7 @@ function DropdownTextField({
             inputRef.current?.focus();
           }}
         >
-          ▾
+          <ChevronRightIcon className="disclosure-chevron" />
         </button>
       </div>
       {listOpen ? (
@@ -1184,7 +1211,9 @@ function NatureMatrixField({ label, value, className, onChange }: NatureMatrixFi
         <UiPopover.Trigger asChild>
           <button className="nature-trigger" type="button" aria-label={`${label}: ${value || "未選択"}`}>
             <span className={`nature-trigger-main${value ? "" : " placeholder"}`}>{value || label}</span>
-            <span className="nature-trigger-icon" aria-hidden="true">▾</span>
+            <span className="nature-trigger-icon" aria-hidden="true">
+              <ChevronRightIcon className="disclosure-chevron" />
+            </span>
           </button>
         </UiPopover.Trigger>
         <UiPopover.Portal>
@@ -1371,6 +1400,7 @@ function MechanicControls({
           label="テラタイプ"
           value={teraTypeInput}
           onChange={(event) => onTeraTypeInputChange(event.target.value)}
+          onSelectValue={onTeraTypeInputChange}
         />
       ) : null}
       {activeChoices.length > 0 ? (
@@ -1490,14 +1520,6 @@ function TargetPanel({
             pokemonAbilityOptions={abilityOptions}
             onChange={(event) => onUpdateField("abilityInput", event.target.value)}
             onSelectAbility={(value) => onUpdateField("abilityInput", value)}
-          />
-          <SelectField
-            placeholderLabel
-            placeholderValue="none"
-            label="状態異常"
-            value={targetForm.status}
-            options={statusOptions}
-            onChange={(value) => onUpdateField("status", value)}
           />
           <MechanicControls
             pokemonInput={targetForm.pokemonInput}
@@ -1935,6 +1957,7 @@ function AttackCard({
     attack.attackerDmaxEnabled,
     ...Object.values(attack.attackerBoosts).map((value) => value !== 0),
     ...Object.values(attack.defenderBoosts).map((value) => value !== 0),
+    attack.defenderStatus !== "none",
     attack.critical,
     attack.reflect,
     attack.lightScreen,
@@ -2097,6 +2120,7 @@ function AttackCard({
 
           <details className="attack-advanced-settings">
             <summary>
+              <ChevronRightIcon className="disclosure-chevron" aria-hidden="true" />
               <span>詳細補正</span>
               {activeAdjustmentCount > 0 ? (
                 <span className="active-adjustment-count">{activeAdjustmentCount}件有効</span>
@@ -2205,6 +2229,18 @@ function AttackCard({
                     />
                   </div>
                 ))}
+                <div className="scenario-defender-status">
+                  <span>調整対象の状態異常</span>
+                  <SelectField
+                    compact
+                    placeholderLabel
+                    placeholderValue="none"
+                    label={`${attackLabel} 調整対象の状態異常`}
+                    value={attack.defenderStatus}
+                    options={statusOptions}
+                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderStatus", value)}
+                  />
+                </div>
               </div>
 
               <div className="scenario-options">
@@ -2377,31 +2413,35 @@ export function ResultsPanel({
         ) : candidates.map((candidate) => {
           const expanded = selectedCandidateId === candidate.id;
           return (
-            <div
+            <Collapsible.Root
               className={`candidate-entry${expanded ? " selected" : ""}`}
+              open={expanded}
+              onOpenChange={(open) => {
+                if (open !== expanded) {
+                  onSelectCandidate(candidate.id);
+                }
+              }}
               role="rowgroup"
               key={candidate.id}
             >
               <div className="candidate-row" role="row">
-                <button
-                  className="candidate-row-toggle"
-                  type="button"
-                  aria-expanded={expanded}
-                  aria-controls={`${candidate.id}-details`}
-                  onClick={() => onSelectCandidate(candidate.id)}
-                >
-                  <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
-                  <span className="allocation compact-allocation">
-                    <b>{candidate.candidate.hp}</b>
-                    <b>{candidate.candidate.def}</b>
-                    <b>{candidate.candidate.spd}</b>
-                    <CandidateAllocationMeter candidate={candidate.candidate} />
-                  </span>
-                  <span>{candidate.usedStatPointBudget}</span>
-                  <span>{candidate.remainingStatPointBudget}</span>
-                  <span>{candidate.bottleneckLabel}</span>
-                  <span className="candidate-disclosure" aria-hidden="true">{expanded ? "▲" : "▼"}</span>
-                </button>
+                <Collapsible.Trigger asChild>
+                  <button className="candidate-row-toggle" type="button">
+                    <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
+                    <span className="allocation compact-allocation">
+                      <b>{candidate.candidate.hp}</b>
+                      <b>{candidate.candidate.def}</b>
+                      <b>{candidate.candidate.spd}</b>
+                      <CandidateAllocationMeter candidate={candidate.candidate} />
+                    </span>
+                    <span>{candidate.usedStatPointBudget}</span>
+                    <span>{candidate.remainingStatPointBudget}</span>
+                    <span>{candidate.bottleneckLabel}</span>
+                    <span className="candidate-disclosure" aria-hidden="true">
+                      <ChevronRightIcon className="disclosure-chevron" />
+                    </span>
+                  </button>
+                </Collapsible.Trigger>
                 <Button
                   variant="primary"
                   size="small"
@@ -2411,7 +2451,7 @@ export function ResultsPanel({
                   {appliedCandidateId === candidate.id ? "適応済み" : "適応"}
                 </Button>
               </div>
-              {expanded ? (
+              <Collapsible.Content asChild>
                 <div className="candidate-expanded-detail" id={`${candidate.id}-details`}>
                   {candidate.scenarioResults.map((result) => {
                     const scenarioLabel = scenarioLabels.get(result.scenarioId) ?? result.scenarioId;
@@ -2443,8 +2483,8 @@ export function ResultsPanel({
                     );
                   })}
                 </div>
-              ) : null}
-            </div>
+              </Collapsible.Content>
+            </Collapsible.Root>
           );
         })}
       </div>

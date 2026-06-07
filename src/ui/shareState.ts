@@ -6,6 +6,7 @@ import {
   type ScenarioFormState,
   type TargetFormState,
 } from "./defenceSearchUi";
+import type { PokemonStatus } from "../domain/model";
 
 export const SHARE_SCHEMA_VERSION = 1;
 
@@ -22,35 +23,56 @@ const mergeObject = <T extends object>(base: T, value: unknown): T => (
   isRecord(value) ? { ...base, ...value } as T : base
 );
 
+const pokemonStatuses = new Set<PokemonStatus>(["none", "slp", "psn", "brn", "frz", "par", "tox"]);
+
+const normalizePokemonStatus = (value: unknown, fallback: PokemonStatus): PokemonStatus =>
+  typeof value === "string" && pokemonStatuses.has(value as PokemonStatus)
+    ? value as PokemonStatus
+    : fallback;
+
 const normalizeTarget = (value: unknown): TargetFormState => {
   const defaults = createDefaultTargetForm();
   const input = mergeObject(defaults, value) as TargetFormState & Record<string, unknown>;
-  return {
+  const normalized = {
     ...defaults,
     ...input,
     statPoints: mergeObject(defaults.statPoints, input.statPoints),
     boosts: mergeObject(defaults.boosts, input.boosts),
   } as TargetFormState;
+  delete (normalized as TargetFormState & { status?: unknown }).status;
+  return normalized;
 };
 
-const normalizeAttack = (value: unknown, index: number): ScenarioAttackFormState => {
+const normalizeAttack = (
+  value: unknown,
+  index: number,
+  legacyTargetStatus: PokemonStatus,
+): ScenarioAttackFormState => {
   const defaults = createDefaultScenarioAttackForm(`attack-${index + 1}`, `攻撃${String.fromCharCode(65 + index)}`);
   const input = mergeObject(defaults, value) as ScenarioAttackFormState & Record<string, unknown>;
+  const hasDefenderStatus = isRecord(value) && "defenderStatus" in value;
   return {
     ...defaults,
     ...input,
     id: typeof input.id === "string" && input.id ? input.id : defaults.id,
+    defenderStatus: hasDefenderStatus
+      ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
+      : legacyTargetStatus,
     attackerStatPoints: mergeObject(defaults.attackerStatPoints, input.attackerStatPoints),
     attackerBoosts: mergeObject(defaults.attackerBoosts, input.attackerBoosts),
     defenderBoosts: mergeObject(defaults.defenderBoosts, input.defenderBoosts),
   } as ScenarioAttackFormState;
 };
 
-const normalizeScenario = (value: unknown, index: number): ScenarioFormState => {
+const normalizeScenario = (
+  value: unknown,
+  index: number,
+  legacyTargetStatus: PokemonStatus,
+): ScenarioFormState => {
   const defaults = createDefaultScenarioForms()[0];
   const input = mergeObject(defaults, value) as ScenarioFormState & Record<string, unknown>;
   const attacks = Array.isArray(input.attacks)
-    ? input.attacks.map((attack, attackIndex) => normalizeAttack(attack, attackIndex))
+    ? input.attacks.map((attack, attackIndex) => normalizeAttack(attack, attackIndex, legacyTargetStatus))
     : defaults.attacks;
 
   return {
@@ -85,9 +107,13 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     throw new Error("条件JSONに scenarios がありません");
   }
 
+  const legacyTargetStatus = isRecord(parsed.target)
+    ? normalizePokemonStatus(parsed.target.status, "none")
+    : "none";
+
   return {
     schemaVersion: SHARE_SCHEMA_VERSION,
     target: normalizeTarget(parsed.target),
-    scenarios: parsed.scenarios.map((scenario, index) => normalizeScenario(scenario, index)),
+    scenarios: parsed.scenarios.map((scenario, index) => normalizeScenario(scenario, index, legacyTargetStatus)),
   };
 };

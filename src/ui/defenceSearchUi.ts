@@ -35,7 +35,6 @@ export interface TargetFormState {
   teraTypeInput: string;
   teraEnabled: boolean;
   dmaxEnabled: boolean;
-  status: PokemonStatus;
   level: number;
   statPoints: StatPointTable;
   boosts: StatBoostTable;
@@ -52,6 +51,7 @@ export interface ScenarioAttackFormState {
   attackerTeraEnabled: boolean;
   attackerDmaxEnabled: boolean;
   attackerStatus: PokemonStatus;
+  defenderStatus: PokemonStatus;
   attackerLevel: number;
   attackerStatPoints: StatPointTable;
   attackerBoosts: StatBoostTable;
@@ -225,7 +225,6 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   teraTypeInput: "",
   teraEnabled: false,
   dmaxEnabled: false,
-  status: "none",
   level: 50,
   statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
   boosts: { ...zeroBoosts },
@@ -242,6 +241,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerTeraEnabled: false,
   attackerDmaxEnabled: false,
   attackerStatus: "none",
+  defenderStatus: "none",
   attackerLevel: 50,
   attackerStatPoints: createDefaultAttackerStatPoints(),
   attackerBoosts: { ...zeroBoosts },
@@ -270,7 +270,7 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
   },
 ];
 
-const toBuild = (form: TargetFormState, id: string): Build => {
+const toBuild = (form: TargetFormState & { status?: PokemonStatus }, id: string): Build => {
   const statPoints = clampStatPointTable(form.statPoints);
   const teraType = form.teraEnabled
     ? mustResolve("type", form.teraTypeInput, "テラスタイプ")
@@ -287,7 +287,7 @@ const toBuild = (form: TargetFormState, id: string): Build => {
     item: resolveOptional("item", form.itemInput, "持ち物"),
     teraType,
     isDynamaxed: form.dmaxEnabled || isGmaxForm || undefined,
-    status: form.status === "none" ? undefined : form.status,
+    status: form.status && form.status !== "none" ? form.status : undefined,
     ivs: defaultIvs,
     statPoints,
     evs: statPointTableToSmogonEvs(statPoints),
@@ -326,6 +326,7 @@ const toScenarioHit = (
   return {
     id: `${scenarioForm.id}-hit-${index + 1}`,
     attacker,
+    defenderStatus: attackForm.defenderStatus === "none" ? undefined : attackForm.defenderStatus,
     allyAbilities: attackForm.gameType === "doubles"
       ? scenarioForm.attacks
         .filter((allyForm) => allyForm.id !== attackForm.id)

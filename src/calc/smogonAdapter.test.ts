@@ -155,6 +155,23 @@ describe("calculateSmogonHit", () => {
     expect(doublesField.gameType).toBe("Doubles");
   });
 
+  it("uses the hit-specific status for the defender", () => {
+    const poisonedHit = { ...hit, defenderStatus: "psn" as const };
+    const adapterResult = calculateSmogonHit(defender, poisonedHit, fieldState);
+    const directAttacker = toSmogonPokemon(attacker, hit.attackerBoosts);
+    const directDefender = toSmogonPokemon({ ...defender, status: "psn" }, hit.defenderBoosts);
+    const directResult = calculate(
+      gen,
+      directAttacker,
+      directDefender,
+      new Move(gen, "Earthquake"),
+      toSmogonField(fieldState, poisonedHit),
+    );
+
+    expect(adapterResult.damageRolls).toEqual(flattenDamageRolls(directResult.damage));
+    expect(directDefender.status).toBe("psn");
+  });
+
   it("maps an active ally's direct damage abilities to @smogon/calc field flags", () => {
     const doublesField = toSmogonField(
       { gameType: "doubles", weather: "sun", terrain: "none" },

@@ -126,7 +126,12 @@ export const calculateSmogonHit = (
     hit.attackerBoosts,
     hasPlusMinusSynergy(hit, allyAbilityNames),
   );
-  const defender = toSmogonPokemon(defenderBuild, hit.defenderBoosts);
+  const defender = toSmogonPokemon(
+    hit.defenderStatus === undefined
+      ? defenderBuild
+      : { ...defenderBuild, status: hit.defenderStatus },
+    hit.defenderBoosts,
+  );
   const move = toSmogonMove(hit);
   const field = toSmogonField(fieldState, hit);
   const result = calculate(SMOGON_GENERATION, attacker, defender, move, field);

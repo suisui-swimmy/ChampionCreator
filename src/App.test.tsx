@@ -10,12 +10,22 @@ import {
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
+  getDropdownEntityOptions,
   getNatureModifierDirection,
   isUnresolvedEntityInput,
 } from "./App";
 import { createDefaultScenarioForms } from "./ui/defenceSearchUi";
 
 describe("App", () => {
+  it("keeps type and item dropdown candidates separated", () => {
+    const typeOptions = getDropdownEntityOptions("type", "");
+    const itemOptions = getDropdownEntityOptions("item", "");
+
+    expect(typeOptions.some((option) => option.value === "ほのお")).toBe(true);
+    expect(typeOptions.some((option) => option.value === "Crucibellite")).toBe(false);
+    expect(itemOptions.some((option) => option.value === "Crucibellite")).toBe(true);
+  });
+
   it("supports keyboard navigation and Tab selection for Pokemon suggestions", () => {
     expect(getPokemonSuggestionKeyAction("ArrowDown", 0, 2)).toEqual({ type: "move", index: 1 });
     expect(getPokemonSuggestionKeyAction("ArrowDown", 1, 2)).toEqual({ type: "move", index: 0 });
@@ -32,8 +42,13 @@ describe("App", () => {
     expect(html).toContain("調整対象");
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain("シナリオを追加");
+    expect(html).toContain('aria-label="探索操作"');
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain(">キャンセル<");
+    expect(html).toContain(">計算開始<");
     expect(html).toContain("候補一覧");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
+    expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
   });
 
   it("renders exact 32-cell SP allocation sliders", () => {
@@ -50,6 +65,8 @@ describe("App", () => {
     expect(html).toContain("assets/ui/lock-closed.svg");
     expect(html).toContain('aria-label="Hは探索対象"');
     expect(html).toContain('aria-label="Aは固定"');
+    expect(html).not.toContain('aria-label="状態異常: なし"');
+    expect(html).toContain('aria-label="攻撃A 調整対象の状態異常: なし"');
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {
@@ -57,7 +74,8 @@ describe("App", () => {
 
     expect(html).toContain(">基本条件<");
     expect(html).toContain(">バトル環境<");
-    expect(html).toContain("<summary><span>詳細補正</span>");
+    expect(html).toContain("<summary><svg");
+    expect(html).toContain("<span>詳細補正</span>");
     expect(html).toContain(">補正なし<");
     expect(html).toContain(">攻撃回数<");
     expect(html).toContain('aria-label="攻撃A 参照能力"');
@@ -200,8 +218,15 @@ describe("App", () => {
     expect(html).toContain(">最厳条件<");
     expect(html).toContain(">適応<");
     expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('data-state="open"');
+    expect(html).toContain('class="candidate-disclosure"');
+    expect(html).not.toContain("▼");
+    expect(html).not.toContain("▲");
     expect(html).toContain("シナリオA</strong><span>A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
     expect(closedHtml).toContain('aria-expanded="false"');
+    expect(closedHtml).toContain('data-state="closed"');
+    expect(closedHtml).not.toContain("▼");
+    expect(closedHtml).not.toContain("▲");
     expect(closedHtml).not.toContain("A252+ ドドゲザン ふいうち");
   });
 
@@ -222,6 +247,8 @@ describe("App", () => {
     expect(html).not.toContain('list="entity-options-move');
     expect(html).toContain('class="nature-trigger"');
     expect(html).toContain('aria-label="性格: ひかえめ"');
+    expect(html).toContain('class="disclosure-chevron"');
+    expect(html).not.toContain("▾");
     expect(html).not.toContain("C↑ / A↓");
     expect(html).not.toContain("A↑ / C↓");
     expect(html).not.toContain('list="entity-options-ability');
@@ -229,12 +256,14 @@ describe("App", () => {
     expect(html).toContain('aria-label="特性候補を開く"');
     expect(html).toContain('aria-label="持ち物候補を開く"');
     expect(html).toContain('aria-label="技候補を開く"');
-    expect(html).toContain('class="select-field select-field-placeholder"');
+    expect(html).toContain('class="scenario-defender-status"');
     expect(html).toContain('class="select-trigger select-trigger-placeholder"');
-    expect(html).toContain('aria-label="状態異常: なし"');
+    expect(html).not.toContain('aria-label="状態異常: なし"');
+    expect(html).toContain('aria-label="攻撃A 調整対象の状態異常: なし"');
     expect(html).toContain('value="まけんき"');
     expect(html).not.toContain('value="もうか"');
     expect(html).not.toContain('list="entity-options-item');
+    expect(html).not.toContain('list="entity-options-type');
     expect(html).toContain('aria-label="テラスタル"');
     expect(html).toContain('aria-label="攻撃テラ"');
     expect(html).toContain("tera-off.svg");

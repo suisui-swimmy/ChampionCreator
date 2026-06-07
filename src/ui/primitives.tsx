@@ -1,5 +1,6 @@
 import * as Select from "@radix-ui/react-select";
 import * as Popover from "@radix-ui/react-popover";
+import { ChevronRightIcon } from "@radix-ui/react-icons";
 import { type ButtonHTMLAttributes, type ReactNode, useId } from "react";
 
 type ButtonVariant = "primary" | "ghost" | "danger";
@@ -79,7 +80,9 @@ export function SelectField<TValue extends string>({
           aria-labelledby={placeholderLabel ? undefined : labelId}
         >
           <Select.Value>{displayLabel}</Select.Value>
-          <Select.Icon className="select-trigger-icon">▾</Select.Icon>
+          <Select.Icon className="select-trigger-icon">
+            <ChevronRightIcon className="disclosure-chevron" />
+          </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
           <Select.Content className="select-content" position="popper" sideOffset={4}>
