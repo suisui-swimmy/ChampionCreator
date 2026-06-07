@@ -2010,7 +2010,16 @@ textarea {
 }
 
 .ghost-button.danger {
-  color: #ff8585;
+  border-color: rgba(230, 40, 41, 0.72);
+  background: linear-gradient(180deg, #c83232 0%, #962121 100%);
+  color: #fff;
+}
+
+.ghost-button.danger:hover,
+.ui-button-danger:hover {
+  border-color: rgba(255, 133, 133, 0.9);
+  background: linear-gradient(180deg, #dc3c3c 0%, #a82626 100%);
+  color: #fff;
 }
 
 .result-layout {

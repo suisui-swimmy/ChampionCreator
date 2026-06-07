@@ -1772,9 +1772,7 @@ function ScenarioPanel({
       <div className="section-heading">
         <div>
           <h2 id="scenario-title">仮想敵シナリオ</h2>
-          <span>攻撃A+Bを累積評価。ダブルでは同じ行の特性を味方効果として自動反映</span>
         </div>
-        <Button variant="ghost" onClick={onAddScenario}>+ シナリオを追加</Button>
       </div>
 
       <div className="scenario-stack" aria-label="仮想敵シナリオ行">
@@ -1794,7 +1792,7 @@ function ScenarioPanel({
           />
         ))}
         <button className="scenario-add-row ui-button" type="button" onClick={onAddScenario}>
-          ダメージ計算を追加
+          シナリオを追加
         </button>
       </div>
     </section>
@@ -1859,7 +1857,7 @@ function ScenarioRow({
           aria-label={`${scenario.label}を削除`}
           onClick={() => onRemoveScenario(scenario.id)}
         >
-          行を削除
+          シナリオを削除
         </Button>
       </div>
 
