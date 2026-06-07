@@ -2,46 +2,6 @@ import { readFile } from "node:fs/promises";
 import { SPECIES, toID } from "@smogon/calc";
 
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
-const readText = async (path) => readFile(path, "utf8");
-
-const parseCsvLine = (line) => {
-  const values = [];
-  let current = "";
-  let quoted = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
-    if (char === "\"" && quoted && next === "\"") {
-      current += "\"";
-      index += 1;
-      continue;
-    }
-    if (char === "\"") {
-      quoted = !quoted;
-      continue;
-    }
-    if (char === "," && !quoted) {
-      values.push(current);
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-
-  values.push(current);
-  return values;
-};
-
-const readCsv = async (path) => {
-  const rows = (await readText(path)).trim().split(/\r?\n/);
-  const headers = parseCsvLine(rows.shift() ?? "");
-  return rows
-    .filter(Boolean)
-    .map((line) => Object.fromEntries(parseCsvLine(line).map((value, index) => [headers[index], value])));
-};
-
-const normalizeIdentifier = (value) => toID(value);
 
 const fail = (messages) => {
   for (const message of messages) {
@@ -53,134 +13,23 @@ const fail = (messages) => {
 const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.json");
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
 const pokemonAbilities = await readJson("src/data/generated/pokemon-abilities.gen.json");
-const pokeapiPokemon = await readCsv("others/pokeapi/data/v2/csv/pokemon.csv");
-const pokeapiForms = await readCsv("others/pokeapi/data/v2/csv/pokemon_forms.csv");
-const pokeapiAbilities = await readCsv("others/pokeapi/data/v2/csv/abilities.csv");
-const pokeapiPokemonAbilities = await readCsv("others/pokeapi/data/v2/csv/pokemon_abilities.csv");
+const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 
 const errors = [];
 const warnings = [];
 const speciesData = SPECIES[9];
 const abilityOptionIds = new Set(abilityOptions.entries.map((entry) => entry.id));
+const missingAbilityOptionIds = new Set();
 const pokemonOptionsById = new Map(pokemonOptions.entries.map((entry) => [entry.id, entry]));
 const abilityEntriesByPokemonId = new Map();
-const pokeapiAbilityById = new Map(pokeapiAbilities.map((entry) => [entry.id, entry]));
-const pokeapiAbilityRowsByPokemonId = new Map();
+const validSources = new Set(["pokeapi", "calc-fallback"]);
 
-for (const row of pokeapiPokemonAbilities) {
-  const rows = pokeapiAbilityRowsByPokemonId.get(row.pokemon_id) ?? [];
-  rows.push(row);
-  pokeapiAbilityRowsByPokemonId.set(row.pokemon_id, rows);
-}
-
-const pokeapiMatchesByIdentifier = new Map();
-const addPokeapiMatch = (identifier, pokemonId, source) => {
-  const normalized = normalizeIdentifier(identifier);
-  if (normalized && !pokeapiMatchesByIdentifier.has(normalized)) {
-    pokeapiMatchesByIdentifier.set(normalized, { pokemonId, identifier, source });
-  }
-};
-
-for (const pokemon of pokeapiPokemon) {
-  addPokeapiMatch(pokemon.identifier, pokemon.id, "pokeapi-pokemon");
-}
-for (const form of pokeapiForms) {
-  addPokeapiMatch(form.identifier, form.pokemon_id, "pokeapi-form");
-}
-
-const pokeapiCandidates = [
-  ...pokeapiPokemon.map((entry) => ({
-    pokemonId: entry.id,
-    identifier: entry.identifier,
-    normalized: normalizeIdentifier(entry.identifier),
-    isDefault: entry.is_default === "1",
-    source: "pokeapi-pokemon",
-  })),
-  ...pokeapiForms.map((entry) => ({
-    pokemonId: entry.pokemon_id,
-    identifier: entry.identifier,
-    normalized: normalizeIdentifier(entry.identifier),
-    isDefault: entry.is_default === "1",
-    source: "pokeapi-form",
-  })),
-];
-
-const findPokeapiMatch = (showdownName) => {
-  const normalized = normalizeIdentifier(showdownName);
-  const exactMatch = pokeapiMatchesByIdentifier.get(normalized);
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  const genderExpanded = normalized.endsWith("f")
-    ? `${normalized.slice(0, -1)}female`
-    : normalized.endsWith("m")
-      ? `${normalized.slice(0, -1)}male`
-      : undefined;
-  if (genderExpanded) {
-    const genderMatch = pokeapiMatchesByIdentifier.get(genderExpanded);
-    if (genderMatch) {
-      return genderMatch;
-    }
-  }
-
-  const prefixMatches = pokeapiCandidates.filter((candidate) => (
-    candidate.normalized.startsWith(normalized)
-    && (candidate.isDefault || candidate.source === "pokeapi-form")
-  ));
-  const uniqueByPokemonId = new Map(prefixMatches.map((candidate) => [candidate.pokemonId, candidate]));
-  if (uniqueByPokemonId.size === 1) {
-    return Array.from(uniqueByPokemonId.values())[0];
-  }
-
-  return undefined;
-};
-
-const toCalcExpectedAbilities = (pokemonOption) => (
-  Array.from(new Set(Object.values(speciesData[pokemonOption.showdownName]?.abilities ?? {}).map((ability) => toID(ability))))
-    .map((id, index) => ({
-      id,
-      slot: String(index),
-      isHidden: false,
-      source: "calc-fallback",
-    }))
-);
-
-const toPokeapiExpectedAbilities = (pokemonId) => (
-  (pokeapiAbilityRowsByPokemonId.get(pokemonId) ?? []).map((row) => {
-    const pokeapiAbility = pokeapiAbilityById.get(row.ability_id);
-    return {
-      id: normalizeIdentifier(pokeapiAbility?.identifier ?? ""),
-      slot: String(row.slot),
-      isHidden: row.is_hidden === "1",
-      source: "pokeapi",
-    };
+const calcExpectedAbilities = (pokemonOption) => (
+  Object.entries(speciesData[pokemonOption.showdownName]?.abilities ?? {}).flatMap(([slot, showdownName]) => {
+    const id = toID(showdownName);
+    return id ? [{ id, slot: String(slot) }] : [];
   })
 );
-
-const getExpectedAbilities = (pokemonOption) => {
-  const calcAbilities = toCalcExpectedAbilities(pokemonOption);
-  const pokeapiMatch = findPokeapiMatch(pokemonOption.showdownName);
-  if (!pokeapiMatch) {
-    warnings.push(`${pokemonOption.showdownName} has no PokeAPI match; validating calc fallback`);
-    return calcAbilities;
-  }
-
-  const pokeapiAbilitiesForPokemon = toPokeapiExpectedAbilities(pokeapiMatch.pokemonId);
-  if (pokeapiAbilitiesForPokemon.length === 0) {
-    warnings.push(`${pokemonOption.showdownName} has no PokeAPI ability rows; validating calc fallback`);
-    return calcAbilities;
-  }
-
-  const pokeapiAbilityIds = new Set(pokeapiAbilitiesForPokemon.map((ability) => ability.id));
-  const compatibleWithCalc = calcAbilities.every((ability) => pokeapiAbilityIds.has(ability.id));
-  if (!compatibleWithCalc) {
-    warnings.push(`${pokemonOption.showdownName} PokeAPI abilities conflict with @smogon/calc; validating calc fallback`);
-    return calcAbilities;
-  }
-
-  return pokeapiAbilitiesForPokemon;
-};
 
 if (pokemonAbilities.schemaVersion !== 1) {
   errors.push("pokemon-abilities.gen.json schemaVersion must be 1");
@@ -188,6 +37,11 @@ if (pokemonAbilities.schemaVersion !== 1) {
 
 if (pokemonAbilities.kind !== "pokemon-abilities") {
   errors.push("pokemon-abilities.gen.json kind must be pokemon-abilities");
+}
+
+const expectedDataVersion = `calc-${calcPackage.version}-gen9`;
+if (pokemonAbilities.dataVersion !== expectedDataVersion) {
+  errors.push(`pokemon-abilities.gen.json dataVersion mismatch: ${pokemonAbilities.dataVersion} != ${expectedDataVersion}`);
 }
 
 for (const entry of pokemonAbilities.entries ?? []) {
@@ -213,14 +67,13 @@ for (const entry of pokemonAbilities.entries ?? []) {
     continue;
   }
 
-  const expectedAbilities = getExpectedAbilities(pokemonOption);
-  const actualAbilityIds = (entry.abilities ?? []).map((ability) => ability.id);
-  if (expectedAbilities.map((ability) => ability.id).join("|") !== actualAbilityIds.join("|")) {
-    errors.push(`${key} ability list mismatch: ${actualAbilityIds.join(",")} != ${expectedAbilities.map((ability) => ability.id).join(",")}`);
+  if (!Array.isArray(entry.abilities) || entry.abilities.length === 0) {
+    errors.push(`${key} must have at least one ability`);
+    continue;
   }
 
-  for (const [index, ability] of (entry.abilities ?? []).entries()) {
-    const expected = expectedAbilities[index];
+  const seenAbilityIds = new Set();
+  for (const ability of entry.abilities) {
     const abilityKey = `ability:${ability.id}`;
     for (const field of ["id", "label", "showdownName", "slot", "source"]) {
       if (typeof ability[field] !== "string" || ability[field].trim() === "") {
@@ -228,21 +81,29 @@ for (const entry of pokemonAbilities.entries ?? []) {
       }
     }
 
+    if (seenAbilityIds.has(ability.id)) {
+      errors.push(`${key} has duplicate ${abilityKey}`);
+    }
+    seenAbilityIds.add(ability.id);
+
     if (typeof ability.isHidden !== "boolean") {
       errors.push(`${key} ${abilityKey} isHidden must be boolean`);
     }
 
-    if (expected && ability.slot !== expected.slot) {
-      errors.push(`${key} ${abilityKey} slot mismatch: ${ability.slot} != ${expected.slot}`);
+    if (!validSources.has(ability.source)) {
+      errors.push(`${key} ${abilityKey} has invalid source: ${ability.source}`);
     }
-    if (expected && ability.isHidden !== expected.isHidden) {
-      errors.push(`${key} ${abilityKey} isHidden mismatch: ${ability.isHidden} != ${expected.isHidden}`);
+
+    if (ability.source === "calc-fallback" && !ability.fallback?.reason) {
+      errors.push(`${key} ${abilityKey} calc-fallback must include fallback.reason`);
     }
-    if (expected && ability.source !== expected.source) {
-      errors.push(`${key} ${abilityKey} source mismatch: ${ability.source} != ${expected.source}`);
+
+    if (ability.source === "pokeapi" && ability.fallback && ability.fallback.reason !== "pokeapi-form-match") {
+      errors.push(`${key} ${abilityKey} has invalid PokeAPI fallback reason: ${ability.fallback.reason}`);
     }
 
     if (!abilityOptionIds.has(ability.id)) {
+      missingAbilityOptionIds.add(ability.id);
       if (ability.fallback?.reason) {
         warnings.push(`${key} uses fallback label for missing ${abilityKey}`);
       } else {
@@ -250,11 +111,56 @@ for (const entry of pokemonAbilities.entries ?? []) {
       }
     }
   }
+
+  const expectedCalcAbilities = calcExpectedAbilities(pokemonOption);
+  const actualAbilityIds = new Set(entry.abilities.map((ability) => ability.id));
+  for (const expected of expectedCalcAbilities) {
+    if (!actualAbilityIds.has(expected.id)) {
+      errors.push(`${key} is missing @smogon/calc ability: ability:${expected.id}`);
+    }
+  }
+
+  const usesOnlyCalcFallback = entry.abilities.every((ability) => ability.source === "calc-fallback");
+  if (usesOnlyCalcFallback) {
+    const actualSignature = entry.abilities.map((ability) => `${ability.id}:${ability.slot}`).join("|");
+    const expectedSignature = expectedCalcAbilities.map((ability) => `${ability.id}:${ability.slot}`).join("|");
+    if (actualSignature !== expectedSignature) {
+      errors.push(`${key} calc fallback mismatch: ${actualSignature} != ${expectedSignature}`);
+    }
+    warnings.push(`${entry.showdownName} uses @smogon/calc fallback abilities`);
+  }
 }
 
 for (const pokemonOption of pokemonOptions.entries ?? []) {
   if (!abilityEntriesByPokemonId.has(pokemonOption.id)) {
     errors.push(`missing pokemon ability entry for pokemon:${pokemonOption.id}`);
+  }
+}
+
+const entries = pokemonAbilities.entries ?? [];
+const abilities = entries.flatMap((entry) => entry.abilities ?? []);
+const calculatedSummary = {
+  totalPokemon: entries.length,
+  withAbilities: entries.filter((entry) => (entry.abilities ?? []).length > 0).length,
+  totalAbilityRefs: abilities.length,
+  uniqueAbilities: new Set(abilities.map((ability) => ability.id)).size,
+  multiAbilityPokemon: entries.filter((entry) => (entry.abilities ?? []).length > 1).length,
+  hiddenAbilityRefs: abilities.filter((ability) => ability.isHidden).length,
+  pokeapiMatchedPokemon: entries.filter((entry) => (
+    (entry.abilities ?? []).some((ability) => ability.source === "pokeapi")
+  )).length,
+  calcFallbackPokemon: entries.filter((entry) => (
+    (entry.abilities ?? []).some((ability) => ability.source === "calc-fallback")
+  )).length,
+  pokeapiConflictFallbackPokemon: entries.filter((entry) => (
+    (entry.abilities ?? []).some((ability) => ability.fallback?.reason === "pokeapi-conflicts-with-calc")
+  )).length,
+  missingAbilityOptions: missingAbilityOptionIds.size,
+};
+
+for (const [field, value] of Object.entries(calculatedSummary)) {
+  if (pokemonAbilities.summary?.[field] !== value) {
+    errors.push(`pokemon-abilities summary.${field} mismatch: ${pokemonAbilities.summary?.[field]} != ${value}`);
   }
 }
 
