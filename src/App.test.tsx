@@ -75,7 +75,7 @@ describe("App", () => {
     expect(html).toContain(">耐久条件<");
     expect(html).toContain(">状況条件<");
     expect(html).toContain('aria-label="攻撃A 能力"');
-    expect(html.indexOf(">状況条件<")).toBeLessThan(html.indexOf('class="attack-stat-section"'));
+    expect(html.indexOf(">状況条件<")).toBeLessThan(html.indexOf('class="attack-stat-section'));
     expect(html).not.toContain('id="scenario-special-attack-a-stat-title">能力</h3>');
     expect(html).toContain(">調整対象条件<");
     expect(html).toContain(">耐久回数<");
