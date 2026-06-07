@@ -46,6 +46,10 @@ describe("App", () => {
     expect(html).toContain(">ランク<");
     expect(html).toContain('aria-label="Bランク: 0"');
     expect(html).toContain('aria-label="Dランク: 0"');
+    expect(html).toContain("assets/ui/lock-open.svg");
+    expect(html).toContain("assets/ui/lock-closed.svg");
+    expect(html).toContain('aria-label="Hは探索対象"');
+    expect(html).toContain('aria-label="Aは固定"');
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {

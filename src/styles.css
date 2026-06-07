@@ -76,9 +76,8 @@ textarea:focus-visible,
 }
 
 .app-shell {
-  max-width: 1600px;
+  width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
   padding: 16px;
 }
 
@@ -309,7 +308,7 @@ textarea:focus-visible,
 
 .workbench {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-columns: 420px minmax(0, 1fr);
   grid-template-rows: auto auto;
   gap: 12px;
   align-items: start;
@@ -1226,8 +1225,8 @@ textarea {
 .ev-header,
 .ev-row {
   display: grid;
-  grid-template-columns: 42px 16px 58px 64px minmax(0, 1fr) 54px 52px;
-  gap: 6px;
+  grid-template-columns: 36px 14px 54px 56px minmax(96px, 1fr) 48px 28px;
+  gap: 5px;
   align-items: center;
   min-height: 38px;
   border-bottom: 1px solid var(--line);
@@ -1304,26 +1303,43 @@ textarea {
   accent-color: var(--gold);
 }
 
-.search-chip,
-.fixed-chip {
-  display: inline-flex;
-  justify-content: center;
-  min-height: 22px;
-  align-items: center;
+.allocation-lock-header,
+.allocation-lock {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 24px;
+  justify-self: center;
+}
+
+.allocation-lock-header img,
+.allocation-lock img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.allocation-lock-header img {
+  opacity: 0.58;
+}
+
+.allocation-lock {
   border-radius: 5px;
-  padding: 0 6px;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.search-chip {
-  background: rgba(245, 197, 66, 0.12);
-  color: #d7b84b;
-}
-
-.fixed-chip {
   background: #1b2022;
-  color: var(--muted);
+}
+
+.allocation-lock.searchable {
+  background: rgba(245, 197, 66, 0.12);
+}
+
+.allocation-lock.searchable img {
+  opacity: 0.82;
+  filter: sepia(1) saturate(4) hue-rotate(350deg) brightness(1.12);
+}
+
+.allocation-lock.fixed img {
+  opacity: 0.48;
 }
 
 .sp-cell-bar {
@@ -1484,16 +1500,23 @@ textarea {
 }
 
 .switch {
+  position: relative;
   display: inline-flex;
   width: 38px;
   height: 22px;
+  overflow: hidden;
   cursor: pointer;
   align-self: center;
 }
 
 .switch input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
+  cursor: pointer;
 }
 
 .switch span {

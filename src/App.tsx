@@ -1521,7 +1521,10 @@ function TargetPanel({
           <span>現在SP</span>
           <span>SP配分</span>
           <span>ランク</span>
-          <span>固定</span>
+          <span className="allocation-lock-header" title="固定状態">
+            <img src={getAssetSrc("assets/ui/lock-closed.svg")} alt="" aria-hidden="true" />
+            <span className="visually-hidden">固定状態</span>
+          </span>
         </div>
         {statKeys.map((key) => (
           <div className={`ev-row ${key}`} key={key}>
@@ -1560,8 +1563,18 @@ function TargetPanel({
                 })}
               />
             )}
-            <span className={defenceStatKeySet.has(key) ? "search-chip" : "fixed-chip"}>
-              {defenceStatKeySet.has(key) ? "HBD" : "固定"}
+            <span
+              className={`allocation-lock ${defenceStatKeySet.has(key) ? "searchable" : "fixed"}`}
+              aria-label={defenceStatKeySet.has(key) ? `${statLabels[key]}は探索対象` : `${statLabels[key]}は固定`}
+              title={defenceStatKeySet.has(key) ? "探索対象（H/B/D）" : "固定"}
+            >
+              <img
+                src={getAssetSrc(defenceStatKeySet.has(key)
+                  ? "assets/ui/lock-open.svg"
+                  : "assets/ui/lock-closed.svg")}
+                alt=""
+                aria-hidden="true"
+              />
             </span>
           </div>
         ))}
