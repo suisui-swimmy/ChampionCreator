@@ -25,10 +25,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run validate:localization
-      - run: npm run validate:artwork-assets
-      - run: npm test
-      - run: npm run build
+      - run: npm run check
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
