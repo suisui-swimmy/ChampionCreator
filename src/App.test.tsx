@@ -66,17 +66,22 @@ describe("App", () => {
     expect(html).toContain('aria-label="Hは探索対象"');
     expect(html).toContain('aria-label="Aは固定"');
     expect(html).not.toContain('aria-label="状態異常: なし"');
-    expect(html).toContain('aria-label="攻撃A 調整対象の状態異常: なし"');
+    expect(html).toContain(">攻撃A 調整対象の状態異常</span>");
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {
     const html = renderToStaticMarkup(<App />);
 
-    expect(html).toContain(">基本条件<");
-    expect(html).toContain(">バトル環境<");
-    expect(html).toContain("<summary><svg");
-    expect(html).toContain("<span>詳細補正</span>");
-    expect(html).toContain(">補正なし<");
+    expect(html).toContain(">耐久条件<");
+    expect(html).toContain(">状況条件<");
+    expect(html).toContain('aria-label="攻撃A 能力"');
+    expect(html.indexOf(">状況条件<")).toBeLessThan(html.indexOf('class="attack-stat-section"'));
+    expect(html).not.toContain('id="scenario-special-attack-a-stat-title">能力</h3>');
+    expect(html).toContain(">調整対象条件<");
+    expect(html).toContain(">耐久回数<");
+    expect(html).toContain(">耐久確立<");
+    expect(html).not.toContain("<span>詳細補正</span>");
+    expect(html).not.toContain(">補正なし<");
     expect(html).toContain(">攻撃回数<");
     expect(html).toContain('aria-label="攻撃A 参照能力"');
     expect(html).toContain('aria-label="攻撃A A SP"');
@@ -89,10 +94,9 @@ describe("App", () => {
     expect(html).not.toContain('aria-label="攻撃A S SP"');
     expect(html).not.toContain('aria-label="攻撃A Bランク: 0"');
     expect(html).not.toContain('aria-label="攻撃A Dランク: 0"');
-    expect(html).toContain('aria-label="攻撃A 調整対象ランク"');
+    expect(html).toContain('aria-label="攻撃A 調整対象条件"');
     expect(html).toContain('aria-label="攻撃A 調整対象Bランク: 0"');
     expect(html).toContain('aria-label="攻撃A 調整対象Dランク: 0"');
-    expect(html).toContain(">調整対象ランク<");
     expect(html).not.toContain("（この攻撃のみ）");
   });
 
@@ -257,15 +261,16 @@ describe("App", () => {
     expect(html).toContain('aria-label="持ち物候補を開く"');
     expect(html).toContain('aria-label="技候補を開く"');
     expect(html).toContain('class="scenario-defender-status"');
-    expect(html).toContain('class="select-trigger select-trigger-placeholder"');
+    expect(html).toContain(">攻撃A 調整対象の状態異常</span>");
+    expect(html).toContain(">なし</span>");
     expect(html).not.toContain('aria-label="状態異常: なし"');
-    expect(html).toContain('aria-label="攻撃A 調整対象の状態異常: なし"');
+    expect(html).toContain(">攻撃A 調整対象の状態異常</span>");
     expect(html).toContain('value="まけんき"');
     expect(html).not.toContain('value="もうか"');
     expect(html).not.toContain('list="entity-options-item');
     expect(html).not.toContain('list="entity-options-type');
     expect(html).toContain('aria-label="テラスタル"');
-    expect(html).toContain('aria-label="攻撃テラ"');
+    expect(html).toContain('aria-label="攻撃テラス"');
     expect(html).toContain("tera-off.svg");
     expect(html).toContain("mega-off.svg");
     expect(html).toContain("dmax-off.svg");

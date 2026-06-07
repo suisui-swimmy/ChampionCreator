@@ -1397,7 +1397,7 @@ function MechanicControls({
         <EntityTextField
           className="tera-type-field"
           kind="type"
-          label="テラタイプ"
+          label="テラスタイプ"
           value={teraTypeInput}
           onChange={(event) => onTeraTypeInputChange(event.target.value)}
           onSelectValue={onTeraTypeInputChange}
@@ -1496,17 +1496,6 @@ function TargetPanel({
             value={targetForm.natureInput}
             onChange={(value) => onUpdateField("natureInput", value)}
           />
-          <label className="placeholder-field">
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={targetForm.level}
-              placeholder="Lv."
-              onFocus={selectInputValueOnFocus}
-              onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
-            />
-          </label>
           <EntityTextField
             kind="item"
             label="持ち物"
@@ -1521,6 +1510,17 @@ function TargetPanel({
             onChange={(event) => onUpdateField("abilityInput", event.target.value)}
             onSelectAbility={(value) => onUpdateField("abilityInput", value)}
           />
+          <label className="placeholder-field">
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={targetForm.level}
+              placeholder="Lv."
+              onFocus={selectInputValueOnFocus}
+              onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
+            />
+          </label>
           <MechanicControls
             pokemonInput={targetForm.pokemonInput}
             teraEnabled={targetForm.teraEnabled}
@@ -1952,20 +1952,6 @@ function AttackCard({
     "spd",
     ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
   ]));
-  const activeAdjustmentCount = [
-    attack.attackerTeraEnabled,
-    attack.attackerDmaxEnabled,
-    ...Object.values(attack.attackerBoosts).map((value) => value !== 0),
-    ...Object.values(attack.defenderBoosts).map((value) => value !== 0),
-    attack.defenderStatus !== "none",
-    attack.critical,
-    attack.reflect,
-    attack.lightScreen,
-    attack.auroraVeil,
-    attack.helpingHand,
-    attack.friendGuard,
-  ].filter(Boolean).length;
-
   return (
     <section className="attack-condition-card" aria-label={attackLabel}>
       <div className="attack-card-header">
@@ -1996,7 +1982,7 @@ function AttackCard({
       <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
         <ScenarioTextField
           kind="pokemon"
-          label="攻撃側"
+          label="ポケモン"
           showLabel
           value={attack.attackerPokemonInput}
           onChange={onInput("attackerPokemonInput")}
@@ -2018,14 +2004,6 @@ function AttackCard({
             onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
           />
         ) : null}
-        <AbilityTextField
-          className="scenario-cell"
-          label="特性"
-          value={attack.attackerAbilityInput}
-          pokemonAbilityOptions={attackerAbilityOptions}
-          onChange={onInput("attackerAbilityInput")}
-          onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
-        />
         {!isAbilitySupport ? (
           <ScenarioTextField
             kind="item"
@@ -2036,6 +2014,37 @@ function AttackCard({
             onChange={onInput("attackerItemInput")}
             onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
           />
+        ) : null}
+        <AbilityTextField
+          className="scenario-cell"
+          label="特性"
+          value={attack.attackerAbilityInput}
+          pokemonAbilityOptions={attackerAbilityOptions}
+          onChange={onInput("attackerAbilityInput")}
+          onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
+        />
+        {!isAbilitySupport ? (
+          <>
+            <ScenarioNumberField
+              label="レベル"
+              showLabel
+              value={attack.attackerLevel}
+              min={1}
+              max={100}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
+            />
+            <MechanicControls
+              pokemonInput={attack.attackerPokemonInput}
+              teraEnabled={attack.attackerTeraEnabled}
+              dmaxEnabled={attack.attackerDmaxEnabled}
+              teraTypeInput={attack.attackerTeraTypeInput}
+              teraLabel={attack.attackerTeraEnabled ? "攻撃テラス解除" : "攻撃テラス"}
+              onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+              onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
+              onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
+              onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
+            />
+          </>
         ) : null}
       </div>
 
@@ -2050,17 +2059,9 @@ function AttackCard({
         </div>
       ) : (
         <>
-          <section className="attack-setting-section" aria-labelledby={`${scenarioId}-${attack.id}-survival-title`}>
-            <h3 id={`${scenarioId}-${attack.id}-survival-title`}>基本条件</h3>
-            <div className="attack-number-grid">
-              <ScenarioNumberField
-                label="Lv."
-                showLabel
-                value={attack.attackerLevel}
-                min={1}
-                max={100}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
-              />
+          <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-survival-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-survival-title`}>耐久条件</h3>
+            <div className="attack-number-grid attack-setting-section-body">
               <ScenarioNumberField
                 label="攻撃回数"
                 showLabel
@@ -2070,7 +2071,7 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)}
               />
               <ScenarioNumberField
-                label="必要耐久"
+                label="耐久回数"
                 showLabel
                 value={attack.requiredSurvivedHits}
                 min={1}
@@ -2078,19 +2079,23 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "requiredSurvivedHits", value)}
               />
               <ScenarioNumberField
-                label="生存率%"
+                label="耐久確立"
                 showLabel
                 value={attack.minSurvivalProbabilityPercent}
                 min={0}
                 max={100}
+                suffix="%"
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "minSurvivalProbabilityPercent", value)}
               />
             </div>
           </section>
 
-          <section className="attack-setting-section" aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}>
-            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>バトル環境</h3>
-            <div className="attack-field-grid">
+          <section
+            className="attack-setting-section attack-setting-section--indented"
+            aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}
+          >
+            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>状況条件</h3>
+            <div className="attack-field-grid attack-setting-section-body">
               <SelectField
                 label="ルール"
                 value={attack.gameType}
@@ -2098,7 +2103,7 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
               />
               <SelectField
-                label="攻撃状態"
+                label="状態異常"
                 value={attack.attackerStatus}
                 options={statusOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
@@ -2116,31 +2121,8 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
               />
             </div>
-          </section>
 
-          <details className="attack-advanced-settings">
-            <summary>
-              <ChevronRightIcon className="disclosure-chevron" aria-hidden="true" />
-              <span>詳細補正</span>
-              {activeAdjustmentCount > 0 ? (
-                <span className="active-adjustment-count">{activeAdjustmentCount}件有効</span>
-              ) : (
-                <span className="active-adjustment-empty">補正なし</span>
-              )}
-            </summary>
-            <div className="attack-advanced-content">
-              <MechanicControls
-                pokemonInput={attack.attackerPokemonInput}
-                teraEnabled={attack.attackerTeraEnabled}
-                dmaxEnabled={attack.attackerDmaxEnabled}
-                teraTypeInput={attack.attackerTeraTypeInput}
-                teraLabel={attack.attackerTeraEnabled ? "攻撃テラ解除" : "攻撃テラ"}
-                onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
-                onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
-                onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
-                onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
-              />
-
+            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 能力`}>
               <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} 参照能力`}>
                 <div className="ev-header attacker-stat-header">
                   <span>能力</span>
@@ -2208,9 +2190,36 @@ function AttackCard({
                   );
                 })}
               </div>
+            </section>
+          </section>
 
-              <div className="scenario-defender-ranks" aria-label={`${attackLabel} 調整対象ランク`}>
-                <span className="scenario-defender-ranks-title">調整対象ランク</span>
+          <div className="scenario-options">
+            <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
+            <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
+            <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+            <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+            <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+            <label><input type="checkbox" checked={attack.friendGuard} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "friendGuard", event.target.checked)} /> フレンドガード</label>
+          </div>
+
+          <section
+            className="attack-setting-section attack-setting-section--indented attack-setting-section--target-condition"
+            aria-labelledby={`${scenarioId}-${attack.id}-target-condition-title`}
+          >
+            <h3 id={`${scenarioId}-${attack.id}-target-condition-title`}>調整対象条件</h3>
+            <div className="attack-target-condition-body">
+              <div className="scenario-defender-status">
+                <span>状態異常</span>
+                <SelectField
+                  compact
+                  label={`${attackLabel} 調整対象の状態異常`}
+                  value={attack.defenderStatus}
+                  options={statusOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderStatus", value)}
+                />
+              </div>
+              <div className="scenario-defender-ranks" aria-label={`${attackLabel} 調整対象条件`}>
+                <span className="scenario-defender-rank-label">ランク</span>
                 {defenderRankKeys.map((key) => (
                   <div className="scenario-defender-rank" key={key}>
                     <StatIcon stat={key} />
@@ -2229,30 +2238,9 @@ function AttackCard({
                     />
                   </div>
                 ))}
-                <div className="scenario-defender-status">
-                  <span>調整対象の状態異常</span>
-                  <SelectField
-                    compact
-                    placeholderLabel
-                    placeholderValue="none"
-                    label={`${attackLabel} 調整対象の状態異常`}
-                    value={attack.defenderStatus}
-                    options={statusOptions}
-                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderStatus", value)}
-                  />
-                </div>
-              </div>
-
-              <div className="scenario-options">
-                <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
-                <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
-                <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
-                <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
-                <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
-                <label><input type="checkbox" checked={attack.friendGuard} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "friendGuard", event.target.checked)} /> フレンドガード</label>
               </div>
             </div>
-          </details>
+          </section>
         </>
       )}
     </section>
@@ -2343,21 +2331,35 @@ type ScenarioNumberFieldProps = {
   min: number;
   max: number;
   onChange: (value: number) => void;
+  suffix?: string;
 };
 
-function ScenarioNumberField({ label, showLabel, value, min, max, onChange }: ScenarioNumberFieldProps) {
+function ScenarioNumberField({
+  label,
+  showLabel,
+  value,
+  min,
+  max,
+  onChange,
+  suffix,
+}: ScenarioNumberFieldProps) {
+  const ariaLabel = suffix ? `${label} ${suffix}` : label;
+
   return (
-    <label className="scenario-cell number-cell number-labeled-field">
+    <label className={`scenario-cell number-cell number-labeled-field${suffix ? " has-suffix" : ""}`}>
       {showLabel ? <span className="row-label">{label}</span> : null}
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        aria-label={label}
-        onFocus={selectInputValueOnFocus}
-        onChange={(event) => onChange(toNumber(event.target.value, min))}
-      />
+      <span className="number-input-wrap">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={value}
+          aria-label={ariaLabel}
+          onFocus={selectInputValueOnFocus}
+          onChange={(event) => onChange(toNumber(event.target.value, min))}
+        />
+        {suffix ? <span className="number-input-suffix">{suffix}</span> : null}
+      </span>
     </label>
   );
 }

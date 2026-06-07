@@ -407,6 +407,7 @@ textarea:focus-visible,
 .mechanic-block {
   display: grid;
   grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   min-width: 0;
 }
@@ -452,6 +453,7 @@ textarea:focus-visible,
 
 .variant-choice-row {
   display: flex;
+  grid-column: 1 / -1;
   flex-wrap: wrap;
   gap: 6px;
 }
@@ -1529,6 +1531,29 @@ textarea {
   white-space: nowrap;
 }
 
+.number-input-wrap {
+  position: relative;
+}
+
+.number-input-wrap input {
+  width: 100%;
+}
+
+.number-labeled-field.has-suffix .number-input-wrap input {
+  padding-right: 18px;
+}
+
+.number-input-suffix {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8fa09f;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .inline-title-input {
   height: 28px;
   border-color: transparent;
@@ -1650,6 +1675,18 @@ textarea {
   gap: 8px;
 }
 
+.attack-field-grid .select-field {
+  grid-template-columns: minmax(58px, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.attack-field-grid .select-field-label {
+  color: #8fa09f;
+  font-size: 11px;
+  line-height: 14px;
+}
+
 .attack-condition-card,
 .attack-add-card,
 .scenario-add-row {
@@ -1687,6 +1724,30 @@ textarea {
 .attack-setting-section {
   display: grid;
   gap: 6px;
+}
+
+.attack-setting-section--indented .attack-setting-section-body,
+.attack-setting-section--indented .attack-target-condition-body {
+  margin-left: 8px;
+}
+
+.attack-setting-section--target-condition .attack-target-condition-body {
+  display: grid;
+  gap: 6px;
+}
+
+.attack-setting-section--target-condition .scenario-defender-status {
+  width: 160px;
+}
+
+.attack-setting-section--target-condition .scenario-defender-ranks {
+  grid-template-columns: 58px repeat(auto-fit, minmax(84px, max-content));
+  justify-content: start;
+}
+
+.attack-setting-section--target-condition .scenario-defender-rank {
+  grid-template-columns: 18px 58px;
+  gap: 8px;
 }
 
 .attack-setting-section h3 {
@@ -1842,7 +1903,7 @@ textarea {
 
 .scenario-defender-ranks {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(auto-fit, minmax(64px, 72px));
+  grid-template-columns: minmax(150px, 1fr) repeat(auto-fit, minmax(64px, 72px));
   gap: 8px;
   align-items: center;
   min-height: 36px;
@@ -1862,6 +1923,12 @@ textarea {
   align-items: center;
 }
 
+.scenario-defender-rank-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .scenario-defender-rank .stat-icon {
   width: 18px;
   height: 18px;
@@ -1869,16 +1936,26 @@ textarea {
 
 .scenario-defender-status {
   display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px);
+  grid-template-columns: 58px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .scenario-defender-status > span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.scenario-defender-status .select-field-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .compact-select-field {
@@ -1891,6 +1968,7 @@ textarea {
   gap: 6px 10px;
   align-items: center;
   min-height: 28px;
+  margin-left: 8px;
 }
 
 .scenario-options label {
