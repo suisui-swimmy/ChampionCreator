@@ -3,10 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { CandidateResult } from "./domain/model";
 import {
   App,
-  CandidateAllocationMeter,
+  CandidateStatPointSpread,
   ResultsPanel,
   clampTargetStatPointChange,
-  getCandidateAllocationFillPercent,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
@@ -14,7 +13,9 @@ import {
   getNatureModifierDirection,
   isUnresolvedEntityInput,
 } from "./App";
-import { createDefaultScenarioForms } from "./ui/defenceSearchUi";
+import {
+  createDefaultScenarioForms,
+} from "./ui/defenceSearchUi";
 
 describe("App", () => {
   it("keeps type and item dropdown candidates separated", () => {
@@ -41,6 +42,9 @@ describe("App", () => {
     expect(html).toContain("ChampionCreator");
     expect(html).toContain("調整対象");
     expect(html).toContain("仮想敵シナリオ");
+    expect(html).toContain('aria-label="シナリオA 調整種別"');
+    expect(html).toContain(">耐久調整</span>");
+    expect(html).toContain(">火力調整</span>");
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
     expect(html).toContain('role="progressbar"');
@@ -142,18 +146,21 @@ describe("App", () => {
     }, "atk", 5)).toBe(5);
   });
 
-  it("renders candidate allocation meter from the candidate H/B/D values", () => {
-    expect(getCandidateAllocationFillPercent(0)).toBe("0.00%");
-    expect(getCandidateAllocationFillPercent(16)).toBe("50.00%");
-    expect(getCandidateAllocationFillPercent(32)).toBe("100.00%");
+  it("renders candidate H/A/B/C/D/S SP values", () => {
+    const html = renderToStaticMarkup(<CandidateStatPointSpread statPoints={{
+      hp: 0,
+      atk: 12,
+      def: 16,
+      spa: 20,
+      spd: 32,
+      spe: 4,
+    }} />);
 
-    const html = renderToStaticMarkup(<CandidateAllocationMeter candidate={{ hp: 0, def: 16, spd: 32 }} />);
-
-    expect(html).toContain('aria-label="H 0 / B 16 / D 32 SP"');
-    expect(html).toContain('class="candidate-meter-track hp"');
-    expect(html).toContain('style="width:0.00%"');
-    expect(html).toContain('style="width:50.00%"');
-    expect(html).toContain('style="width:100.00%"');
+    expect(html).toContain('aria-label="H 0 / A 12 / B 16 / C 20 / D 32 / S 4 SP"');
+    expect(html).toContain('class="candidate-stat-value hp"');
+    expect(html).toContain(">H</span><span>0</span>");
+    expect(html).toContain(">A</span><span>12</span>");
+    expect(html).toContain(">C</span><span>20</span>");
   });
 
   it("labels failed scenario results as unavailable", () => {
@@ -196,8 +203,13 @@ describe("App", () => {
       }],
     };
     const [scenario] = createDefaultScenarioForms();
+    const resultsPanelBaseProps = {
+      offenseResults: [],
+      onApplyOffenseResult: () => undefined,
+    };
     const closedHtml = renderToStaticMarkup(
       <ResultsPanel
+        {...resultsPanelBaseProps}
         candidates={[candidate]}
         selectedCandidateId={null}
         appliedCandidateId={null}
@@ -209,6 +221,7 @@ describe("App", () => {
     );
     const html = renderToStaticMarkup(
       <ResultsPanel
+        {...resultsPanelBaseProps}
         candidates={[candidate]}
         selectedCandidateId={candidate.id}
         appliedCandidateId={null}
@@ -220,6 +233,10 @@ describe("App", () => {
     );
 
     expect(html).toContain(">最厳条件<");
+    expect(html).toContain(">H/A/B/C/D/S<");
+    expect(html).toContain(">H</span><span>6</span>");
+    expect(html).toContain(">A</span><span>0</span>");
+    expect(html).toContain(">B</span><span>13</span>");
     expect(html).toContain(">適用<");
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('data-state="open"');

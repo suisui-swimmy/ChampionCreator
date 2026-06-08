@@ -20,12 +20,20 @@ import type {
   Terrain,
 } from "../domain/model";
 import {
+  CHAMPIONS_TOTAL_STAT_POINTS,
   clampStatPointTable,
+  clampStatPointValue,
   statPointTableToSmogonEvs,
+  sumStatPoints,
   type StatPointTable,
 } from "../domain/championsStats";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
+import {
+  calculateOffenseAdjustment,
+  type OffenseAdjustmentInput,
+  type OffenseAdjustmentResult,
+} from "../search/offenseAdjustment";
 
 export interface TargetFormState {
   pokemonInput: string;
@@ -60,6 +68,7 @@ export interface ScenarioAttackFormState {
   repeat: number;
   requiredSurvivedHits: number;
   minSurvivalProbabilityPercent: number;
+  targetKoProbabilityPercent: number;
   gameType: GameType;
   weather: Weather;
   terrain: Terrain;
@@ -71,16 +80,53 @@ export interface ScenarioAttackFormState {
   friendGuard: boolean;
 }
 
+export type ScenarioAdjustmentType = "defence" | "offense";
+
 export interface ScenarioFormState {
   id: string;
   label: string;
   enabled: boolean;
+  adjustmentType: ScenarioAdjustmentType;
   attacks: ScenarioAttackFormState[];
+}
+
+export interface OffenseAdjustmentFormState {
+  defenderPokemonInput: string;
+  defenderNatureInput: string;
+  defenderAbilityInput: string;
+  defenderItemInput: string;
+  defenderTeraTypeInput: string;
+  defenderTeraEnabled: boolean;
+  defenderDmaxEnabled: boolean;
+  defenderStatus: PokemonStatus;
+  defenderLevel: number;
+  defenderStatPoints: StatPointTable;
+  defenderBoosts: StatBoostTable;
+  moveInput: string;
+  targetKoProbabilityPercent: number;
+  gameType: GameType;
+  weather: Weather;
+  terrain: Terrain;
+  critical: boolean;
+  reflect: boolean;
+  lightScreen: boolean;
+  auroraVeil: boolean;
+  helpingHand: boolean;
+  friendGuard: boolean;
 }
 
 export interface DefenceSearchInput {
   build: Build;
   scenarios: Scenario[];
+}
+
+export interface OffenseScenarioResult {
+  id: string;
+  scenarioId: string;
+  scenarioLabel: string;
+  attackId: string;
+  attackLabel: string;
+  result: OffenseAdjustmentResult;
 }
 
 export type SearchStatus = "idle" | "running" | "complete" | "error" | "canceled";
@@ -250,6 +296,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   repeat: 1,
   requiredSurvivedHits: 1,
   minSurvivalProbabilityPercent: 100,
+  targetKoProbabilityPercent: 100,
   gameType: "singles",
   weather: "none",
   terrain: "none",
@@ -266,9 +313,35 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
     id: "scenario-special",
     label: "シナリオA",
     enabled: true,
+    adjustmentType: "defence",
     attacks: [createDefaultScenarioAttackForm()],
   },
 ];
+
+export const createDefaultOffenseAdjustmentForm = (): OffenseAdjustmentFormState => ({
+  defenderPokemonInput: "ピチュー",
+  defenderNatureInput: "",
+  defenderAbilityInput: "",
+  defenderItemInput: "",
+  defenderTeraTypeInput: "",
+  defenderTeraEnabled: false,
+  defenderDmaxEnabled: false,
+  defenderStatus: "none",
+  defenderLevel: 50,
+  defenderStatPoints: { ...zeroStatPoints },
+  defenderBoosts: { ...zeroBoosts },
+  moveInput: "ふいうち",
+  targetKoProbabilityPercent: 100,
+  gameType: "singles",
+  weather: "none",
+  terrain: "none",
+  critical: false,
+  reflect: false,
+  lightScreen: false,
+  auroraVeil: false,
+  helpingHand: false,
+  friendGuard: false,
+});
 
 const toBuild = (form: TargetFormState & { status?: PokemonStatus }, id: string): Build => {
   const statPoints = clampStatPointTable(form.statPoints);
@@ -294,6 +367,31 @@ const toBuild = (form: TargetFormState & { status?: PokemonStatus }, id: string)
   };
 };
 
+export const buildTargetBuildFromUi = (
+  targetForm: TargetFormState,
+  id = "target",
+): Build => toBuild(targetForm, id);
+
+export const buildScenarioAttackBuildFromUi = (
+  attackForm: ScenarioAttackFormState,
+  id: string,
+): Build => toBuild(
+  {
+    pokemonInput: attackForm.attackerPokemonInput,
+    natureInput: attackForm.attackerNatureInput,
+    abilityInput: attackForm.attackerAbilityInput,
+    itemInput: attackForm.attackerItemInput,
+    teraTypeInput: attackForm.attackerTeraTypeInput,
+    teraEnabled: attackForm.attackerTeraEnabled,
+    dmaxEnabled: attackForm.attackerDmaxEnabled,
+    status: attackForm.attackerStatus,
+    level: attackForm.attackerLevel,
+    statPoints: attackForm.attackerStatPoints,
+    boosts: { ...zeroBoosts },
+  },
+  id,
+);
+
 const toScenarioHit = (
   scenarioForm: ScenarioFormState,
   attackForm: ScenarioAttackFormState,
@@ -306,20 +404,8 @@ const toScenarioHit = (
     Math.max(1, clampInt(attackForm.requiredSurvivedHits, 1, 10)),
     Math.min(10, hitsBefore + 1),
   );
-  const attacker = toBuild(
-    {
-      pokemonInput: attackForm.attackerPokemonInput,
-      natureInput: attackForm.attackerNatureInput,
-      abilityInput: attackForm.attackerAbilityInput,
-      itemInput: attackForm.attackerItemInput,
-      teraTypeInput: attackForm.attackerTeraTypeInput,
-      teraEnabled: attackForm.attackerTeraEnabled,
-      dmaxEnabled: attackForm.attackerDmaxEnabled,
-      status: attackForm.attackerStatus,
-      level: attackForm.attackerLevel,
-      statPoints: attackForm.attackerStatPoints,
-      boosts: { ...zeroBoosts },
-    },
+  const attacker = buildScenarioAttackBuildFromUi(
+    attackForm,
     `${scenarioForm.id}-${attackForm.id}-attacker`,
   );
 
@@ -391,10 +477,12 @@ export const buildDefenceSearchInput = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
 ): DefenceSearchInput => {
-  const activeScenarioForms = scenarioForms.filter((form) => form.enabled);
+  const activeScenarioForms = scenarioForms.filter((form) => (
+    form.enabled && form.adjustmentType === "defence"
+  ));
 
   if (activeScenarioForms.length === 0) {
-    throw new Error("有効な仮想敵シナリオがありません");
+    throw new Error("有効な耐久調整シナリオがありません");
   }
 
   return {
@@ -426,6 +514,136 @@ export const buildDefenceSearchInput = (
     }),
   };
 };
+
+export const buildOffenseAdjustmentInput = (
+  targetForm: TargetFormState,
+  offenseForm: OffenseAdjustmentFormState,
+): OffenseAdjustmentInput => ({
+  attackerBuild: buildTargetBuildFromUi(targetForm, "offense-attacker"),
+  defenderBuild: toBuild({
+    pokemonInput: offenseForm.defenderPokemonInput,
+    natureInput: offenseForm.defenderNatureInput,
+    abilityInput: offenseForm.defenderAbilityInput,
+    itemInput: offenseForm.defenderItemInput,
+    teraTypeInput: offenseForm.defenderTeraTypeInput,
+    teraEnabled: offenseForm.defenderTeraEnabled,
+    dmaxEnabled: offenseForm.defenderDmaxEnabled,
+    status: offenseForm.defenderStatus,
+    level: offenseForm.defenderLevel,
+    statPoints: offenseForm.defenderStatPoints,
+    boosts: { ...zeroBoosts },
+  }, "offense-defender"),
+  move: mustResolve("move", offenseForm.moveInput, "火力調整の技"),
+  moveInput: offenseForm.moveInput,
+  targetKoProbability: clampProbabilityPercent(offenseForm.targetKoProbabilityPercent),
+  field: toFieldState(offenseForm),
+  critical: offenseForm.critical,
+  attackerBoosts: normalizeBoosts(targetForm.boosts),
+  defenderBoosts: normalizeBoosts(offenseForm.defenderBoosts),
+  attackerSide: { ...emptySide, helpingHand: offenseForm.helpingHand },
+  defenderSide: {
+    ...emptySide,
+    reflect: offenseForm.reflect,
+    lightScreen: offenseForm.lightScreen,
+    auroraVeil: offenseForm.auroraVeil,
+    friendGuard: offenseForm.gameType === "doubles" && offenseForm.friendGuard,
+  },
+  boostedNatures: {
+    atk: mustResolve("nature", "いじっぱり", "A上昇補正"),
+    spa: mustResolve("nature", "ひかえめ", "C上昇補正"),
+  },
+});
+
+export const createOffenseAdjustmentFormFromScenarioAttack = (
+  attackForm: ScenarioAttackFormState,
+): OffenseAdjustmentFormState => ({
+  defenderPokemonInput: attackForm.attackerPokemonInput,
+  defenderNatureInput: attackForm.attackerNatureInput,
+  defenderAbilityInput: attackForm.attackerAbilityInput,
+  defenderItemInput: attackForm.attackerItemInput,
+  defenderTeraTypeInput: attackForm.attackerTeraTypeInput,
+  defenderTeraEnabled: attackForm.attackerTeraEnabled,
+  defenderDmaxEnabled: attackForm.attackerDmaxEnabled,
+  defenderStatus: attackForm.attackerStatus,
+  defenderLevel: attackForm.attackerLevel,
+  defenderStatPoints: attackForm.attackerStatPoints,
+  defenderBoosts: attackForm.attackerBoosts,
+  moveInput: attackForm.moveInput,
+  targetKoProbabilityPercent: attackForm.targetKoProbabilityPercent,
+  gameType: attackForm.gameType,
+  weather: attackForm.weather,
+  terrain: attackForm.terrain,
+  critical: attackForm.critical,
+  reflect: attackForm.reflect,
+  lightScreen: attackForm.lightScreen,
+  auroraVeil: attackForm.auroraVeil,
+  helpingHand: attackForm.helpingHand,
+  friendGuard: attackForm.friendGuard,
+});
+
+const makeOffenseAdjustmentMessageResult = (
+  status: OffenseAdjustmentResult["status"],
+  reason: string,
+): OffenseAdjustmentResult => ({
+  id: `offense-${status}`,
+  status,
+  passed: false,
+  label: status === "unresolved" ? "未解決" : "入力エラー",
+  owner: "none",
+  stat: null,
+  role: "fixed",
+  canApply: false,
+  requiredStatPoints: null,
+  actualStat: null,
+  koProbability: 0,
+  targetKoProbability: 0,
+  damageRange: null,
+  reason,
+});
+
+export const calculateOffenseAdjustmentFromUi = (
+  targetForm: TargetFormState,
+  offenseForm: OffenseAdjustmentFormState,
+): OffenseAdjustmentResult[] => {
+  const moveResult = resolveEntity("move", offenseForm.moveInput);
+  if (!toEntityRef(moveResult, "move")) {
+    const candidates = moveResult.candidates.length > 0
+      ? `候補: ${moveResult.candidates.map((candidate) => candidate.displayNameJa).join(", ")}`
+      : "候補なし";
+    return [makeOffenseAdjustmentMessageResult(
+      "unresolved",
+      `技「${offenseForm.moveInput}」を canonical name に解決できません (${moveResult.status}, ${candidates})`,
+    )];
+  }
+
+  try {
+    return calculateOffenseAdjustment(buildOffenseAdjustmentInput(targetForm, offenseForm));
+  } catch (error) {
+    return [makeOffenseAdjustmentMessageResult(
+      "invalid",
+      error instanceof Error ? error.message : String(error),
+    )];
+  }
+};
+
+export const calculateOffenseAdjustmentsFromScenarios = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): OffenseScenarioResult[] => scenarioForms
+  .filter((scenario) => scenario.enabled && scenario.adjustmentType === "offense")
+  .flatMap((scenario) => scenario.attacks
+    .filter(hasDamageMove)
+    .flatMap((attack) => {
+      const offenseForm = createOffenseAdjustmentFormFromScenarioAttack(attack);
+      return calculateOffenseAdjustmentFromUi(targetForm, offenseForm).map((result) => ({
+        id: `${scenario.id}-${attack.id}-${result.id}`,
+        scenarioId: scenario.id,
+        scenarioLabel: scenario.label,
+        attackId: attack.id,
+        attackLabel: attack.label,
+        result,
+      }));
+    }));
 
 const isActiveRequest = (state: SearchUiState, requestId: string): boolean =>
   state.activeRequestId === requestId;
@@ -567,3 +785,28 @@ export const applyTopCandidateToTarget = (
   targetForm: TargetFormState,
   candidates: CandidateResult[],
 ): TargetFormState => applyCandidateToTarget(targetForm, candidates[0]);
+
+export const applyOffenseAdjustmentToTarget = (
+  targetForm: TargetFormState,
+  result: OffenseAdjustmentResult | undefined,
+): TargetFormState => {
+  if (
+    !result?.canApply
+    || result.requiredStatPoints === null
+    || (result.stat !== "atk" && result.stat !== "spa")
+  ) {
+    return targetForm;
+  }
+
+  const nextValue = clampStatPointValue(result.requiredStatPoints);
+  const usedByOtherStats = sumStatPoints(targetForm.statPoints) - targetForm.statPoints[result.stat];
+  const cappedValue = Math.min(nextValue, Math.max(0, CHAMPIONS_TOTAL_STAT_POINTS - usedByOtherStats));
+
+  return {
+    ...targetForm,
+    statPoints: {
+      ...targetForm.statPoints,
+      [result.stat]: cappedValue,
+    },
+  };
+};

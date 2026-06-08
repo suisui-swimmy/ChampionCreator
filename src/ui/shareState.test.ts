@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultScenarioForms, createDefaultTargetForm } from "./defenceSearchUi";
+import {
+  createDefaultOffenseAdjustmentForm,
+  createDefaultScenarioForms,
+  createDefaultTargetForm,
+} from "./defenceSearchUi";
 import {
   SHARE_SCHEMA_VERSION,
   parseShareStateDocument,
@@ -31,8 +35,15 @@ describe("shareState", () => {
         gameType: "doubles" as const,
       })),
     }));
+    const offenseAdjustment = {
+      ...createDefaultOffenseAdjustmentForm(),
+      defenderPokemonInput: "ピチュー",
+      moveInput: "インファイト",
+      targetKoProbabilityPercent: 75,
+      defenderStatPoints: { ...createDefaultOffenseAdjustmentForm().defenderStatPoints, hp: 4, def: 2 },
+    };
 
-    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios));
+    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios, offenseAdjustment));
 
     expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
     expect(parsed.target).toMatchObject({
@@ -51,6 +62,12 @@ describe("shareState", () => {
       defenderStatus: "brn",
       gameType: "doubles",
     });
+    expect(parsed.offenseAdjustment).toMatchObject({
+      defenderPokemonInput: "ピチュー",
+      moveInput: "インファイト",
+      targetKoProbabilityPercent: 75,
+      defenderStatPoints: { hp: 4, def: 2 },
+    });
   });
 
   it("rejects unsupported schema versions", () => {
@@ -63,7 +80,7 @@ describe("shareState", () => {
 
   it("fills missing target boosts from defaults when importing older JSON", () => {
     const parsed = parseShareStateDocument(JSON.stringify({
-      schemaVersion: SHARE_SCHEMA_VERSION,
+      schemaVersion: 1,
       target: {
         pokemonInput: "メガスターミー",
       },
@@ -77,11 +94,12 @@ describe("shareState", () => {
       spd: 0,
       spe: 0,
     });
+    expect(parsed.offenseAdjustment).toEqual(createDefaultOffenseAdjustmentForm());
   });
 
   it("moves the legacy target status into scenario attacks when importing older JSON", () => {
     const parsed = parseShareStateDocument(JSON.stringify({
-      schemaVersion: SHARE_SCHEMA_VERSION,
+      schemaVersion: 1,
       target: {
         ...createDefaultTargetForm(),
         status: "par",

@@ -10,7 +10,6 @@ import {
 } from "./domain/championsStats";
 import type {
   CandidateResult,
-  DefenceStatPointCandidate,
   GameType,
   PokemonStatus,
   StatBoostTable,
@@ -29,7 +28,11 @@ import {
   type EntityInputOption,
 } from "./localization/resolver";
 import {
+  applyOffenseAdjustmentToTarget,
   applyCandidateToTarget,
+  buildScenarioAttackBuildFromUi,
+  buildTargetBuildFromUi,
+  calculateOffenseAdjustmentsFromScenarios,
   createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
   buildDefenceSearchInput,
@@ -38,10 +41,13 @@ import {
   createInitialSearchUiState,
   searchUiReducer,
   startDefenceSearchFromUi,
+  type OffenseScenarioResult,
+  type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
   type ScenarioFormState,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import type { OffenseAdjustmentResult } from "./search/offenseAdjustment";
 import { getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import {
@@ -285,14 +291,11 @@ export const formatLocalizedDamageDescription = (description: string): string =>
 
 const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
 
-export const getCandidateAllocationFillPercent = (value: number): string =>
-  `${((clampStatPointValue(value) / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100).toFixed(2)}%`;
-
 export const formatScenarioResultStatusLabel = (passed: boolean): "PASS" | "不可" =>
   passed ? "PASS" : "不可";
 
-const formatCandidateAllocationLabel = (candidate: DefenceStatPointCandidate): string =>
-  `H ${candidate.hp} / B ${candidate.def} / D ${candidate.spd} SP`;
+const formatStatPointSpreadLabel = (statPoints: StatTable): string =>
+  statKeys.map((key) => `${statLabels[key]} ${statPoints[key]}`).join(" / ");
 
 const selectInputValueOnFocus = (event: FocusEvent<HTMLInputElement>) => {
   try {
@@ -388,6 +391,7 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   repeat: 1,
   requiredSurvivedHits: Math.min(10, index + 1),
   minSurvivalProbabilityPercent: 100,
+  targetKoProbabilityPercent: 100,
   gameType: "singles",
   weather: "none",
   terrain: "none",
@@ -436,10 +440,27 @@ export function App() {
     }
   }, [targetForm, scenarioForms]);
 
+  const targetBuildPreview = useMemo(() => {
+    try {
+      return buildTargetBuildFromUi(targetForm);
+    } catch {
+      return null;
+    }
+  }, [targetForm]);
+
   const targetArtwork = useMemo(() => findPokemonArtwork({
     input: targetForm.pokemonInput,
-    canonicalName: previewInput.input?.build.pokemon.canonicalName,
-  }), [targetForm.pokemonInput, previewInput.input?.build.pokemon.canonicalName]);
+    canonicalName: targetBuildPreview?.pokemon.canonicalName,
+  }), [targetForm.pokemonInput, targetBuildPreview?.pokemon.canonicalName]);
+
+  const offenseResults = useMemo(
+    () => calculateOffenseAdjustmentsFromScenarios(targetForm, scenarioForms),
+    [targetForm, scenarioForms],
+  );
+
+  const hasEnabledDefenceScenario = scenarioForms.some((scenario) => (
+    scenario.enabled && scenario.adjustmentType === "defence"
+  ));
 
   useEffect(() => {
     return () => {
@@ -454,7 +475,7 @@ export function App() {
   useEffect(() => {
     let canceled = false;
 
-    if (!previewInput.input) {
+    if (!targetBuildPreview) {
       setActualStats(null);
       setAttackerActualStats({});
       return () => {
@@ -463,16 +484,22 @@ export function App() {
     }
 
     void import("./calc/smogonAdapter").then(({ toSmogonPokemon }) => {
-      if (!canceled && previewInput.input) {
-        const pokemon = toSmogonPokemon(previewInput.input.build);
+      if (!canceled) {
+        const pokemon = toSmogonPokemon(targetBuildPreview);
         setActualStats({ ...pokemon.stats, hp: pokemon.maxHP() });
         setAttackerActualStats(Object.fromEntries(
-          previewInput.input.scenarios.flatMap((scenario) =>
-            scenario.hits.map((hit) => {
-              const attacker = toSmogonPokemon(hit.attacker);
-              return [hit.attacker.id, { ...attacker.stats, hp: attacker.maxHP() }];
-            }),
-          ),
+          scenarioForms.flatMap((scenario) => scenario.attacks.flatMap((attack) => {
+            try {
+              const build = buildScenarioAttackBuildFromUi(
+                attack,
+                `${scenario.id}-${attack.id}-attacker`,
+              );
+              const attacker = toSmogonPokemon(build);
+              return [[build.id, { ...attacker.stats, hp: attacker.maxHP() }]];
+            } catch {
+              return [];
+            }
+          })),
         ));
       }
     }).catch(() => {
@@ -485,7 +512,7 @@ export function App() {
     return () => {
       canceled = true;
     };
-  }, [previewInput]);
+  }, [scenarioForms, targetBuildPreview]);
 
   const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
     setTargetForm((current) => ({ ...current, [key]: value }));
@@ -670,6 +697,12 @@ export function App() {
     applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
   };
 
+  const handleApplyOffenseResult = (result: OffenseAdjustmentResult) => {
+    setTargetForm((current) => applyOffenseAdjustmentToTarget(current, result));
+    dispatchSearch({ type: "reset" });
+    setSelectedCandidateId(null);
+  };
+
   return (
     <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
       <header className="topbar">
@@ -703,7 +736,7 @@ export function App() {
       {searchState.errorMessage && !isCanonicalResolutionMessage(searchState.errorMessage) ? (
         <div className="status-banner error" role="alert">{searchState.errorMessage}</div>
       ) : null}
-      {previewInput.error && !isCanonicalResolutionMessage(previewInput.error) ? (
+      {hasEnabledDefenceScenario && previewInput.error && !isCanonicalResolutionMessage(previewInput.error) ? (
         <div className="status-banner warning" role="status">{previewInput.error}</div>
       ) : null}
       {shareOpen ? (
@@ -733,7 +766,7 @@ export function App() {
           targetForm={targetForm}
           onUpdateField={updateTargetField}
           onUpdateEv={updateTargetEv}
-          canonicalPokemon={previewInput.input?.build.pokemon.canonicalName}
+          canonicalPokemon={targetBuildPreview?.pokemon.canonicalName}
           artwork={targetArtwork}
           actualStats={actualStats}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
@@ -781,9 +814,11 @@ export function App() {
             variant="primary"
             id="runButton"
             onClick={handleRun}
-            disabled={searchState.status === "running"}
+            disabled={searchState.status === "running" || !hasEnabledDefenceScenario}
           >
-            {searchState.status === "running" ? "計算中..." : "計算開始"}
+            {searchState.status === "running"
+              ? "計算中..."
+              : hasEnabledDefenceScenario ? "計算開始" : "耐久シナリオなし"}
           </Button>
         </section>
         <ResultsPanel
@@ -792,6 +827,8 @@ export function App() {
           appliedCandidateId={appliedCandidateId}
           scenarios={scenarioForms}
           status={searchState.status}
+          offenseResults={offenseResults}
+          onApplyOffenseResult={handleApplyOffenseResult}
           onSelectCandidate={handleSelectCandidate}
           onApplyCandidate={handleApplyCandidate}
         />
@@ -1821,6 +1858,38 @@ type ScenarioRowProps = {
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
 
+const scenarioAdjustmentTypeOptions: Array<{ value: ScenarioAdjustmentType; label: string }> = [
+  { value: "defence", label: "耐久調整" },
+  { value: "offense", label: "火力調整" },
+];
+
+type ScenarioAdjustmentTypeCardsProps = {
+  scenario: ScenarioFormState;
+  onChange: (value: ScenarioAdjustmentType) => void;
+};
+
+function ScenarioAdjustmentTypeCards({ scenario, onChange }: ScenarioAdjustmentTypeCardsProps) {
+  return (
+    <div className="scenario-adjustment-cards" role="radiogroup" aria-label={`${scenario.label} 調整種別`}>
+      {scenarioAdjustmentTypeOptions.map((option) => (
+        <label
+          className={`scenario-adjustment-card${scenario.adjustmentType === option.value ? " selected" : ""}`}
+          key={option.value}
+        >
+          <input
+            type="radio"
+            name={`${scenario.id}-adjustment-type`}
+            value={option.value}
+            checked={scenario.adjustmentType === option.value}
+            onChange={() => onChange(option.value)}
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function ScenarioRow({
   scenario,
   attackerActualStats,
@@ -1852,16 +1921,22 @@ function ScenarioRow({
             onChange={(event) => onUpdateScenario(scenario.id, "label", event.target.value)}
           />
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="icon-button scenario-remove-button"
-          aria-label={`${scenario.label}を削除`}
-          title={`${scenario.label}を削除`}
-          onClick={() => onRemoveScenario(scenario.id)}
-        >
-          <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
-        </Button>
+        <div className="scenario-row-actions">
+          <ScenarioAdjustmentTypeCards
+            scenario={scenario}
+            onChange={(value) => onUpdateScenario(scenario.id, "adjustmentType", value)}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="icon-button scenario-remove-button"
+            aria-label={`${scenario.label}を削除`}
+            title={`${scenario.label}を削除`}
+            onClick={() => onRemoveScenario(scenario.id)}
+          >
+            <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+          </Button>
+        </div>
       </div>
 
       <div className="scenario-attack-lane">
@@ -1871,6 +1946,7 @@ function ScenarioRow({
             attack={attack}
             attackIndex={attackIndex}
             scenarioId={scenario.id}
+            adjustmentType={scenario.adjustmentType}
             actualStats={attackerActualStats[`${scenario.id}-${attack.id}-attacker`]}
             targetForm={targetForm}
             targetActualStats={targetActualStats}
@@ -1902,6 +1978,7 @@ type AttackCardProps = {
   attack: ScenarioAttackFormState;
   attackIndex: number;
   scenarioId: string;
+  adjustmentType: ScenarioAdjustmentType;
   actualStats?: StatTable;
   targetForm: TargetFormState;
   targetActualStats: StatTable | null;
@@ -1921,6 +1998,7 @@ function AttackCard({
   attack,
   attackIndex,
   scenarioId,
+  adjustmentType,
   actualStats,
   targetForm,
   targetActualStats,
@@ -1934,8 +2012,9 @@ function AttackCard({
     event: ChangeEvent<HTMLInputElement>,
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const attackLabel = attack.label || `攻撃${String.fromCharCode(65 + attackIndex)}`;
+  const isOffenseAdjustment = adjustmentType === "offense";
   const isAbilitySupport = Boolean(
-    !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
+    !isOffenseAdjustment && !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
   );
   const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
   const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
@@ -1943,7 +2022,7 @@ function AttackCard({
     attackerCanonicalPokemon,
   );
   const statReferencePlan = getMoveStatReferencePlan(attack.moveInput, {
-    teraEnabled: attack.attackerTeraEnabled,
+    teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
   });
   const targetReferenceKeys = statReferencePlan.references
     .filter((reference) => reference.owner === "target")
@@ -1984,7 +2063,7 @@ function AttackCard({
       <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
         <ScenarioTextField
           kind="pokemon"
-          label="ポケモン"
+          label={isOffenseAdjustment ? "仮想敵" : "ポケモン"}
           showLabel
           value={attack.attackerPokemonInput}
           onChange={onInput("attackerPokemonInput")}
@@ -2040,7 +2119,11 @@ function AttackCard({
               teraEnabled={attack.attackerTeraEnabled}
               dmaxEnabled={attack.attackerDmaxEnabled}
               teraTypeInput={attack.attackerTeraTypeInput}
-              teraLabel={attack.attackerTeraEnabled ? "攻撃テラス解除" : "攻撃テラス"}
+              teraLabel={
+                isOffenseAdjustment
+                  ? attack.attackerTeraEnabled ? "仮想敵テラス解除" : "仮想敵テラス"
+                  : attack.attackerTeraEnabled ? "攻撃テラス解除" : "攻撃テラス"
+              }
               onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
               onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
               onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
@@ -2059,6 +2142,120 @@ function AttackCard({
               : "同じ行の攻撃ルールをダブルにすると、この特性が反映されます"}
           </span>
         </div>
+      ) : isOffenseAdjustment ? (
+        <>
+          <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-ko-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-ko-title`}>火力条件</h3>
+            <div className="attack-number-grid attack-setting-section-body">
+              <ScenarioNumberField
+                label="KO率"
+                showLabel
+                value={attack.targetKoProbabilityPercent}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "targetKoProbabilityPercent", value)}
+              />
+            </div>
+          </section>
+
+          <section
+            className="attack-setting-section attack-setting-section--indented"
+            aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}
+          >
+            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>状況条件</h3>
+            <div className="attack-field-grid attack-setting-section-body">
+              <SelectField
+                label="ルール"
+                value={attack.gameType}
+                options={gameTypeOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
+              />
+              <SelectField
+                label="仮想敵状態"
+                value={attack.attackerStatus}
+                options={statusOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
+              />
+              <SelectField
+                label="天候"
+                value={attack.weather}
+                options={weatherOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
+              />
+              <SelectField
+                label="フィールド"
+                value={attack.terrain}
+                options={terrainOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
+              />
+            </div>
+
+            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 仮想敵能力`}>
+              <div className="ev-table attacker-stat-table offense-defender-stat-table" aria-label={`${attackLabel} 仮想敵能力`}>
+                <div className="ev-header attacker-stat-header">
+                  <span>能力</span>
+                  <span>実数値</span>
+                  <span>SP</span>
+                  <span>ランク</span>
+                </div>
+                {statKeys.map((key) => (
+                  <div
+                    className={`ev-row attacker-stat-row ${key}`}
+                    key={key}
+                  >
+                    <strong>
+                      <StatIcon stat={key} />
+                      <span>仮想敵</span>
+                    </strong>
+                    <span className="actual-stat-with-modifier">
+                      <NatureStatModifier natureLabel={attack.attackerNatureInput} stat={key} />
+                      <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="252"
+                      step="1"
+                      value={attack.attackerStatPoints[key]}
+                      aria-label={`${attackLabel} 仮想敵${statLabels[key]} SP`}
+                      placeholder={`${statLabels[key]} SP`}
+                      title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+                      onFocus={selectInputValueOnFocus}
+                      onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
+                    />
+                    {key !== "hp" ? (
+                      <SelectField
+                        compact
+                        placeholderLabel
+                        placeholderValue=""
+                        className="target-rank-field"
+                        label={`${attackLabel} 仮想敵${statLabels[key]}ランク`}
+                        value={String(attack.attackerBoosts[key] ?? 0)}
+                        options={rankSelectOptions}
+                        onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+                          ...attack.attackerBoosts,
+                          [key]: toNumber(value, 0),
+                        })}
+                      />
+                    ) : (
+                      <span className="attacker-stat-role">仮想敵</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </section>
+
+          <div className="scenario-options">
+            <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
+            <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
+            <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+            <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+            <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+            <label><input type="checkbox" checked={attack.friendGuard} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "friendGuard", event.target.checked)} /> フレンドガード</label>
+          </div>
+        </>
       ) : (
         <>
           <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-survival-title`}>
@@ -2372,9 +2569,86 @@ type ResultsPanelProps = {
   appliedCandidateId: string | null;
   scenarios: ScenarioFormState[];
   status: string;
+  offenseResults: OffenseScenarioResult[];
+  onApplyOffenseResult: (result: OffenseAdjustmentResult) => void;
   onSelectCandidate: (id: string) => void;
   onApplyCandidate: (candidate: CandidateResult) => void;
 };
+
+type OffenseScenarioResultsPanelProps = {
+  offenseResults: OffenseScenarioResult[];
+  onApplyOffenseResult: (result: OffenseAdjustmentResult) => void;
+};
+
+const formatOffenseResultStatusLabel = (result: OffenseAdjustmentResult): string => {
+  if (result.status === "unresolved") {
+    return "未解決";
+  }
+  if (result.status === "invalid") {
+    return "入力エラー";
+  }
+  if (result.status === "fixed") {
+    return result.passed ? "固定PASS" : "固定未達";
+  }
+  return result.passed ? "PASS" : "未達";
+};
+
+const getOffenseResultTone = (result: OffenseAdjustmentResult): "green" | "red" | "blue" | "purple" => {
+  if (result.status === "unresolved" || result.status === "invalid") {
+    return "purple";
+  }
+  if (result.status === "fixed") {
+    return result.passed ? "blue" : "red";
+  }
+  return result.passed ? "green" : "red";
+};
+
+function OffenseScenarioResultsPanel({
+  offenseResults,
+  onApplyOffenseResult,
+}: OffenseScenarioResultsPanelProps) {
+  return (
+    <section className="offense-adjustment-panel" aria-labelledby="offense-adjustment-title">
+      <div className="offense-adjustment-heading">
+        <h3 id="offense-adjustment-title">火力ライン結果</h3>
+        <span>{offenseResults.length} 条件</span>
+      </div>
+
+      <div className="offense-result-list" aria-label="火力ライン結果">
+        {offenseResults.map(({ id, scenarioLabel, attackLabel, result }) => (
+          <div className={`offense-result-row ${result.status}`} key={id}>
+            <StatusBadge tone={getOffenseResultTone(result)} />
+            <strong>{result.label}</strong>
+            <span className="offense-result-source">{scenarioLabel} / {attackLabel}</span>
+            <span>{formatOffenseResultStatusLabel(result)}</span>
+            <span>
+              {result.requiredStatPoints === null ? "-" : `${result.requiredStatPoints} SP`}
+              {result.actualStat === null ? "" : ` / 実数値 ${result.actualStat}`}
+            </span>
+            <span>KO率 {formatPercent(result.koProbability)}</span>
+            <span>
+              {result.damageRange
+                ? `${formatDamageRange(result.damageRange.min, result.damageRange.max)} (${result.damageRange.percentMin.toFixed(1)}-${result.damageRange.percentMax.toFixed(1)}%)`
+                : result.reason}
+            </span>
+            {result.canApply ? (
+              <Button variant="primary" size="small" onClick={() => onApplyOffenseResult(result)}>
+                適用
+              </Button>
+            ) : (
+              <em>{result.reason}</em>
+            )}
+            {result.reference ? (
+              <small>
+                補正あり参考: {result.reference.requiredStatPoints ?? "-"} SP / KO率 {formatPercent(result.reference.koProbability)}
+              </small>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function ResultsPanel({
   candidates,
@@ -2382,6 +2656,8 @@ export function ResultsPanel({
   appliedCandidateId,
   scenarios,
   status,
+  offenseResults,
+  onApplyOffenseResult,
   onSelectCandidate,
   onApplyCandidate,
 }: ResultsPanelProps) {
@@ -2399,9 +2675,16 @@ export function ResultsPanel({
         </div>
       </div>
 
+      {offenseResults.length > 0 ? (
+        <OffenseScenarioResultsPanel
+          offenseResults={offenseResults}
+          onApplyOffenseResult={onApplyOffenseResult}
+        />
+      ) : null}
+
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
-          <span>順位</span><span>H/B/D</span><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
+          <span>順位</span><span>H/A/B/C/D/S</span><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
         </div>
         {candidates.length === 0 ? (
           <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
@@ -2432,12 +2715,7 @@ export function ResultsPanel({
                 <Collapsible.Trigger asChild>
                   <button className="candidate-row-toggle" type="button">
                     <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
-                    <span className="allocation compact-allocation">
-                      <b>{candidate.candidate.hp}</b>
-                      <b>{candidate.candidate.def}</b>
-                      <b>{candidate.candidate.spd}</b>
-                      <CandidateAllocationMeter candidate={candidate.candidate} />
-                    </span>
+                    <CandidateStatPointSpread statPoints={candidate.appliedStatPoints} />
                     <span>{candidate.usedStatPointBudget}</span>
                     <span>{candidate.remainingStatPointBudget}</span>
                     <span>{candidate.bottleneckLabel}</span>
@@ -2496,17 +2774,18 @@ export function ResultsPanel({
   );
 }
 
-export function CandidateAllocationMeter({ candidate }: { candidate: DefenceStatPointCandidate }) {
+export function CandidateStatPointSpread({ statPoints }: { statPoints: StatTable }) {
   return (
     <span
-      className="candidate-allocation-meter"
-      aria-label={formatCandidateAllocationLabel(candidate)}
-      title={formatCandidateAllocationLabel(candidate)}
+      className="allocation compact-allocation candidate-stat-spread"
+      aria-label={`${formatStatPointSpreadLabel(statPoints)} SP`}
+      title={`${formatStatPointSpreadLabel(statPoints)} SP`}
     >
-      {defenceStatKeys.map((key) => (
-        <span className={`candidate-meter-track ${key}`} key={key} aria-hidden="true">
-          <span style={{ width: getCandidateAllocationFillPercent(candidate[key]) }} />
-        </span>
+      {statKeys.map((key) => (
+        <b className={`candidate-stat-value ${key}`} key={key}>
+          <span className="candidate-stat-code">{statLabels[key]}</span>
+          <span>{statPoints[key]}</span>
+        </b>
       ))}
     </span>
   );

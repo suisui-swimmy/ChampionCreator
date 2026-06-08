@@ -6,8 +6,14 @@ import type {
 } from "../worker/defenceSearchWorkerClient";
 import {
   applyCandidateToTarget,
+  applyOffenseAdjustmentToTarget,
   applyTopCandidateToTarget,
+  buildOffenseAdjustmentInput,
   buildDefenceSearchInput,
+  calculateOffenseAdjustmentFromUi,
+  calculateOffenseAdjustmentsFromScenarios,
+  createOffenseAdjustmentFormFromScenarioAttack,
+  createDefaultOffenseAdjustmentForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
   createInitialSearchUiState,
@@ -458,7 +464,135 @@ describe("buildDefenceSearchInput", () => {
       enabled: false,
     }));
 
-    expect(() => buildDefenceSearchInput(target, scenarios)).toThrow("有効な仮想敵シナリオがありません");
+    expect(() => buildDefenceSearchInput(target, scenarios)).toThrow("有効な耐久調整シナリオがありません");
+  });
+
+  it("ignores offense scenarios when building H/B/D defence search input", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarios = [
+      { ...defaultScenario, id: "scenario-offense", adjustmentType: "offense" as const },
+      { ...defaultScenario, id: "scenario-defence", label: "耐久だけ", adjustmentType: "defence" as const },
+    ];
+
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    expect(input.scenarios).toHaveLength(1);
+    expect(input.scenarios[0]).toMatchObject({
+      id: "scenario-defence",
+      label: "耐久だけ",
+    });
+  });
+});
+
+describe("buildOffenseAdjustmentInput", () => {
+  it("converts an offense scenario attack into offense adjustment form state", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const attack = {
+      ...scenario.attacks[0],
+      attackerPokemonInput: "ピチュー",
+      attackerStatus: "par" as const,
+      attackerStatPoints: { ...scenario.attacks[0].attackerStatPoints, hp: 4, def: 2 },
+      attackerBoosts: { ...scenario.attacks[0].attackerBoosts, def: 1 },
+      moveInput: "インファイト",
+      targetKoProbabilityPercent: 75,
+      reflect: true,
+    };
+
+    const offense = createOffenseAdjustmentFormFromScenarioAttack(attack);
+
+    expect(offense).toMatchObject({
+      defenderPokemonInput: "ピチュー",
+      defenderStatus: "par",
+      defenderStatPoints: { hp: 4, def: 2 },
+      defenderBoosts: { def: 1 },
+      moveInput: "インファイト",
+      targetKoProbabilityPercent: 75,
+      reflect: true,
+    });
+  });
+
+  it("converts target form as attacker and offense form as defender", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "オオニューラ",
+      natureInput: "いじっぱり",
+      statPoints: { hp: 0, atk: 12, def: 0, spa: 0, spd: 0, spe: 20 },
+      boosts: { atk: 1, def: 0, spa: 0, spd: 0, spe: 0 },
+    };
+    const offense = {
+      ...createDefaultOffenseAdjustmentForm(),
+      defenderPokemonInput: "ピチュー",
+      defenderStatus: "par" as const,
+      defenderStatPoints: { hp: 4, atk: 0, def: 2, spa: 0, spd: 0, spe: 0 },
+      moveInput: "インファイト",
+      targetKoProbabilityPercent: 75,
+      reflect: true,
+    };
+
+    const input = buildOffenseAdjustmentInput(target, offense);
+
+    expect(input.attackerBuild.pokemon.canonicalName).toBe("Sneasler");
+    expect(input.attackerBuild.statPoints?.atk).toBe(12);
+    expect(input.defenderBuild.pokemon.canonicalName).toBe("Pichu");
+    expect(input.defenderBuild.status).toBe("par");
+    expect(input.defenderBuild.statPoints?.hp).toBe(4);
+    expect(input.move.canonicalName).toBe("Close Combat");
+    expect(input.targetKoProbability).toBe(0.75);
+    expect(input.attackerBoosts.atk).toBe(1);
+    expect(input.defenderSide.reflect).toBe(true);
+  });
+
+  it("returns unresolved offense results without throwing when the move cannot be resolved", () => {
+    const results = calculateOffenseAdjustmentFromUi(createDefaultTargetForm(), {
+      ...createDefaultOffenseAdjustmentForm(),
+      moveInput: "しらないわざ",
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      status: "unresolved",
+      canApply: false,
+    });
+    expect(results[0].reason).toContain("canonical name に解決できません");
+  });
+
+  it("calculates offense results only from enabled offense scenarios", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      statPoints: { hp: 0, atk: 12, def: 0, spa: 0, spd: 0, spe: 0 },
+    };
+    const scenarios = [
+      {
+        ...defaultScenario,
+        id: "scenario-defence",
+        adjustmentType: "defence" as const,
+      },
+      {
+        ...defaultScenario,
+        id: "scenario-offense",
+        label: "火力A",
+        adjustmentType: "offense" as const,
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          label: "単発KO",
+          attackerPokemonInput: "ピチュー",
+          attackerNatureInput: "",
+          attackerAbilityInput: "",
+          moveInput: "ふいうち",
+        })),
+      },
+    ];
+
+    const results = calculateOffenseAdjustmentsFromScenarios(target, scenarios);
+
+    expect(results).not.toHaveLength(0);
+    expect(results.every((result) => result.scenarioId === "scenario-offense")).toBe(true);
+    expect(results[0]).toMatchObject({
+      scenarioLabel: "火力A",
+      attackLabel: "単発KO",
+    });
   });
 });
 
@@ -596,5 +730,51 @@ describe("applyTopCandidateToTarget", () => {
     expect(applied.statPoints.atk).toBe(target.statPoints.atk);
     expect(applied.statPoints.spa).toBe(target.statPoints.spa);
     expect(applied.statPoints.spe).toBe(target.statPoints.spe);
+  });
+});
+
+describe("applyOffenseAdjustmentToTarget", () => {
+  it("applies only A/C offense lines to target fixed SP", () => {
+    const target = createDefaultTargetForm();
+    const applied = applyOffenseAdjustmentToTarget(target, {
+      id: "line-a",
+      status: "pass",
+      passed: true,
+      label: "Aライン",
+      owner: "attacker",
+      stat: "atk",
+      role: "damage",
+      canApply: true,
+      requiredStatPoints: 24,
+      actualStat: 180,
+      koProbability: 1,
+      targetKoProbability: 1,
+      damageRange: null,
+      reason: "Aライン 24 SPでKO条件を満たします",
+    });
+
+    expect(applied.statPoints).toMatchObject({ atk: 24, hp: 0, def: 0, spd: 0, spe: 0 });
+  });
+
+  it("does not apply B/H or target-reference offense lines", () => {
+    const target = createDefaultTargetForm();
+    const applied = applyOffenseAdjustmentToTarget(target, {
+      id: "line-b",
+      status: "pass",
+      passed: true,
+      label: "Bライン",
+      owner: "attacker",
+      stat: "def",
+      role: "damage",
+      canApply: false,
+      requiredStatPoints: 24,
+      actualStat: 180,
+      koProbability: 1,
+      targetKoProbability: 1,
+      damageRange: null,
+      reason: "Bライン 24 SPでKO条件を満たします",
+    });
+
+    expect(applied).toBe(target);
   });
 });
