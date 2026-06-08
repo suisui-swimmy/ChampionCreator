@@ -1483,6 +1483,20 @@ textarea {
   justify-content: space-between;
   gap: 12px;
   min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  margin: -2px -2px 0;
+  padding: 4px 6px;
+}
+
+.scenario-row.defence .scenario-row-header {
+  border-color: rgba(0, 216, 240, 0.2);
+  background: linear-gradient(90deg, rgba(0, 216, 240, 0.13), rgba(0, 216, 240, 0.03));
+}
+
+.scenario-row.offense .scenario-row-header {
+  border-color: rgba(255, 0, 0, 0.24);
+  background: linear-gradient(90deg, rgba(255, 0, 0, 0.14), rgba(255, 0, 0, 0.03));
 }
 
 .scenario-row-title {
@@ -1547,6 +1561,18 @@ textarea {
   border-color: rgba(245, 197, 66, 0.58);
   background: linear-gradient(180deg, rgba(245, 197, 66, 0.14), rgba(245, 197, 66, 0.05));
   color: #ffe08a;
+}
+
+.scenario-row.defence .scenario-adjustment-card.selected {
+  border-color: rgba(0, 216, 240, 0.6);
+  background: linear-gradient(180deg, rgba(0, 216, 240, 0.18), rgba(0, 216, 240, 0.06));
+  color: #bcf7ff;
+}
+
+.scenario-row.offense .scenario-adjustment-card.selected {
+  border-color: rgba(255, 0, 0, 0.58);
+  background: linear-gradient(180deg, rgba(255, 0, 0, 0.18), rgba(255, 0, 0, 0.06));
+  color: #ffc0c0;
 }
 
 .scenario-adjustment-card:focus-within {

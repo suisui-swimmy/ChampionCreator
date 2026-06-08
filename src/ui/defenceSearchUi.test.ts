@@ -21,6 +21,7 @@ import {
   createInitialSearchUiState,
   resolveIntegratedOffenseRequirements,
   applyIntegratedOffenseRequirementsToTargetForm,
+  formatScenarioAttackLabel,
   searchUiReducer,
   startDefenceSearchFromUi,
   type DefenceSearchWorkerClientAdapter,
@@ -96,6 +97,13 @@ const makeOffenseResult = (
 });
 
 describe("buildDefenceSearchInput", () => {
+  it("formats default attack labels by adjustment type while preserving custom labels", () => {
+    expect(formatScenarioAttackLabel("defence", 0, "攻撃A")).toBe("耐久調整A");
+    expect(formatScenarioAttackLabel("offense", 1, "攻撃B")).toBe("火力調整B");
+    expect(formatScenarioAttackLabel("offense", 2, "耐久調整C")).toBe("火力調整C");
+    expect(formatScenarioAttackLabel("defence", 0, "特殊受け")).toBe("特殊受け");
+  });
+
   it("converts UI input to domain Build and Scenario with canonical names", () => {
     const target = createDefaultTargetForm();
     const scenarios = createDefaultScenarioForms();

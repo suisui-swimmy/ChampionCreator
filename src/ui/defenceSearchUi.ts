@@ -317,10 +317,26 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   friendGuard: false,
 });
 
+export const formatScenarioAttackLabel = (
+  adjustmentType: ScenarioAdjustmentType,
+  attackIndex: number,
+  label: string,
+): string => {
+  const defaultPrefix = adjustmentType === "offense" ? "火力調整" : "耐久調整";
+  const defaultLabel = `${defaultPrefix}${String.fromCharCode(65 + attackIndex)}`;
+  const trimmedLabel = label.trim();
+
+  if (!trimmedLabel || /^(?:攻撃|耐久調整|火力調整)[A-Z]$/.test(trimmedLabel)) {
+    return defaultLabel;
+  }
+
+  return label;
+};
+
 export const createDefaultScenarioForms = (): ScenarioFormState[] => [
   {
     id: "scenario-special",
-    label: "シナリオA",
+    label: "シナリオ1",
     enabled: true,
     adjustmentType: "defence",
     attacks: [createDefaultScenarioAttackForm()],
@@ -642,14 +658,14 @@ export const calculateOffenseAdjustmentsFromScenarios = (
   .filter((scenario) => scenario.enabled && scenario.adjustmentType === "offense")
   .flatMap((scenario) => scenario.attacks
     .filter(hasDamageMove)
-    .flatMap((attack) => {
+    .flatMap((attack, attackIndex) => {
       const offenseForm = createOffenseAdjustmentFormFromScenarioAttack(attack);
       return calculateOffenseAdjustmentFromUi(targetForm, offenseForm).map((result) => ({
         id: `${scenario.id}-${attack.id}-${result.id}`,
         scenarioId: scenario.id,
         scenarioLabel: scenario.label,
         attackId: attack.id,
-        attackLabel: attack.label,
+        attackLabel: formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label),
         result,
       }));
     }));

@@ -39,6 +39,7 @@ import {
   createDefaultScenarioForms,
   createDefaultTargetForm,
   createInitialSearchUiState,
+  formatScenarioAttackLabel,
   searchUiReducer,
   startDefenceSearchFromUi,
   type OffenseScenarioResult,
@@ -1903,7 +1904,10 @@ function ScenarioRow({
   onUpdateAttackerEv,
 }: ScenarioRowProps) {
   return (
-    <article className={`scenario-row${scenario.enabled ? "" : " disabled"}`} aria-label={scenario.label}>
+    <article
+      className={`scenario-row ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
+      aria-label={scenario.label}
+    >
       <div className="scenario-row-header">
         <div className="scenario-row-title">
           <label className="switch" aria-label={`${scenario.label}を有効化`}>
@@ -2011,8 +2015,8 @@ function AttackCard({
   const onInput = <K extends keyof ScenarioAttackFormState>(key: K) => (
     event: ChangeEvent<HTMLInputElement>,
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
-  const attackLabel = attack.label || `攻撃${String.fromCharCode(65 + attackIndex)}`;
   const isOffenseAdjustment = adjustmentType === "offense";
+  const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
   const isAbilitySupport = Boolean(
     !isOffenseAdjustment && !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
   );
@@ -2043,7 +2047,7 @@ function AttackCard({
         />
         <input
           className="inline-title-input"
-          value={attack.label}
+          value={attackLabel}
           aria-label="攻撃名"
           onChange={onInput("label")}
         />
