@@ -220,7 +220,7 @@ describe("App", () => {
     );
 
     expect(html).toContain(">最厳条件<");
-    expect(html).toContain(">適応<");
+    expect(html).toContain(">適用<");
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('data-state="open"');
     expect(html).toContain('class="candidate-disclosure"');

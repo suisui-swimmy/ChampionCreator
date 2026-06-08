@@ -1503,6 +1503,37 @@ textarea {
   white-space: nowrap;
 }
 
+.scenario-row-header .scenario-remove-button {
+  min-width: 26px;
+  margin-left: auto;
+  white-space: normal;
+}
+
+.scenario-remove-button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  padding: 0;
+  color: #ffb7b7;
+  background: rgba(230, 40, 41, 0.16);
+  border-color: rgba(230, 40, 41, 0.72);
+}
+
+.scenario-remove-button .ui-button-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.scenario-remove-button:hover {
+  border-color: rgba(255, 120, 120, 0.9);
+  background: rgba(230, 40, 41, 0.24);
+  color: #ffd2d2;
+}
+
 .scenario-row.disabled {
   background: #111415;
   opacity: 0.78;
@@ -1708,6 +1739,32 @@ textarea {
   grid-template-columns: 46px 1fr 30px;
   gap: 6px;
   align-items: center;
+}
+
+.attack-remove-button {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: #ffb7b7;
+  background: rgba(230, 40, 41, 0.16);
+  border-color: rgba(230, 40, 41, 0.72);
+}
+
+.attack-remove-button .ui-button-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.attack-remove-button:hover {
+  border-color: rgba(255, 120, 120, 0.9);
+  background: rgba(230, 40, 41, 0.24);
+  color: #ffd2d2;
+}
+
+.attack-remove-button:disabled {
+  opacity: 0.45;
 }
 
 .attack-card-fields,
@@ -2080,16 +2137,18 @@ textarea {
 .candidate-table {
   display: grid;
   gap: 6px;
-  overflow-x: auto;
+  overflow-x: hidden;
+  --candidate-row-columns: 38px minmax(142px, 1fr) 52px 52px minmax(112px, 1fr) 20px;
 }
 
 .candidate-row {
   display: grid;
-  grid-template-columns: minmax(700px, 1fr) 68px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 48px;
-  padding: 0 10px;
+  min-width: 0;
+  padding: 0 8px;
 }
 
 .empty-result,
@@ -2124,7 +2183,7 @@ textarea {
 }
 
 .candidate-row.header {
-  grid-template-columns: 54px minmax(180px, 1fr) 84px 84px minmax(160px, 1fr) 28px 68px;
+  grid-template-columns: var(--candidate-row-columns) 58px;
   min-height: 26px;
   border: 0;
   color: var(--muted);
@@ -2134,7 +2193,8 @@ textarea {
 }
 
 .candidate-entry {
-  min-width: 790px;
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -2157,10 +2217,11 @@ textarea {
 
 .candidate-row-toggle {
   display: grid;
-  grid-template-columns: 54px minmax(180px, 1fr) 84px 84px minmax(160px, 1fr) 28px;
+  grid-template-columns: var(--candidate-row-columns);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  width: 100%;
   min-height: 46px;
   border: 0;
   background: transparent;
@@ -2171,6 +2232,14 @@ textarea {
 
 .candidate-row-toggle:hover {
   color: #fff7d6;
+}
+
+.candidate-row.header > span,
+.candidate-row-toggle > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .candidate-disclosure {
@@ -2185,7 +2254,20 @@ textarea {
 }
 
 .candidate-apply-button {
-  min-width: 62px;
+  min-width: 52px;
+  min-height: 28px;
+  border-color: rgba(245, 197, 66, 0.45);
+  background: rgba(245, 197, 66, 0.08);
+  color: #f4d46b;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.candidate-apply-button:hover {
+  border-color: rgba(245, 197, 66, 0.7);
+  background: rgba(245, 197, 66, 0.16);
+  color: #ffe08a;
+  filter: none;
 }
 
 .candidate-expanded-detail {
@@ -2263,6 +2345,21 @@ textarea {
   color: #d7b84b;
 }
 
+.candidate-row-toggle .rank {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.candidate-row-toggle .compact-allocation b,
+.candidate-row-toggle > span:nth-of-type(3),
+.candidate-row-toggle > span:nth-of-type(4) {
+  font-size: 13px;
+}
+
+.candidate-row-toggle .compact-allocation b {
+  font-size: 14px;
+}
+
 .allocation {
   display: grid;
   grid-template-columns: repeat(6, 26px) 1fr;
@@ -2273,14 +2370,15 @@ textarea {
 }
 
 .compact-allocation {
-  grid-template-columns: repeat(3, 38px) 1fr;
+  grid-template-columns: repeat(3, 28px) minmax(68px, 1fr);
+  gap: 3px;
 }
 
 .candidate-allocation-meter {
   display: grid;
-  grid-template-columns: repeat(3, minmax(30px, 1fr));
-  gap: 4px;
-  min-width: 120px;
+  grid-template-columns: repeat(3, minmax(18px, 1fr));
+  gap: 3px;
+  min-width: 0;
 }
 
 .candidate-meter-track {
@@ -2514,6 +2612,6 @@ textarea {
   }
 
   .candidate-row {
-    grid-template-columns: minmax(700px, 1fr) 68px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }

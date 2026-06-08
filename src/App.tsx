@@ -1853,11 +1853,14 @@ function ScenarioRow({
           />
         </div>
         <Button
-          variant="danger"
+          variant="ghost"
+          size="icon"
+          className="icon-button scenario-remove-button"
           aria-label={`${scenario.label}を削除`}
+          title={`${scenario.label}を削除`}
           onClick={() => onRemoveScenario(scenario.id)}
         >
-          シナリオを削除
+          <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
         </Button>
       </div>
 
@@ -1968,12 +1971,13 @@ function AttackCard({
         <Button
           variant="ghost"
           size="icon"
-          className="icon-button"
+          className="icon-button attack-remove-button"
           aria-label={`${attackLabel}を削除`}
+          title={`${attackLabel}を削除`}
           disabled={!canRemove}
           onClick={() => onRemoveAttack(scenarioId, attack.id)}
         >
-          ×
+          <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
         </Button>
       </div>
 
@@ -2448,7 +2452,7 @@ export function ResultsPanel({
                   className="candidate-apply-button"
                   onClick={() => onApplyCandidate(candidate)}
                 >
-                  {appliedCandidateId === candidate.id ? "適応済み" : "適応"}
+                  {appliedCandidateId === candidate.id ? "適用済み" : "適用"}
                 </Button>
               </div>
               <Collapsible.Content asChild>
