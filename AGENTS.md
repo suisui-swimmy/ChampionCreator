@@ -358,6 +358,9 @@ MVP UI の最低ライン:
 - canonical name / domain model / adapter / search / worker の境界を維持している
 - 代表シナリオで `A / C` ラインと `S` ラインの回帰テストがある
 - `npm test` と `npm run build` が通る
+  
+## 追記
+- ブランチ「experiment/ac-adjustment-scenarios」で育てます
 
 ### M9: 全件閲覧・ページネーション・性能改善
 
@@ -473,3 +476,4 @@ Codex in-app Browser や Browser plugin が `windows sandbox failed: spawn setup
 ## ユーザー追記
 - ドキュメントに絶対パス、ユーザー名を含めないでください
 - 個人用の汎用 skill `progress-update` を使い、`PROGRESS.md`に作業内容に記録してください。プロジェクトの進捗は`PROGRESS.md`を参照してください。汎用 skill `progress-update` は `~/.agents/skills` に配置されています。
+- `PROGRESS.md` は git 追跡対象外のローカル進捗メモです。更新しても `git status` に出ない前提で扱ってください。

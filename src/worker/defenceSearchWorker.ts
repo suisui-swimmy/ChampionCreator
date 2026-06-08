@@ -1,14 +1,16 @@
-import type { Build, CandidateResult, Scenario } from "../domain/model";
+import type { Build, CandidateResult, Scenario, StatTable } from "../domain/model";
 import {
   countDefenceEvCandidates,
   evaluateCandidate,
   finalizeDefenceSearchResults,
   iterateDefenceEvCandidates,
+  meetsMinimumStatPointRequirements,
   type DefenceSearchOptions,
 } from "../search/defenceSearch";
 
 export interface DefenceSearchWorkerRunOptions {
   maxResults?: number;
+  minimumStatPoints?: Partial<StatTable>;
   progressInterval?: number;
   partialResultInterval?: number;
   yieldEvery?: number;
@@ -91,7 +93,10 @@ export const runDefenceSearchWorkerTask = async (
   const progressInterval = Math.max(1, Math.trunc(options.progressInterval ?? DEFAULT_PROGRESS_INTERVAL));
   const partialResultInterval = Math.max(1, Math.trunc(options.partialResultInterval ?? DEFAULT_PARTIAL_RESULT_INTERVAL));
   const yieldEvery = Math.max(1, Math.trunc(options.yieldEvery ?? DEFAULT_YIELD_EVERY));
-  const searchOptions: DefenceSearchOptions = { maxResults };
+  const searchOptions: DefenceSearchOptions = {
+    maxResults,
+    minimumStatPoints: options.minimumStatPoints,
+  };
 
   try {
     const totalCandidates = countDefenceEvCandidates(build);
@@ -119,8 +124,34 @@ export const runDefenceSearchWorkerTask = async (
         break;
       }
 
-      const result = evaluateCandidate(build, scenarios, candidate, searchOptions);
       searchedCandidates += 1;
+
+      if (!meetsMinimumStatPointRequirements(candidate, options.minimumStatPoints)) {
+        if (
+          searchedCandidates === 1
+          || searchedCandidates % progressInterval === 0
+          || searchedCandidates === totalCandidates
+        ) {
+          if (isCanceled(requestId)) {
+            return;
+          }
+
+          emit({
+            type: "progress",
+            requestId,
+            searchedCandidates,
+            totalCandidates,
+            progress: totalCandidates === 0 ? 1 : searchedCandidates / totalCandidates,
+          });
+        }
+
+        if (searchedCandidates % yieldEvery === 0) {
+          await yieldToWorker();
+        }
+        continue;
+      }
+
+      const result = evaluateCandidate(build, scenarios, candidate, searchOptions);
 
       if (result.passed) {
         passingResults.push(result);

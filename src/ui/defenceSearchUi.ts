@@ -15,6 +15,7 @@ import type {
   ScenarioHit,
   SideState,
   StatBoostTable,
+  StatKey,
   StatTable,
   Weather,
   Terrain,
@@ -118,6 +119,7 @@ export interface OffenseAdjustmentFormState {
 export interface DefenceSearchInput {
   build: Build;
   scenarios: Scenario[];
+  minimumStatPoints?: Partial<StatPointTable>;
 }
 
 export interface OffenseScenarioResult {
@@ -127,6 +129,13 @@ export interface OffenseScenarioResult {
   attackId: string;
   attackLabel: string;
   result: OffenseAdjustmentResult;
+}
+
+export interface IntegratedOffenseRequirements {
+  fixedStatPoints: Partial<Pick<StatPointTable, "atk" | "spa">>;
+  minimumStatPoints: Partial<Pick<StatPointTable, "hp" | "def" | "spd">>;
+  selectedResults: OffenseScenarioResult[];
+  blockingReasons: string[];
 }
 
 export type SearchStatus = "idle" | "running" | "complete" | "error" | "canceled";
@@ -645,6 +654,249 @@ export const calculateOffenseAdjustmentsFromScenarios = (
       }));
     }));
 
+type FixedOffenseStat = "atk" | "spa";
+type MinimumOffenseStat = "hp" | "def" | "spd";
+
+type OffenseRequirementChoice = {
+  result: OffenseScenarioResult;
+  fixedStatPoints: Partial<Record<FixedOffenseStat, number>>;
+  minimumStatPoints: Partial<Record<MinimumOffenseStat, number>>;
+};
+
+type OffenseRequirementState = Omit<IntegratedOffenseRequirements, "blockingReasons">;
+
+const isFixedOffenseStat = (stat: StatKey | null): stat is FixedOffenseStat =>
+  stat === "atk" || stat === "spa";
+
+const isMinimumOffenseStat = (stat: StatKey | null): stat is MinimumOffenseStat =>
+  stat === "hp" || stat === "def" || stat === "spd";
+
+const getOffenseResultSourceLabel = (entry: OffenseScenarioResult): string =>
+  `${entry.scenarioLabel} / ${entry.attackLabel} / ${entry.result.label}`;
+
+const createOffenseRequirementChoice = (
+  entry: OffenseScenarioResult,
+): OffenseRequirementChoice | null => {
+  const { result } = entry;
+  if (
+    !result.passed
+    || result.owner !== "attacker"
+    || result.stat === null
+    || result.requiredStatPoints === null
+  ) {
+    return null;
+  }
+
+  if (isFixedOffenseStat(result.stat)) {
+    return {
+      result: entry,
+      fixedStatPoints: { [result.stat]: result.requiredStatPoints },
+      minimumStatPoints: {},
+    };
+  }
+
+  if (isMinimumOffenseStat(result.stat)) {
+    return {
+      result: entry,
+      fixedStatPoints: {},
+      minimumStatPoints: { [result.stat]: result.requiredStatPoints },
+    };
+  }
+
+  return null;
+};
+
+const mergeOffenseRequirementChoice = (
+  state: OffenseRequirementState,
+  choice: OffenseRequirementChoice,
+): OffenseRequirementState => ({
+  fixedStatPoints: {
+    atk: Math.max(state.fixedStatPoints.atk ?? 0, choice.fixedStatPoints.atk ?? 0),
+    spa: Math.max(state.fixedStatPoints.spa ?? 0, choice.fixedStatPoints.spa ?? 0),
+  },
+  minimumStatPoints: {
+    hp: Math.max(state.minimumStatPoints.hp ?? 0, choice.minimumStatPoints.hp ?? 0),
+    def: Math.max(state.minimumStatPoints.def ?? 0, choice.minimumStatPoints.def ?? 0),
+    spd: Math.max(state.minimumStatPoints.spd ?? 0, choice.minimumStatPoints.spd ?? 0),
+  },
+  selectedResults: [...state.selectedResults, choice.result],
+});
+
+const getOffenseRequirementCost = (
+  state: OffenseRequirementState,
+  baseStatPoints: StatPointTable,
+): number => (
+  Math.max(baseStatPoints.atk, state.fixedStatPoints.atk ?? 0)
+  + Math.max(baseStatPoints.spa, state.fixedStatPoints.spa ?? 0)
+  + baseStatPoints.spe
+  + (state.minimumStatPoints.hp ?? 0)
+  + (state.minimumStatPoints.def ?? 0)
+  + (state.minimumStatPoints.spd ?? 0)
+);
+
+const compareOffenseRequirementStates = (
+  left: OffenseRequirementState,
+  right: OffenseRequirementState,
+  baseStatPoints: StatPointTable,
+): number => {
+  const leftCost = getOffenseRequirementCost(left, baseStatPoints);
+  const rightCost = getOffenseRequirementCost(right, baseStatPoints);
+  if (leftCost !== rightCost) {
+    return leftCost - rightCost;
+  }
+
+  const leftFixed = (left.fixedStatPoints.atk ?? 0) + (left.fixedStatPoints.spa ?? 0);
+  const rightFixed = (right.fixedStatPoints.atk ?? 0) + (right.fixedStatPoints.spa ?? 0);
+  if (leftFixed !== rightFixed) {
+    return leftFixed - rightFixed;
+  }
+
+  return left.selectedResults.length - right.selectedResults.length;
+};
+
+const pruneOffenseRequirementStates = (
+  states: OffenseRequirementState[],
+  baseStatPoints: StatPointTable,
+): OffenseRequirementState[] => {
+  const bestByKey = new Map<string, OffenseRequirementState>();
+  for (const state of states) {
+    const key = [
+      state.fixedStatPoints.atk ?? 0,
+      state.fixedStatPoints.spa ?? 0,
+      state.minimumStatPoints.hp ?? 0,
+      state.minimumStatPoints.def ?? 0,
+      state.minimumStatPoints.spd ?? 0,
+    ].join(":");
+    const current = bestByKey.get(key);
+    if (!current || compareOffenseRequirementStates(state, current, baseStatPoints) < 0) {
+      bestByKey.set(key, state);
+    }
+  }
+
+  return Array.from(bestByKey.values())
+    .sort((left, right) => compareOffenseRequirementStates(left, right, baseStatPoints))
+    .slice(0, 32);
+};
+
+export const createOffenseSearchBaselineTargetForm = (
+  targetForm: TargetFormState,
+): TargetFormState => ({
+  ...targetForm,
+  statPoints: {
+    ...targetForm.statPoints,
+    hp: 0,
+    def: 0,
+    spd: 0,
+  },
+});
+
+export const calculateOffenseAdjustmentsForCandidateRanking = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): OffenseScenarioResult[] => calculateOffenseAdjustmentsFromScenarios(
+  createOffenseSearchBaselineTargetForm(targetForm),
+  scenarioForms,
+);
+
+export const resolveIntegratedOffenseRequirements = (
+  targetForm: TargetFormState,
+  offenseResults: OffenseScenarioResult[],
+): IntegratedOffenseRequirements => {
+  const baseStatPoints = clampStatPointTable(targetForm.statPoints);
+  const groupedResults = new Map<string, OffenseScenarioResult[]>();
+  const blockingReasons: string[] = [];
+  let states: OffenseRequirementState[] = [{
+    fixedStatPoints: {},
+    minimumStatPoints: {},
+    selectedResults: [],
+  }];
+
+  for (const entry of offenseResults) {
+    const key = `${entry.scenarioId}:${entry.attackId}`;
+    groupedResults.set(key, [...(groupedResults.get(key) ?? []), entry]);
+  }
+
+  for (const group of groupedResults.values()) {
+    const choices = group
+      .map(createOffenseRequirementChoice)
+      .filter((choice): choice is OffenseRequirementChoice => Boolean(choice));
+
+    if (choices.length > 0) {
+      states = pruneOffenseRequirementStates(
+        states.flatMap((state) => choices.map((choice) => mergeOffenseRequirementChoice(state, choice))),
+        baseStatPoints,
+      );
+      continue;
+    }
+
+    if (!group.some((entry) => entry.result.passed)) {
+      const failed = group.find((entry) => !entry.result.passed) ?? group[0];
+      blockingReasons.push(`${getOffenseResultSourceLabel(failed)}: ${failed.result.reason}`);
+    }
+  }
+
+  const best = pruneOffenseRequirementStates(states, baseStatPoints)[0] ?? {
+    fixedStatPoints: {},
+    minimumStatPoints: {},
+    selectedResults: [],
+  };
+
+  return {
+    ...best,
+    blockingReasons,
+  };
+};
+
+export const applyIntegratedOffenseRequirementsToTargetForm = (
+  targetForm: TargetFormState,
+  requirements: IntegratedOffenseRequirements,
+): TargetFormState => {
+  const statPoints = clampStatPointTable(targetForm.statPoints);
+  return {
+    ...targetForm,
+    statPoints: {
+      ...statPoints,
+      atk: Math.max(statPoints.atk, requirements.fixedStatPoints.atk ?? 0),
+      spa: Math.max(statPoints.spa, requirements.fixedStatPoints.spa ?? 0),
+    },
+  };
+};
+
+export const buildIntegratedDefenceSearchInput = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): DefenceSearchInput => {
+  const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
+  const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
+  const requirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
+
+  if (requirements.blockingReasons.length > 0) {
+    throw new Error(`火力調整条件を候補一覧へ統合できません: ${requirements.blockingReasons.join(" / ")}`);
+  }
+
+  const integratedTargetForm = applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, requirements);
+  const fixedBudget =
+    integratedTargetForm.statPoints.atk
+    + integratedTargetForm.statPoints.spa
+    + integratedTargetForm.statPoints.spe;
+  const minimumDefenceBudget =
+    (requirements.minimumStatPoints.hp ?? 0)
+    + (requirements.minimumStatPoints.def ?? 0)
+    + (requirements.minimumStatPoints.spd ?? 0);
+
+  if (fixedBudget + minimumDefenceBudget > CHAMPIONS_TOTAL_STAT_POINTS) {
+    throw new Error(
+      `火力調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
+      + ` (固定 ${fixedBudget} + 火力最低 ${minimumDefenceBudget})`,
+    );
+  }
+
+  return {
+    ...buildDefenceSearchInput(integratedTargetForm, scenarioForms),
+    minimumStatPoints: requirements.minimumStatPoints,
+  };
+};
+
 const isActiveRequest = (state: SearchUiState, requestId: string): boolean =>
   state.activeRequestId === requestId;
 
@@ -723,13 +975,14 @@ export const startDefenceSearchFromUi = (
   dispatch: SearchUiDispatch,
   options: { requestId?: string; maxResults?: number } = {},
 ): { request: ActiveDefenceSearchRequest; input: DefenceSearchInput } => {
-  const input = buildDefenceSearchInput(targetForm, scenarioForms);
+  const input = buildIntegratedDefenceSearchInput(targetForm, scenarioForms);
   const requestId = options.requestId ?? createDefenceSearchRequestId();
   dispatch({ type: "start", requestId });
 
   const request = client.start(input.build, input.scenarios, {
     requestId,
     maxResults: options.maxResults ?? 20,
+    minimumStatPoints: input.minimumStatPoints,
     progressInterval: 250,
     partialResultInterval: 1,
     yieldEvery: 250,
@@ -772,12 +1025,7 @@ export const applyCandidateToTarget = (
 
   return {
     ...targetForm,
-    statPoints: {
-      ...targetForm.statPoints,
-      hp: candidate.candidate.hp,
-      def: candidate.candidate.def,
-      spd: candidate.candidate.spd,
-    },
+    statPoints: { ...candidate.appliedStatPoints },
   };
 };
 

@@ -31,11 +31,11 @@ import {
   applyOffenseAdjustmentToTarget,
   applyCandidateToTarget,
   buildScenarioAttackBuildFromUi,
+  buildIntegratedDefenceSearchInput,
   buildTargetBuildFromUi,
-  calculateOffenseAdjustmentsFromScenarios,
+  calculateOffenseAdjustmentsForCandidateRanking,
   createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
-  buildDefenceSearchInput,
   createDefaultScenarioForms,
   createDefaultTargetForm,
   createInitialSearchUiState,
@@ -434,7 +434,7 @@ export function App() {
 
   const previewInput = useMemo(() => {
     try {
-      return { input: buildDefenceSearchInput(targetForm, scenarioForms), error: null };
+      return { input: buildIntegratedDefenceSearchInput(targetForm, scenarioForms), error: null };
     } catch (error) {
       return { input: null, error: error instanceof Error ? error.message : String(error) };
     }
@@ -454,7 +454,7 @@ export function App() {
   }), [targetForm.pokemonInput, targetBuildPreview?.pokemon.canonicalName]);
 
   const offenseResults = useMemo(
-    () => calculateOffenseAdjustmentsFromScenarios(targetForm, scenarioForms),
+    () => calculateOffenseAdjustmentsForCandidateRanking(targetForm, scenarioForms),
     [targetForm, scenarioForms],
   );
 
@@ -2611,7 +2611,7 @@ function OffenseScenarioResultsPanel({
     <section className="offense-adjustment-panel" aria-labelledby="offense-adjustment-title">
       <div className="offense-adjustment-heading">
         <h3 id="offense-adjustment-title">火力ライン結果</h3>
-        <span>{offenseResults.length} 条件</span>
+        <span>{offenseResults.length} 条件 / 候補順位へ統合</span>
       </div>
 
       <div className="offense-result-list" aria-label="火力ライン結果">

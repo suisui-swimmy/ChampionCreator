@@ -37,6 +37,7 @@ export type CalculateHit = (
 export interface DefenceSearchOptions {
   maxResults?: number;
   calculateHit?: CalculateHit;
+  minimumStatPoints?: Partial<StatTable>;
 }
 
 interface ScenarioEvaluationOptions {
@@ -117,6 +118,13 @@ const isLegalDefenceCandidate = (candidate: DefenceStatPointCandidate): boolean 
 
 const getCandidateDefenceBudget = (candidate: DefenceStatPointCandidate): number =>
   candidate.hp + candidate.def + candidate.spd;
+
+export const meetsMinimumStatPointRequirements = (
+  candidate: DefenceStatPointCandidate,
+  minimumStatPoints: Partial<StatTable> = {},
+): boolean => DEFENCE_SEARCH_KEYS.every((key) => (
+  candidate[key] >= (minimumStatPoints[key] ?? 0)
+));
 
 export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceStatPointCandidate> {
   if (!isLegalFixedStatPointBudget(build)) {
@@ -447,10 +455,16 @@ export const finalizeDefenceSearchResults = (
   options: DefenceSearchOptions = {},
 ): CandidateResult[] => {
   const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
-  const topCandidates = passingResults.sort(compareCandidateResults).slice(0, maxResults);
+  const topCandidates = passingResults
+    .filter((result) => meetsMinimumStatPointRequirements(result.candidate, options.minimumStatPoints))
+    .sort(compareCandidateResults)
+    .slice(0, maxResults);
   const revalidatedCandidates = topCandidates
     .map((result) => evaluateCandidate(defenderBuild, scenarios, result.candidate, options))
-    .filter((result) => result.passed)
+    .filter((result) => (
+      result.passed
+      && meetsMinimumStatPointRequirements(result.candidate, options.minimumStatPoints)
+    ))
     .sort(compareCandidateResults)
     .slice(0, maxResults);
 
@@ -474,6 +488,10 @@ export const searchDefenceCandidates = (
     const defenceBudget = getCandidateDefenceBudget(candidate);
     if (acceptedDefenceBudgetCeiling !== null && defenceBudget > acceptedDefenceBudgetCeiling) {
       break;
+    }
+
+    if (!meetsMinimumStatPointRequirements(candidate, options.minimumStatPoints)) {
+      continue;
     }
 
     const result = evaluateCandidate(defenderBuild, scenarios, candidate, options);

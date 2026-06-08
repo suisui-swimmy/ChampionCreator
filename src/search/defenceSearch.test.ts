@@ -256,4 +256,23 @@ describe("searchDefenceCandidates", () => {
 
     expect(results).toEqual([]);
   });
+
+  it("filters passing candidates below integrated H/B/D minimum requirements", () => {
+    const defender = makeBuild("target", "ピカチュウ");
+    const scenario = makeScenario("easy", [makeHit("hit", makeBuild("attacker", "ピチュー"), "でんこうせっか")], 1, 1);
+    const calculateHit: CalculateHit = () => ({
+      hitId: "hit",
+      damageRolls: [1],
+      damageRange: { min: 1, max: 1, percentMin: 1, percentMax: 1 },
+    });
+
+    const results = searchDefenceCandidates(defender, [scenario], {
+      maxResults: 3,
+      calculateHit,
+      minimumStatPoints: { hp: 2, def: 1 },
+    });
+
+    expect(results).not.toHaveLength(0);
+    expect(results.every((result) => result.candidate.hp >= 2 && result.candidate.def >= 1)).toBe(true);
+  });
 });
