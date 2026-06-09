@@ -7,6 +7,7 @@ import {
   CandidateStatPointSpread,
   ResultsPanel,
   clampTargetStatPointChange,
+  getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
@@ -115,6 +116,26 @@ describe("App", () => {
     expect(html).toContain('aria-label="耐久調整A 調整対象Bランク: 0"');
     expect(html).toContain('aria-label="耐久調整A 調整対象Dランク: 0"');
     expect(html).not.toContain("（この攻撃のみ）");
+  });
+
+  it("shows only relevant defender stats for offense adjustment moves", () => {
+    expect(getOffenseDefenderStatKeys("サイコキネシス")).toEqual(["hp", "spd"]);
+    expect(getOffenseDefenderStatKeys("ふいうち")).toEqual(["hp", "def"]);
+    expect(getOffenseDefenderStatKeys("イカサマ")).toEqual(["hp", "atk", "def"]);
+    expect(getOffenseDefenderStatKeys("ジャイロボール")).toEqual(["hp", "def", "spe"]);
+    expect(getOffenseDefenderStatKeys("")).toEqual(["hp", "def", "spd"]);
+
+    const html = renderToStaticMarkup(<App />);
+
+    expect(html).toContain('aria-label="火力調整A 仮想敵能力"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵D SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵Dランク: 0"');
+    expect(html).not.toContain('aria-label="火力調整A 仮想敵A SP"');
+    expect(html).not.toContain('aria-label="火力調整A 仮想敵B SP"');
+    expect(html).not.toContain('aria-label="火力調整A 仮想敵C SP"');
+    expect(html).not.toContain('aria-label="火力調整A 仮想敵S SP"');
+    expect(html).not.toContain('aria-label="火力調整A 仮想敵Bランク');
   });
 
   it("renders nature stat modifiers beside target and attacker SP fields", () => {

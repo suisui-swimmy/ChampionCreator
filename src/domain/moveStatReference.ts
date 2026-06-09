@@ -34,6 +34,49 @@ const uniqueReferences = (references: MoveStatReference[]): MoveStatReference[] 
   });
 };
 
+const adaptiveOffenseMoveNames = new Set([
+  "Shell Side Arm",
+  "Photon Geyser",
+  "Light That Burns the Sky",
+]);
+
+const specialMovesUsingDefense = new Set([
+  "Psyshock",
+  "Psystrike",
+  "Secret Sword",
+]);
+
+const usesAdaptiveOffenseStats = (canonicalName: string, options: { teraEnabled?: boolean }): boolean =>
+  adaptiveOffenseMoveNames.has(canonicalName) || (canonicalName === "Tera Blast" && Boolean(options.teraEnabled));
+
+export const getMoveDefenderStatKeys = (
+  moveInput: string,
+  options: { teraEnabled?: boolean } = {},
+): StatKey[] => {
+  const resolved = resolveEntity("move", moveInput);
+  if (resolved.status !== "exact" && resolved.status !== "alias") {
+    return ["hp", "def", "spd"];
+  }
+
+  const canonicalName = resolved.canonicalName ?? "";
+  const move = resolved.calcId ? moveOptionsById.get(resolved.calcId) : undefined;
+
+  if (canonicalName === "Final Gambit") {
+    return ["hp"];
+  }
+  if (usesAdaptiveOffenseStats(canonicalName, options)) {
+    return ["hp", "def", "spd"];
+  }
+  if (move?.category === "Physical" || canonicalName === "Body Press" || canonicalName === "Foul Play") {
+    return ["hp", "def"];
+  }
+  if (move?.category === "Special") {
+    return specialMovesUsingDefense.has(canonicalName) ? ["hp", "def"] : ["hp", "spd"];
+  }
+
+  return ["hp", "def", "spd"];
+};
+
 export const getMoveStatReferencePlan = (
   moveInput: string,
   options: { teraEnabled?: boolean } = {},
@@ -49,7 +92,7 @@ export const getMoveStatReferencePlan = (
     };
   }
 
-  const canonicalName = resolved.canonicalName;
+  const canonicalName = resolved.canonicalName ?? "";
   const move = resolved.calcId ? moveOptionsById.get(resolved.calcId) : undefined;
 
   if (canonicalName === "Final Gambit") {
@@ -75,10 +118,7 @@ export const getMoveStatReferencePlan = (
         : null;
 
   const references: MoveStatReference[] = [];
-  const usesAdaptiveOffense = canonicalName === "Shell Side Arm"
-    || canonicalName === "Photon Geyser"
-    || canonicalName === "Light That Burns the Sky"
-    || (canonicalName === "Tera Blast" && options.teraEnabled);
+  const usesAdaptiveOffense = usesAdaptiveOffenseStats(canonicalName, options);
 
   if (usesAdaptiveOffense) {
     references.push(

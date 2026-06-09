@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMoveStatReferencePlan } from "./moveStatReference";
+import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./moveStatReference";
 
 describe("getMoveStatReferencePlan", () => {
   it("uses one offensive stat for ordinary physical and special moves", () => {
@@ -46,5 +46,14 @@ describe("getMoveStatReferencePlan", () => {
       { owner: "attacker", stat: "atk", role: "damage" },
       { owner: "attacker", stat: "spa", role: "damage" },
     ]);
+  });
+
+  it("returns the defender stats that affect KO thresholds", () => {
+    expect(getMoveDefenderStatKeys("ふいうち")).toEqual(["hp", "def"]);
+    expect(getMoveDefenderStatKeys("サイコキネシス")).toEqual(["hp", "spd"]);
+    expect(getMoveDefenderStatKeys("サイコショック")).toEqual(["hp", "def"]);
+    expect(getMoveDefenderStatKeys("いのちがけ")).toEqual(["hp"]);
+    expect(getMoveDefenderStatKeys("テラバースト", { teraEnabled: true })).toEqual(["hp", "def", "spd"]);
+    expect(getMoveDefenderStatKeys("")).toEqual(["hp", "def", "spd"]);
   });
 });

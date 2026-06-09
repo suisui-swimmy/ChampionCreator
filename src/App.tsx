@@ -47,7 +47,7 @@ import {
   type ScenarioFormState,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
-import { getMoveStatReferencePlan } from "./ui/moveStatReference";
+import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import {
   getPokemonBaseFormValue,
@@ -86,6 +86,28 @@ const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies re
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
 const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
+
+const getOffenseDefenderStatKeysFromMoveContext = (
+  moveInput: string,
+  options: { teraEnabled?: boolean },
+  targetReferenceKeys: ReadonlySet<StatKey>,
+): StatKey[] => {
+  const visibleKeys = new Set<StatKey>(getMoveDefenderStatKeys(moveInput, options));
+  targetReferenceKeys.forEach((key) => visibleKeys.add(key));
+  return statKeys.filter((key) => visibleKeys.has(key));
+};
+
+export const getOffenseDefenderStatKeys = (
+  moveInput: string,
+  options: { teraEnabled?: boolean } = {},
+): StatKey[] => {
+  const targetReferenceKeys = new Set(
+    getMoveStatReferencePlan(moveInput, options).references
+      .filter((reference) => reference.owner === "target")
+      .map((reference) => reference.stat),
+  );
+  return getOffenseDefenderStatKeysFromMoveContext(moveInput, options, targetReferenceKeys);
+};
 
 type NatureMatrixStatKey = (typeof natureMatrixKeys)[number];
 
@@ -2043,9 +2065,18 @@ function AttackCard({
   const statReferencePlan = getMoveStatReferencePlan(attack.moveInput, {
     teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
   });
-  const targetReferenceKeys = statReferencePlan.references
+  const targetReferenceKeySet = new Set(statReferencePlan.references
     .filter((reference) => reference.owner === "target")
-    .map((reference) => reference.stat);
+    .map((reference) => reference.stat));
+  const targetReferenceKeys = Array.from(targetReferenceKeySet);
+  const moveStatReferenceOptions = {
+    teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
+  };
+  const offenseDefenderStatKeys = getOffenseDefenderStatKeysFromMoveContext(
+    attack.moveInput,
+    moveStatReferenceOptions,
+    targetReferenceKeySet,
+  );
   const defenderRankKeys = Array.from(new Set<Exclude<StatKey, "hp">>([
     "def",
     "spd",
@@ -2218,7 +2249,7 @@ function AttackCard({
                   <span>SP</span>
                   <span>ランク</span>
                 </div>
-                {statKeys.map((key) => (
+                {offenseDefenderStatKeys.map((key) => (
                   <div
                     className={`ev-row attacker-stat-row ${key}`}
                     key={key}
