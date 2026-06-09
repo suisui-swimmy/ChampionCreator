@@ -20,9 +20,10 @@ describe("shareState", () => {
       dmaxEnabled: true,
       boosts: { atk: 0, def: 2, spa: 0, spd: -1, spe: 0 },
     };
-    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+    const scenarios = createDefaultScenarioForms().map((scenario, index) => ({
       ...scenario,
       label: "対オオニューラ",
+      adjustmentType: index === 1 ? "speed" as const : scenario.adjustmentType,
       attacks: scenario.attacks.map((attack) => ({
         ...attack,
         attackerPokemonInput: "オオニューラ",
@@ -33,6 +34,11 @@ describe("shareState", () => {
         defenderStatus: "brn" as const,
         attackerBoosts: { ...attack.attackerBoosts, atk: 2 },
         gameType: "doubles" as const,
+        speedComparison: "tie" as const,
+        speedTargetValue: 220,
+        speedItemMultiplier: "1.5" as const,
+        speedAbilityMultiplier: "2" as const,
+        tailwind: true,
       })),
     }));
     const offenseAdjustment = {
@@ -54,6 +60,7 @@ describe("shareState", () => {
       boosts: { def: 2, spd: -1 },
     });
     expect(parsed.scenarios[0].label).toBe("対オオニューラ");
+    expect(parsed.scenarios[1].adjustmentType).toBe("speed");
     expect(parsed.scenarios[0].attacks[0]).toMatchObject({
       attackerPokemonInput: "オオニューラ",
       moveInput: "インファイト",
@@ -61,6 +68,11 @@ describe("shareState", () => {
       attackerDmaxEnabled: true,
       defenderStatus: "brn",
       gameType: "doubles",
+      speedComparison: "tie",
+      speedTargetValue: 220,
+      speedItemMultiplier: "1.5",
+      speedAbilityMultiplier: "2",
+      tailwind: true,
     });
     expect(parsed.offenseAdjustment).toMatchObject({
       defenderPokemonInput: "ピチュー",

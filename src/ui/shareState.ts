@@ -28,7 +28,7 @@ const mergeObject = <T extends object>(base: T, value: unknown): T => (
 );
 
 const pokemonStatuses = new Set<PokemonStatus>(["none", "slp", "psn", "brn", "frz", "par", "tox"]);
-const scenarioAdjustmentTypes = new Set<ScenarioAdjustmentType>(["defence", "offense"]);
+const scenarioAdjustmentTypes = new Set<ScenarioAdjustmentType>(["defence", "offense", "speed"]);
 
 const normalizePokemonStatus = (value: unknown, fallback: PokemonStatus): PokemonStatus =>
   typeof value === "string" && pokemonStatuses.has(value as PokemonStatus)

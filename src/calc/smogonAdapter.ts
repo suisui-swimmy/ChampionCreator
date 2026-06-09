@@ -1,4 +1,5 @@
 import { calculate, Field, Generations, Move, Pokemon, Side, type Result, type State } from "@smogon/calc";
+import { getFinalSpeed } from "@smogon/calc/dist/mechanics/util";
 import type {
   Build,
   FieldState,
@@ -45,6 +46,7 @@ export const toSmogonSide = (
     isLightScreen: side.lightScreen,
     isAuroraVeil: side.auroraVeil,
     isHelpingHand: side.helpingHand,
+    isTailwind: side.tailwind,
     isFriendGuard: side.friendGuard,
     isFlowerGift: allyAbilityNames.has("Flower Gift"),
     isBattery: allyAbilityNames.has("Battery"),
@@ -100,6 +102,59 @@ export const toSmogonPokemon = (
     boosts,
     abilityOn,
   });
+
+export interface SmogonFinalSpeedOptions {
+  boosts?: StatBoostTable;
+  abilityOn?: boolean;
+  manualItemMultiplier?: number;
+  manualAbilityMultiplier?: number;
+}
+
+const applyManualSpeedMultiplier = (
+  speed: number,
+  multiplier: number | undefined,
+): number => {
+  if (multiplier === undefined) {
+    return speed;
+  }
+  return Math.max(0, Math.min(10000, Math.floor(speed * multiplier)));
+};
+
+export const calculateSmogonFinalSpeed = (
+  build: Build,
+  fieldState: FieldState,
+  sideState: SideState,
+  options: SmogonFinalSpeedOptions = {},
+): number => {
+  const buildForAutoCalculation: Build = {
+    ...build,
+    item: options.manualItemMultiplier === undefined ? build.item : undefined,
+    ability: options.manualAbilityMultiplier === undefined ? build.ability : undefined,
+  };
+  const side = toSmogonSide(sideState);
+  const field = new Field({
+    gameType: gameTypeByFieldState[fieldState.gameType],
+    weather: weatherByFieldState[fieldState.weather],
+    terrain: terrainByFieldState[fieldState.terrain],
+    attackerSide: side,
+    defenderSide: toSmogonSide({
+      reflect: false,
+      lightScreen: false,
+      auroraVeil: false,
+      helpingHand: false,
+    }),
+  });
+  const pokemon = toSmogonPokemon(
+    buildForAutoCalculation,
+    options.boosts,
+    options.abilityOn,
+  );
+  const autoSpeed = getFinalSpeed(SMOGON_GENERATION, pokemon, field, side);
+  return applyManualSpeedMultiplier(
+    applyManualSpeedMultiplier(autoSpeed, options.manualItemMultiplier),
+    options.manualAbilityMultiplier,
+  );
+};
 
 export const toSmogonMove = (hit: ScenarioHit): Move =>
   new Move(SMOGON_GENERATION, hit.move.canonicalName, {

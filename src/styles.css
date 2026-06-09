@@ -1496,6 +1496,14 @@ textarea {
   box-shadow: inset 0 0 0 1px rgba(255, 0, 0, 0.15);
 }
 
+.scenario-row.speed {
+  border-color: rgba(0, 216, 240, 0.54);
+  background:
+    linear-gradient(90deg, rgba(0, 216, 240, 0.075), rgba(0, 216, 240, 0.02) 52%, rgba(235, 254, 61, 0.045)),
+    var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(0, 216, 240, 0.13);
+}
+
 .scenario-row-header {
   display: flex;
   align-items: center;
@@ -1537,9 +1545,9 @@ textarea {
 
 .scenario-adjustment-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(72px, 1fr));
+  grid-template-columns: repeat(3, minmax(62px, 1fr));
   gap: 4px;
-  min-width: min(168px, 36vw);
+  min-width: min(220px, 48vw);
 }
 
 .scenario-adjustment-card {
@@ -1582,6 +1590,12 @@ textarea {
   border-color: rgba(255, 0, 0, 0.58);
   background: linear-gradient(180deg, rgba(255, 0, 0, 0.18), rgba(255, 0, 0, 0.06));
   color: #ffc0c0;
+}
+
+.scenario-row.speed .scenario-adjustment-card.selected {
+  border-color: rgba(0, 216, 240, 0.58);
+  background: linear-gradient(180deg, rgba(0, 216, 240, 0.18), rgba(0, 216, 240, 0.06));
+  color: #bcf7ff;
 }
 
 .scenario-adjustment-card:focus-within {
@@ -1866,6 +1880,10 @@ textarea {
   filter: drop-shadow(0 0 4px rgba(245, 197, 66, 0.22));
 }
 
+.attack-direction-button.speed img {
+  filter: drop-shadow(0 0 4px rgba(0, 216, 240, 0.28));
+}
+
 .attack-remove-button {
   width: 26px;
   height: 26px;
@@ -1897,6 +1915,34 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.speed-condition-grid,
+.speed-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.speed-tailwind-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.speed-tailwind-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--spe);
+}
+
+.speed-stat-table .ev-header,
+.speed-stat-table .ev-row {
+  grid-template-columns: 58px 64px 58px minmax(70px, 1fr);
 }
 
 .attack-card-fields.support-mode {
@@ -2391,6 +2437,84 @@ textarea {
 .offense-result-row small {
   grid-column: 2 / -1;
   color: #a9b8b7;
+}
+
+.speed-result-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 8px;
+  border: 1px solid rgba(0, 216, 240, 0.26);
+  border-radius: 7px;
+  background: #111516;
+  padding: 8px;
+}
+
+.speed-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.speed-result-heading strong {
+  color: #bcf7ff;
+  font-size: 12px;
+}
+
+.speed-result-row {
+  display: grid;
+  grid-template-columns: 12px 70px minmax(72px, 1fr) 64px 62px 62px 62px 52px auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border-top: 1px solid rgba(124, 143, 144, 0.12);
+  padding-top: 6px;
+  font-size: 11px;
+}
+
+.speed-result-row > * {
+  min-width: 0;
+}
+
+.speed-result-row strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.speed-result-source {
+  color: #d3d9d5;
+  font-weight: 850;
+}
+
+.speed-result-row span,
+.speed-result-row em,
+.speed-result-row small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.speed-result-row em {
+  font-style: normal;
+  color: #9cecff;
+}
+
+.speed-result-row em.fail-badge {
+  color: #ff9d9d;
+}
+
+.speed-result-row small {
+  grid-column: 2 / -1;
+  color: #a9b8b7;
+}
+
+.speed-result-apply-button:disabled {
+  opacity: 0.52;
 }
 
 .candidate-table {

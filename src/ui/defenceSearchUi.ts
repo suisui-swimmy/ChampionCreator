@@ -35,6 +35,13 @@ import {
   type OffenseAdjustmentInput,
   type OffenseAdjustmentResult,
 } from "../search/offenseAdjustment";
+import {
+  calculateSpeedAdjustment,
+  type SpeedAdjustmentInput,
+  type SpeedAdjustmentResult,
+  type SpeedComparisonMode,
+  type SpeedManualMultiplier,
+} from "../search/speedAdjustment";
 
 export interface TargetFormState {
   pokemonInput: string;
@@ -79,9 +86,14 @@ export interface ScenarioAttackFormState {
   auroraVeil: boolean;
   helpingHand: boolean;
   friendGuard: boolean;
+  speedComparison: SpeedComparisonMode;
+  speedTargetValue: number;
+  speedItemMultiplier: SpeedManualMultiplier;
+  speedAbilityMultiplier: SpeedManualMultiplier;
+  tailwind: boolean;
 }
 
-export type ScenarioAdjustmentType = "defence" | "offense";
+export type ScenarioAdjustmentType = "defence" | "offense" | "speed";
 
 export interface ScenarioFormState {
   id: string;
@@ -131,10 +143,25 @@ export interface OffenseScenarioResult {
   result: OffenseAdjustmentResult;
 }
 
+export interface SpeedScenarioResult {
+  id: string;
+  scenarioId: string;
+  scenarioLabel: string;
+  attackId: string;
+  attackLabel: string;
+  result: SpeedAdjustmentResult;
+}
+
 export interface IntegratedOffenseRequirements {
   fixedStatPoints: Partial<Pick<StatPointTable, "atk" | "spa">>;
   minimumStatPoints: Partial<Pick<StatPointTable, "hp" | "def" | "spd">>;
   selectedResults: OffenseScenarioResult[];
+  blockingReasons: string[];
+}
+
+export interface IntegratedSpeedRequirements {
+  fixedStatPoints: Partial<Pick<StatPointTable, "spe">>;
+  selectedResults: SpeedScenarioResult[];
   blockingReasons: string[];
 }
 
@@ -215,6 +242,7 @@ const emptySide: SideState = {
   lightScreen: false,
   auroraVeil: false,
   helpingHand: false,
+  tailwind: false,
   friendGuard: false,
 };
 
@@ -315,6 +343,11 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   auroraVeil: false,
   helpingHand: false,
   friendGuard: false,
+  speedComparison: "outspeed",
+  speedTargetValue: 0,
+  speedItemMultiplier: "auto",
+  speedAbilityMultiplier: "auto",
+  tailwind: false,
 });
 
 export const formatScenarioAttackLabel = (
@@ -322,11 +355,13 @@ export const formatScenarioAttackLabel = (
   attackIndex: number,
   label: string,
 ): string => {
-  const defaultPrefix = adjustmentType === "offense" ? "火力調整" : "耐久調整";
+  const defaultPrefix = adjustmentType === "offense"
+    ? "火力調整"
+    : adjustmentType === "speed" ? "S調整" : "耐久調整";
   const defaultLabel = `${defaultPrefix}${String.fromCharCode(65 + attackIndex)}`;
   const trimmedLabel = label.trim();
 
-  if (!trimmedLabel || /^(?:攻撃|耐久調整|火力調整)[A-Z]$/.test(trimmedLabel)) {
+  if (!trimmedLabel || /^(?:攻撃|耐久調整|火力調整|S調整)[A-Z]$/.test(trimmedLabel)) {
     return defaultLabel;
   }
 
@@ -339,7 +374,10 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
     label: "シナリオ1",
     enabled: true,
     adjustmentType: "defence",
-    attacks: [createDefaultScenarioAttackForm()],
+    attacks: [{
+      ...createDefaultScenarioAttackForm(),
+      minSurvivalProbabilityPercent: 90,
+    }],
   },
   {
     id: "scenario-offense",
@@ -353,6 +391,23 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
       attackerAbilityInput: "",
       attackerStatPoints: { ...zeroStatPoints, hp: 32 },
       moveInput: "サイコキネシス",
+      targetKoProbabilityPercent: 80,
+    }],
+  },
+  {
+    id: "scenario-speed",
+    label: "シナリオ3",
+    enabled: true,
+    adjustmentType: "speed",
+    attacks: [{
+      ...createDefaultScenarioAttackForm(),
+      attackerPokemonInput: "メガゲンガー",
+      attackerNatureInput: "おくびょう",
+      attackerAbilityInput: "",
+      attackerItemInput: "",
+      attackerStatPoints: { ...zeroStatPoints, spe: 32 },
+      moveInput: "",
+      speedComparison: "outspeed",
     }],
   },
 ];
@@ -479,7 +534,7 @@ const toScenarioHit = (
       spd: (targetBoosts.spd ?? 0) + (attackForm.defenderBoosts.spd ?? 0),
       spe: (targetBoosts.spe ?? 0) + (attackForm.defenderBoosts.spe ?? 0),
     }),
-    attackerSide: { ...emptySide, helpingHand: attackForm.helpingHand },
+    attackerSide: { ...emptySide, helpingHand: attackForm.helpingHand, tailwind: attackForm.tailwind },
     defenderSide: {
       ...emptySide,
       reflect: attackForm.reflect,
@@ -684,6 +739,89 @@ export const calculateOffenseAdjustmentsFromScenarios = (
       }));
     }));
 
+const hasSpeedTarget = (form: ScenarioAttackFormState): boolean =>
+  Boolean(form.attackerPokemonInput.trim()) || form.speedTargetValue > 0;
+
+export const buildSpeedAdjustmentInput = (
+  targetForm: TargetFormState,
+  attackForm: ScenarioAttackFormState,
+): SpeedAdjustmentInput => {
+  const hasManualTargetSpeed = attackForm.speedTargetValue > 0;
+  const opponentBuild = hasManualTargetSpeed
+    ? undefined
+    : buildScenarioAttackBuildFromUi(attackForm, "speed-opponent");
+
+  return {
+    targetBuild: buildTargetBuildFromUi(targetForm, "speed-target"),
+    opponentBuild,
+    opponentLabel: attackForm.attackerPokemonInput.trim() || "目標S",
+    field: toFieldState(attackForm),
+    targetBoosts: normalizeBoosts(targetForm.boosts),
+    opponentBoosts: normalizeBoosts(attackForm.attackerBoosts),
+    targetSide: { ...emptySide },
+    opponentSide: { ...emptySide, tailwind: attackForm.tailwind },
+    comparison: attackForm.speedComparison,
+    manualTargetSpeed: hasManualTargetSpeed ? clampInt(attackForm.speedTargetValue, 0, 10000) : undefined,
+    opponentItemMultiplier: attackForm.speedItemMultiplier,
+    opponentAbilityMultiplier: attackForm.speedAbilityMultiplier,
+    boostedNature: mustResolve("nature", "おくびょう", "S上昇補正"),
+  };
+};
+
+const makeSpeedAdjustmentMessageResult = (
+  status: SpeedAdjustmentResult["status"],
+  reason: string,
+): SpeedAdjustmentResult => ({
+  id: `speed-${status}`,
+  status,
+  passed: false,
+  canApply: false,
+  label: "Sライン",
+  comparison: "outspeed",
+  relation: "miss",
+  requiredStatPoints: null,
+  actualSpeed: null,
+  targetSpeed: 0,
+  requiredSpeed: 0,
+  targetStatPoints: 0,
+  notes: [],
+  reason,
+});
+
+export const calculateSpeedAdjustmentFromUi = (
+  targetForm: TargetFormState,
+  attackForm: ScenarioAttackFormState,
+): SpeedAdjustmentResult => {
+  try {
+    return calculateSpeedAdjustment(buildSpeedAdjustmentInput(targetForm, attackForm));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return makeSpeedAdjustmentMessageResult(
+      message.includes("canonical name に解決できません") ? "unresolved" : "invalid",
+      message,
+    );
+  }
+};
+
+export const calculateSpeedAdjustmentsFromScenarios = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): SpeedScenarioResult[] => scenarioForms
+  .filter((scenario) => scenario.enabled && scenario.adjustmentType === "speed")
+  .flatMap((scenario) => scenario.attacks
+    .filter(hasSpeedTarget)
+    .map((attack, attackIndex) => {
+      const result = calculateSpeedAdjustmentFromUi(targetForm, attack);
+      return {
+        id: `${scenario.id}-${attack.id}-${result.id}`,
+        scenarioId: scenario.id,
+        scenarioLabel: scenario.label,
+        attackId: attack.id,
+        attackLabel: formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label),
+        result,
+      };
+    }));
+
 type FixedOffenseStat = "atk" | "spa";
 type MinimumOffenseStat = "hp" | "def" | "spd";
 
@@ -828,6 +966,14 @@ export const calculateOffenseAdjustmentsForCandidateRanking = (
   scenarioForms,
 );
 
+export const calculateSpeedAdjustmentsForCandidateRanking = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): SpeedScenarioResult[] => calculateSpeedAdjustmentsFromScenarios(
+  createOffenseSearchBaselineTargetForm(targetForm),
+  scenarioForms,
+);
+
 export const resolveIntegratedOffenseRequirements = (
   targetForm: TargetFormState,
   offenseResults: OffenseScenarioResult[],
@@ -892,6 +1038,80 @@ export const applyIntegratedOffenseRequirementsToTargetForm = (
   };
 };
 
+const createSpeedRequirementChoice = (
+  entry: SpeedScenarioResult,
+): { result: SpeedScenarioResult; fixedStatPoints: Partial<Pick<StatPointTable, "spe">> } | null => {
+  const { result } = entry;
+  if (!result.passed || !result.canApply || result.requiredStatPoints === null) {
+    return null;
+  }
+  return {
+    result: entry,
+    fixedStatPoints: { spe: result.requiredStatPoints },
+  };
+};
+
+const getSpeedResultSourceLabel = (entry: SpeedScenarioResult): string =>
+  `${entry.scenarioLabel} / ${entry.attackLabel} / ${entry.result.label}`;
+
+export const resolveIntegratedSpeedRequirements = (
+  targetForm: TargetFormState,
+  speedResults: SpeedScenarioResult[],
+): IntegratedSpeedRequirements => {
+  const baseStatPoints = clampStatPointTable(targetForm.statPoints);
+  const groupedResults = new Map<string, SpeedScenarioResult[]>();
+  const blockingReasons: string[] = [];
+  const selectedResults: SpeedScenarioResult[] = [];
+  let requiredSpe = baseStatPoints.spe;
+
+  for (const entry of speedResults) {
+    const key = `${entry.scenarioId}:${entry.attackId}`;
+    groupedResults.set(key, [...(groupedResults.get(key) ?? []), entry]);
+  }
+
+  for (const group of groupedResults.values()) {
+    const choices = group
+      .map(createSpeedRequirementChoice)
+      .filter((choice): choice is NonNullable<typeof choice> => Boolean(choice));
+
+    if (choices.length > 0) {
+      const best = choices.reduce((currentBest, choice) => (
+        (choice.fixedStatPoints.spe ?? 0) < (currentBest.fixedStatPoints.spe ?? 0)
+          ? choice
+          : currentBest
+      ));
+      requiredSpe = Math.max(requiredSpe, best.fixedStatPoints.spe ?? 0);
+      selectedResults.push(best.result);
+      continue;
+    }
+
+    if (!group.some((entry) => entry.result.passed)) {
+      const failed = group.find((entry) => !entry.result.passed) ?? group[0];
+      blockingReasons.push(`${getSpeedResultSourceLabel(failed)}: ${failed.result.reason}`);
+    }
+  }
+
+  return {
+    fixedStatPoints: { spe: requiredSpe },
+    selectedResults,
+    blockingReasons,
+  };
+};
+
+export const applyIntegratedSpeedRequirementsToTargetForm = (
+  targetForm: TargetFormState,
+  requirements: IntegratedSpeedRequirements,
+): TargetFormState => {
+  const statPoints = clampStatPointTable(targetForm.statPoints);
+  return {
+    ...targetForm,
+    statPoints: {
+      ...statPoints,
+      spe: Math.max(statPoints.spe, requirements.fixedStatPoints.spe ?? 0),
+    },
+  };
+};
+
 export const buildIntegratedDefenceSearchInput = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
@@ -899,12 +1119,20 @@ export const buildIntegratedDefenceSearchInput = (
   const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
   const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
   const requirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
+  const speedResults = calculateSpeedAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
+  const speedRequirements = resolveIntegratedSpeedRequirements(baselineTargetForm, speedResults);
 
   if (requirements.blockingReasons.length > 0) {
     throw new Error(`火力調整条件を候補一覧へ統合できません: ${requirements.blockingReasons.join(" / ")}`);
   }
+  if (speedRequirements.blockingReasons.length > 0) {
+    throw new Error(`S調整条件を候補一覧へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
+  }
 
-  const integratedTargetForm = applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, requirements);
+  const integratedTargetForm = applyIntegratedSpeedRequirementsToTargetForm(
+    applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, requirements),
+    speedRequirements,
+  );
   const fixedBudget =
     integratedTargetForm.statPoints.atk
     + integratedTargetForm.statPoints.spa
@@ -916,7 +1144,7 @@ export const buildIntegratedDefenceSearchInput = (
 
   if (fixedBudget + minimumDefenceBudget > CHAMPIONS_TOTAL_STAT_POINTS) {
     throw new Error(
-      `火力調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
+      `火力/S調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
       + ` (固定 ${fixedBudget} + 火力最低 ${minimumDefenceBudget})`,
     );
   }
@@ -1085,6 +1313,27 @@ export const applyOffenseAdjustmentToTarget = (
     statPoints: {
       ...targetForm.statPoints,
       [result.stat]: cappedValue,
+    },
+  };
+};
+
+export const applySpeedAdjustmentToTarget = (
+  targetForm: TargetFormState,
+  result: SpeedAdjustmentResult | undefined,
+): TargetFormState => {
+  if (!result?.canApply || result.requiredStatPoints === null) {
+    return targetForm;
+  }
+
+  const nextValue = clampStatPointValue(result.requiredStatPoints);
+  const usedByOtherStats = sumStatPoints(targetForm.statPoints) - targetForm.statPoints.spe;
+  const cappedValue = Math.min(nextValue, Math.max(0, CHAMPIONS_TOTAL_STAT_POINTS - usedByOtherStats));
+
+  return {
+    ...targetForm,
+    statPoints: {
+      ...targetForm.statPoints,
+      spe: cappedValue,
     },
   };
 };

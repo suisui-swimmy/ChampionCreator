@@ -7,27 +7,36 @@ import type {
 import {
   applyCandidateToTarget,
   applyOffenseAdjustmentToTarget,
+  applySpeedAdjustmentToTarget,
   applyTopCandidateToTarget,
   buildOffenseAdjustmentInput,
   buildDefenceSearchInput,
   buildIntegratedDefenceSearchInput,
+  buildSpeedAdjustmentInput,
   calculateOffenseAdjustmentFromUi,
   calculateOffenseAdjustmentsForCandidateRanking,
   calculateOffenseAdjustmentsFromScenarios,
+  calculateSpeedAdjustmentFromUi,
+  calculateSpeedAdjustmentsForCandidateRanking,
+  calculateSpeedAdjustmentsFromScenarios,
   createOffenseAdjustmentFormFromScenarioAttack,
   createDefaultOffenseAdjustmentForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
   createInitialSearchUiState,
   resolveIntegratedOffenseRequirements,
+  resolveIntegratedSpeedRequirements,
   applyIntegratedOffenseRequirementsToTargetForm,
+  applyIntegratedSpeedRequirementsToTargetForm,
   formatScenarioAttackLabel,
   searchUiReducer,
   startDefenceSearchFromUi,
   type DefenceSearchWorkerClientAdapter,
   type OffenseScenarioResult,
+  type SpeedScenarioResult,
 } from "./defenceSearchUi";
 import type { OffenseAdjustmentResult } from "../search/offenseAdjustment";
+import type { SpeedAdjustmentResult } from "../search/speedAdjustment";
 
 class FakeWorkerClient implements DefenceSearchWorkerClientAdapter {
   build: Build | null = null;
@@ -96,6 +105,34 @@ const makeOffenseResult = (
   },
 });
 
+const makeSpeedResult = (
+  attackId: string,
+  result: Partial<SpeedAdjustmentResult> = {},
+): SpeedScenarioResult => ({
+  id: `scenario-speed-${attackId}-${result.id ?? "line"}`,
+  scenarioId: "scenario-speed",
+  scenarioLabel: "S調整A",
+  attackId,
+  attackLabel: attackId,
+  result: {
+    id: result.id ?? "line",
+    status: result.status ?? "pass",
+    passed: result.passed ?? true,
+    canApply: result.canApply ?? true,
+    label: result.label ?? "Sライン",
+    comparison: result.comparison ?? "outspeed",
+    relation: result.relation ?? "outspeed",
+    requiredStatPoints: result.requiredStatPoints ?? 0,
+    actualSpeed: result.actualSpeed ?? 120,
+    targetSpeed: result.targetSpeed ?? 119,
+    requiredSpeed: result.requiredSpeed ?? 120,
+    targetStatPoints: result.targetStatPoints ?? 0,
+    notes: result.notes ?? ["自動補正なし"],
+    reason: result.reason ?? "Sライン 0 SPで達成します",
+    reference: result.reference,
+  },
+});
+
 describe("buildDefenceSearchInput", () => {
   it("formats default attack labels by adjustment type while preserving custom labels", () => {
     expect(formatScenarioAttackLabel("defence", 0, "攻撃A")).toBe("耐久調整A");
@@ -125,17 +162,35 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
     expect(input.scenarios).toHaveLength(1);
-    expect(scenarios).toHaveLength(2);
+    expect(scenarios).toHaveLength(3);
+    expect(scenarios[0].attacks[0].minSurvivalProbabilityPercent).toBe(90);
     expect(scenarios[1]).toMatchObject({
       id: "scenario-offense",
       label: "シナリオ2",
       adjustmentType: "offense",
     });
+    expect(scenarios[1].attacks[0].targetKoProbabilityPercent).toBe(80);
     expect(createOffenseAdjustmentFormFromScenarioAttack(scenarios[1].attacks[0])).toMatchObject({
       defenderPokemonInput: "メガゲンガー",
       defenderNatureInput: "おくびょう",
       defenderStatPoints: { hp: 32, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
       moveInput: "サイコキネシス",
+      targetKoProbabilityPercent: 80,
+    });
+    expect(scenarios[2]).toMatchObject({
+      id: "scenario-speed",
+      label: "シナリオ3",
+      adjustmentType: "speed",
+    });
+    expect(scenarios[2].attacks[0]).toMatchObject({
+      attackerPokemonInput: "メガゲンガー",
+      attackerNatureInput: "おくびょう",
+      attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 32 },
+      speedComparison: "outspeed",
+    });
+    expect(buildSpeedAdjustmentInput(target, scenarios[2].attacks[0])).toMatchObject({
+      opponentLabel: "メガゲンガー",
+      comparison: "outspeed",
     });
   });
 
@@ -676,6 +731,96 @@ describe("buildOffenseAdjustmentInput", () => {
   });
 });
 
+describe("buildSpeedAdjustmentInput", () => {
+  it("converts a speed scenario attack into canonical speed adjustment input", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 8 },
+      boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 1 },
+    };
+    const attack = {
+      ...scenario.attacks[0],
+      attackerPokemonInput: "ピカチュウ",
+      attackerNatureInput: "おくびょう",
+      attackerAbilityInput: "すいすい",
+      attackerItemInput: "こだわりスカーフ",
+      attackerStatus: "par" as const,
+      attackerStatPoints: { ...scenario.attacks[0].attackerStatPoints, spe: 12 },
+      attackerBoosts: { ...scenario.attacks[0].attackerBoosts, spe: 2 },
+      weather: "rain" as const,
+      speedComparison: "tie" as const,
+      speedItemMultiplier: "1.5" as const,
+      speedAbilityMultiplier: "2" as const,
+      tailwind: true,
+    };
+
+    const input = buildSpeedAdjustmentInput(target, attack);
+
+    expect(input.targetBuild.pokemon.canonicalName).toBe("Delphox-Mega");
+    expect(input.targetBuild.statPoints?.spe).toBe(8);
+    expect(input.targetBoosts.spe).toBe(1);
+    expect(input.opponentBuild?.pokemon.canonicalName).toBe("Pikachu");
+    expect(input.opponentBuild?.nature?.canonicalName).toBe("Timid");
+    expect(input.opponentBuild?.ability?.canonicalName).toBe("Swift Swim");
+    expect(input.opponentBuild?.item?.canonicalName).toBe("Choice Scarf");
+    expect(input.opponentBuild?.status).toBe("par");
+    expect(input.opponentBuild?.statPoints?.spe).toBe(12);
+    expect(input.opponentBoosts.spe).toBe(2);
+    expect(input.field.weather).toBe("rain");
+    expect(input.opponentSide.tailwind).toBe(true);
+    expect(input.comparison).toBe("tie");
+    expect(input.opponentItemMultiplier).toBe("1.5");
+    expect(input.opponentAbilityMultiplier).toBe("2");
+  });
+
+  it("uses direct target speed without requiring an opponent build", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const input = buildSpeedAdjustmentInput(createDefaultTargetForm(), {
+      ...scenario.attacks[0],
+      attackerPokemonInput: "",
+      speedTargetValue: 220,
+    });
+
+    expect(input.opponentBuild).toBeUndefined();
+    expect(input.manualTargetSpeed).toBe(220);
+    expect(calculateSpeedAdjustmentFromUi(createDefaultTargetForm(), {
+      ...scenario.attacks[0],
+      attackerPokemonInput: "",
+      speedTargetValue: 220,
+    }).targetSpeed).toBe(220);
+  });
+
+  it("calculates speed results only from enabled speed scenarios", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarios = [
+      { ...defaultScenario, id: "scenario-defence", adjustmentType: "defence" as const },
+      {
+        ...defaultScenario,
+        id: "scenario-speed",
+        label: "S調整A",
+        adjustmentType: "speed" as const,
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          attackerPokemonInput: "",
+          speedTargetValue: 120,
+        })),
+      },
+    ];
+
+    const results = calculateSpeedAdjustmentsFromScenarios(createDefaultTargetForm(), scenarios);
+    const rankingResults = calculateSpeedAdjustmentsForCandidateRanking(createDefaultTargetForm(), scenarios);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      scenarioId: "scenario-speed",
+      scenarioLabel: "S調整A",
+      attackLabel: "S調整A",
+    });
+    expect(rankingResults).toHaveLength(1);
+  });
+});
+
 describe("resolveIntegratedOffenseRequirements", () => {
   it("chooses the cheapest A/C line per attack and folds B/H lines into H/B/D minimums", () => {
     const target = {
@@ -778,6 +923,76 @@ describe("resolveIntegratedOffenseRequirements", () => {
     expect(input.build.statPoints?.hp).toBe(0);
     expect(input.build.statPoints?.def).toBe(0);
     expect(input.minimumStatPoints?.def).toBeGreaterThanOrEqual(0);
+    expect(input.scenarios).toHaveLength(1);
+  });
+});
+
+describe("resolveIntegratedSpeedRequirements", () => {
+  it("folds passing speed lines into fixed S requirements", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 4 },
+    };
+    const requirements = resolveIntegratedSpeedRequirements(target, [
+      makeSpeedResult("speed-a", { requiredStatPoints: 18 }),
+      makeSpeedResult("speed-b", { requiredStatPoints: 12 }),
+    ]);
+
+    expect(requirements.fixedStatPoints.spe).toBe(18);
+    expect(requirements.selectedResults.map((entry) => entry.attackId)).toEqual(["speed-a", "speed-b"]);
+    expect(requirements.blockingReasons).toEqual([]);
+  });
+
+  it("reports blocking speed lines that cannot be satisfied", () => {
+    const requirements = resolveIntegratedSpeedRequirements(createDefaultTargetForm(), [
+      makeSpeedResult("failed-speed", {
+        status: "fail",
+        passed: false,
+        canApply: false,
+        requiredStatPoints: 32,
+        relation: "miss",
+        reason: "最大 32 SPでも確定抜きに届きません",
+      }),
+    ]);
+
+    expect(requirements.blockingReasons[0]).toContain("最大 32 SPでも確定抜きに届きません");
+  });
+
+  it("applies integrated S requirements without mutating H/B/D form values", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      statPoints: { hp: 10, atk: 4, def: 11, spa: 0, spd: 12, spe: 8 },
+    };
+    const applied = applyIntegratedSpeedRequirementsToTargetForm(target, {
+      fixedStatPoints: { spe: 18 },
+      selectedResults: [],
+      blockingReasons: [],
+    });
+
+    expect(applied.statPoints).toEqual({ hp: 10, atk: 4, def: 11, spa: 0, spd: 12, spe: 18 });
+  });
+
+  it("builds an integrated search input with speed S fixed", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const target = createDefaultTargetForm();
+    const scenarios = [
+      defaultScenario,
+      {
+        ...defaultScenario,
+        id: "scenario-speed",
+        label: "S調整",
+        adjustmentType: "speed" as const,
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          attackerPokemonInput: "",
+          speedTargetValue: 120,
+        })),
+      },
+    ];
+
+    const input = buildIntegratedDefenceSearchInput(target, scenarios);
+
+    expect(input.build.statPoints?.spe).toBeGreaterThanOrEqual(0);
     expect(input.scenarios).toHaveLength(1);
   });
 });
@@ -961,6 +1176,52 @@ describe("applyOffenseAdjustmentToTarget", () => {
       targetKoProbability: 1,
       damageRange: null,
       reason: "Bライン 24 SPでKO条件を満たします",
+    });
+
+    expect(applied).toBe(target);
+  });
+});
+
+describe("applySpeedAdjustmentToTarget", () => {
+  it("applies only passing speed lines to target fixed S", () => {
+    const target = createDefaultTargetForm();
+    const applied = applySpeedAdjustmentToTarget(target, {
+      id: "speed-line",
+      status: "pass",
+      passed: true,
+      canApply: true,
+      label: "Sライン",
+      comparison: "outspeed",
+      relation: "outspeed",
+      requiredStatPoints: 24,
+      actualSpeed: 180,
+      targetSpeed: 179,
+      requiredSpeed: 180,
+      targetStatPoints: 0,
+      notes: ["自動補正なし"],
+      reason: "Sライン 24 SPで達成します",
+    });
+
+    expect(applied.statPoints).toMatchObject({ hp: 0, def: 0, spd: 0, spe: 24 });
+  });
+
+  it("does not apply failed speed lines", () => {
+    const target = createDefaultTargetForm();
+    const applied = applySpeedAdjustmentToTarget(target, {
+      id: "speed-line",
+      status: "fail",
+      passed: false,
+      canApply: false,
+      label: "Sライン",
+      comparison: "outspeed",
+      relation: "miss",
+      requiredStatPoints: 32,
+      actualSpeed: 120,
+      targetSpeed: 200,
+      requiredSpeed: 201,
+      targetStatPoints: 0,
+      notes: [],
+      reason: "最大SPでも届きません",
     });
 
     expect(applied).toBe(target);

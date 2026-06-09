@@ -29,10 +29,12 @@ import {
 } from "./localization/resolver";
 import {
   applyCandidateToTarget,
+  applySpeedAdjustmentToTarget,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
   buildTargetBuildFromUi,
   calculateOffenseAdjustmentsForCandidateRanking,
+  calculateSpeedAdjustmentsForCandidateRanking,
   createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
   createDefaultScenarioForms,
@@ -45,8 +47,10 @@ import {
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
   type ScenarioFormState,
+  type SpeedScenarioResult,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import type { SpeedAdjustmentResult, SpeedManualMultiplier } from "./search/speedAdjustment";
 import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import {
@@ -182,6 +186,18 @@ const terrainOptions: Array<{ value: Terrain; label: string }> = [
   { value: "grassy", label: "グラス" },
   { value: "misty", label: "ミスト" },
   { value: "psychic", label: "サイコ" },
+];
+
+const speedComparisonOptions = [
+  { value: "outspeed", label: "確定抜き" },
+  { value: "tie", label: "同速以上" },
+] as const;
+
+const speedMultiplierOptions: Array<{ value: SpeedManualMultiplier; label: string }> = [
+  { value: "auto", label: "—" },
+  { value: "2", label: "2倍" },
+  { value: "1.5", label: "1.5倍" },
+  { value: "0.5", label: "0.5倍" },
 ];
 
 const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | undefined => {
@@ -424,6 +440,11 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   auroraVeil: false,
   helpingHand: false,
   friendGuard: false,
+  speedComparison: "outspeed",
+  speedTargetValue: 0,
+  speedItemMultiplier: "auto",
+  speedAbilityMultiplier: "auto",
+  tailwind: false,
 });
 
 const createBlankScenario = (index: number): ScenarioFormState => ({
@@ -446,6 +467,7 @@ export function App() {
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [appliedCandidateId, setAppliedCandidateId] = useState<string | null>(null);
+  const [appliedSpeedResultId, setAppliedSpeedResultId] = useState<string | null>(null);
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [shareOpen, setShareOpen] = useState(false);
@@ -478,6 +500,10 @@ export function App() {
 
   const offenseResults = useMemo(
     () => calculateOffenseAdjustmentsForCandidateRanking(targetForm, scenarioForms),
+    [targetForm, scenarioForms],
+  );
+  const speedResults = useMemo(
+    () => calculateSpeedAdjustmentsForCandidateRanking(targetForm, scenarioForms),
     [targetForm, scenarioForms],
   );
 
@@ -727,6 +753,15 @@ export function App() {
     applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
   };
 
+  const handleApplySpeedAdjustment = (entry: SpeedScenarioResult) => {
+    setTargetForm((current) => applySpeedAdjustmentToTarget(current, entry.result));
+    setAppliedSpeedResultId(entry.id);
+    if (applyTimerRef.current !== null) {
+      window.clearTimeout(applyTimerRef.current);
+    }
+    applyTimerRef.current = window.setTimeout(() => setAppliedSpeedResultId(null), 1200);
+  };
+
   return (
     <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
       <header className="topbar">
@@ -846,10 +881,13 @@ export function App() {
           scenarios={scenarioForms}
           status={searchState.status}
           offenseResults={offenseResults}
+          speedResults={speedResults}
+          appliedSpeedResultId={appliedSpeedResultId}
           targetLabel={targetBuildPreview?.pokemon.displayNameJa ?? targetForm.pokemonInput}
           resultAlertMessage={resultAlertMessage}
           onSelectCandidate={handleSelectCandidate}
           onApplyCandidate={handleApplyCandidate}
+          onApplySpeedAdjustment={handleApplySpeedAdjustment}
         />
       </main>
       <footer className="app-footer" aria-label="権利表記">
@@ -1881,6 +1919,7 @@ type ScenarioRowProps = {
 const scenarioAdjustmentTypeOptions: Array<{ value: ScenarioAdjustmentType; label: string }> = [
   { value: "defence", label: "耐久調整" },
   { value: "offense", label: "火力調整" },
+  { value: "speed", label: "S調整" },
 ];
 
 type ScenarioAdjustmentTypeCardsProps = {
@@ -1909,6 +1948,21 @@ function ScenarioAdjustmentTypeCards({ scenario, onChange }: ScenarioAdjustmentT
     </div>
   );
 }
+
+const nextScenarioAdjustmentType = (value: ScenarioAdjustmentType): ScenarioAdjustmentType => {
+  switch (value) {
+    case "defence":
+      return "offense";
+    case "offense":
+      return "speed";
+    case "speed":
+    default:
+      return "defence";
+  }
+};
+
+const getScenarioAdjustmentTypeLabel = (value: ScenarioAdjustmentType): string =>
+  scenarioAdjustmentTypeOptions.find((option) => option.value === value)?.label ?? value;
 
 function ScenarioRow({
   scenario,
@@ -1983,7 +2037,7 @@ function ScenarioRow({
             onToggleAdjustmentType={() => onUpdateScenario(
               scenario.id,
               "adjustmentType",
-              scenario.adjustmentType === "defence" ? "offense" : "defence",
+              nextScenarioAdjustmentType(scenario.adjustmentType),
             )}
             onUpdateAttack={onUpdateAttack}
             onUpdateAttackerEv={onUpdateAttackerEv}
@@ -2042,11 +2096,13 @@ function AttackCard({
     event: ChangeEvent<HTMLInputElement>,
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const isOffenseAdjustment = adjustmentType === "offense";
+  const isSpeedAdjustment = adjustmentType === "speed";
   const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
-  const adjustmentDirection = isOffenseAdjustment ? "right" : "left";
-  const nextAdjustmentLabel = isOffenseAdjustment ? "耐久調整" : "火力調整";
+  const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
+  const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(adjustmentType));
+  const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(adjustmentType);
   const isAbilitySupport = Boolean(
-    !isOffenseAdjustment && !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
+    !isOffenseAdjustment && !isSpeedAdjustment && !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
   );
   const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
   const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
@@ -2079,12 +2135,12 @@ function AttackCard({
         <button
           className={`attack-direction-button ${adjustmentDirection}`}
           type="button"
-          aria-label={`${attackLabel} ${isOffenseAdjustment ? "攻撃を与える側" : "攻撃を受ける側"}。クリックで${nextAdjustmentLabel}に切り替え`}
-          title={`${isOffenseAdjustment ? "攻撃を与える側" : "攻撃を受ける側"} / ${nextAdjustmentLabel}に切り替え`}
+          aria-label={`${attackLabel} ${currentAdjustmentLabel}。クリックで${nextAdjustmentLabel}に切り替え`}
+          title={`${currentAdjustmentLabel} / ${nextAdjustmentLabel}に切り替え`}
           onClick={onToggleAdjustmentType}
         >
           <img
-            src={getAssetSrc(isOffenseAdjustment
+            src={getAssetSrc(isOffenseAdjustment || isSpeedAdjustment
               ? "assets/ui/arrow-right-circle.svg"
               : "assets/ui/arrow-left-circle.svg")}
             alt=""
@@ -2119,20 +2175,22 @@ function AttackCard({
       <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
         <ScenarioTextField
           kind="pokemon"
-          label={isOffenseAdjustment ? "仮想敵" : "ポケモン"}
+          label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
           showLabel
           value={attack.attackerPokemonInput}
           onChange={onInput("attackerPokemonInput")}
           onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
         />
-        <ScenarioTextField
-          kind="move"
-          label="技"
-          showLabel
-          value={attack.moveInput}
-          onChange={onInput("moveInput")}
-          onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
-        />
+        {!isSpeedAdjustment ? (
+          <ScenarioTextField
+            kind="move"
+            label="技"
+            showLabel
+            value={attack.moveInput}
+            onChange={onInput("moveInput")}
+            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
+          />
+        ) : null}
         {!isAbilitySupport ? (
           <NatureMatrixField
             className="scenario-cell"
@@ -2198,6 +2256,121 @@ function AttackCard({
               : "同じ行の攻撃ルールをダブルにすると、この特性が反映されます"}
           </span>
         </div>
+      ) : isSpeedAdjustment ? (
+        <>
+          <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-speed-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-speed-title`}>S条件</h3>
+            <div className="speed-condition-grid attack-setting-section-body">
+              <SelectField
+                label="判定"
+                value={attack.speedComparison}
+                options={[...speedComparisonOptions]}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedComparison", value)}
+              />
+              <ScenarioNumberField
+                label="目標S"
+                showLabel
+                value={attack.speedTargetValue}
+                min={0}
+                max={10000}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetValue", value)}
+              />
+            </div>
+          </section>
+
+          <section
+            className="attack-setting-section attack-setting-section--indented"
+            aria-labelledby={`${scenarioId}-${attack.id}-speed-environment-title`}
+          >
+            <h3 id={`${scenarioId}-${attack.id}-speed-environment-title`}>相手S条件</h3>
+            <div className="attack-field-grid speed-field-grid attack-setting-section-body">
+              <SelectField
+                label="状態"
+                value={attack.attackerStatus}
+                options={statusOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
+              />
+              <SelectField
+                label="天候"
+                value={attack.weather}
+                options={weatherOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
+              />
+              <SelectField
+                label="フィールド"
+                value={attack.terrain}
+                options={terrainOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
+              />
+              <SelectField
+                label="道具倍率"
+                value={attack.speedItemMultiplier}
+                options={speedMultiplierOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
+              />
+              <SelectField
+                label="特性倍率"
+                value={attack.speedAbilityMultiplier}
+                options={speedMultiplierOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
+              />
+              <label className="scenario-cell speed-tailwind-toggle">
+                <input
+                  type="checkbox"
+                  checked={attack.tailwind}
+                  onChange={(event) => onUpdateAttack(scenarioId, attack.id, "tailwind", event.target.checked)}
+                />
+                <span>おいかぜ</span>
+              </label>
+            </div>
+
+            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 相手S能力`}>
+              <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
+                <div className="ev-header attacker-stat-header">
+                  <span>能力</span>
+                  <span>実数値</span>
+                  <span>SP</span>
+                  <span>ランク</span>
+                </div>
+                <div className="ev-row attacker-stat-row spe">
+                  <strong>
+                    <StatIcon stat="spe" />
+                    <span>相手</span>
+                  </strong>
+                  <span className="actual-stat-with-modifier">
+                    <NatureStatModifier natureLabel={attack.attackerNatureInput} stat="spe" />
+                    <span className="actual-stat">{actualStats?.spe ?? "-"}</span>
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="252"
+                    step="1"
+                    value={attack.attackerStatPoints.spe}
+                    aria-label={`${attackLabel} 相手S SP`}
+                    placeholder="S SP"
+                    title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+                    onFocus={selectInputValueOnFocus}
+                    onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, "spe", toStatPointInput(event.target.value))}
+                  />
+                  <SelectField
+                    compact
+                    placeholderLabel
+                    placeholderValue=""
+                    className="target-rank-field"
+                    label={`${attackLabel} 相手Sランク`}
+                    value={String(attack.attackerBoosts.spe ?? 0)}
+                    options={rankSelectOptions}
+                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+                      ...attack.attackerBoosts,
+                      spe: toNumber(value, 0),
+                    })}
+                  />
+                </div>
+              </div>
+            </section>
+          </section>
+        </>
       ) : isOffenseAdjustment ? (
         <>
           <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-ko-title`}>
@@ -2626,10 +2799,13 @@ type ResultsPanelProps = {
   scenarios: ScenarioFormState[];
   status: string;
   offenseResults: OffenseScenarioResult[];
+  speedResults: SpeedScenarioResult[];
+  appliedSpeedResultId: string | null;
   targetLabel: string;
   resultAlertMessage: string | null;
   onSelectCandidate: (id: string) => void;
   onApplyCandidate: (candidate: CandidateResult) => void;
+  onApplySpeedAdjustment: (entry: SpeedScenarioResult) => void;
 };
 
 const getOffenseResultTone = (result: OffenseScenarioResult["result"]): "green" | "red" | "blue" | "purple" => {
@@ -2643,8 +2819,12 @@ const getOffenseResultTone = (result: OffenseScenarioResult["result"]): "green" 
 };
 
 const formatResultAlertStrictestCondition = (message: string): string => {
-  const integrationPrefix = "火力調整条件を候補一覧へ統合できません: ";
-  return message.startsWith(integrationPrefix) ? message.slice(integrationPrefix.length) : message;
+  const integrationPrefixes = [
+    "火力調整条件を候補一覧へ統合できません: ",
+    "S調整条件を候補一覧へ統合できません: ",
+  ];
+  const matchedPrefix = integrationPrefixes.find((prefix) => message.startsWith(prefix));
+  return matchedPrefix ? message.slice(matchedPrefix.length) : message;
 };
 
 const formatOffenseCandidateDetail = (
@@ -2667,6 +2847,47 @@ const formatOffenseCandidateDetail = (
   return `${sourceLabel} → ${defenderLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
 };
 
+const getSpeedResultTone = (result: SpeedAdjustmentResult): "green" | "red" | "blue" | "purple" => {
+  if (result.status === "unresolved" || result.status === "invalid") {
+    return "purple";
+  }
+  if (result.status === "tie") {
+    return "blue";
+  }
+  return result.passed ? "green" : "red";
+};
+
+const formatSpeedRelationLabel = (relation: SpeedAdjustmentResult["relation"]): string => {
+  switch (relation) {
+    case "outspeed":
+      return "抜ける";
+    case "tie":
+      return "同速";
+    case "miss":
+    default:
+      return "届かない";
+  }
+};
+
+const formatSpeedResultDetail = (
+  entry: SpeedScenarioResult,
+  targetLabel: string,
+  scenario: ScenarioFormState | undefined,
+): string => {
+  const attack = scenario?.attacks.find((currentAttack) => currentAttack.id === entry.attackId);
+  const opponentLabel = attack?.speedTargetValue && attack.speedTargetValue > 0
+    ? `目標S${attack.speedTargetValue}`
+    : attack?.attackerPokemonInput.trim() || entry.attackLabel;
+  const requiredStatPointLabel = entry.result.requiredStatPoints === null
+    ? "S-"
+    : `S${entry.result.requiredStatPoints}`;
+  const actualSpeedLabel = entry.result.actualSpeed === null ? "-" : String(entry.result.actualSpeed);
+  const noteLabel = entry.result.notes.length > 0 ? ` / ${entry.result.notes.join(" / ")}` : "";
+
+  return `${requiredStatPointLabel} ${targetLabel.trim() || "調整対象"} → ${opponentLabel} : `
+    + `自分 ${actualSpeedLabel} / 相手 ${entry.result.targetSpeed} / ${formatSpeedRelationLabel(entry.result.relation)}${noteLabel}`;
+};
+
 export function ResultsPanel({
   candidates,
   selectedCandidateId,
@@ -2674,10 +2895,13 @@ export function ResultsPanel({
   scenarios,
   status,
   offenseResults,
+  speedResults,
+  appliedSpeedResultId,
   targetLabel,
   resultAlertMessage,
   onSelectCandidate,
   onApplyCandidate,
+  onApplySpeedAdjustment,
 }: ResultsPanelProps) {
   const scenarioLabels = useMemo(
     () => new Map(scenarios.map((scenario) => [scenario.id, scenario.label])),
@@ -2696,6 +2920,41 @@ export function ResultsPanel({
           <span>{status === "running" ? "探索中" : `候補 ${candidates.length} 件`}</span>
         </div>
       </div>
+
+      {speedResults.length > 0 ? (
+        <div className="speed-result-list" aria-label="Sライン結果">
+          <div className="speed-result-heading">
+            <strong>Sライン結果</strong>
+            <span>候補一覧の固定Sへ自動統合されます</span>
+          </div>
+          {speedResults.map((entry) => (
+            <div className="speed-result-row" key={entry.id}>
+              <StatusBadge tone={getSpeedResultTone(entry.result)} />
+              <strong>{entry.scenarioLabel}</strong>
+              <span className="speed-result-source">{entry.attackLabel}</span>
+              <span>{entry.result.label}</span>
+              <span>
+                必要 {entry.result.requiredStatPoints === null ? "-" : `S${entry.result.requiredStatPoints}`}
+              </span>
+              <span>自分 {entry.result.actualSpeed ?? "-"}</span>
+              <span>相手 {entry.result.targetSpeed || "-"}</span>
+              <em className={entry.result.passed ? "" : "fail-badge"}>
+                {formatSpeedRelationLabel(entry.result.relation)}
+              </em>
+              <Button
+                variant="primary"
+                size="small"
+                className="speed-result-apply-button"
+                disabled={!entry.result.canApply}
+                onClick={() => onApplySpeedAdjustment(entry)}
+              >
+                {appliedSpeedResultId === entry.id ? "適用済み" : "S適用"}
+              </Button>
+              <small>{entry.result.reason} / {entry.result.notes.join(" / ")}</small>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
@@ -2804,6 +3063,29 @@ export function ResultsPanel({
                             <strong>{scenarioLabel}</strong>
                             <span>
                               {formatOffenseCandidateDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
+                            </span>
+                          </li>
+                        </ul>
+                      </section>
+                    );
+                  })}
+                  {speedResults.map((entry) => {
+                    const scenarioLabel = scenarioLabels.get(entry.scenarioId) ?? entry.scenarioLabel;
+                    return (
+                      <section className="candidate-scenario-detail" key={entry.id}>
+                        <div className="candidate-scenario-status">
+                          <StatusBadge tone={getSpeedResultTone(entry.result)} />
+                          <strong>{scenarioLabel}</strong>
+                          <span>相手S {entry.result.targetSpeed || "-"}</span>
+                          <em className={entry.result.passed ? "" : "fail-badge"}>
+                            {formatSpeedRelationLabel(entry.result.relation)}
+                          </em>
+                        </div>
+                        <ul>
+                          <li>
+                            <strong>{scenarioLabel}</strong>
+                            <span>
+                              {formatSpeedResultDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
                             </span>
                           </li>
                         </ul>

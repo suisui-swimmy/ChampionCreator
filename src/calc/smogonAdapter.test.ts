@@ -1,10 +1,17 @@
 import { calculate, Field, Generations, Move, Pokemon, Side } from "@smogon/calc";
+import { getFinalSpeed } from "@smogon/calc/dist/mechanics/util";
 import { describe, expect, it } from "vitest";
 import type { EntityKind } from "../data/localizationTypes";
 import type { Build, EntityRef, FieldState, ScenarioHit, SideState, StatTable } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
-import { calculateSmogonHit, flattenDamageRolls, toSmogonField, toSmogonPokemon } from "./smogonAdapter";
+import {
+  calculateSmogonFinalSpeed,
+  calculateSmogonHit,
+  flattenDamageRolls,
+  toSmogonField,
+  toSmogonPokemon,
+} from "./smogonAdapter";
 
 const gen = Generations.get(9);
 
@@ -386,5 +393,72 @@ describe("calculateSmogonHit", () => {
 
     expect(dynamaxedAttacker.isDynamaxed).toBe(true);
     expect(dynamaxedAttacker.maxHP()).toBe(normalAttacker.maxHP() * 2);
+  });
+
+  it("matches @smogon/calc final speed for item, ability, rank, status, and Tailwind modifiers", () => {
+    const speedBuild = {
+      ...attacker,
+      pokemon: mustResolve("pokemon", "ピカチュウ"),
+      nature: mustResolve("nature", "おくびょう"),
+      ability: mustResolve("ability", "すいすい"),
+      item: mustResolve("item", "こだわりスカーフ"),
+      status: "par" as const,
+      evs: { ...zeroEvs, spe: 252 },
+    };
+    const sideState = { ...emptySide, tailwind: true };
+    const field = { gameType: "singles", weather: "rain", terrain: "none" } as const;
+    const adapterSpeed = calculateSmogonFinalSpeed(
+      speedBuild,
+      field,
+      sideState,
+      { boosts: { spe: 1 } },
+    );
+    const directSide = new Side({ isTailwind: true });
+    const directPokemon = new Pokemon(gen, "Pikachu", {
+      level: 100,
+      nature: "Timid",
+      ivs: defaultIvs,
+      evs: { ...zeroEvs, spe: 252 },
+      ability: "Swift Swim",
+      item: "Choice Scarf",
+      status: "par",
+      boosts: { spe: 1 },
+    });
+    const directField = new Field({
+      gameType: "Singles",
+      weather: "Rain",
+      terrain: undefined,
+      attackerSide: directSide,
+    });
+
+    expect(adapterSpeed).toBe(getFinalSpeed(gen, directPokemon, directField, directSide));
+  });
+
+  it("lets manual speed multipliers replace the selected item or ability category", () => {
+    const speedBuild = {
+      ...attacker,
+      pokemon: mustResolve("pokemon", "ピカチュウ"),
+      nature: mustResolve("nature", "おくびょう"),
+      ability: mustResolve("ability", "ようりょくそ"),
+      item: mustResolve("item", "こだわりスカーフ"),
+      evs: { ...zeroEvs, spe: 252 },
+    };
+    const field = { gameType: "singles", weather: "sun", terrain: "none" } as const;
+    const autoSpeed = calculateSmogonFinalSpeed(speedBuild, field, emptySide);
+    const manualItemSpeed = calculateSmogonFinalSpeed(
+      speedBuild,
+      field,
+      emptySide,
+      { manualItemMultiplier: 0.5 },
+    );
+    const manualAbilitySpeed = calculateSmogonFinalSpeed(
+      speedBuild,
+      field,
+      emptySide,
+      { manualAbilityMultiplier: 0.5 },
+    );
+
+    expect(manualItemSpeed).toBeLessThan(autoSpeed);
+    expect(manualAbilitySpeed).toBeLessThan(autoSpeed);
   });
 });
