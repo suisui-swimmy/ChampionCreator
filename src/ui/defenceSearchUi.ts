@@ -273,8 +273,8 @@ const resolveOptional = <K extends EntityKind>(
 };
 
 export const createDefaultTargetForm = (): TargetFormState => ({
-  pokemonInput: "メガスターミー",
-  natureInput: "ひかえめ",
+  pokemonInput: "メガマフォクシー",
+  natureInput: "おくびょう",
   abilityInput: "",
   itemInput: "",
   teraTypeInput: "",
@@ -290,7 +290,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   label,
   attackerPokemonInput: "ドドゲザン",
   attackerNatureInput: "いじっぱり",
-  attackerAbilityInput: "まけんき",
+  attackerAbilityInput: "",
   attackerItemInput: "",
   attackerTeraTypeInput: "",
   attackerTeraEnabled: false,
@@ -335,11 +335,25 @@ export const formatScenarioAttackLabel = (
 
 export const createDefaultScenarioForms = (): ScenarioFormState[] => [
   {
-    id: "scenario-special",
+    id: "scenario-defence",
     label: "シナリオ1",
     enabled: true,
     adjustmentType: "defence",
     attacks: [createDefaultScenarioAttackForm()],
+  },
+  {
+    id: "scenario-offense",
+    label: "シナリオ2",
+    enabled: true,
+    adjustmentType: "offense",
+    attacks: [{
+      ...createDefaultScenarioAttackForm(),
+      attackerPokemonInput: "メガゲンガー",
+      attackerNatureInput: "おくびょう",
+      attackerAbilityInput: "",
+      attackerStatPoints: { ...zeroStatPoints, hp: 32 },
+      moveInput: "サイコキネシス",
+    }],
   },
 ];
 

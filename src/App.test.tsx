@@ -43,16 +43,20 @@ describe("App", () => {
     expect(html).toContain("調整対象");
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain('aria-label="シナリオ1 調整種別"');
+    expect(html).toContain('aria-label="シナリオ2 調整種別"');
     expect(html).toContain('class="scenario-row defence"');
+    expect(html).toContain('class="scenario-row offense"');
     expect(html).toContain(">耐久調整</span>");
     expect(html).toContain(">火力調整</span>");
     expect(html).toContain('value="耐久調整A"');
+    expect(html).toContain('value="火力調整A"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
     expect(html).toContain('role="progressbar"');
     expect(html).toContain(">キャンセル<");
     expect(html).toContain(">計算開始<");
     expect(html).toContain("候補一覧");
+    expect(html).not.toContain("火力ライン結果");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
   });
@@ -82,7 +86,7 @@ describe("App", () => {
     expect(html).toContain(">状況条件<");
     expect(html).toContain('aria-label="耐久調整A 能力"');
     expect(html.indexOf(">状況条件<")).toBeLessThan(html.indexOf('class="attack-stat-section'));
-    expect(html).not.toContain('id="scenario-special-attack-a-stat-title">能力</h3>');
+    expect(html).not.toContain('id="scenario-defence-attack-a-stat-title">能力</h3>');
     expect(html).toContain(">調整対象条件<");
     expect(html).toContain(">耐久回数<");
     expect(html).toContain(">耐久確立<");
@@ -111,12 +115,14 @@ describe("App", () => {
     expect(getNatureModifierDirection("ひかえめ", "atk")).toBe("down");
     expect(getNatureModifierDirection("いじっぱり", "atk")).toBe("up");
     expect(getNatureModifierDirection("いじっぱり", "spa")).toBe("down");
+    expect(getNatureModifierDirection("おくびょう", "spe")).toBe("up");
+    expect(getNatureModifierDirection("おくびょう", "atk")).toBe("down");
     expect(getNatureModifierDirection("ひかえめ", "hp")).toBeNull();
     expect(getNatureModifierDirection("がんばりや", "atk")).toBeNull();
 
     const html = renderToStaticMarkup(<App />);
 
-    expect(html).toContain('class="nature-stat-modifier up" aria-label="C 上昇"');
+    expect(html).toContain('class="nature-stat-modifier up" aria-label="S 上昇"');
     expect(html).toContain('class="nature-stat-modifier down" aria-label="A 下降"');
     expect(html).toContain('class="nature-stat-modifier up" aria-label="A 上昇"');
     expect(html).not.toContain('class="nature-stat-modifier down" aria-label="C 下降"');
@@ -205,9 +211,45 @@ describe("App", () => {
       }],
     };
     const [scenario] = createDefaultScenarioForms();
+    const offenseScenario = {
+      ...scenario,
+      id: "scenario-offense-test",
+      label: "シナリオ2",
+      adjustmentType: "offense" as const,
+      attacks: [{
+        ...scenario.attacks[0],
+        id: "attack-offense-test",
+        label: "火力調整A",
+        attackerPokemonInput: "メガゲンガー",
+      }],
+    };
+    const offenseResults = [{
+      id: "scenario-offense-test:attack-offense-test:spa",
+      scenarioId: "scenario-offense-test",
+      scenarioLabel: "シナリオ2",
+      attackId: "attack-offense-test",
+      attackLabel: "火力調整A",
+      result: {
+        id: "offense-result-test",
+        status: "pass" as const,
+        passed: true,
+        label: "Cライン",
+        owner: "attacker" as const,
+        stat: "spa" as const,
+        role: "damage" as const,
+        canApply: false,
+        requiredStatPoints: 7,
+        actualStat: 186,
+        koProbability: 1,
+        targetKoProbability: 1,
+        damageRange: { min: 168, max: 198, percentMin: 100.6, percentMax: 118.6 },
+        reason: "PASS",
+      },
+    }];
     const resultsPanelBaseProps = {
-      offenseResults: [],
-      onApplyOffenseResult: () => undefined,
+      offenseResults,
+      targetLabel: "メガマフォクシー",
+      resultAlertMessage: null,
     };
     const closedHtml = renderToStaticMarkup(
       <ResultsPanel
@@ -215,7 +257,7 @@ describe("App", () => {
         candidates={[candidate]}
         selectedCandidateId={null}
         appliedCandidateId={null}
-        scenarios={[{ ...scenario, id: "scenario-a", label: "シナリオA" }]}
+        scenarios={[{ ...scenario, id: "scenario-a", label: "シナリオA" }, offenseScenario]}
         status="complete"
         onSelectCandidate={() => undefined}
         onApplyCandidate={() => undefined}
@@ -227,7 +269,7 @@ describe("App", () => {
         candidates={[candidate]}
         selectedCandidateId={candidate.id}
         appliedCandidateId={null}
-        scenarios={[{ ...scenario, id: "scenario-a", label: "シナリオA" }]}
+        scenarios={[{ ...scenario, id: "scenario-a", label: "シナリオA" }, offenseScenario]}
         status="complete"
         onSelectCandidate={() => undefined}
         onApplyCandidate={() => undefined}
@@ -246,30 +288,62 @@ describe("App", () => {
     expect(html).not.toContain("▼");
     expect(html).not.toContain("▲");
     expect(html).toContain("シナリオA</strong><span>A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
+    expect(html).toContain("シナリオ2</strong><span>メガマフォクシー → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
+    expect(html).not.toContain("火力ライン結果");
     expect(closedHtml).toContain('aria-expanded="false"');
     expect(closedHtml).toContain('data-state="closed"');
     expect(closedHtml).not.toContain("▼");
     expect(closedHtml).not.toContain("▲");
     expect(closedHtml).not.toContain("A252+ ドドゲザン ふいうち");
+    expect(closedHtml).not.toContain("メガマフォクシー → メガゲンガー");
+  });
+
+  it("places integrated firepower failures in the candidate list", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[]}
+        selectedCandidateId={null}
+        appliedCandidateId={null}
+        scenarios={[scenario]}
+        status="idle"
+        offenseResults={[]}
+        targetLabel="メガマフォクシー"
+        resultAlertMessage="火力調整条件を候補一覧へ統合できません: シナリオ2 / 火力調整A: 最大SPでも指定KO率に届きません"
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("候補一覧");
+    expect(html).toContain("すべてのシナリオを満たす候補を作れません");
+    expect(html).toContain("最厳条件: シナリオ2 / 火力調整A: 最大SPでも指定KO率に届きません");
+    expect(html).not.toContain("火力ライン結果");
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {
     const html = renderToStaticMarkup(<App />);
 
     expect(html).toContain('value="ドドゲザン"');
-    expect(html).toContain('value="メガスターミー"');
+    expect(html).toContain('value="メガマフォクシー"');
+    expect(html).toContain('value="メガゲンガー"');
+    expect(html).toContain('value="サイコキネシス"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵H SP" placeholder="H SP"');
+    expect(html).toContain('value="32"');
     expect(html).not.toContain('value="Dragonite"');
     expect(html).not.toContain('label="Dragonite"');
-    expect(html).not.toContain("calc: Starmie-Mega");
+    expect(html).not.toContain("calc: Delphox-Mega");
     expect(html).not.toContain("名前を解決できません");
-    expect(html).not.toContain(">Starmie-Mega<");
+    expect(html).not.toContain(">Delphox-Mega<");
     expect(html).not.toContain(">Illuminate<");
     expect(html).not.toContain('list="entity-options-pokemon');
     expect(html).toContain('role="combobox"');
     expect(html).toContain('aria-autocomplete="list"');
     expect(html).not.toContain('list="entity-options-move');
     expect(html).toContain('class="nature-trigger"');
-    expect(html).toContain('aria-label="性格: ひかえめ"');
+    expect(html).toContain('aria-label="性格: おくびょう"');
     expect(html).toContain('class="disclosure-chevron"');
     expect(html).not.toContain("▾");
     expect(html).not.toContain("C↑ / A↓");
@@ -284,7 +358,7 @@ describe("App", () => {
     expect(html).toContain(">なし</span>");
     expect(html).not.toContain('aria-label="状態異常: なし"');
     expect(html).toContain(">耐久調整A 調整対象の状態異常</span>");
-    expect(html).toContain('value="まけんき"');
+    expect(html).not.toContain('value="まけんき"');
     expect(html).not.toContain('value="もうか"');
     expect(html).not.toContain('list="entity-options-item');
     expect(html).not.toContain('list="entity-options-type');

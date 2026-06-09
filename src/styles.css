@@ -2383,6 +2383,22 @@ textarea {
   color: #f4d2d2;
 }
 
+.empty-result.impossible-result.result-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.result-alert small {
+  grid-column: 2;
+  min-width: 0;
+  color: #efb8b8;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .impossible-result strong {
   display: inline-flex;
   align-items: center;

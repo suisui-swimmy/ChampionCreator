@@ -28,7 +28,6 @@ import {
   type EntityInputOption,
 } from "./localization/resolver";
 import {
-  applyOffenseAdjustmentToTarget,
   applyCandidateToTarget,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
@@ -48,7 +47,6 @@ import {
   type ScenarioFormState,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
-import type { OffenseAdjustmentResult } from "./search/offenseAdjustment";
 import { getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import {
@@ -463,6 +461,13 @@ export function App() {
     scenario.enabled && scenario.adjustmentType === "defence"
   ));
 
+  const resultAlertMessage =
+    (hasEnabledDefenceScenario && previewInput.error && !isCanonicalResolutionMessage(previewInput.error))
+      ? previewInput.error
+      : searchState.errorMessage && !isCanonicalResolutionMessage(searchState.errorMessage)
+        ? searchState.errorMessage
+        : null;
+
   useEffect(() => {
     return () => {
       activeRequestRef.current?.cancel();
@@ -698,12 +703,6 @@ export function App() {
     applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
   };
 
-  const handleApplyOffenseResult = (result: OffenseAdjustmentResult) => {
-    setTargetForm((current) => applyOffenseAdjustmentToTarget(current, result));
-    dispatchSearch({ type: "reset" });
-    setSelectedCandidateId(null);
-  };
-
   return (
     <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
       <header className="topbar">
@@ -734,12 +733,6 @@ export function App() {
         </div>
       </header>
 
-      {searchState.errorMessage && !isCanonicalResolutionMessage(searchState.errorMessage) ? (
-        <div className="status-banner error" role="alert">{searchState.errorMessage}</div>
-      ) : null}
-      {hasEnabledDefenceScenario && previewInput.error && !isCanonicalResolutionMessage(previewInput.error) ? (
-        <div className="status-banner warning" role="status">{previewInput.error}</div>
-      ) : null}
       {shareOpen ? (
         <section className="share-panel" aria-label="条件JSON">
           <textarea
@@ -829,7 +822,8 @@ export function App() {
           scenarios={scenarioForms}
           status={searchState.status}
           offenseResults={offenseResults}
-          onApplyOffenseResult={handleApplyOffenseResult}
+          targetLabel={targetBuildPreview?.pokemon.displayNameJa ?? targetForm.pokemonInput}
+          resultAlertMessage={resultAlertMessage}
           onSelectCandidate={handleSelectCandidate}
           onApplyCandidate={handleApplyCandidate}
         />
@@ -2574,30 +2568,13 @@ type ResultsPanelProps = {
   scenarios: ScenarioFormState[];
   status: string;
   offenseResults: OffenseScenarioResult[];
-  onApplyOffenseResult: (result: OffenseAdjustmentResult) => void;
+  targetLabel: string;
+  resultAlertMessage: string | null;
   onSelectCandidate: (id: string) => void;
   onApplyCandidate: (candidate: CandidateResult) => void;
 };
 
-type OffenseScenarioResultsPanelProps = {
-  offenseResults: OffenseScenarioResult[];
-  onApplyOffenseResult: (result: OffenseAdjustmentResult) => void;
-};
-
-const formatOffenseResultStatusLabel = (result: OffenseAdjustmentResult): string => {
-  if (result.status === "unresolved") {
-    return "未解決";
-  }
-  if (result.status === "invalid") {
-    return "入力エラー";
-  }
-  if (result.status === "fixed") {
-    return result.passed ? "固定PASS" : "固定未達";
-  }
-  return result.passed ? "PASS" : "未達";
-};
-
-const getOffenseResultTone = (result: OffenseAdjustmentResult): "green" | "red" | "blue" | "purple" => {
+const getOffenseResultTone = (result: OffenseScenarioResult["result"]): "green" | "red" | "blue" | "purple" => {
   if (result.status === "unresolved" || result.status === "invalid") {
     return "purple";
   }
@@ -2607,52 +2584,26 @@ const getOffenseResultTone = (result: OffenseAdjustmentResult): "green" | "red" 
   return result.passed ? "green" : "red";
 };
 
-function OffenseScenarioResultsPanel({
-  offenseResults,
-  onApplyOffenseResult,
-}: OffenseScenarioResultsPanelProps) {
-  return (
-    <section className="offense-adjustment-panel" aria-labelledby="offense-adjustment-title">
-      <div className="offense-adjustment-heading">
-        <h3 id="offense-adjustment-title">火力ライン結果</h3>
-        <span>{offenseResults.length} 条件 / 候補順位へ統合</span>
-      </div>
+const formatResultAlertStrictestCondition = (message: string): string => {
+  const integrationPrefix = "火力調整条件を候補一覧へ統合できません: ";
+  return message.startsWith(integrationPrefix) ? message.slice(integrationPrefix.length) : message;
+};
 
-      <div className="offense-result-list" aria-label="火力ライン結果">
-        {offenseResults.map(({ id, scenarioLabel, attackLabel, result }) => (
-          <div className={`offense-result-row ${result.status}`} key={id}>
-            <StatusBadge tone={getOffenseResultTone(result)} />
-            <strong>{result.label}</strong>
-            <span className="offense-result-source">{scenarioLabel} / {attackLabel}</span>
-            <span>{formatOffenseResultStatusLabel(result)}</span>
-            <span>
-              {result.requiredStatPoints === null ? "-" : `${result.requiredStatPoints} SP`}
-              {result.actualStat === null ? "" : ` / 実数値 ${result.actualStat}`}
-            </span>
-            <span>KO率 {formatPercent(result.koProbability)}</span>
-            <span>
-              {result.damageRange
-                ? `${formatDamageRange(result.damageRange.min, result.damageRange.max)} (${result.damageRange.percentMin.toFixed(1)}-${result.damageRange.percentMax.toFixed(1)}%)`
-                : result.reason}
-            </span>
-            {result.canApply ? (
-              <Button variant="primary" size="small" onClick={() => onApplyOffenseResult(result)}>
-                適用
-              </Button>
-            ) : (
-              <em>{result.reason}</em>
-            )}
-            {result.reference ? (
-              <small>
-                補正あり参考: {result.reference.requiredStatPoints ?? "-"} SP / KO率 {formatPercent(result.reference.koProbability)}
-              </small>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+const formatOffenseCandidateDetail = (
+  entry: OffenseScenarioResult,
+  targetLabel: string,
+  scenario: ScenarioFormState | undefined,
+): string => {
+  const attacker = scenario?.attacks.find((attack) => attack.id === entry.attackId);
+  const defenderLabel = attacker?.attackerPokemonInput.trim() || entry.attackLabel;
+  const sourceLabel = `${targetLabel.trim() || "調整対象"} → ${defenderLabel}`;
+  const damageLabel = entry.result.damageRange
+    ? `${formatDamageRange(entry.result.damageRange.min, entry.result.damageRange.max)} `
+      + `(${entry.result.damageRange.percentMin.toFixed(1)}-${entry.result.damageRange.percentMax.toFixed(1)}%)`
+    : entry.result.reason;
+
+  return `${sourceLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
+};
 
 export function ResultsPanel({
   candidates,
@@ -2661,12 +2612,17 @@ export function ResultsPanel({
   scenarios,
   status,
   offenseResults,
-  onApplyOffenseResult,
+  targetLabel,
+  resultAlertMessage,
   onSelectCandidate,
   onApplyCandidate,
 }: ResultsPanelProps) {
   const scenarioLabels = useMemo(
     () => new Map(scenarios.map((scenario) => [scenario.id, scenario.label])),
+    [scenarios],
+  );
+  const scenariosById = useMemo(
+    () => new Map(scenarios.map((scenario) => [scenario.id, scenario])),
     [scenarios],
   );
 
@@ -2679,23 +2635,23 @@ export function ResultsPanel({
         </div>
       </div>
 
-      {offenseResults.length > 0 ? (
-        <OffenseScenarioResultsPanel
-          offenseResults={offenseResults}
-          onApplyOffenseResult={onApplyOffenseResult}
-        />
-      ) : null}
-
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
           <span>順位</span><span>H/A/B/C/D/S</span><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
         </div>
+        {resultAlertMessage ? (
+          <div className="empty-result impossible-result result-alert" role="alert">
+            <strong>不可</strong>
+            <span>すべてのシナリオを満たす候補を作れません。</span>
+            <small>最厳条件: {formatResultAlertStrictestCondition(resultAlertMessage)}</small>
+          </div>
+        ) : null}
         {candidates.length === 0 ? (
-          <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
+          resultAlertMessage ? null : <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
             {status === "complete" ? (
               <>
                 <strong>不可</strong>
-                <span>条件を満たす候補がありません。必要耐久・生存率・固定SPをゆるめてください。</span>
+                <span>すべてのシナリオを満たす候補がありません。必要耐久・生存率・固定SPをゆるめてください。</span>
               </>
             ) : (
               "計算開始で Worker 経由の候補がここに出ます"
@@ -2765,6 +2721,29 @@ export function ResultsPanel({
                             ))}
                           </ul>
                         ) : null}
+                      </section>
+                    );
+                  })}
+                  {offenseResults.map((entry) => {
+                    const scenarioLabel = scenarioLabels.get(entry.scenarioId) ?? entry.scenarioLabel;
+                    return (
+                      <section className="candidate-scenario-detail" key={entry.id}>
+                        <div className="candidate-scenario-status">
+                          <StatusBadge tone={getOffenseResultTone(entry.result)} />
+                          <strong>{scenarioLabel}</strong>
+                          <span>KO率 {formatPercent(entry.result.koProbability)}</span>
+                          <em className={entry.result.passed ? "" : "fail-badge"}>
+                            {formatScenarioResultStatusLabel(entry.result.passed)}
+                          </em>
+                        </div>
+                        <ul>
+                          <li>
+                            <strong>{scenarioLabel}</strong>
+                            <span>
+                              {formatOffenseCandidateDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
+                            </span>
+                          </li>
+                        </ul>
                       </section>
                     );
                   })}
