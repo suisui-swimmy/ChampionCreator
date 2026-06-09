@@ -831,6 +831,24 @@ export function App() {
           onApplyCandidate={handleApplyCandidate}
         />
       </main>
+      <footer className="app-footer" aria-label="権利表記">
+        <div className="app-footer-copy">
+          <span>© 2026 suisui-swimmy</span>
+          <span>
+            本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します。
+          </span>
+        </div>
+        <a
+          className="app-footer-contact"
+          href="https://x.com/peixe0307"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="不具合報告 / お問い合わせ: X @peixe0307"
+        >
+          <span>不具合報告 / お問い合わせ :</span>
+          <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
+        </a>
+      </footer>
     </div>
   );
 }

@@ -57,6 +57,12 @@ describe("App", () => {
     expect(html).toContain(">キャンセル<");
     expect(html).toContain(">計算開始<");
     expect(html).toContain("候補一覧");
+    expect(html).toContain('aria-label="権利表記"');
+    expect(html).toContain("© 2026 suisui-swimmy");
+    expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
+    expect(html).toContain('href="https://x.com/peixe0307"');
+    expect(html).toContain("不具合報告 / お問い合わせ :");
+    expect(html).toContain("assets/social/x-logo.svg");
     expect(html).not.toContain("火力ライン結果");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
