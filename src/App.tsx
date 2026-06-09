@@ -226,6 +226,9 @@ const damageDescriptionPattern = /^(\d+)([+-]?)\s+(Atk|Def|SpA|SpD|Spe)\s+(.+?)\
 const formatDamageDescriptionStatCode = (stat: string): string =>
   damageDescriptionStatCodes[stat as DamageDescriptionStat] ?? stat;
 
+const formatDamageDescriptionStatPoint = (investment: string): string =>
+  String(smogonEvToStatPoints(Number(investment)));
+
 const formatKoPhraseJa = (count: string): string => (
   count === "O" ? "1発" : `${count}発`
 );
@@ -276,12 +279,12 @@ export const formatLocalizedDamageDescription = (description: string): string =>
   ] = match;
 
   return [
-    `${formatDamageDescriptionStatCode(attackStat)}${attackInvestment}${attackNature}`,
+    `${formatDamageDescriptionStatCode(attackStat)}${formatDamageDescriptionStatPoint(attackInvestment)}${attackNature}`,
     localizeDamageDescriptionNames(attackerAndMove),
     "→",
-    `H${defenderHpInvestment}`,
+    `H${formatDamageDescriptionStatPoint(defenderHpInvestment)}`,
     "/",
-    `${formatDamageDescriptionStatCode(defenderStat)}${defenderInvestment}${defenderNature}`,
+    `${formatDamageDescriptionStatCode(defenderStat)}${formatDamageDescriptionStatPoint(defenderInvestment)}${defenderNature}`,
     localizeDamageDescriptionNames(defenderPokemon.trim()),
     ":",
     formatLocalizedDamageResult(resultText),
@@ -2596,13 +2599,17 @@ const formatOffenseCandidateDetail = (
 ): string => {
   const attacker = scenario?.attacks.find((attack) => attack.id === entry.attackId);
   const defenderLabel = attacker?.attackerPokemonInput.trim() || entry.attackLabel;
-  const sourceLabel = `${targetLabel.trim() || "調整対象"} → ${defenderLabel}`;
+  const moveLabel = attacker?.moveInput.trim() || "技";
+  const statPointLabel = entry.result.stat
+    ? `${statLabels[entry.result.stat]}${entry.result.requiredStatPoints ?? "-"}`
+    : entry.result.label;
+  const sourceLabel = [statPointLabel, targetLabel.trim() || "調整対象", moveLabel].join(" ");
   const damageLabel = entry.result.damageRange
     ? `${formatDamageRange(entry.result.damageRange.min, entry.result.damageRange.max)} `
       + `(${entry.result.damageRange.percentMin.toFixed(1)}-${entry.result.damageRange.percentMax.toFixed(1)}%)`
     : entry.result.reason;
 
-  return `${sourceLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
+  return `${sourceLabel} → ${defenderLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
 };
 
 export function ResultsPanel({

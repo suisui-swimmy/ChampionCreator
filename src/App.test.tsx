@@ -179,7 +179,10 @@ describe("App", () => {
   it("localizes Smogon damage descriptions for the selected candidate detail", () => {
     expect(formatLocalizedDamageDescription(
       "252+ Atk Kingambit Sucker Punch vs. 92 HP / 52 Def Starmie-Mega: 122-146 (82.9 - 99.3%) -- guaranteed 2HKO",
-    )).toBe("A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    )).toBe("A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    expect(formatLocalizedDamageDescription(
+      "252+ Atk Kingambit Sucker Punch vs. 68 HP / 236 Def Delphox-Mega: 134-158 (84.2 - 99.3%) -- guaranteed 2HKO",
+    )).toBe("A32+ ドドゲザン ふいうち → H9 / B30 メガマフォクシー : 134-158 (84.2-99.3%) / 確定2発");
   });
 
   it("integrates the selected candidate detail into the candidate list", () => {
@@ -221,6 +224,7 @@ describe("App", () => {
         id: "attack-offense-test",
         label: "火力調整A",
         attackerPokemonInput: "メガゲンガー",
+        moveInput: "サイコキネシス",
       }],
     };
     const offenseResults = [{
@@ -287,16 +291,16 @@ describe("App", () => {
     expect(html).toContain('class="candidate-disclosure"');
     expect(html).not.toContain("▼");
     expect(html).not.toContain("▲");
-    expect(html).toContain("シナリオA</strong><span>A252+ ドドゲザン ふいうち → H92 / B52 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    expect(html).toContain("シナリオA</strong><span>A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
     expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
-    expect(html).toContain("シナリオ2</strong><span>メガマフォクシー → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
+    expect(html).toContain("シナリオ2</strong><span>C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
     expect(html).not.toContain("火力ライン結果");
     expect(closedHtml).toContain('aria-expanded="false"');
     expect(closedHtml).toContain('data-state="closed"');
     expect(closedHtml).not.toContain("▼");
     expect(closedHtml).not.toContain("▲");
-    expect(closedHtml).not.toContain("A252+ ドドゲザン ふいうち");
-    expect(closedHtml).not.toContain("メガマフォクシー → メガゲンガー");
+    expect(closedHtml).not.toContain("A32+ ドドゲザン ふいうち");
+    expect(closedHtml).not.toContain("C7 メガマフォクシー サイコキネシス");
   });
 
   it("places integrated firepower failures in the candidate list", () => {
