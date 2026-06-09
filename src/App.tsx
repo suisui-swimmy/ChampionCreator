@@ -84,7 +84,6 @@ const statIconFiles: Record<StatKey, string> = {
 
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
-const defenceStatKeySet = new Set<StatKey>(defenceStatKeys);
 const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 
 const getOffenseDefenderStatKeysFromMoveContext = (
@@ -1618,10 +1617,6 @@ function TargetPanel({
           <span>現在SP</span>
           <span>SP配分</span>
           <span>ランク</span>
-          <span className="allocation-lock-header" title="固定状態">
-            <img src={getAssetSrc("assets/ui/lock-closed.svg")} alt="" aria-hidden="true" />
-            <span className="visually-hidden">固定状態</span>
-          </span>
         </div>
         {statKeys.map((key) => (
           <div className={`ev-row ${key}`} key={key}>
@@ -1660,19 +1655,6 @@ function TargetPanel({
                 })}
               />
             )}
-            <span
-              className={`allocation-lock ${defenceStatKeySet.has(key) ? "searchable" : "fixed"}`}
-              aria-label={defenceStatKeySet.has(key) ? `${statLabels[key]}は探索対象` : `${statLabels[key]}は固定`}
-              title={defenceStatKeySet.has(key) ? "探索対象（H/B/D）" : "固定"}
-            >
-              <img
-                src={getAssetSrc(defenceStatKeySet.has(key)
-                  ? "assets/ui/lock-open.svg"
-                  : "assets/ui/lock-closed.svg")}
-                alt=""
-                aria-hidden="true"
-              />
-            </span>
           </div>
         ))}
       </div>
@@ -1998,6 +1980,11 @@ function ScenarioRow({
             ))}
             canRemove={scenario.attacks.length > 1}
             onRemoveAttack={onRemoveAttack}
+            onToggleAdjustmentType={() => onUpdateScenario(
+              scenario.id,
+              "adjustmentType",
+              scenario.adjustmentType === "defence" ? "offense" : "defence",
+            )}
             onUpdateAttack={onUpdateAttack}
             onUpdateAttackerEv={onUpdateAttackerEv}
           />
@@ -2026,6 +2013,7 @@ type AttackCardProps = {
   supportsDoublesAttack: boolean;
   canRemove: boolean;
   onRemoveAttack: (scenarioId: string, attackId: string) => void;
+  onToggleAdjustmentType: () => void;
   onUpdateAttack: <K extends keyof ScenarioAttackFormState>(
     scenarioId: string,
     attackId: string,
@@ -2046,6 +2034,7 @@ function AttackCard({
   supportsDoublesAttack,
   canRemove,
   onRemoveAttack,
+  onToggleAdjustmentType,
   onUpdateAttack,
   onUpdateAttackerEv,
 }: AttackCardProps) {
@@ -2054,6 +2043,8 @@ function AttackCard({
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const isOffenseAdjustment = adjustmentType === "offense";
   const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
+  const adjustmentDirection = isOffenseAdjustment ? "right" : "left";
+  const nextAdjustmentLabel = isOffenseAdjustment ? "耐久調整" : "火力調整";
   const isAbilitySupport = Boolean(
     !isOffenseAdjustment && !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
   );
@@ -2085,6 +2076,21 @@ function AttackCard({
   return (
     <section className="attack-condition-card" aria-label={attackLabel}>
       <div className="attack-card-header">
+        <button
+          className={`attack-direction-button ${adjustmentDirection}`}
+          type="button"
+          aria-label={`${attackLabel} ${isOffenseAdjustment ? "攻撃を与える側" : "攻撃を受ける側"}。クリックで${nextAdjustmentLabel}に切り替え`}
+          title={`${isOffenseAdjustment ? "攻撃を与える側" : "攻撃を受ける側"} / ${nextAdjustmentLabel}に切り替え`}
+          onClick={onToggleAdjustmentType}
+        >
+          <img
+            src={getAssetSrc(isOffenseAdjustment
+              ? "assets/ui/arrow-right-circle.svg"
+              : "assets/ui/arrow-left-circle.svg")}
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
         <PokemonArtworkFrame
           match={attackerArtwork}
           fallbackLabel={attack.attackerPokemonInput}

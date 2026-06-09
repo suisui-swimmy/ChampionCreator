@@ -52,6 +52,10 @@ describe("App", () => {
     expect(html).toContain(">火力調整</span>");
     expect(html).toContain('value="耐久調整A"');
     expect(html).toContain('value="火力調整A"');
+    expect(html).toContain("assets/ui/arrow-left-circle.svg");
+    expect(html).toContain("assets/ui/arrow-right-circle.svg");
+    expect(html).toContain('aria-label="耐久調整A 攻撃を受ける側。クリックで火力調整に切り替え"');
+    expect(html).toContain('aria-label="火力調整A 攻撃を与える側。クリックで耐久調整に切り替え"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
     expect(html).toContain('role="progressbar"');
@@ -79,10 +83,10 @@ describe("App", () => {
     expect(html).toContain(">ランク<");
     expect(html).toContain('aria-label="Bランク: 0"');
     expect(html).toContain('aria-label="Dランク: 0"');
-    expect(html).toContain("assets/ui/lock-open.svg");
-    expect(html).toContain("assets/ui/lock-closed.svg");
-    expect(html).toContain('aria-label="Hは探索対象"');
-    expect(html).toContain('aria-label="Aは固定"');
+    expect(html).not.toContain("assets/ui/lock-open.svg");
+    expect(html).not.toContain("assets/ui/lock-closed.svg");
+    expect(html).not.toContain('class="allocation-lock');
+    expect(html).not.toContain("固定状態");
     expect(html).not.toContain('aria-label="状態異常: なし"');
     expect(html).toContain(">耐久調整A 調整対象の状態異常</span>");
   });

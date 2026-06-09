@@ -1319,7 +1319,7 @@ textarea {
 .ev-header,
 .ev-row {
   display: grid;
-  grid-template-columns: 36px 14px 54px 56px minmax(96px, 1fr) 48px 28px;
+  grid-template-columns: 36px 14px 54px 56px minmax(96px, 1fr) 48px;
   gap: 5px;
   align-items: center;
   min-height: 38px;
@@ -1395,45 +1395,6 @@ textarea {
   height: 18px;
   justify-self: center;
   accent-color: var(--gold);
-}
-
-.allocation-lock-header,
-.allocation-lock {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 24px;
-  justify-self: center;
-}
-
-.allocation-lock-header img,
-.allocation-lock img {
-  display: block;
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-}
-
-.allocation-lock-header img {
-  opacity: 0.58;
-}
-
-.allocation-lock {
-  border-radius: 5px;
-  background: #1b2022;
-}
-
-.allocation-lock.searchable {
-  background: rgba(245, 197, 66, 0.12);
-}
-
-.allocation-lock.searchable img {
-  opacity: 0.82;
-  filter: sepia(1) saturate(4) hue-rotate(350deg) brightness(1.12);
-}
-
-.allocation-lock.fixed img {
-  opacity: 0.48;
 }
 
 .sp-cell-bar {
@@ -1861,9 +1822,48 @@ textarea {
 
 .attack-card-header {
   display: grid;
-  grid-template-columns: 46px 1fr 30px;
+  grid-template-columns: 24px 46px 1fr 30px;
   gap: 6px;
   align-items: center;
+}
+
+.attack-direction-button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 46px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+  color: var(--muted);
+  opacity: 0.78;
+  transition: opacity 120ms ease, filter 120ms ease, transform 120ms ease;
+}
+
+.attack-direction-button:hover,
+.attack-direction-button:focus-visible {
+  opacity: 1;
+  filter: drop-shadow(0 0 7px rgba(245, 197, 66, 0.28));
+}
+
+.attack-direction-button:active {
+  transform: translateY(1px);
+}
+
+.attack-direction-button img {
+  display: block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.attack-direction-button.left img {
+  filter: drop-shadow(0 0 4px rgba(41, 128, 239, 0.22));
+}
+
+.attack-direction-button.right img {
+  filter: drop-shadow(0 0 4px rgba(245, 197, 66, 0.22));
 }
 
 .attack-remove-button {
