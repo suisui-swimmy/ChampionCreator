@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { CandidateResult } from "./domain/model";
 import {
   App,
+  CandidateStatPointBars,
   CandidateStatPointSpread,
   ResultsPanel,
   clampTargetStatPointChange,
@@ -169,6 +170,27 @@ describe("App", () => {
     expect(html).toContain(">H</span><span>0</span>");
     expect(html).toContain(">A</span><span>12</span>");
     expect(html).toContain(">C</span><span>20</span>");
+    expect(html).toContain('class="candidate-sp-bars"');
+    expect(html).toContain('aria-label="SPバー: H 0 / A 12 / B 16 / C 20 / D 32 / S 4"');
+  });
+
+  it("renders compact SP bars for candidate rows", () => {
+    const html = renderToStaticMarkup(<CandidateStatPointBars statPoints={{
+      hp: 9,
+      atk: 0,
+      def: 30,
+      spa: 7,
+      spd: 0,
+      spe: 0,
+    }} />);
+
+    expect(html).toContain('class="candidate-sp-bars"');
+    expect(html).toContain('aria-label="SPバー: H 9 / A 0 / B 30 / C 7 / D 0 / S 0"');
+    expect(html).toContain('class="candidate-sp-bar hp"');
+    expect(html).toContain('style="width:28.125%"');
+    expect(html).toContain('class="candidate-sp-bar def"');
+    expect(html).toContain('style="width:93.75%"');
+    expect(html).toContain('class="candidate-sp-bar spa"');
   });
 
   it("labels failed scenario results as unavailable", () => {
@@ -282,6 +304,8 @@ describe("App", () => {
 
     expect(html).toContain(">最厳条件<");
     expect(html).toContain(">H/A/B/C/D/S<");
+    expect(html).toContain('class="candidate-sp-bars"');
+    expect(html).toContain('aria-label="SPバー: H 6 / A 0 / B 13 / C 0 / D 0 / S 0"');
     expect(html).toContain(">H</span><span>6</span>");
     expect(html).toContain(">A</span><span>0</span>");
     expect(html).toContain(">B</span><span>13</span>");

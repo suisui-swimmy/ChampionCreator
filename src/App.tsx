@@ -2644,7 +2644,7 @@ export function ResultsPanel({
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
-          <span>順位</span><span>H/A/B/C/D/S</span><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
+          <span>順位</span><span>H/A/B/C/D/S</span><span /><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
         </div>
         {resultAlertMessage ? (
           <div className="empty-result impossible-result result-alert" role="alert">
@@ -2683,6 +2683,7 @@ export function ResultsPanel({
                   <button className="candidate-row-toggle" type="button">
                     <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
                     <CandidateStatPointSpread statPoints={candidate.appliedStatPoints} />
+                    <span className="candidate-row-spacer" aria-hidden="true" />
                     <span>{candidate.usedStatPointBudget}</span>
                     <span>{candidate.remainingStatPointBudget}</span>
                     <span>{candidate.bottleneckLabel}</span>
@@ -2764,6 +2765,26 @@ export function ResultsPanel({
   );
 }
 
+export function CandidateStatPointBars({ statPoints }: { statPoints: StatTable }) {
+  return (
+    <span
+      className="candidate-sp-bars"
+      aria-label={`SPバー: ${formatStatPointSpreadLabel(statPoints)}`}
+      title={`SPバー: ${formatStatPointSpreadLabel(statPoints)}`}
+    >
+      {statKeys.map((key) => (
+        <span
+          className={`candidate-sp-bar ${key}`}
+          aria-hidden="true"
+          key={key}
+        >
+          <span style={{ width: `${(statPoints[key] / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100}%` }} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function CandidateStatPointSpread({ statPoints }: { statPoints: StatTable }) {
   return (
     <span
@@ -2777,6 +2798,7 @@ export function CandidateStatPointSpread({ statPoints }: { statPoints: StatTable
           <span>{statPoints[key]}</span>
         </b>
       ))}
+      <CandidateStatPointBars statPoints={statPoints} />
     </span>
   );
 }

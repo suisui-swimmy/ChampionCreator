@@ -2351,7 +2351,14 @@ textarea {
   display: grid;
   gap: 6px;
   overflow-x: hidden;
-  --candidate-row-columns: 34px minmax(176px, 188px) 50px 50px minmax(76px, 112px) 20px;
+  --candidate-row-columns:
+    34px
+    minmax(286px, 560px)
+    minmax(10px, 1fr)
+    44px
+    44px
+    minmax(96px, 136px)
+    18px;
 }
 
 .candidate-row {
@@ -2448,7 +2455,7 @@ textarea {
   display: grid;
   grid-template-columns: var(--candidate-row-columns);
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   width: 100%;
   min-height: 46px;
@@ -2580,8 +2587,8 @@ textarea {
 }
 
 .candidate-row-toggle .compact-allocation b,
-.candidate-row-toggle > span:nth-of-type(3),
-.candidate-row-toggle > span:nth-of-type(4) {
+.candidate-row-toggle > span:nth-of-type(4),
+.candidate-row-toggle > span:nth-of-type(5) {
   font-size: 13px;
 }
 
@@ -2591,7 +2598,7 @@ textarea {
 
 .allocation {
   display: grid;
-  grid-template-columns: repeat(6, 26px) 1fr;
+  grid-template-columns: repeat(6, minmax(22px, 1fr));
   align-items: center;
   gap: 4px;
   font-size: 11px;
@@ -2600,10 +2607,12 @@ textarea {
 
 .compact-allocation {
   grid-template-columns: repeat(6, minmax(22px, 1fr));
-  gap: 3px;
+  gap: 3px 2px;
 }
 
 .candidate-stat-spread {
+  display: grid;
+  grid-template-rows: auto 7px;
   min-width: 0;
 }
 
@@ -2615,13 +2624,67 @@ textarea {
   min-width: 0;
   border-radius: 4px;
   background: #101617;
-  padding: 2px 3px;
+  padding: 2px 2px;
   line-height: 1;
 }
 
 .candidate-stat-code {
   color: #8fa09f;
   font-size: 9px;
+}
+
+.candidate-sp-bars {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(6, minmax(20px, 1fr));
+  gap: 3px;
+  min-width: 0;
+  align-items: center;
+  margin-top: -1px;
+}
+
+.candidate-sp-bar {
+  height: 6px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #30383a;
+  box-shadow: inset 0 0 0 1px rgba(141, 159, 159, 0.12);
+}
+
+.candidate-sp-bar > span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.candidate-sp-bar.hp > span {
+  background: rgba(0, 255, 114, 0.78);
+}
+
+.candidate-sp-bar.atk > span {
+  background: rgba(255, 0, 0, 0.72);
+}
+
+.candidate-sp-bar.def > span {
+  background: rgba(251, 168, 47, 0.78);
+}
+
+.candidate-sp-bar.spa > span {
+  background: rgba(255, 0, 215, 0.75);
+}
+
+.candidate-sp-bar.spd > span {
+  background: rgba(235, 254, 61, 0.76);
+}
+
+.candidate-sp-bar.spe > span {
+  background: rgba(0, 216, 240, 0.74);
+}
+
+.candidate-row-spacer {
+  pointer-events: none;
 }
 
 .candidate-allocation-meter {
