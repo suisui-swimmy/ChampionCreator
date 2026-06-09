@@ -419,16 +419,16 @@ npm run build
 
 ### in-app Browser 確認方針
 
-Codex in-app Browser / Browser plugin は復旧済み。UI 修正後は、静的検証に加えて実画面の表示と操作を通常の検証工程として確認する。
+Codex in-app Browser / Browser plugin は `windows sandbox failed: spawn setup refresh` が再発しやすく、UI 作業のたびに復旧へ時間を使うと実装が止まりやすい。通常の UI 修正では in-app Browser 確認を既定でスキップし、静的検証・HTTP 確認・配信 CSS / DOM 相当の代替確認を優先する。
 
 方針:
 
 - UI 修正後は、`npm run typecheck`、対象テスト、`npm run build`、必要に応じて `npm run check` を実行する。
-- in-app Browser で対象ページを開き、DOM snapshot、対象操作、表示状態、必要に応じたスクリーンショットを確認する。
-- localhost が表示できない場合は、先に HTTP 200 と dev / preview server の状態を確認し、ページ側と Browser runtime 側を切り分ける。
-- `windows sandbox failed: spawn setup refresh` が再発した場合は、個人用 skill `fix-in-app-browser-node-repl` を使い、最小実行、完全再起動、wrapper / watcher / scheduled task の順に確認する。
-- Browser runtime の復旧に設定変更が必要な場合は、sandbox 隔離を弱めるためユーザーの明示承認を得る。
-- Browser 確認を実施できなかった場合は、その理由と代替確認の結果を最終報告および `PROGRESS.md` に明記する。
+- UI 表示に関わる変更では、dev / preview server の HTTP 200、配信中の CSS / JS / HTML、必要に応じて React の静的 render や対象関数テストで代替確認する。
+- in-app Browser の DOM snapshot、クリック、スクリーンショット確認は通常工程に含めない。
+- ユーザーが明示的に「in-app Browser で確認して」「スクショを取って」「Browser を直して」と依頼した場合だけ、`in-app Browser / node_repl 復旧メモ` に従って切り分ける。
+- Browser runtime の復旧に設定変更、wrapper、`--disable-sandbox` が必要な場合は、sandbox 隔離を弱めるためユーザーの明示承認を得る。
+- in-app Browser 確認をスキップした場合は、最終報告と `PROGRESS.md` に「AGENTS の一時スルー方針に従い未実施」と代替確認の結果を明記する。
 
 ## 長期保守ルール
 
@@ -453,14 +453,18 @@ Codex in-app Browser / Browser plugin は復旧済み。UI 修正後は、静的
 
 ## in-app Browser / node_repl 復旧メモ
 
+このメモは、ユーザーが明示的に in-app Browser の復旧や実画面スクリーンショット確認を依頼した場合だけ使う。通常の UI 作業では上の一時スルー方針を優先し、復旧作業へ自動で入らない。
+
 Codex in-app Browser や Browser plugin が `windows sandbox failed: spawn setup refresh` で起動できない場合は、ページやアプリの不具合と決めつけず、まず `node_repl` の最小実行を確認する。
 
 復旧方針:
 
 - 個人用 skill `fix-in-app-browser-node-repl` を使う。
 - まず `node_repl` で `1 + 1` 相当の最小実行を試す。
+- 最小実行が成功する場合は、設定上の `args = []` や direct `node_repl.exe` 起動だけを理由に失敗扱いしない。Browser 接続、localhost navigation、DOM snapshot、クリック、スクリーンショットで実動作を確認する。
+- direct 起動のまま実動作が通る場合は native/direct recovery として扱い、そのセッションでは wrapper 修理を重ねない。
 - Codex 設定を触る場合は、必ず `%USERPROFILE%\.codex\config.toml` を timestamp 付きでバックアップする。
-- `[mcp_servers.node_repl]` は `args = ["--disable-sandbox"]` を使う。
+- fresh probe が継続して失敗する場合だけ、`[mcp_servers.node_repl]` の `args = ["--disable-sandbox"]` や wrapper 修理を検討する。
 - Codex Desktop が `args` を実プロセスへ反映しない場合は、`node_repl_disable_sandbox.cmd` のような wrapper で `node_repl.exe --disable-sandbox %*` を起動する。
 - `[mcp_servers.node_repl.env]` に `CODEX_CLI_PATH = ...` が残っていると sandbox launcher 経由になる場合があるため、fallback 時はこの行だけを外す。他の env や他 MCP 設定は触らない。
 - この変更は `node_repl` の sandbox 隔離を弱めるため、ユーザーの明示承認がある場合だけ行う。
