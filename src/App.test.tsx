@@ -48,6 +48,12 @@ describe("App", () => {
     expect(html).toContain(`app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`);
     expect(html).not.toContain("Pokemon Champions 自動耐久調整");
     expect(html).toContain("調整対象");
+    expect(html).toContain('class="box-access-button"');
+    expect(html).toContain('aria-label="ボックス機能を開く"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("assets/ui/pokebox.svg");
+    expect(html).not.toContain(">条件JSON</button>");
+    expect(html).not.toContain(">コピー</button>");
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain('aria-label="シナリオ1 調整種別"');
     expect(html).toContain('aria-label="シナリオ2 調整種別"');

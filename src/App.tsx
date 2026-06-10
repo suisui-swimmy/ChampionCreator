@@ -59,7 +59,15 @@ import {
   type PokemonFormVariantKind,
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
-import { parseShareStateDocument, stringifyShareStateDocument } from "./ui/shareState";
+import {
+  BOX_STORAGE_KEY,
+  createBoxEntryFromState,
+  createBoxEntrySummary,
+  parseBoxStorageDocument,
+  stringifyBoxStorageDocument,
+  type BoxEntry,
+  type BoxEntrySummary,
+} from "./ui/boxStorage";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
 import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
@@ -467,6 +475,20 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   tailwind: false,
 });
 
+const createBlankTargetForm = (): TargetFormState => ({
+  ...createDefaultTargetForm(),
+  pokemonInput: "",
+  natureInput: "",
+  abilityInput: "",
+  itemInput: "",
+  teraTypeInput: "",
+  teraEnabled: false,
+  dmaxEnabled: false,
+  level: 50,
+  statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+  boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+});
+
 const createBlankScenario = (index: number): ScenarioFormState => ({
   ...createDefaultScenarioForms()[0],
   id: `scenario-${Date.now()}-${index}`,
@@ -481,6 +503,29 @@ const createScenario = (index: number): ScenarioFormState => ({
   label: `シナリオ${index + 1}`,
 });
 
+const BLANK_BOX_SLOT_ID = "blank-box-slot";
+
+const loadBoxEntriesFromBrowser = (): BoxEntry[] => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  return parseBoxStorageDocument(window.localStorage.getItem(BOX_STORAGE_KEY));
+};
+
+const saveBoxEntriesToBrowser = (entries: BoxEntry[]): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    window.localStorage.setItem(BOX_STORAGE_KEY, stringifyBoxStorageDocument(entries));
+    return null;
+  } catch {
+    return "ブラウザ保存に失敗しました";
+  }
+};
+
 export function App() {
   const [targetForm, setTargetForm] = useState<TargetFormState>(() => createDefaultTargetForm());
   const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(() => createDefaultScenarioForms());
@@ -489,9 +534,10 @@ export function App() {
   const [appliedCandidateId, setAppliedCandidateId] = useState<string | null>(null);
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shareText, setShareText] = useState("");
-  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [boxOpen, setBoxOpen] = useState(false);
+  const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(loadBoxEntriesFromBrowser);
+  const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
+  const [boxMessage, setBoxMessage] = useState<string | null>(null);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
@@ -516,6 +562,11 @@ export function App() {
     input: targetForm.pokemonInput,
     canonicalName: targetBuildPreview?.pokemon.canonicalName,
   }), [targetForm.pokemonInput, targetBuildPreview?.pokemon.canonicalName]);
+
+  const currentBoxSummary = useMemo(
+    () => createBoxEntrySummary(targetForm, scenarioForms),
+    [targetForm, scenarioForms],
+  );
 
   const offenseResults = useMemo(
     () => calculateOffenseAdjustmentsForCandidateRanking(targetForm, scenarioForms),
@@ -742,37 +793,150 @@ export function App() {
     activeRequestRef.current = null;
   };
 
-  const openSharePanel = () => {
-    setShareText(stringifyShareStateDocument(targetForm, scenarioForms));
-    setShareMessage(null);
-    setShareOpen((current) => !current);
+  const persistBoxEntries = (nextEntries: BoxEntry[], message: string): boolean => {
+    const error = saveBoxEntriesToBrowser(nextEntries);
+    if (error) {
+      setBoxMessage(error);
+      return false;
+    }
+
+    setBoxEntries(nextEntries);
+    setBoxMessage(message);
+    return true;
   };
 
-  const handleCopyShareJson = () => {
-    const json = stringifyShareStateDocument(targetForm, scenarioForms);
-    setShareText(json);
-    setShareOpen(true);
-    if (navigator.clipboard) {
-      void navigator.clipboard.writeText(json)
-        .then(() => setShareMessage("条件JSONをクリップボードへコピーしました"))
-        .catch(() => setShareMessage("条件JSONを下の欄に出しました"));
-    } else {
-      setShareMessage("条件JSONを下の欄に出しました");
+  const toggleBoxPanel = () => {
+    if (!boxOpen && !selectedBoxEntryId) {
+      setSelectedBoxEntryId(BLANK_BOX_SLOT_ID);
+    }
+    setBoxMessage(null);
+    setBoxOpen((current) => !current);
+  };
+
+  const handleSaveCurrentBox = () => {
+    const entry = createBoxEntryFromState(targetForm, scenarioForms);
+    if (persistBoxEntries([entry, ...boxEntries], "今の条件を保存しました")) {
+      setSelectedBoxEntryId(entry.id);
     }
   };
 
-  const handleImportShareJson = () => {
-    try {
-      const document = parseShareStateDocument(shareText);
+  const handleLoadBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_BOX_SLOT_ID) {
       activeRequestRef.current?.cancel();
       activeRequestRef.current = null;
-      setTargetForm(document.target);
-      setScenarioForms(document.scenarios);
+      setTargetForm(createBlankTargetForm());
+      setScenarioForms([createBlankScenario(0)]);
       setSelectedCandidateId(null);
       dispatchSearch({ type: "reset" });
-      setShareMessage("条件JSONを読み込みました");
-    } catch (error) {
-      setShareMessage(error instanceof Error ? error.message : String(error));
+      setBoxMessage(null);
+      setBoxOpen(false);
+      return;
+    }
+
+    const entry = boxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setBoxMessage("保存スロットが見つかりません");
+      return;
+    }
+
+    activeRequestRef.current?.cancel();
+    activeRequestRef.current = null;
+    setTargetForm(entry.payload.target);
+    setScenarioForms(entry.payload.scenarios);
+    setSelectedCandidateId(null);
+    dispatchSearch({ type: "reset" });
+    setBoxMessage(null);
+    setBoxOpen(false);
+  };
+
+  const handleOverwriteBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_BOX_SLOT_ID) {
+      setBoxMessage("空スロットは上書きできません");
+      return;
+    }
+
+    const entry = boxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setBoxMessage("保存スロットが見つかりません");
+      return;
+    }
+
+    const updatedEntry = createBoxEntryFromState(targetForm, scenarioForms, {
+      id: entry.id,
+      name: entry.name,
+      createdAt: entry.createdAt,
+    });
+    const nextEntries = boxEntries.map((candidate) => (
+      candidate.id === entryId ? updatedEntry : candidate
+    ));
+    if (persistBoxEntries(nextEntries, "選択中の保存を上書きしました")) {
+      setSelectedBoxEntryId(entryId);
+    }
+  };
+
+  const handleRenameBoxEntry = (entryId: string, name: string) => {
+    if (entryId === BLANK_BOX_SLOT_ID) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const nextEntries = boxEntries.map((entry) => (
+      entry.id === entryId
+        ? { ...entry, name, updatedAt: now }
+        : entry
+    ));
+    const error = saveBoxEntriesToBrowser(nextEntries);
+    if (error) {
+      setBoxMessage(error);
+      return;
+    }
+
+    setBoxEntries(nextEntries);
+  };
+
+  const handleDuplicateBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_BOX_SLOT_ID) {
+      setBoxMessage("空スロットは複製できません");
+      return;
+    }
+
+    const entry = boxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setBoxMessage("保存スロットが見つかりません");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const duplicatedEntry: BoxEntry = {
+      ...entry,
+      id: `box-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: `${entry.name || entry.summary.pokemonName} コピー`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (persistBoxEntries([duplicatedEntry, ...boxEntries], "保存を複製しました")) {
+      setSelectedBoxEntryId(duplicatedEntry.id);
+    }
+  };
+
+  const handleDeleteBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_BOX_SLOT_ID) {
+      setBoxMessage("空スロットは削除できません");
+      return;
+    }
+
+    const entry = boxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setBoxMessage("保存スロットが見つかりません");
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm(`${entry.name} を削除しますか？`)) {
+      return;
+    }
+
+    const nextEntries = boxEntries.filter((candidate) => candidate.id !== entryId);
+    if (persistBoxEntries(nextEntries, "保存を削除しました")) {
+      setSelectedBoxEntryId(nextEntries[0]?.id ?? null);
     }
   };
 
@@ -809,36 +973,23 @@ export function App() {
             </p>
           </div>
         </div>
-        <div className="topbar-actions">
-          <Button variant="ghost" onClick={openSharePanel}>
-            条件JSON
-          </Button>
-          <Button variant="ghost" onClick={handleCopyShareJson}>
-            コピー
-          </Button>
-        </div>
       </header>
 
-      {shareOpen ? (
-        <section className="share-panel" aria-label="条件JSON">
-          <textarea
-            value={shareText}
-            onChange={(event) => setShareText(event.target.value)}
-            spellCheck={false}
-          />
-          <div>
-            <Button variant="primary" size="small" onClick={handleImportShareJson}>
-              読込
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setShareText(stringifyShareStateDocument(targetForm, scenarioForms))}
-            >
-              現在条件を反映
-            </Button>
-            {shareMessage ? <span>{shareMessage}</span> : null}
-          </div>
-        </section>
+      {boxOpen ? (
+        <BoxPanel
+          entries={boxEntries}
+          selectedEntryId={selectedBoxEntryId}
+          currentSummary={currentBoxSummary}
+          message={boxMessage}
+          onClose={() => setBoxOpen(false)}
+          onSaveCurrent={handleSaveCurrentBox}
+          onSelectEntry={setSelectedBoxEntryId}
+          onLoadEntry={handleLoadBoxEntry}
+          onOverwriteEntry={handleOverwriteBoxEntry}
+          onRenameEntry={handleRenameBoxEntry}
+          onDuplicateEntry={handleDuplicateBoxEntry}
+          onDeleteEntry={handleDeleteBoxEntry}
+        />
       ) : null}
 
       <main className="workbench">
@@ -850,6 +1001,8 @@ export function App() {
           artwork={targetArtwork}
           actualStats={actualStats}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
+          isBoxPanelOpen={boxOpen}
+          onOpenBoxPanel={toggleBoxPanel}
         />
         <ScenarioPanel
           scenarios={scenarioForms}
@@ -1633,9 +1786,176 @@ type TargetPanelProps = {
   artwork: PokemonArtworkMatch | null;
   actualStats: StatTable | null;
   totalStatPoints: number;
+  isBoxPanelOpen: boolean;
   onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
   onUpdateEv: (key: StatKey, value: number) => void;
+  onOpenBoxPanel: () => void;
 };
+
+type BoxPanelProps = {
+  entries: BoxEntry[];
+  selectedEntryId: string | null;
+  currentSummary: BoxEntrySummary;
+  message: string | null;
+  onClose: () => void;
+  onSaveCurrent: () => void;
+  onSelectEntry: (entryId: string) => void;
+  onLoadEntry: (entryId: string) => void;
+  onOverwriteEntry: (entryId: string) => void;
+  onRenameEntry: (entryId: string, name: string) => void;
+  onDuplicateEntry: (entryId: string) => void;
+  onDeleteEntry: (entryId: string) => void;
+};
+
+function BoxSlotArtwork({ entry }: { entry: BoxEntry }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const artwork = findPokemonArtwork({ input: entry.summary.pokemonName });
+  const canShowImage = artwork && failedSrc !== artwork.artworkUrl;
+  const fallbackInitial = (entry.summary.pokemonName.trim() || "?").slice(0, 1);
+
+  return (
+    <span className="box-slot-art" aria-hidden="true">
+      {canShowImage ? (
+        <img
+          src={artwork.artworkUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailedSrc(artwork.artworkUrl)}
+        />
+      ) : (
+        <strong>{fallbackInitial}</strong>
+      )}
+    </span>
+  );
+}
+
+function BoxPanel({
+  entries,
+  selectedEntryId,
+  currentSummary,
+  message,
+  onClose,
+  onSaveCurrent,
+  onSelectEntry,
+  onLoadEntry,
+  onOverwriteEntry,
+  onRenameEntry,
+  onDuplicateEntry,
+  onDeleteEntry,
+}: BoxPanelProps) {
+  const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
+  const isBlankSlotSelected = selectedEntryId === BLANK_BOX_SLOT_ID;
+  const hasSelectedSlot = isBlankSlotSelected || selectedEntry !== null;
+
+  return (
+    <div className="box-overlay">
+      <div className="box-backdrop" aria-hidden="true" onClick={onClose} />
+      <section className="box-window" role="dialog" aria-modal="true" aria-labelledby="box-title">
+        <header className="box-window-header">
+          <div>
+            <h2 id="box-title">ボックス</h2>
+            <span>ブラウザに保存</span>
+          </div>
+          <button className="box-close-button" type="button" onClick={onClose}>
+            閉じる
+          </button>
+        </header>
+
+        <div className="box-current-row" aria-label="今の条件">
+          <div>
+            <span>今の条件</span>
+            <strong>{currentSummary.pokemonName}</strong>
+          </div>
+          <small>{currentSummary.conditionSummary}</small>
+          <Button variant="primary" size="small" onClick={onSaveCurrent}>
+            保存
+          </Button>
+        </div>
+
+        <div className="box-grid" aria-label="保存済みボックス">
+          <button
+            className={`box-slot blank${isBlankSlotSelected ? " selected" : ""}`}
+            type="button"
+            aria-pressed={isBlankSlotSelected}
+            onClick={() => onSelectEntry(BLANK_BOX_SLOT_ID)}
+          >
+            <span className="box-slot-art blank" aria-hidden="true">
+              <strong>+</strong>
+            </span>
+            <strong>空スロット</strong>
+            <span>リセット</span>
+          </button>
+          {entries.map((entry) => {
+            const selected = entry.id === selectedEntry?.id;
+            return (
+              <button
+                className={`box-slot${selected ? " selected" : ""}`}
+                type="button"
+                aria-pressed={selected}
+                key={entry.id}
+                onClick={() => onSelectEntry(entry.id)}
+              >
+                <BoxSlotArtwork entry={entry} />
+                <strong>{entry.name}</strong>
+                <span>{entry.summary.conditionSummary}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {entries.length === 0 ? (
+          <div className="box-empty-note" role="status">
+            今のシナリオを保存するとここに表示されます
+          </div>
+        ) : null}
+
+        <footer className="box-action-row">
+          {hasSelectedSlot ? (
+            <>
+              <div className="box-selected-label">
+                <span>選択中</span>
+                {selectedEntry ? (
+                  <input
+                    className="box-name-input"
+                    value={selectedEntry.name}
+                    placeholder={selectedEntry.summary.pokemonName}
+                    aria-label="保存名"
+                    onChange={(event) => onRenameEntry(selectedEntry.id, event.target.value)}
+                  />
+                ) : (
+                  <strong>空スロット</strong>
+                )}
+              </div>
+              <div className="box-action-buttons">
+                <Button variant="primary" size="small" onClick={() => onLoadEntry(selectedEntry?.id ?? BLANK_BOX_SLOT_ID)}>
+                  読込
+                </Button>
+                {selectedEntry ? (
+                  <>
+                    <Button variant="ghost" size="small" onClick={() => onOverwriteEntry(selectedEntry.id)}>
+                      上書き
+                    </Button>
+                    <Button variant="ghost" size="small" onClick={() => onDuplicateEntry(selectedEntry.id)}>
+                      複製
+                    </Button>
+                    <Button variant="danger" size="small" onClick={() => onDeleteEntry(selectedEntry.id)}>
+                      削除
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <span className="box-action-placeholder">保存スロットを選んでください</span>
+          )}
+        </footer>
+
+        {message ? <p className="box-message">{message}</p> : null}
+      </section>
+    </div>
+  );
+}
 
 function TargetPanel({
   targetForm,
@@ -1643,8 +1963,10 @@ function TargetPanel({
   artwork,
   actualStats,
   totalStatPoints,
+  isBoxPanelOpen,
   onUpdateField,
   onUpdateEv,
+  onOpenBoxPanel,
 }: TargetPanelProps) {
   const isSpLimitReached = totalStatPoints >= CHAMPIONS_TOTAL_STAT_POINTS;
   const abilityOptions = getPokemonAbilityInputOptions(
@@ -1657,6 +1979,16 @@ function TargetPanel({
         <div>
           <h2 id="target-title">調整対象</h2>
         </div>
+        <button
+          className={`box-access-button${isBoxPanelOpen ? " active" : ""}`}
+          type="button"
+          aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
+          aria-expanded={isBoxPanelOpen}
+          title="ボックス機能"
+          onClick={onOpenBoxPanel}
+        >
+          <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+        </button>
       </div>
 
       <div className="target-identity">
