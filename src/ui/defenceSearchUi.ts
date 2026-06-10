@@ -181,6 +181,7 @@ export interface SearchUiState {
   progress: number;
   candidates: CandidateResult[];
   errorMessage: string | null;
+  strictestFailureLabel: string | null;
 }
 
 export type SearchUiAction =
@@ -193,7 +194,7 @@ export type SearchUiAction =
       progress: number;
     }
   | { type: "partialResult"; requestId: string; candidates: CandidateResult[] }
-  | { type: "complete"; requestId: string; candidates: CandidateResult[] }
+  | { type: "complete"; requestId: string; candidates: CandidateResult[]; strictestFailureLabel?: string | null }
   | { type: "error"; requestId?: string; message: string }
   | { type: "cancel"; requestId?: string }
   | { type: "validationError"; message: string }
@@ -217,6 +218,7 @@ export const createInitialSearchUiState = (): SearchUiState => ({
   progress: 0,
   candidates: [],
   errorMessage: null,
+  strictestFailureLabel: null,
 });
 
 const zeroStatPoints: StatPointTable = {
@@ -1195,6 +1197,7 @@ export const searchUiReducer = (
         progress: 0,
         candidates: [],
         errorMessage: null,
+        strictestFailureLabel: null,
       };
     case "progress":
       return {
@@ -1215,6 +1218,7 @@ export const searchUiReducer = (
         activeRequestId: null,
         progress: 1,
         candidates: action.candidates,
+        strictestFailureLabel: action.strictestFailureLabel ?? null,
       };
     case "error":
       return {
@@ -1222,6 +1226,7 @@ export const searchUiReducer = (
         status: "error",
         activeRequestId: null,
         errorMessage: action.message,
+        strictestFailureLabel: null,
       };
     case "cancel":
       return {
@@ -1235,6 +1240,7 @@ export const searchUiReducer = (
         status: "error",
         activeRequestId: null,
         errorMessage: action.message,
+        strictestFailureLabel: null,
       };
     case "reset":
       return createInitialSearchUiState();
@@ -1278,6 +1284,7 @@ export const startDefenceSearchFromUi = (
         type: "complete",
         requestId: message.requestId,
         candidates: message.candidates,
+        strictestFailureLabel: message.strictestFailureLabel ?? null,
       }),
       onError: (message) => dispatch({
         type: "error",

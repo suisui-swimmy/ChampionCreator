@@ -278,6 +278,11 @@ const getWorstScenarioEvaluation = (evaluations: ScenarioEvaluation[]): Scenario
     return worst;
   }, undefined);
 
+export const getCandidateWorstMargin = (result: CandidateResult): number => {
+  const worstScenario = getWorstScenarioEvaluation(result.scenarioResults);
+  return worstScenario ? getScenarioMargin(worstScenario) : 0;
+};
+
 export const evaluateScenario = (
   defenderBuild: Build,
   scenario: Scenario,
@@ -384,29 +389,23 @@ export const compareCandidateResults = (left: CandidateResult, right: CandidateR
     return right.remainingStatPointBudget - left.remainingStatPointBudget;
   }
 
-  const leftWorstMargin = getScenarioMargin(getWorstScenarioEvaluation(left.scenarioResults) ?? {
-    scenarioId: "",
-    passed: true,
-    survivalProbability: 1,
-    requiredSurvivedHits: 0,
-    minSurvivalProbability: 0,
-    hitEvaluations: [],
-    bottleneckLabel: "",
-  });
-  const rightWorstMargin = getScenarioMargin(getWorstScenarioEvaluation(right.scenarioResults) ?? {
-    scenarioId: "",
-    passed: true,
-    survivalProbability: 1,
-    requiredSurvivedHits: 0,
-    minSurvivalProbability: 0,
-    hitEvaluations: [],
-    bottleneckLabel: "",
-  });
+  const leftWorstMargin = getCandidateWorstMargin(left);
+  const rightWorstMargin = getCandidateWorstMargin(right);
   if (leftWorstMargin !== rightWorstMargin) {
     return rightWorstMargin - leftWorstMargin;
   }
 
   return right.candidate.hp - left.candidate.hp;
+};
+
+export const compareFailureCandidateResults = (left: CandidateResult, right: CandidateResult): number => {
+  const leftWorstMargin = getCandidateWorstMargin(left);
+  const rightWorstMargin = getCandidateWorstMargin(right);
+  if (leftWorstMargin !== rightWorstMargin) {
+    return rightWorstMargin - leftWorstMargin;
+  }
+
+  return compareCandidateResults(left, right);
 };
 
 export const rankCandidateResults = (results: CandidateResult[]): CandidateResult[] =>

@@ -1048,12 +1048,30 @@ describe("searchUiReducer", () => {
       type: "complete",
       requestId: "request-a",
       candidates: [candidate],
+      strictestFailureLabel: null,
     });
 
     expect(state.status).toBe("complete");
     expect(state.progress).toBe(1);
     expect(state.searchedCandidates).toBe(5);
     expect(state.candidates).toEqual([candidate]);
+    expect(state.strictestFailureLabel).toBeNull();
+  });
+
+  it("stores the strictest failure label from empty complete results", () => {
+    let state = createInitialSearchUiState();
+
+    state = searchUiReducer(state, { type: "start", requestId: "request-empty" });
+    state = searchUiReducer(state, {
+      type: "complete",
+      requestId: "request-empty",
+      candidates: [],
+      strictestFailureLabel: "シナリオ1 -6.3%",
+    });
+
+    expect(state.status).toBe("complete");
+    expect(state.candidates).toEqual([]);
+    expect(state.strictestFailureLabel).toBe("シナリオ1 -6.3%");
   });
 
   it("does not adopt cancel results or stale requestId messages", () => {
@@ -1067,6 +1085,7 @@ describe("searchUiReducer", () => {
       type: "complete",
       requestId: "old-request",
       candidates: [staleCandidate],
+      strictestFailureLabel: "stale -100.0%",
     });
 
     expect(state.status).toBe("canceled");
@@ -1127,6 +1146,7 @@ describe("startDefenceSearchFromUi", () => {
       type: "complete",
       requestId: "request-ui",
       candidates: [candidate],
+      strictestFailureLabel: null,
     });
 
     expect(state.status).toBe("complete");

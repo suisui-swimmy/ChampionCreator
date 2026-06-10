@@ -165,6 +165,31 @@ describe("runDefenceSearchWorkerTask", () => {
       .toContain("Thunderbolt");
   });
 
+  it("includes the closest failed candidate bottleneck when no candidates pass", async () => {
+    const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
+    const attacker = makeBuild("attacker", "ピカチュウ", { ...zeroEvs, spa: 252 }, 1, "ひかえめ");
+    const scenarios = [
+      makeScenario("missing", [makeHit("thunderbolt", attacker, "10まんボルト")], 2, 1),
+    ];
+    const messages: DefenceSearchWorkerMessage[] = [];
+
+    await runDefenceSearchWorkerTask(
+      {
+        type: "start",
+        requestId: "request-empty",
+        build: defender,
+        scenarios,
+        options: { maxResults: 1, progressInterval: 1, yieldEvery: 1 },
+      },
+      (message) => messages.push(message),
+    );
+
+    const complete = messages.find((message) => message.type === "complete");
+
+    expect(complete?.type === "complete" ? complete.candidates : []).toEqual([]);
+    expect(complete?.type === "complete" ? complete.strictestFailureLabel : null).toBe("missing missing hits");
+  });
+
   it("emits error messages with a readable reason", async () => {
     const messages: DefenceSearchWorkerMessage[] = [];
 

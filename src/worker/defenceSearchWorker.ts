@@ -1,5 +1,6 @@
 import type { Build, CandidateResult, Scenario, StatTable } from "../domain/model";
 import {
+  compareFailureCandidateResults,
   countDefenceEvCandidates,
   evaluateCandidate,
   finalizeDefenceSearchResults,
@@ -51,6 +52,7 @@ export interface DefenceSearchWorkerCompleteMessage {
   type: "complete";
   requestId: string;
   candidates: CandidateResult[];
+  strictestFailureLabel?: string | null;
 }
 
 export interface DefenceSearchWorkerErrorMessage {
@@ -105,11 +107,13 @@ export const runDefenceSearchWorkerTask = async (
         type: "complete",
         requestId,
         candidates: [],
+        strictestFailureLabel: null,
       });
       return;
     }
 
     const passingResults: CandidateResult[] = [];
+    let closestFailedResult: CandidateResult | null = null;
     let searchedCandidates = 0;
     let partialResultCount = 0;
     let acceptedDefenceBudgetCeiling: number | null = null;
@@ -167,6 +171,11 @@ export const runDefenceSearchWorkerTask = async (
             candidates: finalizeDefenceSearchResults(build, scenarios, passingResults, searchOptions),
           });
         }
+      } else if (
+        closestFailedResult === null
+        || compareFailureCandidateResults(result, closestFailedResult) < 0
+      ) {
+        closestFailedResult = result;
       }
 
       if (searchedCandidates === 1 || searchedCandidates % progressInterval === 0 || searchedCandidates === totalCandidates) {
@@ -192,10 +201,12 @@ export const runDefenceSearchWorkerTask = async (
       return;
     }
 
+    const finalCandidates = finalizeDefenceSearchResults(build, scenarios, passingResults, searchOptions);
     emit({
       type: "complete",
       requestId,
-      candidates: finalizeDefenceSearchResults(build, scenarios, passingResults, searchOptions),
+      candidates: finalCandidates,
+      strictestFailureLabel: finalCandidates.length === 0 ? closestFailedResult?.bottleneckLabel ?? null : null,
     });
   } catch (error) {
     if (!isCanceled(requestId)) {

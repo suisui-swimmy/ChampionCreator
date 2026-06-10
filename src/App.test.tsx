@@ -19,6 +19,7 @@ import {
 import {
   createDefaultScenarioForms,
 } from "./ui/defenceSearchUi";
+import { appVersionInfo } from "./appVersion";
 
 describe("App", () => {
   it("keeps type and item dropdown candidates separated", () => {
@@ -43,6 +44,9 @@ describe("App", () => {
     const html = renderToStaticMarkup(<App />);
 
     expect(html).toContain("ChampionCreator");
+    expect(html).toContain('class="brand-line"');
+    expect(html).toContain(`app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`);
+    expect(html).not.toContain("Pokemon Champions 自動耐久調整");
     expect(html).toContain("調整対象");
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain('aria-label="シナリオ1 調整種別"');
@@ -61,6 +65,9 @@ describe("App", () => {
     expect(html).toContain(">任意S値</span>");
     expect(html).toContain(">素早さ条件</h3>");
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値"');
+    expect(html).toContain('class="number-stepper speed-offset-input"');
+    expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1下げる"');
+    expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1上げる"');
     expect(html).toContain(">技補正</span>");
     expect(html).not.toContain("speed-tailwind-toggle");
     expect(html).toContain('class="scenario-cell number-cell number-labeled-field speed-manual-target-input"');
@@ -83,16 +90,22 @@ describe("App", () => {
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
     expect(html).toContain('role="progressbar"');
+    expect(html).toContain("0 / - 候補");
     expect(html).toContain(">キャンセル<");
     expect(html).toContain(">計算開始<");
     expect(html).toContain("候補一覧");
+    expect(html).toContain("計算結果");
+    expect(html).not.toContain("計算開始で Worker 経由の候補がここに出ます");
     expect(html).toContain('aria-label="権利表記"');
     expect(html).toContain("© 2026 suisui-swimmy");
     expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
+    expect(html).not.toContain("ゲームフリーク に帰属します。");
     expect(html).toContain('href="https://x.com/peixe0307"');
-    expect(html).toContain("不具合報告 / お問い合わせ :");
+    expect(html).toContain("不具合報告 / お問い合わせ");
+    expect(html).not.toContain("不具合報告 / お問い合わせ :");
     expect(html).toContain("assets/social/x-logo.svg");
     expect(html).not.toContain("火力ライン結果");
+    expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
   });
@@ -254,9 +267,9 @@ describe("App", () => {
     expect(html).toContain('class="candidate-sp-bar spa"');
   });
 
-  it("labels failed scenario results as unavailable", () => {
+  it("labels failed scenario results as FAIL", () => {
     expect(formatScenarioResultStatusLabel(true)).toBe("PASS");
-    expect(formatScenarioResultStatusLabel(false)).toBe("不可");
+    expect(formatScenarioResultStatusLabel(false)).toBe("FAIL");
   });
 
   it("localizes Smogon damage descriptions for the selected candidate detail", () => {
@@ -336,6 +349,7 @@ describe("App", () => {
     const resultsPanelBaseProps = {
       offenseResults,
       speedResults: [],
+      strictestFailureLabel: null,
       targetLabel: "メガマフォクシー",
       resultAlertMessage: null,
     };
@@ -400,6 +414,7 @@ describe("App", () => {
         status="idle"
         offenseResults={[]}
         speedResults={[]}
+        strictestFailureLabel="シナリオ1 -6.3%"
         targetLabel="メガマフォクシー"
         resultAlertMessage="火力調整条件を候補一覧へ統合できません: シナリオ2 / 火力調整A: 最大SPでも指定KO率に届きません"
         onSelectCandidate={() => undefined}
@@ -408,9 +423,36 @@ describe("App", () => {
     );
 
     expect(html).toContain("候補一覧");
+    expect(html).toContain(">FAIL</strong>");
     expect(html).toContain("すべてのシナリオを満たす候補を作れません");
     expect(html).toContain("最厳条件: シナリオ2 / 火力調整A: 最大SPでも指定KO率に届きません");
+    expect(html).not.toContain("最厳条件: シナリオ1 -6.3%");
     expect(html).not.toContain("火力ライン結果");
+  });
+
+  it("shows the strictest condition when a completed search has no candidates", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[]}
+        selectedCandidateId={null}
+        appliedCandidateId={null}
+        scenarios={[scenario]}
+        status="complete"
+        offenseResults={[]}
+        speedResults={[]}
+        strictestFailureLabel="シナリオ1 -6.3%"
+        targetLabel="メガマフォクシー"
+        resultAlertMessage={null}
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain(">FAIL</strong>");
+    expect(html).toContain("すべてのシナリオを満たす候補が見つかりません");
+    expect(html).not.toContain("必要耐久・生存率・固定SPをゆるめてください");
+    expect(html).toContain("最厳条件: シナリオ1 -6.3%");
   });
 
   it("keeps speed line details inside expanded candidates without the separate result panel", () => {
@@ -475,6 +517,7 @@ describe("App", () => {
             reason: "確定抜きは S12 SPで達成します",
           },
         }]}
+        strictestFailureLabel={null}
         targetLabel="メガマフォクシー"
         resultAlertMessage={null}
         onSelectCandidate={() => undefined}
@@ -487,6 +530,7 @@ describe("App", () => {
     expect(html).not.toContain("S適用");
     expect(html).toContain("素早さ調整</strong>");
     expect(html).toContain("相手S 150");
+    expect(html).toContain(">PASS</em>");
     expect(html).toContain("S12 メガマフォクシー → 任意S150 : 自分 151 / 相手 150 / 抜ける / こだわりスカーフ 1.5倍");
     expect(html).toContain('aria-label="SPバー: H 3 / A 0 / B 32 / C 2 / D 0 / S 12"');
     expect(html).toContain("自分 151");
@@ -543,6 +587,7 @@ describe("App", () => {
             reason: "確定抜きは S29 SPで達成します",
           },
         }]}
+        strictestFailureLabel={null}
         targetLabel="メガマフォクシー"
         resultAlertMessage={null}
         onSelectCandidate={() => undefined}

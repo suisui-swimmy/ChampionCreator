@@ -347,8 +347,8 @@ export const formatLocalizedDamageDescription = (description: string): string =>
 
 const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
 
-export const formatScenarioResultStatusLabel = (passed: boolean): "PASS" | "不可" =>
-  passed ? "PASS" : "不可";
+export const formatScenarioResultStatusLabel = (passed: boolean): "PASS" | "FAIL" =>
+  passed ? "PASS" : "FAIL";
 
 const formatStatPointSpreadLabel = (statPoints: StatTable): string =>
   statKeys.map((key) => `${statLabels[key]} ${statPoints[key]}`).join(" / ");
@@ -793,21 +793,21 @@ export function App() {
     <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
       <header className="topbar">
         <div className="brand-title">
-          <h1>
-            <img
-              src={getAssetSrc("assets/brand/championcreator-title.svg")}
-              alt="ChampionCreator"
-            />
-          </h1>
-          <p>
-            Pokemon Champions 自動耐久調整
-            {" / "}
-            app v{appVersionInfo.appVersion}
-            {" / "}
-            calc {appVersionInfo.smogonCalcVersion}
-            {" / "}
-            data {appVersionInfo.localizationEntries}
-          </p>
+          <div className="brand-line">
+            <h1>
+              <img
+                src={getAssetSrc("assets/brand/championcreator-title.svg")}
+                alt="ChampionCreator"
+              />
+            </h1>
+            <p>
+              app v{appVersionInfo.appVersion}
+              {" / "}
+              calc {appVersionInfo.smogonCalcVersion}
+              {" / "}
+              data {appVersionInfo.localizationEntries}
+            </p>
+          </div>
         </div>
         <div className="topbar-actions">
           <Button variant="ghost" onClick={openSharePanel}>
@@ -881,7 +881,7 @@ export function App() {
             />
             <span className="search-progress-label" aria-live="polite">
               <strong>{Math.round(searchState.progress * 100)}%</strong>
-              <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} candidates</span>
+              <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} 候補</span>
             </span>
           </div>
           <Button
@@ -910,6 +910,7 @@ export function App() {
           status={searchState.status}
           offenseResults={offenseResults}
           speedResults={speedResults}
+          strictestFailureLabel={searchState.strictestFailureLabel}
           targetLabel={targetBuildPreview?.pokemon.displayNameJa ?? targetForm.pokemonInput}
           resultAlertMessage={resultAlertMessage}
           onSelectCandidate={handleSelectCandidate}
@@ -920,7 +921,7 @@ export function App() {
         <div className="app-footer-copy">
           <span>© 2026 suisui-swimmy</span>
           <span>
-            本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します。
+            本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します
           </span>
         </div>
         <a
@@ -930,7 +931,7 @@ export function App() {
           rel="noreferrer"
           aria-label="不具合報告 / お問い合わせ: X @peixe0307"
         >
-          <span>不具合報告 / お問い合わせ :</span>
+          <span>不具合報告 / お問い合わせ</span>
           <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
         </a>
       </footer>
@@ -1582,6 +1583,50 @@ function IconToggleButton({ active, disabled = false, iconName, label, onClick }
   );
 }
 
+type NumberStepperProps = {
+  className?: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  disabled?: boolean;
+  onChange: (value: number) => void;
+};
+
+function NumberStepper({ className, label, value, min, max, disabled = false, onChange }: NumberStepperProps) {
+  const normalizedValue = clampNumberInput(value, min, max);
+  const updateValue = (nextValue: number) => onChange(clampNumberInput(nextValue, min, max));
+
+  return (
+    <span className={`number-stepper${className ? ` ${className}` : ""}`}>
+      <button
+        type="button"
+        aria-label={`${label}を1下げる`}
+        disabled={disabled || normalizedValue <= min}
+        onClick={() => updateValue(normalizedValue - 1)}
+      >
+        -
+      </button>
+      <input
+        {...numericInputProps}
+        value={normalizedValue}
+        aria-label={label}
+        disabled={disabled}
+        onFocus={selectInputValueOnFocus}
+        onChange={(event) => updateValue(toNumber(event.target.value, normalizedValue))}
+      />
+      <button
+        type="button"
+        aria-label={`${label}を1上げる`}
+        disabled={disabled || normalizedValue >= max}
+        onClick={() => updateValue(normalizedValue + 1)}
+      >
+        +
+      </button>
+    </span>
+  );
+}
+
 type TargetPanelProps = {
   targetForm: TargetFormState;
   canonicalPokemon?: string;
@@ -1838,11 +1883,6 @@ function PokemonArtworkFrame({
       ) : (
         <strong>{fallbackInitial}</strong>
       )}
-      {match ? (
-        <div className="pokemon-artwork-meta">
-          <span>{match.label}</span>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -2351,14 +2391,14 @@ function AttackCard({
                     <strong>{actualStats?.spe ?? "-"}</strong>
                     <span>{isTrickRoomSpeed ? "-" : "+"}</span>
                   </label>
-                  <input
+                  <NumberStepper
                     className="speed-offset-input"
-                    {...numericInputProps}
                     value={attack.speedRequiredOffset}
-                    aria-label={`${attackLabel} ${speedPrimaryConditionLabel}差分値`}
+                    label={`${attackLabel} ${speedPrimaryConditionLabel}差分値`}
+                    min={0}
+                    max={10000}
                     disabled={isManualSpeedTarget}
-                    onFocus={selectInputValueOnFocus}
-                    onChange={(event) => onUpdateAttack(scenarioId, attack.id, "speedRequiredOffset", clampNumberInput(toNumber(event.target.value, 1), 0, 10000))}
+                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedRequiredOffset", value)}
                   />
                 </div>
                 <label className="speed-target-mode-option">
@@ -2859,6 +2899,7 @@ type ResultsPanelProps = {
   status: string;
   offenseResults: OffenseScenarioResult[];
   speedResults: SpeedScenarioResult[];
+  strictestFailureLabel: string | null;
   targetLabel: string;
   resultAlertMessage: string | null;
   onSelectCandidate: (id: string) => void;
@@ -2953,6 +2994,7 @@ export function ResultsPanel({
   status,
   offenseResults,
   speedResults,
+  strictestFailureLabel,
   targetLabel,
   resultAlertMessage,
   onSelectCandidate,
@@ -2982,7 +3024,7 @@ export function ResultsPanel({
         </div>
         {resultAlertMessage ? (
           <div className="empty-result impossible-result result-alert" role="alert">
-            <strong>不可</strong>
+            <strong>FAIL</strong>
             <span>すべてのシナリオを満たす候補を作れません。</span>
             <small>最厳条件: {formatResultAlertStrictestCondition(resultAlertMessage)}</small>
           </div>
@@ -2991,11 +3033,12 @@ export function ResultsPanel({
           resultAlertMessage ? null : <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
             {status === "complete" ? (
               <>
-                <strong>不可</strong>
-                <span>すべてのシナリオを満たす候補がありません。必要耐久・生存率・固定SPをゆるめてください。</span>
+                <strong>FAIL</strong>
+                <span>すべてのシナリオを満たす候補が見つかりません</span>
+                {strictestFailureLabel ? <small>最厳条件: {strictestFailureLabel}</small> : null}
               </>
             ) : (
-              "計算開始で Worker 経由の候補がここに出ます"
+              "計算結果"
             )}
           </div>
         ) : candidates.map((candidate) => {
@@ -3098,7 +3141,7 @@ export function ResultsPanel({
                           <strong>{scenarioLabel}</strong>
                           <span>相手S {entry.result.targetSpeed || "-"}</span>
                           <em className={entry.result.passed ? "" : "fail-badge"}>
-                            {formatSpeedRelationLabel(entry.result)}
+                            {formatScenarioResultStatusLabel(entry.result.passed)}
                           </em>
                         </div>
                         <ul>
