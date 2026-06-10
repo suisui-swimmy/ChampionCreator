@@ -18,6 +18,7 @@ describe("boxStorage", () => {
     expect(summary).toEqual({
       pokemonName: "メガマフォクシー",
       conditionSummary: "耐久 1 / 火力 1 / 素早さ 1",
+      statPointSummary: "H0 / A0 / B0 / C0 / D0 / S0",
     });
   });
 
@@ -37,6 +38,7 @@ describe("boxStorage", () => {
       name: "メガマフォクシー",
       summary: {
         pokemonName: "メガマフォクシー",
+        statPointSummary: "H0 / A0 / B0 / C0 / D0 / S0",
       },
     });
     expect(parsed[0]?.payload.target.pokemonInput).toBe("メガマフォクシー");

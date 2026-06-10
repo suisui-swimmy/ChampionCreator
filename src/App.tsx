@@ -1862,9 +1862,9 @@ function BoxPanel({
           </button>
         </header>
 
-        <div className="box-current-row" aria-label="今の条件">
+        <div className="box-current-row" aria-label="編集中のシナリオ">
           <div>
-            <span>今の条件</span>
+            <span>編集中のシナリオ</span>
             <strong>{currentSummary.pokemonName}</strong>
           </div>
           <small>{currentSummary.conditionSummary}</small>
@@ -1898,7 +1898,7 @@ function BoxPanel({
               >
                 <BoxSlotArtwork entry={entry} />
                 <strong>{entry.name}</strong>
-                <span>{entry.summary.conditionSummary}</span>
+                <span>{entry.summary.statPointSummary}</span>
               </button>
             );
           })}

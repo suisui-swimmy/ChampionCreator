@@ -7,6 +7,7 @@ import {
   type ScenarioFormState,
   type TargetFormState,
 } from "./defenceSearchUi";
+import type { StatPointTable } from "../domain/championsStats";
 
 export const BOX_STORAGE_KEY = "championcreator.box.v1";
 export const BOX_STORAGE_SCHEMA_VERSION = 1;
@@ -14,6 +15,7 @@ export const BOX_STORAGE_SCHEMA_VERSION = 1;
 export type BoxEntrySummary = {
   pokemonName: string;
   conditionSummary: string;
+  statPointSummary: string;
 };
 
 export type BoxEntry = {
@@ -40,6 +42,17 @@ const createBoxEntryId = (): string => {
 
   return `box-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
+
+const formatBoxStatPointSummary = (statPoints: StatPointTable): string => (
+  [
+    `H${statPoints.hp}`,
+    `A${statPoints.atk}`,
+    `B${statPoints.def}`,
+    `C${statPoints.spa}`,
+    `D${statPoints.spd}`,
+    `S${statPoints.spe}`,
+  ].join(" / ")
+);
 
 export const createBoxEntrySummary = (
   target: TargetFormState,
@@ -68,6 +81,7 @@ export const createBoxEntrySummary = (
   return {
     pokemonName,
     conditionSummary: labels.length > 0 ? labels.join(" / ") : "条件なし",
+    statPointSummary: formatBoxStatPointSummary(target.statPoints),
   };
 };
 
@@ -102,6 +116,7 @@ const normalizeBoxEntry = (value: unknown): BoxEntry | null => {
 
   try {
     const payload = parseShareStateDocument(JSON.stringify(value.payload));
+    const fallbackSummary = createBoxEntrySummary(payload.target, payload.scenarios);
     const summary = isRecord(value.summary)
       ? {
         pokemonName: typeof value.summary.pokemonName === "string"
@@ -109,9 +124,12 @@ const normalizeBoxEntry = (value: unknown): BoxEntry | null => {
           : payload.target.pokemonInput || "未設定",
         conditionSummary: typeof value.summary.conditionSummary === "string"
           ? value.summary.conditionSummary
-          : createBoxEntrySummary(payload.target, payload.scenarios).conditionSummary,
+          : fallbackSummary.conditionSummary,
+        statPointSummary: typeof value.summary.statPointSummary === "string"
+          ? value.summary.statPointSummary
+          : fallbackSummary.statPointSummary,
       }
-      : createBoxEntrySummary(payload.target, payload.scenarios);
+      : fallbackSummary;
 
     return {
       id: typeof value.id === "string" && value.id ? value.id : createBoxEntryId(),
