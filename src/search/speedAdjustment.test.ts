@@ -114,6 +114,7 @@ describe("calculateSpeedAdjustment", () => {
     });
     expect(result.requiredStatPoints).not.toBeNull();
     expect(result.actualSpeed).toBeGreaterThan(result.targetSpeed);
+    expect(result.notes).toEqual([]);
   });
 
   it("distinguishes tie lines from guaranteed outspeed lines", () => {
@@ -168,6 +169,64 @@ describe("calculateSpeedAdjustment", () => {
       requiredSpeed: currentSpeed + 1,
     });
     expect(plusOneLine.requiredStatPoints).not.toBe(0);
+  });
+
+  it("searches downward and passes slower lines under Trick Room", () => {
+    const targetBuild = makeBuild("target", "メガマフォクシー", "おくびょう", {
+      ...zeroStatPoints,
+      spe: 32,
+    });
+    const currentSpeed = calculateSmogonFinalSpeed(targetBuild, emptyField, emptySide);
+    const zeroSpeed = calculateSmogonFinalSpeed(
+      makeBuild("target", "メガマフォクシー", "おくびょう"),
+      emptyField,
+      emptySide,
+    );
+    const opponentSpeed = Math.floor((currentSpeed + zeroSpeed) / 2);
+    const result = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild: undefined,
+      opponentLabel: "任意S値",
+      manualTargetSpeed: opponentSpeed,
+      comparison: "outspeed",
+      orderMode: "trick-room",
+      requiredSpeedOffset: 1,
+    }));
+
+    expect(result).toMatchObject({
+      status: "pass",
+      passed: true,
+      orderMode: "trick-room",
+      relation: "outspeed",
+      requiredSpeed: opponentSpeed - 1,
+    });
+    expect(result.requiredStatPoints).not.toBe(32);
+    expect(result.actualSpeed).toBeLessThan(opponentSpeed);
+    expect(result.reason).toContain("トリル先制ライン");
+    expect(result.notes).toContain("トリックルーム 行動順反転");
+  });
+
+  it("allows ties under Trick Room when the explicit offset is zero", () => {
+    const targetBuild = makeBuild("target", "メガマフォクシー", "おくびょう");
+    const currentSpeed = calculateSmogonFinalSpeed(targetBuild, emptyField, emptySide);
+    const result = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild: undefined,
+      opponentLabel: "任意S値",
+      manualTargetSpeed: currentSpeed,
+      comparison: "outspeed",
+      orderMode: "trick-room",
+      requiredSpeedOffset: 0,
+    }));
+
+    expect(result).toMatchObject({
+      status: "tie",
+      passed: true,
+      orderMode: "trick-room",
+      relation: "tie",
+      requiredStatPoints: 0,
+      requiredSpeed: currentSpeed,
+    });
   });
 
   it("reports the maximum reachable line when the SP budget cannot satisfy the condition", () => {

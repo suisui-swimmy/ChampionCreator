@@ -44,6 +44,7 @@ import {
 } from "../search/speedAdjustment";
 
 export type SpeedTargetMode = "opponent" | "manual";
+export type SpeedMoveModifier = "none" | "tailwind" | "trick-room";
 
 export interface TargetFormState {
   pokemonInput: string;
@@ -94,6 +95,7 @@ export interface ScenarioAttackFormState {
   speedTargetValue: number;
   speedItemMultiplier: SpeedManualMultiplier;
   speedAbilityMultiplier: SpeedManualMultiplier;
+  speedMoveModifier: SpeedMoveModifier;
   tailwind: boolean;
 }
 
@@ -353,6 +355,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   speedTargetValue: 0,
   speedItemMultiplier: "auto",
   speedAbilityMultiplier: "auto",
+  speedMoveModifier: "none",
   tailwind: false,
 });
 
@@ -416,6 +419,7 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
       speedTargetMode: "opponent",
       speedComparison: "outspeed",
       speedRequiredOffset: 1,
+      speedMoveModifier: "none",
     }],
   },
 ];
@@ -769,8 +773,9 @@ export const buildSpeedAdjustmentInput = (
     targetBoosts: normalizeBoosts(targetForm.boosts),
     opponentBoosts: normalizeBoosts(attackForm.attackerBoosts),
     targetSide: { ...emptySide },
-    opponentSide: { ...emptySide, tailwind: attackForm.tailwind },
+    opponentSide: { ...emptySide, tailwind: attackForm.speedMoveModifier === "tailwind" },
     comparison: "outspeed",
+    orderMode: attackForm.speedMoveModifier === "trick-room" ? "trick-room" : "normal",
     requiredSpeedOffset: hasManualTargetSpeed ? 0 : clampInt(attackForm.speedRequiredOffset, 0, 10000),
     manualTargetSpeed: hasManualTargetSpeed ? clampInt(attackForm.speedTargetValue, 0, 10000) : undefined,
     opponentItemMultiplier: attackForm.speedItemMultiplier,
@@ -789,6 +794,7 @@ const makeSpeedAdjustmentMessageResult = (
   canApply: false,
   label: "Sライン",
   comparison: "outspeed",
+  orderMode: "normal",
   relation: "miss",
   requiredStatPoints: null,
   actualSpeed: null,

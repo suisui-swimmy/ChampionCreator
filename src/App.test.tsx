@@ -60,7 +60,9 @@ describe("App", () => {
     expect(html).toContain(">確定抜き</span>");
     expect(html).toContain(">任意S値</span>");
     expect(html).toContain(">素早さ条件</h3>");
-    expect(html).toContain('aria-label="素早さ調整A 確定抜き加算値"');
+    expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値"');
+    expect(html).toContain(">技補正</span>");
+    expect(html).not.toContain("speed-tailwind-toggle");
     expect(html).toContain('class="scenario-cell number-cell number-labeled-field speed-manual-target-input"');
     expect(html).toContain('inputMode="numeric"');
     expect(html.match(/>任意S値<\/span>/g)).toHaveLength(1);
@@ -76,7 +78,8 @@ describe("App", () => {
     expect(html).toContain('aria-label="火力調整A 火力調整。クリックで素早さ調整に切り替え"');
     expect(html).toContain('aria-label="素早さ調整A 素早さ調整。クリックで耐久調整に切り替え"');
     expect(html).toContain("assets/ui/arrow-up-circle.svg");
-    expect(html).toContain('aria-label="Sライン結果"');
+    expect(html).not.toContain("assets/ui/arrow-down-circle.svg");
+    expect(html).not.toContain('aria-label="Sライン結果"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
     expect(html).toContain('role="progressbar"');
@@ -333,10 +336,8 @@ describe("App", () => {
     const resultsPanelBaseProps = {
       offenseResults,
       speedResults: [],
-      appliedSpeedResultId: null,
       targetLabel: "メガマフォクシー",
       resultAlertMessage: null,
-      onApplySpeedAdjustment: () => undefined,
     };
     const closedHtml = renderToStaticMarkup(
       <ResultsPanel
@@ -399,12 +400,10 @@ describe("App", () => {
         status="idle"
         offenseResults={[]}
         speedResults={[]}
-        appliedSpeedResultId={null}
         targetLabel="メガマフォクシー"
         resultAlertMessage="火力調整条件を候補一覧へ統合できません: シナリオ2 / 火力調整A: 最大SPでも指定KO率に届きません"
         onSelectCandidate={() => undefined}
         onApplyCandidate={() => undefined}
-        onApplySpeedAdjustment={() => undefined}
       />,
     );
 
@@ -414,7 +413,7 @@ describe("App", () => {
     expect(html).not.toContain("火力ライン結果");
   });
 
-  it("renders speed line results and apply action above candidates", () => {
+  it("keeps speed line details inside expanded candidates without the separate result panel", () => {
     const [scenario] = createDefaultScenarioForms();
     const speedScenario = {
       ...scenario,
@@ -430,10 +429,24 @@ describe("App", () => {
         speedTargetValue: 150,
       }],
     };
+    const candidate: CandidateResult = {
+      id: "candidate-speed",
+      rank: 1,
+      candidate: { hp: 3, def: 32, spd: 0 },
+      appliedStatPoints: { hp: 3, atk: 0, def: 32, spa: 2, spd: 0, spe: 12 },
+      appliedEvs: { hp: 20, atk: 0, def: 252, spa: 12, spd: 0, spe: 92 },
+      usedStatPointBudget: 49,
+      remainingStatPointBudget: 17,
+      usedEvBudget: 376,
+      remainingEvBudget: 132,
+      passed: true,
+      bottleneckLabel: "シナリオ1 +3.7%",
+      scenarioResults: [],
+    };
     const html = renderToStaticMarkup(
       <ResultsPanel
-        candidates={[]}
-        selectedCandidateId={null}
+        candidates={[candidate]}
+        selectedCandidateId={candidate.id}
         appliedCandidateId={null}
         scenarios={[speedScenario]}
         status="idle"
@@ -451,6 +464,7 @@ describe("App", () => {
             canApply: true,
             label: "Sライン",
             comparison: "outspeed",
+            orderMode: "normal",
             relation: "outspeed",
             requiredStatPoints: 12,
             actualSpeed: 151,
@@ -461,25 +475,84 @@ describe("App", () => {
             reason: "確定抜きは S12 SPで達成します",
           },
         }]}
-        appliedSpeedResultId={null}
         targetLabel="メガマフォクシー"
         resultAlertMessage={null}
         onSelectCandidate={() => undefined}
         onApplyCandidate={() => undefined}
-        onApplySpeedAdjustment={() => undefined}
       />,
     );
 
-    expect(html).toContain("Sライン結果");
-    expect(html).toContain("候補一覧の固定Sへ自動統合されます");
+    expect(html).not.toContain("Sライン結果");
+    expect(html).not.toContain("候補一覧の固定Sへ自動統合されます");
+    expect(html).not.toContain("S適用");
     expect(html).toContain("素早さ調整</strong>");
-    expect(html).toContain("最速ピカチュウ");
-    expect(html).toContain("必要 S12");
+    expect(html).toContain("相手S 150");
+    expect(html).toContain("S12 メガマフォクシー → 任意S150 : 自分 151 / 相手 150 / 抜ける / こだわりスカーフ 1.5倍");
+    expect(html).toContain('aria-label="SPバー: H 3 / A 0 / B 32 / C 2 / D 0 / S 12"');
     expect(html).toContain("自分 151");
     expect(html).toContain("相手 150");
     expect(html).toContain("抜ける");
-    expect(html).toContain("S適用");
     expect(html).toContain("こだわりスカーフ 1.5倍");
+  });
+
+  it("omits speed note text when no speed modifiers are applied", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const speedScenario = {
+      ...scenario,
+      id: "scenario-speed-no-note",
+      label: "素早さ調整",
+      adjustmentType: "speed" as const,
+      attacks: [{
+        ...scenario.attacks[0],
+        id: "attack-speed-no-note",
+        label: "最速ゲンガー",
+        attackerPokemonInput: "メガゲンガー",
+        speedTargetMode: "manual" as const,
+        speedTargetValue: 200,
+      }],
+    };
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[]}
+        selectedCandidateId={null}
+        appliedCandidateId={null}
+        scenarios={[speedScenario]}
+        status="idle"
+        offenseResults={[]}
+        speedResults={[{
+          id: "scenario-speed-no-note-attack-speed-no-note-speed-line",
+          scenarioId: "scenario-speed-no-note",
+          scenarioLabel: "素早さ調整",
+          attackId: "attack-speed-no-note",
+          attackLabel: "最速ゲンガー",
+          result: {
+            id: "speed-line",
+            status: "pass",
+            passed: true,
+            canApply: true,
+            label: "Sライン",
+            comparison: "outspeed",
+            orderMode: "normal",
+            relation: "outspeed",
+            requiredStatPoints: 29,
+            actualSpeed: 201,
+            targetSpeed: 200,
+            requiredSpeed: 201,
+            targetStatPoints: 0,
+            notes: [],
+            reason: "確定抜きは S29 SPで達成します",
+          },
+        }]}
+        targetLabel="メガマフォクシー"
+        resultAlertMessage={null}
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain("Sライン結果");
+    expect(html).not.toContain("自動補正なし");
+    expect(html).not.toContain("抜ける /");
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {

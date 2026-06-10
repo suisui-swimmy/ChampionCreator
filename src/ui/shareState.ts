@@ -30,6 +30,7 @@ const mergeObject = <T extends object>(base: T, value: unknown): T => (
 const pokemonStatuses = new Set<PokemonStatus>(["none", "slp", "psn", "brn", "frz", "par", "tox"]);
 const scenarioAdjustmentTypes = new Set<ScenarioAdjustmentType>(["defence", "offense", "speed"]);
 const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["opponent", "manual"]);
+const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 
 const normalizePokemonStatus = (value: unknown, fallback: PokemonStatus): PokemonStatus =>
   typeof value === "string" && pokemonStatuses.has(value as PokemonStatus)
@@ -63,6 +64,7 @@ const normalizeAttack = (
   const input = mergeObject(defaults, value) as ScenarioAttackFormState & Record<string, unknown>;
   const hasDefenderStatus = isRecord(value) && "defenderStatus" in value;
   const hasSpeedTargetMode = isRecord(value) && "speedTargetMode" in value;
+  const hasSpeedMoveModifier = isRecord(value) && "speedMoveModifier" in value;
   return {
     ...defaults,
     ...input,
@@ -72,6 +74,11 @@ const normalizeAttack = (
       && speedTargetModes.has(input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"])
       ? input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"]
       : Number(input.speedTargetValue) > 0 ? "manual" : defaults.speedTargetMode,
+    speedMoveModifier: hasSpeedMoveModifier
+      && typeof input.speedMoveModifier === "string"
+      && speedMoveModifiers.has(input.speedMoveModifier as ScenarioAttackFormState["speedMoveModifier"])
+      ? input.speedMoveModifier as ScenarioAttackFormState["speedMoveModifier"]
+      : input.tailwind === true ? "tailwind" : defaults.speedMoveModifier,
     defenderStatus: hasDefenderStatus
       ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
       : legacyTargetStatus,

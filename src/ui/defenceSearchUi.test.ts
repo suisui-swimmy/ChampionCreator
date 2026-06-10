@@ -121,13 +121,14 @@ const makeSpeedResult = (
     canApply: result.canApply ?? true,
     label: result.label ?? "Sライン",
     comparison: result.comparison ?? "outspeed",
+    orderMode: result.orderMode ?? "normal",
     relation: result.relation ?? "outspeed",
     requiredStatPoints: result.requiredStatPoints ?? 0,
     actualSpeed: result.actualSpeed ?? 120,
     targetSpeed: result.targetSpeed ?? 119,
     requiredSpeed: result.requiredSpeed ?? 120,
     targetStatPoints: result.targetStatPoints ?? 0,
-    notes: result.notes ?? ["自動補正なし"],
+    notes: result.notes ?? [],
     reason: result.reason ?? "Sライン 0 SPで達成します",
     reference: result.reference,
   },
@@ -190,10 +191,12 @@ describe("buildDefenceSearchInput", () => {
       speedTargetMode: "opponent",
       speedComparison: "outspeed",
       speedRequiredOffset: 1,
+      speedMoveModifier: "none",
     });
     expect(buildSpeedAdjustmentInput(target, scenarios[2].attacks[0])).toMatchObject({
       opponentLabel: "メガゲンガー",
       comparison: "outspeed",
+      orderMode: "normal",
       requiredSpeedOffset: 1,
     });
   });
@@ -758,7 +761,7 @@ describe("buildSpeedAdjustmentInput", () => {
       speedRequiredOffset: 3,
       speedItemMultiplier: "1.5" as const,
       speedAbilityMultiplier: "2" as const,
-      tailwind: true,
+      speedMoveModifier: "tailwind" as const,
     };
 
     const input = buildSpeedAdjustmentInput(target, attack);
@@ -775,10 +778,24 @@ describe("buildSpeedAdjustmentInput", () => {
     expect(input.opponentBoosts.spe).toBe(2);
     expect(input.field.weather).toBe("rain");
     expect(input.opponentSide.tailwind).toBe(true);
+    expect(input.orderMode).toBe("normal");
     expect(input.comparison).toBe("outspeed");
     expect(input.requiredSpeedOffset).toBe(3);
     expect(input.opponentItemMultiplier).toBe("1.5");
     expect(input.opponentAbilityMultiplier).toBe("2");
+  });
+
+  it("converts Trick Room move modifier into reversed speed order input", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const input = buildSpeedAdjustmentInput(createDefaultTargetForm(), {
+      ...scenario.attacks[0],
+      attackerPokemonInput: "ピカチュウ",
+      speedTargetMode: "opponent" as const,
+      speedMoveModifier: "trick-room" as const,
+    });
+
+    expect(input.opponentSide.tailwind).toBe(false);
+    expect(input.orderMode).toBe("trick-room");
   });
 
   it("uses direct target speed without requiring an opponent build", () => {
@@ -1204,13 +1221,14 @@ describe("applySpeedAdjustmentToTarget", () => {
       canApply: true,
       label: "Sライン",
       comparison: "outspeed",
+      orderMode: "normal",
       relation: "outspeed",
       requiredStatPoints: 24,
       actualSpeed: 180,
       targetSpeed: 179,
       requiredSpeed: 180,
       targetStatPoints: 0,
-      notes: ["自動補正なし"],
+      notes: [],
       reason: "Sライン 24 SPで達成します",
     });
 
@@ -1226,6 +1244,7 @@ describe("applySpeedAdjustmentToTarget", () => {
       canApply: false,
       label: "Sライン",
       comparison: "outspeed",
+      orderMode: "normal",
       relation: "miss",
       requiredStatPoints: 32,
       actualSpeed: 120,

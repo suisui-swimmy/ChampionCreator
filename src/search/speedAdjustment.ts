@@ -19,6 +19,7 @@ import { getBuildStatPoints } from "./defenceSearch";
 export type SpeedAdjustmentStatus = "pass" | "tie" | "fail" | "unresolved" | "invalid";
 export type SpeedComparisonMode = "outspeed" | "tie";
 export type SpeedManualMultiplier = "auto" | "2" | "1.5" | "0.5";
+export type SpeedOrderMode = "normal" | "trick-room";
 export type SpeedRelation = "outspeed" | "tie" | "miss";
 
 export interface SpeedAdjustmentInput {
@@ -31,6 +32,7 @@ export interface SpeedAdjustmentInput {
   targetSide: SideState;
   opponentSide: SideState;
   comparison: SpeedComparisonMode;
+  orderMode?: SpeedOrderMode;
   requiredSpeedOffset?: number;
   manualTargetSpeed?: number;
   opponentItemMultiplier: SpeedManualMultiplier;
@@ -45,6 +47,7 @@ export interface SpeedAdjustmentResult {
   canApply: boolean;
   label: string;
   comparison: SpeedComparisonMode;
+  orderMode: SpeedOrderMode;
   relation: SpeedRelation;
   requiredStatPoints: number | null;
   actualSpeed: number | null;
@@ -121,21 +124,36 @@ const getSpeedRelation = (actualSpeed: number, targetSpeed: number): SpeedRelati
   return "miss";
 };
 
+const getOrderMode = (input: Pick<SpeedAdjustmentInput, "orderMode">): SpeedOrderMode =>
+  input.orderMode ?? "normal";
+
 const getRequiredSpeed = (
   targetSpeed: number,
   comparison: SpeedComparisonMode,
   requiredSpeedOffset?: number,
-): number => (
-  requiredSpeedOffset !== undefined
-    ? targetSpeed + Math.max(0, Math.trunc(requiredSpeedOffset))
-    : comparison === "outspeed" ? targetSpeed + 1 : targetSpeed
-);
+  orderMode: SpeedOrderMode = "normal",
+): number => {
+  const offset = requiredSpeedOffset !== undefined
+    ? Math.max(0, Math.trunc(requiredSpeedOffset))
+    : comparison === "outspeed" ? 1 : 0;
+  return orderMode === "trick-room" ? targetSpeed - offset : targetSpeed + offset;
+};
 
 const passesSpeedInput = (
   input: SpeedAdjustmentInput,
   actualSpeed: number,
   targetSpeed: number,
-): boolean => actualSpeed >= getRequiredSpeed(targetSpeed, input.comparison, input.requiredSpeedOffset);
+): boolean => {
+  const requiredSpeed = getRequiredSpeed(
+    targetSpeed,
+    input.comparison,
+    input.requiredSpeedOffset,
+    getOrderMode(input),
+  );
+  return getOrderMode(input) === "trick-room"
+    ? actualSpeed <= requiredSpeed
+    : actualSpeed >= requiredSpeed;
+};
 
 const getTargetSpeed = (input: SpeedAdjustmentInput): number => {
   if (input.manualTargetSpeed !== undefined && input.manualTargetSpeed > 0) {
@@ -213,13 +231,16 @@ const getNotes = (input: SpeedAdjustmentInput): string[] => {
   const notes = input.manualTargetSpeed !== undefined && input.manualTargetSpeed > 0
     ? ["任意S値直接入力"]
     : getAutoSpeedNotes(input.opponentBuild, input.field, input.opponentSide, input.opponentBoosts);
+  if (getOrderMode(input) === "trick-room") {
+    notes.push("トリックルーム 行動順反転");
+  }
   if (input.opponentItemMultiplier !== "auto") {
     notes.push(`道具倍率 手動 ${manualMultiplierLabel(input.opponentItemMultiplier)}`);
   }
   if (input.opponentAbilityMultiplier !== "auto") {
     notes.push(`特性倍率 手動 ${manualMultiplierLabel(input.opponentAbilityMultiplier)}`);
   }
-  return notes.length > 0 ? notes : ["自動補正なし"];
+  return notes;
 };
 
 const evaluateSpeedCandidate = (
@@ -241,7 +262,9 @@ const evaluateSpeedCandidate = (
   return {
     statPoints,
     actualSpeed,
-    relation: getSpeedRelation(actualSpeed, targetSpeed),
+    relation: getOrderMode(input) === "trick-room"
+      ? getSpeedRelation(targetSpeed, actualSpeed)
+      : getSpeedRelation(actualSpeed, targetSpeed),
   };
 };
 
@@ -256,6 +279,7 @@ const makeInvalidResult = (
   canApply: false,
   label: "Sライン",
   comparison: input.comparison,
+  orderMode: getOrderMode(input),
   relation: "miss",
   requiredStatPoints: null,
   actualSpeed: null,
@@ -281,9 +305,16 @@ const calculateSpeedLine = (
   const currentStatPoints = getBuildStatPoints(build).spe;
   const maxStatPoints = getMaxSpeedSearchStatPoints(build);
   const evaluations: SpeedCandidateEvaluation[] = [];
+  const orderMode = getOrderMode(input);
 
-  for (let statPoints = currentStatPoints; statPoints <= maxStatPoints; statPoints += 1) {
-    evaluations.push(evaluateSpeedCandidate(input, statPoints, targetSpeed, build));
+  if (orderMode === "trick-room") {
+    for (let statPoints = currentStatPoints; statPoints >= 0; statPoints -= 1) {
+      evaluations.push(evaluateSpeedCandidate(input, statPoints, targetSpeed, build));
+    }
+  } else {
+    for (let statPoints = currentStatPoints; statPoints <= maxStatPoints; statPoints += 1) {
+      evaluations.push(evaluateSpeedCandidate(input, statPoints, targetSpeed, build));
+    }
   }
 
   if (evaluations.length === 0) {
@@ -293,19 +324,28 @@ const calculateSpeedLine = (
   const passing = evaluations.find((evaluation) => (
     passesSpeedInput(input, evaluation.actualSpeed, targetSpeed)
   ));
-  const best = passing ?? evaluations.reduce((currentBest, evaluation) => (
-    evaluation.actualSpeed > currentBest.actualSpeed ? evaluation : currentBest
-  ));
+  const best = passing ?? evaluations.reduce((currentBest, evaluation) => {
+    if (orderMode === "trick-room") {
+      return evaluation.actualSpeed < currentBest.actualSpeed ? evaluation : currentBest;
+    }
+    return evaluation.actualSpeed > currentBest.actualSpeed ? evaluation : currentBest;
+  });
   const passed = Boolean(passing);
   const status: SpeedAdjustmentStatus = passed
     ? best.relation === "tie" ? "tie" : "pass"
     : "fail";
   const comparisonLabel = input.requiredSpeedOffset !== undefined
-    ? "指定ライン"
+    ? orderMode === "trick-room" ? "トリル先制ライン" : "指定ライン"
     : input.comparison === "outspeed" ? "確定抜き" : "指定ライン";
   const relationLabel = best.relation === "outspeed"
-    ? "抜ける"
+    ? orderMode === "trick-room" ? "先制できる" : "抜ける"
     : best.relation === "tie" ? "同速" : "届かない";
+  const requiredSpeed = getRequiredSpeed(
+    targetSpeed,
+    input.comparison,
+    input.requiredSpeedOffset,
+    orderMode,
+  );
 
   return {
     id: options.id,
@@ -314,11 +354,12 @@ const calculateSpeedLine = (
     canApply: passed && !options.referenceNature,
     label: options.referenceNature ? "S+性格ライン" : "Sライン",
     comparison: input.comparison,
+    orderMode,
     relation: best.relation,
     requiredStatPoints: best.statPoints,
     actualSpeed: best.actualSpeed,
     targetSpeed,
-    requiredSpeed: getRequiredSpeed(targetSpeed, input.comparison, input.requiredSpeedOffset),
+    requiredSpeed,
     targetStatPoints: currentStatPoints,
     notes: getNotes(input),
     reason: passed
@@ -333,6 +374,7 @@ export const calculateSpeedAdjustment = (
   const result = calculateSpeedLine(input, { id: "speed-line" });
   if (
     result.status === "fail"
+    && getOrderMode(input) !== "trick-room"
     && input.boostedNature
     && input.targetBuild.nature?.canonicalName !== input.boostedNature.canonicalName
   ) {

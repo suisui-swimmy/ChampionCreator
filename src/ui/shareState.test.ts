@@ -40,7 +40,7 @@ describe("shareState", () => {
         speedTargetValue: 220,
         speedItemMultiplier: "1.5" as const,
         speedAbilityMultiplier: "2" as const,
-        tailwind: true,
+        speedMoveModifier: "trick-room" as const,
       })),
     }));
     const offenseAdjustment = {
@@ -76,7 +76,7 @@ describe("shareState", () => {
       speedTargetValue: 220,
       speedItemMultiplier: "1.5",
       speedAbilityMultiplier: "2",
-      tailwind: true,
+      speedMoveModifier: "trick-room",
     });
     expect(parsed.offenseAdjustment).toMatchObject({
       defenderPokemonInput: "ピチュー",
@@ -146,5 +146,22 @@ describe("shareState", () => {
     }));
 
     expect(parsed.scenarios[0].attacks[0].speedTargetMode).toBe("manual");
+  });
+
+  it("restores legacy tailwind speed conditions as the move modifier", () => {
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 1,
+      target: createDefaultTargetForm(),
+      scenarios: createDefaultScenarioForms().map((scenario) => ({
+        ...scenario,
+        adjustmentType: "speed",
+        attacks: scenario.attacks.map(({ speedMoveModifier: _speedMoveModifier, ...attack }) => ({
+          ...attack,
+          tailwind: true,
+        })),
+      })),
+    }));
+
+    expect(parsed.scenarios[0].attacks[0].speedMoveModifier).toBe("tailwind");
   });
 });
