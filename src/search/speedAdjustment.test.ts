@@ -122,7 +122,7 @@ describe("calculateSpeedAdjustment", () => {
     const result = calculateSpeedAdjustment(makeInput({
       targetBuild,
       opponentBuild: undefined,
-      opponentLabel: "目標S",
+      opponentLabel: "任意S値",
       manualTargetSpeed: currentSpeed,
       comparison: "tie",
     }));
@@ -136,6 +136,40 @@ describe("calculateSpeedAdjustment", () => {
     });
   });
 
+  it("uses the explicit required speed offset when provided", () => {
+    const targetBuild = makeBuild("target", "メガマフォクシー", "おくびょう");
+    const currentSpeed = calculateSmogonFinalSpeed(targetBuild, emptyField, emptySide);
+    const tieLine = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild: undefined,
+      opponentLabel: "任意S値",
+      manualTargetSpeed: currentSpeed,
+      comparison: "outspeed",
+      requiredSpeedOffset: 0,
+    }));
+    const plusOneLine = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild: undefined,
+      opponentLabel: "任意S値",
+      manualTargetSpeed: currentSpeed,
+      comparison: "outspeed",
+      requiredSpeedOffset: 1,
+    }));
+
+    expect(tieLine).toMatchObject({
+      status: "tie",
+      passed: true,
+      requiredSpeed: currentSpeed,
+      requiredStatPoints: 0,
+    });
+    expect(plusOneLine).toMatchObject({
+      status: "pass",
+      passed: true,
+      requiredSpeed: currentSpeed + 1,
+    });
+    expect(plusOneLine.requiredStatPoints).not.toBe(0);
+  });
+
   it("reports the maximum reachable line when the SP budget cannot satisfy the condition", () => {
     const result = calculateSpeedAdjustment(makeInput({
       targetBuild: makeBuild("target", "メガマフォクシー", "おくびょう", {
@@ -147,7 +181,7 @@ describe("calculateSpeedAdjustment", () => {
         spe: 0,
       }),
       opponentBuild: undefined,
-      opponentLabel: "目標S",
+      opponentLabel: "任意S値",
       manualTargetSpeed: 10000,
       comparison: "outspeed",
     }));

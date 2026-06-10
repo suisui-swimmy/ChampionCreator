@@ -1481,11 +1481,11 @@ textarea {
 }
 
 .scenario-row.defence {
-  border-color: rgba(0, 216, 240, 0.62);
+  border-color: rgba(0, 255, 114, 0.58);
   background:
-    linear-gradient(90deg, rgba(0, 216, 240, 0.08), rgba(0, 216, 240, 0.025) 52%, rgba(0, 216, 240, 0.05)),
+    linear-gradient(90deg, rgba(0, 255, 114, 0.075), rgba(0, 255, 114, 0.02) 52%, rgba(0, 255, 114, 0.045)),
     var(--surface);
-  box-shadow: inset 0 0 0 1px rgba(0, 216, 240, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 114, 0.13);
 }
 
 .scenario-row.offense {
@@ -1497,11 +1497,11 @@ textarea {
 }
 
 .scenario-row.speed {
-  border-color: rgba(0, 216, 240, 0.54);
+  border-color: rgba(0, 216, 240, 0.62);
   background:
-    linear-gradient(90deg, rgba(0, 216, 240, 0.075), rgba(0, 216, 240, 0.02) 52%, rgba(235, 254, 61, 0.045)),
+    linear-gradient(90deg, rgba(0, 216, 240, 0.08), rgba(0, 216, 240, 0.025) 52%, rgba(0, 216, 240, 0.05)),
     var(--surface);
-  box-shadow: inset 0 0 0 1px rgba(0, 216, 240, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(0, 216, 240, 0.16);
 }
 
 .scenario-row-header {
@@ -1581,9 +1581,9 @@ textarea {
 }
 
 .scenario-row.defence .scenario-adjustment-card.selected {
-  border-color: rgba(0, 216, 240, 0.6);
-  background: linear-gradient(180deg, rgba(0, 216, 240, 0.18), rgba(0, 216, 240, 0.06));
-  color: #bcf7ff;
+  border-color: rgba(0, 255, 114, 0.58);
+  background: linear-gradient(180deg, rgba(0, 255, 114, 0.17), rgba(0, 255, 114, 0.055));
+  color: #b8ffd7;
 }
 
 .scenario-row.offense .scenario-adjustment-card.selected {
@@ -1873,7 +1873,7 @@ textarea {
 }
 
 .attack-direction-button.left img {
-  filter: drop-shadow(0 0 4px rgba(41, 128, 239, 0.22));
+  filter: drop-shadow(0 0 4px rgba(0, 255, 114, 0.24));
 }
 
 .attack-direction-button.right img {
@@ -1922,6 +1922,78 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.speed-condition-grid.manual {
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 1fr);
+}
+
+.speed-target-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-width: 0;
+}
+
+.speed-target-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 31px;
+  color: var(--muted);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.speed-target-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.speed-target-mode-option input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--spe);
+  cursor: pointer;
+}
+
+.speed-target-mode-option:has(input[type="radio"]:checked) {
+  color: var(--text);
+}
+
+.speed-target-mode-option:focus-within {
+  color: #bcf7ff;
+}
+
+.speed-target-mode-option strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.speed-offset-input {
+  width: 54px;
+  height: 28px;
+  padding: 0 5px;
+  text-align: center;
+}
+
+.speed-manual-target-input {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.speed-opponent-stat-section {
+  margin-bottom: 6px;
 }
 
 .speed-tailwind-toggle {

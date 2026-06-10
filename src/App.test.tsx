@@ -14,6 +14,7 @@ import {
   getDropdownEntityOptions,
   getNatureModifierDirection,
   isUnresolvedEntityInput,
+  normalizeNumericInputText,
 } from "./App";
 import {
   createDefaultScenarioForms,
@@ -52,18 +53,29 @@ describe("App", () => {
     expect(html).toContain('class="scenario-row speed"');
     expect(html).toContain(">耐久調整</span>");
     expect(html).toContain(">火力調整</span>");
-    expect(html).toContain(">S調整</span>");
+    expect(html).toContain(">素早さ調整</span>");
     expect(html).toContain('value="耐久調整A"');
     expect(html).toContain('value="火力調整A"');
-    expect(html).toContain('value="S調整A"');
+    expect(html).toContain('value="素早さ調整A"');
+    expect(html).toContain(">確定抜き</span>");
+    expect(html).toContain(">任意S値</span>");
+    expect(html).toContain(">素早さ条件</h3>");
+    expect(html).toContain('aria-label="素早さ調整A 確定抜き加算値"');
+    expect(html).toContain('class="scenario-cell number-cell number-labeled-field speed-manual-target-input"');
+    expect(html).toContain('inputMode="numeric"');
+    expect(html.match(/>任意S値<\/span>/g)).toHaveLength(1);
+    expect(html).not.toContain("同速以上");
+    expect(html).not.toContain(">目標S<");
+    expect(html).not.toContain(">S条件</h3>");
     expect(html).toContain('value="90"');
     expect(html).toContain('value="80"');
     expect(html).toContain('value="メガゲンガー"');
     expect(html).toContain("assets/ui/arrow-left-circle.svg");
     expect(html).toContain("assets/ui/arrow-right-circle.svg");
     expect(html).toContain('aria-label="耐久調整A 耐久調整。クリックで火力調整に切り替え"');
-    expect(html).toContain('aria-label="火力調整A 火力調整。クリックでS調整に切り替え"');
-    expect(html).toContain('aria-label="S調整A S調整。クリックで耐久調整に切り替え"');
+    expect(html).toContain('aria-label="火力調整A 火力調整。クリックで素早さ調整に切り替え"');
+    expect(html).toContain('aria-label="素早さ調整A 素早さ調整。クリックで耐久調整に切り替え"');
+    expect(html).toContain("assets/ui/arrow-up-circle.svg");
     expect(html).toContain('aria-label="Sライン結果"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
@@ -80,6 +92,12 @@ describe("App", () => {
     expect(html).not.toContain("火力ライン結果");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+  });
+
+  it("normalizes full-width numeric input text before parsing", () => {
+    expect(normalizeNumericInputText("１２３４５")).toBe("12345");
+    expect(normalizeNumericInputText(" ＋１２．５ ")).toBe("+12.5");
+    expect(normalizeNumericInputText("－６")).toBe("-6");
   });
 
   it("renders exact 32-cell SP allocation sliders", () => {
@@ -401,13 +419,14 @@ describe("App", () => {
     const speedScenario = {
       ...scenario,
       id: "scenario-speed-test",
-      label: "S調整",
+      label: "素早さ調整",
       adjustmentType: "speed" as const,
       attacks: [{
         ...scenario.attacks[0],
         id: "attack-speed-test",
         label: "最速ピカチュウ",
         attackerPokemonInput: "ピカチュウ",
+        speedTargetMode: "manual" as const,
         speedTargetValue: 150,
       }],
     };
@@ -422,7 +441,7 @@ describe("App", () => {
         speedResults={[{
           id: "scenario-speed-test-attack-speed-test-speed-line",
           scenarioId: "scenario-speed-test",
-          scenarioLabel: "S調整",
+          scenarioLabel: "素早さ調整",
           attackId: "attack-speed-test",
           attackLabel: "最速ピカチュウ",
           result: {
@@ -453,7 +472,7 @@ describe("App", () => {
 
     expect(html).toContain("Sライン結果");
     expect(html).toContain("候補一覧の固定Sへ自動統合されます");
-    expect(html).toContain("S調整</strong>");
+    expect(html).toContain("素早さ調整</strong>");
     expect(html).toContain("最速ピカチュウ");
     expect(html).toContain("必要 S12");
     expect(html).toContain("自分 151");

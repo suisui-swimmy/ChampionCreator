@@ -111,7 +111,7 @@ const makeSpeedResult = (
 ): SpeedScenarioResult => ({
   id: `scenario-speed-${attackId}-${result.id ?? "line"}`,
   scenarioId: "scenario-speed",
-  scenarioLabel: "S調整A",
+  scenarioLabel: "素早さ調整A",
   attackId,
   attackLabel: attackId,
   result: {
@@ -138,6 +138,7 @@ describe("buildDefenceSearchInput", () => {
     expect(formatScenarioAttackLabel("defence", 0, "攻撃A")).toBe("耐久調整A");
     expect(formatScenarioAttackLabel("offense", 1, "攻撃B")).toBe("火力調整B");
     expect(formatScenarioAttackLabel("offense", 2, "耐久調整C")).toBe("火力調整C");
+    expect(formatScenarioAttackLabel("speed", 0, "S調整A")).toBe("素早さ調整A");
     expect(formatScenarioAttackLabel("defence", 0, "特殊受け")).toBe("特殊受け");
   });
 
@@ -186,11 +187,14 @@ describe("buildDefenceSearchInput", () => {
       attackerPokemonInput: "メガゲンガー",
       attackerNatureInput: "おくびょう",
       attackerStatPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 32 },
+      speedTargetMode: "opponent",
       speedComparison: "outspeed",
+      speedRequiredOffset: 1,
     });
     expect(buildSpeedAdjustmentInput(target, scenarios[2].attacks[0])).toMatchObject({
       opponentLabel: "メガゲンガー",
       comparison: "outspeed",
+      requiredSpeedOffset: 1,
     });
   });
 
@@ -749,7 +753,9 @@ describe("buildSpeedAdjustmentInput", () => {
       attackerStatPoints: { ...scenario.attacks[0].attackerStatPoints, spe: 12 },
       attackerBoosts: { ...scenario.attacks[0].attackerBoosts, spe: 2 },
       weather: "rain" as const,
+      speedTargetMode: "opponent" as const,
       speedComparison: "tie" as const,
+      speedRequiredOffset: 3,
       speedItemMultiplier: "1.5" as const,
       speedAbilityMultiplier: "2" as const,
       tailwind: true,
@@ -769,7 +775,8 @@ describe("buildSpeedAdjustmentInput", () => {
     expect(input.opponentBoosts.spe).toBe(2);
     expect(input.field.weather).toBe("rain");
     expect(input.opponentSide.tailwind).toBe(true);
-    expect(input.comparison).toBe("tie");
+    expect(input.comparison).toBe("outspeed");
+    expect(input.requiredSpeedOffset).toBe(3);
     expect(input.opponentItemMultiplier).toBe("1.5");
     expect(input.opponentAbilityMultiplier).toBe("2");
   });
@@ -779,14 +786,17 @@ describe("buildSpeedAdjustmentInput", () => {
     const input = buildSpeedAdjustmentInput(createDefaultTargetForm(), {
       ...scenario.attacks[0],
       attackerPokemonInput: "",
+      speedTargetMode: "manual" as const,
       speedTargetValue: 220,
     });
 
     expect(input.opponentBuild).toBeUndefined();
     expect(input.manualTargetSpeed).toBe(220);
+    expect(input.requiredSpeedOffset).toBe(0);
     expect(calculateSpeedAdjustmentFromUi(createDefaultTargetForm(), {
       ...scenario.attacks[0],
       attackerPokemonInput: "",
+      speedTargetMode: "manual" as const,
       speedTargetValue: 220,
     }).targetSpeed).toBe(220);
   });
@@ -798,11 +808,12 @@ describe("buildSpeedAdjustmentInput", () => {
       {
         ...defaultScenario,
         id: "scenario-speed",
-        label: "S調整A",
+        label: "素早さ調整A",
         adjustmentType: "speed" as const,
         attacks: defaultScenario.attacks.map((attack) => ({
           ...attack,
           attackerPokemonInput: "",
+          speedTargetMode: "manual" as const,
           speedTargetValue: 120,
         })),
       },
@@ -814,8 +825,8 @@ describe("buildSpeedAdjustmentInput", () => {
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
       scenarioId: "scenario-speed",
-      scenarioLabel: "S調整A",
-      attackLabel: "S調整A",
+      scenarioLabel: "素早さ調整A",
+      attackLabel: "素早さ調整A",
     });
     expect(rankingResults).toHaveLength(1);
   });
@@ -980,11 +991,12 @@ describe("resolveIntegratedSpeedRequirements", () => {
       {
         ...defaultScenario,
         id: "scenario-speed",
-        label: "S調整",
+        label: "素早さ調整",
         adjustmentType: "speed" as const,
         attacks: defaultScenario.attacks.map((attack) => ({
           ...attack,
           attackerPokemonInput: "",
+          speedTargetMode: "manual" as const,
           speedTargetValue: 120,
         })),
       },

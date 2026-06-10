@@ -31,6 +31,7 @@ export interface SpeedAdjustmentInput {
   targetSide: SideState;
   opponentSide: SideState;
   comparison: SpeedComparisonMode;
+  requiredSpeedOffset?: number;
   manualTargetSpeed?: number;
   opponentItemMultiplier: SpeedManualMultiplier;
   opponentAbilityMultiplier: SpeedManualMultiplier;
@@ -120,21 +121,28 @@ const getSpeedRelation = (actualSpeed: number, targetSpeed: number): SpeedRelati
   return "miss";
 };
 
-const getRequiredSpeed = (targetSpeed: number, comparison: SpeedComparisonMode): number =>
-  comparison === "outspeed" ? targetSpeed + 1 : targetSpeed;
-
-const passesComparison = (
-  actualSpeed: number,
+const getRequiredSpeed = (
   targetSpeed: number,
   comparison: SpeedComparisonMode,
-): boolean => actualSpeed >= getRequiredSpeed(targetSpeed, comparison);
+  requiredSpeedOffset?: number,
+): number => (
+  requiredSpeedOffset !== undefined
+    ? targetSpeed + Math.max(0, Math.trunc(requiredSpeedOffset))
+    : comparison === "outspeed" ? targetSpeed + 1 : targetSpeed
+);
+
+const passesSpeedInput = (
+  input: SpeedAdjustmentInput,
+  actualSpeed: number,
+  targetSpeed: number,
+): boolean => actualSpeed >= getRequiredSpeed(targetSpeed, input.comparison, input.requiredSpeedOffset);
 
 const getTargetSpeed = (input: SpeedAdjustmentInput): number => {
   if (input.manualTargetSpeed !== undefined && input.manualTargetSpeed > 0) {
     return Math.trunc(input.manualTargetSpeed);
   }
   if (!input.opponentBuild) {
-    throw new Error("相手ポケモンまたは目標S実数値が必要です");
+    throw new Error("相手ポケモンまたは任意S値が必要です");
   }
 
   return calculateSmogonFinalSpeed(
@@ -203,7 +211,7 @@ const getAutoSpeedNotes = (
 
 const getNotes = (input: SpeedAdjustmentInput): string[] => {
   const notes = input.manualTargetSpeed !== undefined && input.manualTargetSpeed > 0
-    ? ["目標S直接入力"]
+    ? ["任意S値直接入力"]
     : getAutoSpeedNotes(input.opponentBuild, input.field, input.opponentSide, input.opponentBoosts);
   if (input.opponentItemMultiplier !== "auto") {
     notes.push(`道具倍率 手動 ${manualMultiplierLabel(input.opponentItemMultiplier)}`);
@@ -283,7 +291,7 @@ const calculateSpeedLine = (
   }
 
   const passing = evaluations.find((evaluation) => (
-    passesComparison(evaluation.actualSpeed, targetSpeed, input.comparison)
+    passesSpeedInput(input, evaluation.actualSpeed, targetSpeed)
   ));
   const best = passing ?? evaluations.reduce((currentBest, evaluation) => (
     evaluation.actualSpeed > currentBest.actualSpeed ? evaluation : currentBest
@@ -292,7 +300,9 @@ const calculateSpeedLine = (
   const status: SpeedAdjustmentStatus = passed
     ? best.relation === "tie" ? "tie" : "pass"
     : "fail";
-  const comparisonLabel = input.comparison === "outspeed" ? "確定抜き" : "同速以上";
+  const comparisonLabel = input.requiredSpeedOffset !== undefined
+    ? "指定ライン"
+    : input.comparison === "outspeed" ? "確定抜き" : "指定ライン";
   const relationLabel = best.relation === "outspeed"
     ? "抜ける"
     : best.relation === "tie" ? "同速" : "届かない";
@@ -308,7 +318,7 @@ const calculateSpeedLine = (
     requiredStatPoints: best.statPoints,
     actualSpeed: best.actualSpeed,
     targetSpeed,
-    requiredSpeed: getRequiredSpeed(targetSpeed, input.comparison),
+    requiredSpeed: getRequiredSpeed(targetSpeed, input.comparison, input.requiredSpeedOffset),
     targetStatPoints: currentStatPoints,
     notes: getNotes(input),
     reason: passed

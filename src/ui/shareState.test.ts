@@ -34,7 +34,9 @@ describe("shareState", () => {
         defenderStatus: "brn" as const,
         attackerBoosts: { ...attack.attackerBoosts, atk: 2 },
         gameType: "doubles" as const,
-        speedComparison: "tie" as const,
+        speedTargetMode: "manual" as const,
+        speedComparison: "outspeed" as const,
+        speedRequiredOffset: 4,
         speedTargetValue: 220,
         speedItemMultiplier: "1.5" as const,
         speedAbilityMultiplier: "2" as const,
@@ -68,7 +70,9 @@ describe("shareState", () => {
       attackerDmaxEnabled: true,
       defenderStatus: "brn",
       gameType: "doubles",
-      speedComparison: "tie",
+      speedTargetMode: "manual",
+      speedComparison: "outspeed",
+      speedRequiredOffset: 4,
       speedTargetValue: 220,
       speedItemMultiplier: "1.5",
       speedAbilityMultiplier: "2",
@@ -124,5 +128,23 @@ describe("shareState", () => {
 
     expect("status" in parsed.target).toBe(false);
     expect(parsed.scenarios[0].attacks[0].defenderStatus).toBe("par");
+  });
+
+  it("restores legacy direct speed values as manual speed mode", () => {
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 1,
+      target: createDefaultTargetForm(),
+      scenarios: createDefaultScenarioForms().map((scenario) => ({
+        ...scenario,
+        adjustmentType: "speed",
+        attacks: scenario.attacks.map(({ speedTargetMode: _speedTargetMode, ...attack }) => ({
+          ...attack,
+          attackerPokemonInput: "",
+          speedTargetValue: 180,
+        })),
+      })),
+    }));
+
+    expect(parsed.scenarios[0].attacks[0].speedTargetMode).toBe("manual");
   });
 });

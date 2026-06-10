@@ -43,6 +43,8 @@ import {
   type SpeedManualMultiplier,
 } from "../search/speedAdjustment";
 
+export type SpeedTargetMode = "opponent" | "manual";
+
 export interface TargetFormState {
   pokemonInput: string;
   natureInput: string;
@@ -86,7 +88,9 @@ export interface ScenarioAttackFormState {
   auroraVeil: boolean;
   helpingHand: boolean;
   friendGuard: boolean;
+  speedTargetMode: SpeedTargetMode;
   speedComparison: SpeedComparisonMode;
+  speedRequiredOffset: number;
   speedTargetValue: number;
   speedItemMultiplier: SpeedManualMultiplier;
   speedAbilityMultiplier: SpeedManualMultiplier;
@@ -343,7 +347,9 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   auroraVeil: false,
   helpingHand: false,
   friendGuard: false,
+  speedTargetMode: "opponent",
   speedComparison: "outspeed",
+  speedRequiredOffset: 1,
   speedTargetValue: 0,
   speedItemMultiplier: "auto",
   speedAbilityMultiplier: "auto",
@@ -357,11 +363,11 @@ export const formatScenarioAttackLabel = (
 ): string => {
   const defaultPrefix = adjustmentType === "offense"
     ? "火力調整"
-    : adjustmentType === "speed" ? "S調整" : "耐久調整";
+    : adjustmentType === "speed" ? "素早さ調整" : "耐久調整";
   const defaultLabel = `${defaultPrefix}${String.fromCharCode(65 + attackIndex)}`;
   const trimmedLabel = label.trim();
 
-  if (!trimmedLabel || /^(?:攻撃|耐久調整|火力調整|S調整)[A-Z]$/.test(trimmedLabel)) {
+  if (!trimmedLabel || /^(?:攻撃|耐久調整|火力調整|S調整|素早さ調整)[A-Z]$/.test(trimmedLabel)) {
     return defaultLabel;
   }
 
@@ -407,7 +413,9 @@ export const createDefaultScenarioForms = (): ScenarioFormState[] => [
       attackerItemInput: "",
       attackerStatPoints: { ...zeroStatPoints, spe: 32 },
       moveInput: "",
+      speedTargetMode: "opponent",
       speedComparison: "outspeed",
+      speedRequiredOffset: 1,
     }],
   },
 ];
@@ -740,13 +748,15 @@ export const calculateOffenseAdjustmentsFromScenarios = (
     }));
 
 const hasSpeedTarget = (form: ScenarioAttackFormState): boolean =>
-  Boolean(form.attackerPokemonInput.trim()) || form.speedTargetValue > 0;
+  form.speedTargetMode === "manual"
+    ? form.speedTargetValue > 0
+    : Boolean(form.attackerPokemonInput.trim());
 
 export const buildSpeedAdjustmentInput = (
   targetForm: TargetFormState,
   attackForm: ScenarioAttackFormState,
 ): SpeedAdjustmentInput => {
-  const hasManualTargetSpeed = attackForm.speedTargetValue > 0;
+  const hasManualTargetSpeed = attackForm.speedTargetMode === "manual" && attackForm.speedTargetValue > 0;
   const opponentBuild = hasManualTargetSpeed
     ? undefined
     : buildScenarioAttackBuildFromUi(attackForm, "speed-opponent");
@@ -754,13 +764,14 @@ export const buildSpeedAdjustmentInput = (
   return {
     targetBuild: buildTargetBuildFromUi(targetForm, "speed-target"),
     opponentBuild,
-    opponentLabel: attackForm.attackerPokemonInput.trim() || "目標S",
+    opponentLabel: attackForm.attackerPokemonInput.trim() || "任意S値",
     field: toFieldState(attackForm),
     targetBoosts: normalizeBoosts(targetForm.boosts),
     opponentBoosts: normalizeBoosts(attackForm.attackerBoosts),
     targetSide: { ...emptySide },
     opponentSide: { ...emptySide, tailwind: attackForm.tailwind },
-    comparison: attackForm.speedComparison,
+    comparison: "outspeed",
+    requiredSpeedOffset: hasManualTargetSpeed ? 0 : clampInt(attackForm.speedRequiredOffset, 0, 10000),
     manualTargetSpeed: hasManualTargetSpeed ? clampInt(attackForm.speedTargetValue, 0, 10000) : undefined,
     opponentItemMultiplier: attackForm.speedItemMultiplier,
     opponentAbilityMultiplier: attackForm.speedAbilityMultiplier,
@@ -1126,7 +1137,7 @@ export const buildIntegratedDefenceSearchInput = (
     throw new Error(`火力調整条件を候補一覧へ統合できません: ${requirements.blockingReasons.join(" / ")}`);
   }
   if (speedRequirements.blockingReasons.length > 0) {
-    throw new Error(`S調整条件を候補一覧へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
+    throw new Error(`素早さ調整条件を候補一覧へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
   }
 
   const integratedTargetForm = applyIntegratedSpeedRequirementsToTargetForm(
@@ -1144,7 +1155,7 @@ export const buildIntegratedDefenceSearchInput = (
 
   if (fixedBudget + minimumDefenceBudget > CHAMPIONS_TOTAL_STAT_POINTS) {
     throw new Error(
-      `火力/S調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
+      `火力/素早さ調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
       + ` (固定 ${fixedBudget} + 火力最低 ${minimumDefenceBudget})`,
     );
   }

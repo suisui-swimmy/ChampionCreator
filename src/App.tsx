@@ -188,13 +188,8 @@ const terrainOptions: Array<{ value: Terrain; label: string }> = [
   { value: "psychic", label: "サイコ" },
 ];
 
-const speedComparisonOptions = [
-  { value: "outspeed", label: "確定抜き" },
-  { value: "tie", label: "同速以上" },
-] as const;
-
 const speedMultiplierOptions: Array<{ value: SpeedManualMultiplier; label: string }> = [
-  { value: "auto", label: "—" },
+  { value: "auto", label: "なし" },
   { value: "2", label: "2倍" },
   { value: "1.5", label: "1.5倍" },
   { value: "0.5", label: "0.5倍" },
@@ -216,10 +211,27 @@ export const isUnresolvedEntityInput = (kind: EntityKind, input: string): boolea
 const isCanonicalResolutionMessage = (message: string | null): boolean =>
   Boolean(message?.includes("canonical name に解決できません"));
 
+export const normalizeNumericInputText = (value: string): string =>
+  value
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[．]/g, ".")
+    .replace(/[－]/g, "-")
+    .replace(/[＋]/g, "+")
+    .trim();
+
+const numericInputProps = {
+  type: "text",
+  inputMode: "numeric",
+  pattern: "[0-9]*",
+} as const;
+
 const toNumber = (value: string, fallback = 0): number => {
-  const parsed = Number(value);
+  const parsed = Number(normalizeNumericInputText(value));
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const clampNumberInput = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, Math.trunc(value)));
 
 const toStatPointInput = (value: string): number => {
   const parsed = toNumber(value, 0);
@@ -440,7 +452,9 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   auroraVeil: false,
   helpingHand: false,
   friendGuard: false,
+  speedTargetMode: "opponent",
   speedComparison: "outspeed",
+  speedRequiredOffset: 1,
   speedTargetValue: 0,
   speedItemMultiplier: "auto",
   speedAbilityMultiplier: "auto",
@@ -1624,13 +1638,11 @@ function TargetPanel({
           />
           <label className="placeholder-field">
             <input
-              type="number"
-              min="1"
-              max="100"
+              {...numericInputProps}
               value={targetForm.level}
               placeholder="Lv."
               onFocus={selectInputValueOnFocus}
-              onChange={(event) => onUpdateField("level", toNumber(event.target.value, 50))}
+              onChange={(event) => onUpdateField("level", clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
             />
           </label>
           <MechanicControls
@@ -1662,10 +1674,7 @@ function TargetPanel({
             <NatureStatModifier natureLabel={targetForm.natureInput} stat={key} />
             <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
             <input
-              type="number"
-              min="0"
-              max="252"
-              step="1"
+              {...numericInputProps}
               value={targetForm.statPoints[key]}
               aria-label={`${statLabels[key]} SP`}
               title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
@@ -1919,7 +1928,7 @@ type ScenarioRowProps = {
 const scenarioAdjustmentTypeOptions: Array<{ value: ScenarioAdjustmentType; label: string }> = [
   { value: "defence", label: "耐久調整" },
   { value: "offense", label: "火力調整" },
-  { value: "speed", label: "S調整" },
+  { value: "speed", label: "素早さ調整" },
 ];
 
 type ScenarioAdjustmentTypeCardsProps = {
@@ -2097,6 +2106,7 @@ function AttackCard({
   ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
   const isOffenseAdjustment = adjustmentType === "offense";
   const isSpeedAdjustment = adjustmentType === "speed";
+  const isManualSpeedTarget = attack.speedTargetMode === "manual";
   const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
   const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
   const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(adjustmentType));
@@ -2129,6 +2139,50 @@ function AttackCard({
     "spd",
     ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
   ]));
+  const speedOpponentStatSection = (
+    <section className="attack-stat-section attack-setting-section-body speed-opponent-stat-section" aria-label={`${attackLabel} 相手S能力`}>
+      <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
+        <div className="ev-header attacker-stat-header">
+          <span>能力</span>
+          <span>実数値</span>
+          <span>SP</span>
+          <span>ランク</span>
+        </div>
+        <div className="ev-row attacker-stat-row spe">
+          <strong>
+            <StatIcon stat="spe" />
+            <span>相手</span>
+          </strong>
+          <span className="actual-stat-with-modifier">
+            <NatureStatModifier natureLabel={attack.attackerNatureInput} stat="spe" />
+            <span className="actual-stat">{actualStats?.spe ?? "-"}</span>
+          </span>
+          <input
+            {...numericInputProps}
+            value={attack.attackerStatPoints.spe}
+            aria-label={`${attackLabel} 相手S SP`}
+            placeholder="S SP"
+            title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
+            onFocus={selectInputValueOnFocus}
+            onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, "spe", toStatPointInput(event.target.value))}
+          />
+          <SelectField
+            compact
+            placeholderLabel
+            placeholderValue=""
+            className="target-rank-field"
+            label={`${attackLabel} 相手Sランク`}
+            value={String(attack.attackerBoosts.spe ?? 0)}
+            options={rankSelectOptions}
+            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+              ...attack.attackerBoosts,
+              spe: toNumber(value, 0),
+            })}
+          />
+        </div>
+      </div>
+    </section>
+  );
   return (
     <section className="attack-condition-card" aria-label={attackLabel}>
       <div className="attack-card-header">
@@ -2140,9 +2194,11 @@ function AttackCard({
           onClick={onToggleAdjustmentType}
         >
           <img
-            src={getAssetSrc(isOffenseAdjustment || isSpeedAdjustment
-              ? "assets/ui/arrow-right-circle.svg"
-              : "assets/ui/arrow-left-circle.svg")}
+            src={getAssetSrc(isSpeedAdjustment
+              ? "assets/ui/arrow-up-circle.svg"
+              : isOffenseAdjustment
+                ? "assets/ui/arrow-right-circle.svg"
+                : "assets/ui/arrow-left-circle.svg")}
             alt=""
             aria-hidden="true"
           />
@@ -2259,117 +2315,103 @@ function AttackCard({
       ) : isSpeedAdjustment ? (
         <>
           <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-speed-title`}>
-            <h3 id={`${scenarioId}-${attack.id}-speed-title`}>S条件</h3>
-            <div className="speed-condition-grid attack-setting-section-body">
-              <SelectField
-                label="判定"
-                value={attack.speedComparison}
-                options={[...speedComparisonOptions]}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedComparison", value)}
-              />
+            <h3 id={`${scenarioId}-${attack.id}-speed-title`}>素早さ条件</h3>
+            {!isManualSpeedTarget ? speedOpponentStatSection : null}
+            <div className={`speed-condition-grid attack-setting-section-body${isManualSpeedTarget ? " manual" : ""}`}>
+              <div className="speed-target-mode" role="radiogroup" aria-label={`${attackLabel} 素早さ条件`}>
+                <div className="speed-target-mode-option">
+                  <label className="speed-target-radio-label">
+                    <input
+                      type="radio"
+                      name={`${scenarioId}-${attack.id}-speed-target-mode`}
+                      checked={attack.speedTargetMode === "opponent"}
+                      onChange={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "opponent")}
+                    />
+                    <span>確定抜き</span>
+                    <strong>{actualStats?.spe ?? "-"}</strong>
+                    <span>+</span>
+                  </label>
+                  <input
+                    className="speed-offset-input"
+                    {...numericInputProps}
+                    value={attack.speedRequiredOffset}
+                    aria-label={`${attackLabel} 確定抜き加算値`}
+                    disabled={isManualSpeedTarget}
+                    onFocus={selectInputValueOnFocus}
+                    onChange={(event) => onUpdateAttack(scenarioId, attack.id, "speedRequiredOffset", clampNumberInput(toNumber(event.target.value, 1), 0, 10000))}
+                  />
+                </div>
+                <label className="speed-target-mode-option">
+                  <input
+                    type="radio"
+                    name={`${scenarioId}-${attack.id}-speed-target-mode`}
+                    checked={attack.speedTargetMode === "manual"}
+                    onChange={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
+                  />
+                  <span>任意S値</span>
+                </label>
+              </div>
               <ScenarioNumberField
-                label="目標S"
-                showLabel
+                className="speed-manual-target-input"
+                label="任意S値"
+                showLabel={false}
                 value={attack.speedTargetValue}
                 min={0}
                 max={10000}
+                onFocus={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetValue", value)}
               />
             </div>
           </section>
 
-          <section
-            className="attack-setting-section attack-setting-section--indented"
-            aria-labelledby={`${scenarioId}-${attack.id}-speed-environment-title`}
-          >
-            <h3 id={`${scenarioId}-${attack.id}-speed-environment-title`}>相手S条件</h3>
-            <div className="attack-field-grid speed-field-grid attack-setting-section-body">
-              <SelectField
-                label="状態"
-                value={attack.attackerStatus}
-                options={statusOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
-              />
-              <SelectField
-                label="天候"
-                value={attack.weather}
-                options={weatherOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
-              />
-              <SelectField
-                label="フィールド"
-                value={attack.terrain}
-                options={terrainOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
-              />
-              <SelectField
-                label="道具倍率"
-                value={attack.speedItemMultiplier}
-                options={speedMultiplierOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
-              />
-              <SelectField
-                label="特性倍率"
-                value={attack.speedAbilityMultiplier}
-                options={speedMultiplierOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
-              />
-              <label className="scenario-cell speed-tailwind-toggle">
-                <input
-                  type="checkbox"
-                  checked={attack.tailwind}
-                  onChange={(event) => onUpdateAttack(scenarioId, attack.id, "tailwind", event.target.checked)}
+          {!isManualSpeedTarget ? (
+            <section
+              className="attack-setting-section attack-setting-section--indented"
+              aria-labelledby={`${scenarioId}-${attack.id}-speed-environment-title`}
+            >
+              <h3 id={`${scenarioId}-${attack.id}-speed-environment-title`}>相手S条件</h3>
+              <div className="attack-field-grid speed-field-grid attack-setting-section-body">
+                <SelectField
+                  label="状態"
+                  value={attack.attackerStatus}
+                  options={statusOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
                 />
-                <span>おいかぜ</span>
-              </label>
-            </div>
-
-            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 相手S能力`}>
-              <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
-                <div className="ev-header attacker-stat-header">
-                  <span>能力</span>
-                  <span>実数値</span>
-                  <span>SP</span>
-                  <span>ランク</span>
-                </div>
-                <div className="ev-row attacker-stat-row spe">
-                  <strong>
-                    <StatIcon stat="spe" />
-                    <span>相手</span>
-                  </strong>
-                  <span className="actual-stat-with-modifier">
-                    <NatureStatModifier natureLabel={attack.attackerNatureInput} stat="spe" />
-                    <span className="actual-stat">{actualStats?.spe ?? "-"}</span>
-                  </span>
+                <SelectField
+                  label="天候"
+                  value={attack.weather}
+                  options={weatherOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
+                />
+                <SelectField
+                  label="フィールド"
+                  value={attack.terrain}
+                  options={terrainOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
+                />
+                <SelectField
+                  label="道具倍率"
+                  value={attack.speedItemMultiplier}
+                  options={speedMultiplierOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
+                />
+                <SelectField
+                  label="特性倍率"
+                  value={attack.speedAbilityMultiplier}
+                  options={speedMultiplierOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
+                />
+                <label className="scenario-cell speed-tailwind-toggle">
                   <input
-                    type="number"
-                    min="0"
-                    max="252"
-                    step="1"
-                    value={attack.attackerStatPoints.spe}
-                    aria-label={`${attackLabel} 相手S SP`}
-                    placeholder="S SP"
-                    title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
-                    onFocus={selectInputValueOnFocus}
-                    onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, "spe", toStatPointInput(event.target.value))}
+                    type="checkbox"
+                    checked={attack.tailwind}
+                    onChange={(event) => onUpdateAttack(scenarioId, attack.id, "tailwind", event.target.checked)}
                   />
-                  <SelectField
-                    compact
-                    placeholderLabel
-                    placeholderValue=""
-                    className="target-rank-field"
-                    label={`${attackLabel} 相手Sランク`}
-                    value={String(attack.attackerBoosts.spe ?? 0)}
-                    options={rankSelectOptions}
-                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
-                      ...attack.attackerBoosts,
-                      spe: toNumber(value, 0),
-                    })}
-                  />
-                </div>
+                  <span>おいかぜ</span>
+                </label>
               </div>
-            </section>
           </section>
+          ) : null}
         </>
       ) : isOffenseAdjustment ? (
         <>
@@ -2442,10 +2484,7 @@ function AttackCard({
                       <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
                     </span>
                     <input
-                      type="number"
-                      min="0"
-                      max="252"
-                      step="1"
+                      {...numericInputProps}
                       value={attack.attackerStatPoints[key]}
                       aria-label={`${attackLabel} 仮想敵${statLabels[key]} SP`}
                       placeholder={`${statLabels[key]} SP`}
@@ -2581,10 +2620,7 @@ function AttackCard({
                       </span>
                       {isAttacker ? (
                         <input
-                          type="number"
-                          min="0"
-                          max="252"
-                          step="1"
+                          {...numericInputProps}
                           value={statPoints[key]}
                           aria-label={`${attackLabel} ${statLabels[key]} SP`}
                           placeholder={`${statLabels[key]} SP`}
@@ -2753,38 +2789,43 @@ function ScenarioTextField({
 }
 
 type ScenarioNumberFieldProps = {
+  className?: string;
   label: string;
   showLabel: boolean;
   value: number;
   min: number;
   max: number;
+  onFocus?: () => void;
   onChange: (value: number) => void;
   suffix?: string;
 };
 
 function ScenarioNumberField({
+  className,
   label,
   showLabel,
   value,
   min,
   max,
+  onFocus,
   onChange,
   suffix,
 }: ScenarioNumberFieldProps) {
   const ariaLabel = suffix ? `${label} ${suffix}` : label;
 
   return (
-    <label className={`scenario-cell number-cell number-labeled-field${suffix ? " has-suffix" : ""}`}>
+    <label className={`scenario-cell number-cell number-labeled-field${suffix ? " has-suffix" : ""}${className ? ` ${className}` : ""}`}>
       {showLabel ? <span className="row-label">{label}</span> : null}
       <span className="number-input-wrap">
         <input
-          type="number"
-          min={min}
-          max={max}
+          {...numericInputProps}
           value={value}
           aria-label={ariaLabel}
-          onFocus={selectInputValueOnFocus}
-          onChange={(event) => onChange(toNumber(event.target.value, min))}
+          onFocus={(event) => {
+            selectInputValueOnFocus(event);
+            onFocus?.();
+          }}
+          onChange={(event) => onChange(clampNumberInput(toNumber(event.target.value, min), min, max))}
         />
         {suffix ? <span className="number-input-suffix">{suffix}</span> : null}
       </span>
@@ -2821,7 +2862,7 @@ const getOffenseResultTone = (result: OffenseScenarioResult["result"]): "green" 
 const formatResultAlertStrictestCondition = (message: string): string => {
   const integrationPrefixes = [
     "火力調整条件を候補一覧へ統合できません: ",
-    "S調整条件を候補一覧へ統合できません: ",
+    "素早さ調整条件を候補一覧へ統合できません: ",
   ];
   const matchedPrefix = integrationPrefixes.find((prefix) => message.startsWith(prefix));
   return matchedPrefix ? message.slice(matchedPrefix.length) : message;
@@ -2875,8 +2916,8 @@ const formatSpeedResultDetail = (
   scenario: ScenarioFormState | undefined,
 ): string => {
   const attack = scenario?.attacks.find((currentAttack) => currentAttack.id === entry.attackId);
-  const opponentLabel = attack?.speedTargetValue && attack.speedTargetValue > 0
-    ? `目標S${attack.speedTargetValue}`
+  const opponentLabel = attack?.speedTargetMode === "manual" && attack.speedTargetValue > 0
+    ? `任意S${attack.speedTargetValue}`
     : attack?.attackerPokemonInput.trim() || entry.attackLabel;
   const requiredStatPointLabel = entry.result.requiredStatPoints === null
     ? "S-"
