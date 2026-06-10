@@ -208,6 +208,37 @@ textarea:focus-visible,
   white-space: nowrap;
 }
 
+.readme-link {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #1d2224 0%, #141718 100%);
+  opacity: 0.82;
+  transition: border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.readme-link:hover,
+.readme-link:focus-visible {
+  border-color: var(--gold-line);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.readme-link:focus-visible {
+  outline: 2px solid rgba(245, 197, 66, 0.42);
+  outline-offset: 2px;
+}
+
+.readme-link img {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
 .topbar-actions,
 .section-heading,
 .segmented,

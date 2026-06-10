@@ -973,6 +973,16 @@ export function App() {
             </p>
           </div>
         </div>
+        <a
+          className="readme-link"
+          href="https://github.com/suisui-swimmy/ChampionCreator/blob/main/README.md"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="README.mdを開く"
+          title="README.md"
+        >
+          <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
+        </a>
       </header>
 
       {boxOpen ? (
