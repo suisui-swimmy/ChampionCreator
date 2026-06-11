@@ -3319,8 +3319,10 @@ textarea {
   }
 
   .mobile-symmetric-board {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1.05fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+    gap: 34px;
     align-items: start;
     min-height: 610px;
     border-bottom: 1px solid rgba(238, 241, 237, 0.22);
@@ -3338,6 +3340,8 @@ textarea {
 
   .mobile-target-column,
   .mobile-scenario-board {
+    position: relative;
+    z-index: 1;
     display: grid;
     gap: 8px;
     min-width: 0;
@@ -3447,102 +3451,6 @@ textarea {
     font-style: normal;
   }
 
-  .mobile-action-spine {
-    position: relative;
-    display: grid;
-    justify-items: center;
-    align-self: stretch;
-    min-height: 610px;
-    padding: 37px 0 12px;
-  }
-
-  .mobile-action-spine-line {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 1px;
-    background: linear-gradient(
-      180deg,
-      rgba(238, 241, 237, 0.22),
-      rgba(238, 241, 237, 0.54) 12%,
-      rgba(238, 241, 237, 0.54) 88%,
-      rgba(238, 241, 237, 0.22)
-    );
-    transform: translateX(-50%);
-  }
-
-  .mobile-action-spine::after {
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    width: 13px;
-    height: 13px;
-    border: 2px solid rgba(238, 241, 237, 0.48);
-    border-radius: 50%;
-    background: var(--bg);
-    content: "";
-    transform: translateX(-50%);
-  }
-
-  .mobile-spine-scenario-list {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    align-content: start;
-    gap: 7px;
-    width: 100%;
-  }
-
-  .mobile-spine-action {
-    position: relative;
-    display: block;
-    gap: 4px;
-    width: 62px;
-    min-height: 110px;
-    border: 0;
-    background: transparent;
-    color: var(--gold);
-    padding: 0;
-    font-size: 10px;
-    font-weight: 900;
-    line-height: 1.35;
-    text-align: center;
-  }
-
-  .mobile-spine-action img {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    display: block;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(13, 15, 16, 0.82);
-    box-shadow: 0 0 0 1px rgba(238, 241, 237, 0.2), 0 8px 18px rgba(0, 0, 0, 0.24);
-    transform: translate(-50%, -50%);
-  }
-
-  .mobile-spine-action span {
-    position: absolute;
-    top: calc(50% + 26px);
-    left: 50%;
-    width: 100%;
-    transform: translateX(-50%);
-  }
-
-  .mobile-spine-action.defence img {
-    box-shadow: 0 0 0 1px rgba(0, 255, 114, 0.28), 0 8px 18px rgba(0, 0, 0, 0.24);
-  }
-
-  .mobile-spine-action.offense img {
-    box-shadow: 0 0 0 1px rgba(255, 0, 0, 0.28), 0 8px 18px rgba(0, 0, 0, 0.24);
-  }
-
-  .mobile-spine-action.speed img {
-    box-shadow: 0 0 0 1px rgba(0, 216, 240, 0.3), 0 8px 18px rgba(0, 0, 0, 0.24);
-  }
-
   .mobile-scenario-board {
     gap: 7px;
   }
@@ -3562,10 +3470,61 @@ textarea {
     padding: 0;
   }
 
-  .mobile-scenario-list {
+  .mobile-scenario-flow-list {
     display: grid;
     gap: 7px;
     min-width: 0;
+  }
+
+  .mobile-scenario-flow-row {
+    min-width: 0;
+  }
+
+  .mobile-flow-edge-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .mobile-flow-edge {
+    cursor: pointer;
+    outline: none;
+    pointer-events: visiblePainted;
+  }
+
+  .mobile-flow-edge-hit,
+  .mobile-flow-edge-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .mobile-flow-edge-hit {
+    stroke: transparent;
+    stroke-width: 30px;
+  }
+
+  .mobile-flow-edge-line {
+    stroke-width: 2.5px;
+  }
+
+  .mobile-flow-edge-small-node {
+    stroke: #08100d;
+    stroke-width: 2.5px;
+  }
+
+  .mobile-flow-edge-ring-node-outer,
+  .mobile-flow-edge-ring-node-inner {
+    fill: rgba(8, 16, 13, 0.92);
+    stroke-width: 2.5px;
+  }
+
+  .mobile-flow-edge:focus-visible .mobile-flow-edge-line {
+    stroke-width: 4px;
   }
 
   .mobile-scenario-summary {
@@ -4435,20 +4394,8 @@ textarea {
   }
 
   .mobile-symmetric-board {
-    grid-template-columns: minmax(0, 0.96fr) 54px minmax(0, 1fr);
-  }
-
-  .mobile-spine-action {
-    width: 50px;
-  }
-
-  .mobile-spine-action img {
-    width: 38px;
-    height: 38px;
-  }
-
-  .mobile-spine-action span {
-    font-size: 9px;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.55fr);
+    gap: 22px;
   }
 
   .mobile-target-mini,

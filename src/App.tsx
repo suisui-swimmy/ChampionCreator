@@ -1901,6 +1901,53 @@ function formatMobileAttackMeta(attack: ScenarioAttackFormState, adjustmentType:
   return `${attack.requiredSurvivedHits}/${attack.repeat}耐え ${attack.minSurvivalProbabilityPercent}%`;
 }
 
+type MobileFlowEdgeGeometry = {
+  id: string;
+  path: string;
+  color: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  smallNodeX: number;
+  smallNodeY: number;
+  ringNodeX: number;
+  ringNodeY: number;
+  ariaLabel: string;
+};
+
+type MobileFlowGeometry = {
+  width: number;
+  height: number;
+  edges: MobileFlowEdgeGeometry[];
+  signature: string;
+};
+
+const emptyMobileFlowGeometry: MobileFlowGeometry = {
+  width: 0,
+  height: 0,
+  edges: [],
+  signature: "",
+};
+
+function getMobileFlowPalette(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean) {
+  if (adjustmentType === "offense") {
+    return { color: "#ff0000" };
+  }
+
+  if (adjustmentType === "speed") {
+    return isTrickRoom
+      ? { color: "#b56cff" }
+      : { color: "#00d8f0" };
+  }
+
+  return { color: "#00ff72" };
+}
+
+function shouldPlaceMobileFlowRingAtTarget(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean): boolean {
+  return adjustmentType === "defence" || isTrickRoom;
+}
+
 function MobileOverview({
   targetForm,
   targetArtwork,
@@ -1922,13 +1969,117 @@ function MobileOverview({
   onCancel,
 }: MobileOverviewProps) {
   const topCandidate = candidates[0];
+  const boardRef = useRef<HTMLElement | null>(null);
+  const targetMiniRef = useRef<HTMLButtonElement | null>(null);
+  const scenarioCardRefs = useRef(new Map<string, HTMLElement>());
+  const [flowGeometry, setFlowGeometry] = useState<MobileFlowGeometry>(emptyMobileFlowGeometry);
+
+  useEffect(() => {
+    const board = boardRef.current;
+    const targetMini = targetMiniRef.current;
+    if (!board || !targetMini) {
+      return undefined;
+    }
+
+    let frameId = 0;
+
+    const measure = () => {
+      const boardRect = board.getBoundingClientRect();
+      const targetRect = targetMini.getBoundingClientRect();
+      const edgeCount = scenarios.length;
+      const targetTop = targetRect.top - boardRect.top;
+      const targetRight = targetRect.right - boardRect.left - 1;
+      const anchorStartY = targetTop + Math.min(Math.max(targetRect.height * 0.11, 26), 42);
+      const requestedBand = Math.max(30 * Math.max(edgeCount - 1, 1), 60);
+      const maxBand = Math.max(0, targetRect.height * 0.34);
+      const anchorBand = edgeCount <= 1 ? 0 : Math.min(requestedBand, maxBand);
+
+      const edges = scenarios.flatMap((scenario, index) => {
+        const card = scenarioCardRefs.current.get(scenario.id);
+        if (!card) {
+          return [];
+        }
+
+        const cardRect = card.getBoundingClientRect();
+        const isTrickRoom = scenario.adjustmentType === "speed"
+          && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+        const fromX = targetRight;
+        const fromY = anchorStartY + (edgeCount <= 1 ? 0 : (anchorBand * index) / (edgeCount - 1));
+        const toX = cardRect.left - boardRect.left + 1;
+        const toY = cardRect.top - boardRect.top + cardRect.height / 2;
+        const gap = Math.max(toX - fromX, 24);
+        const start = { x: fromX, y: fromY };
+        const end = { x: toX, y: toY };
+        const controlA = { x: fromX + gap * 0.58, y: fromY };
+        const controlB = { x: toX - gap * 0.46, y: toY };
+        const palette = getMobileFlowPalette(scenario.adjustmentType, isTrickRoom);
+        const ringAtTarget = shouldPlaceMobileFlowRingAtTarget(scenario.adjustmentType, isTrickRoom);
+        const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
+        const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(scenario.adjustmentType));
+
+        return [{
+          id: scenario.id,
+          path: `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${controlA.x.toFixed(1)} ${controlA.y.toFixed(1)}, ${controlB.x.toFixed(1)} ${controlB.y.toFixed(1)}, ${end.x.toFixed(1)} ${end.y.toFixed(1)}`,
+          color: palette.color,
+          fromX,
+          fromY,
+          toX,
+          toY,
+          smallNodeX: ringAtTarget ? toX : fromX,
+          smallNodeY: ringAtTarget ? toY : fromY,
+          ringNodeX: ringAtTarget ? fromX : toX,
+          ringNodeY: ringAtTarget ? fromY : toY,
+          ariaLabel: `${scenario.label}: ${currentAdjustmentLabel}。タップで${nextAdjustmentLabel}に切り替え`,
+        }];
+      });
+
+      const nextGeometry: MobileFlowGeometry = {
+        width: boardRect.width,
+        height: boardRect.height,
+        edges,
+        signature: [
+          Math.round(boardRect.width),
+          Math.round(boardRect.height),
+          ...edges.map((edge) => [
+            edge.id,
+            edge.path,
+            Math.round(edge.fromY),
+            Math.round(edge.toY),
+            Math.round(edge.ringNodeX),
+            Math.round(edge.ringNodeY),
+            edge.color,
+          ].join(":")),
+        ].join("|"),
+      };
+
+      setFlowGeometry((previous) => (previous.signature === nextGeometry.signature ? previous : nextGeometry));
+    };
+
+    const scheduleMeasure = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measure);
+    };
+
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleMeasure);
+    resizeObserver?.observe(board);
+    resizeObserver?.observe(targetMini);
+    scenarioCardRefs.current.forEach((card) => resizeObserver?.observe(card));
+    window.addEventListener("resize", scheduleMeasure);
+    scheduleMeasure();
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleMeasure);
+    };
+  }, [scenarios]);
 
   return (
     <section className="mobile-overview" aria-label="スマホ用調整ボード">
-      <section className="mobile-symmetric-board" aria-label="中央ライン調整ボード">
+      <section className="mobile-symmetric-board" aria-label="ノード接続調整ボード" ref={boardRef}>
         <div className="mobile-target-column">
           <h2>調整対象</h2>
-          <button className="mobile-target-mini" type="button" onClick={onOpenTarget}>
+          <button className="mobile-target-mini" type="button" onClick={onOpenTarget} ref={targetMiniRef}>
             <PokemonArtworkFrame
               match={targetArtwork}
               fallbackLabel={targetForm.pokemonInput}
@@ -1954,37 +2105,56 @@ function MobileOverview({
           </button>
         </div>
 
-        <nav className="mobile-action-spine" aria-label="シナリオ調整種別">
-          <span className="mobile-action-spine-line" aria-hidden="true" />
-          <div className="mobile-spine-scenario-list">
-            {scenarios.map((scenario) => {
-              const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
-                && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
-              const iconPath = scenario.adjustmentType === "speed"
-                ? isTrickRoomSpeedScenario
-                  ? "assets/ui/arrow-down-circle.svg"
-                  : "assets/ui/arrow-up-circle.svg"
-                : scenario.adjustmentType === "offense"
-                  ? "assets/ui/arrow-right-circle.svg"
-                  : "assets/ui/arrow-left-circle.svg";
-              const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
-              const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(scenario.adjustmentType));
-
-              return (
-                <button
-                  className={`mobile-spine-action ${scenario.adjustmentType}${isTrickRoomSpeedScenario ? " trick-room" : ""}`}
-                  type="button"
-                  aria-label={`${scenario.label}: ${currentAdjustmentLabel}。タップで${nextAdjustmentLabel}に切り替え`}
-                  key={scenario.id}
-                  onClick={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
-                >
-                  <img src={getAssetSrc(iconPath)} alt="" aria-hidden="true" />
-                  <span>{currentAdjustmentLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
+        <svg
+          className="mobile-flow-edge-layer"
+          aria-label="シナリオ調整種別エッジ"
+          role="img"
+          viewBox={`0 0 ${Math.max(flowGeometry.width, 1)} ${Math.max(flowGeometry.height, 1)}`}
+          preserveAspectRatio="none"
+        >
+          <defs>
+            {flowGeometry.edges.map((edge) => (
+              <filter
+                id={`mobile-flow-glow-${edge.id}`}
+                key={edge.id}
+                x="-35%"
+                y="-35%"
+                width="170%"
+                height="170%"
+                colorInterpolationFilters="sRGB"
+              >
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={edge.color} floodOpacity="0.42" />
+              </filter>
+            ))}
+          </defs>
+          {flowGeometry.edges.map((edge) => (
+            <g
+              className="mobile-flow-edge"
+              key={edge.id}
+              role="button"
+              tabIndex={0}
+              aria-label={edge.ariaLabel}
+              onClick={() => onToggleScenarioAdjustmentFromDirection(edge.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onToggleScenarioAdjustmentFromDirection(edge.id);
+                }
+              }}
+            >
+              <path className="mobile-flow-edge-hit" d={edge.path} />
+              <path
+                className="mobile-flow-edge-line"
+                d={edge.path}
+                stroke={edge.color}
+                filter={`url(#mobile-flow-glow-${edge.id})`}
+              />
+              <circle className="mobile-flow-edge-small-node" cx={edge.smallNodeX} cy={edge.smallNodeY} r="5" fill={edge.color} />
+              <circle className="mobile-flow-edge-ring-node-outer" cx={edge.ringNodeX} cy={edge.ringNodeY} r="8" stroke={edge.color} />
+              <circle className="mobile-flow-edge-ring-node-inner" cx={edge.ringNodeX} cy={edge.ringNodeY} r="4" stroke={edge.color} />
+            </g>
+          ))}
+        </svg>
 
         <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
           <div className="mobile-board-heading">
@@ -1997,62 +2167,79 @@ function MobileOverview({
             </button>
           </div>
 
-          <div className="mobile-scenario-list">
-            {scenarios.map((scenario) => (
-              <article
-                className={`mobile-scenario-summary ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
-                key={scenario.id}
-              >
-                <button
-                  className="mobile-scenario-summary-header"
-                  type="button"
-                  onClick={() => onOpenScenarioDetail(scenario.id)}
-                >
-                  <span className="mobile-scenario-title">
-                    <strong>{scenario.label}</strong>
-                    <span>{getScenarioAdjustmentTypeLabel(scenario.adjustmentType)}</span>
-                  </span>
-                  <span className="mobile-scenario-meta">
-                    <span className="mobile-scenario-count">{scenario.attacks.length}攻撃</span>
-                    <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
-                  </span>
-                </button>
+          <div className="mobile-scenario-flow-list" aria-label="シナリオ調整種別">
+            {scenarios.map((scenario) => {
+              const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
+                && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+              const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
 
-                <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
-                  {scenario.attacks.map((attack, attackIndex) => {
-                    const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
-                    return (
-                      <button
-                        className="mobile-attack-summary"
-                        type="button"
-                        key={attack.id}
-                        onClick={() => onOpenScenarioDetail(scenario.id)}
-                      >
-                        <PokemonArtworkFrame
-                          match={attackerArtwork}
-                          fallbackLabel={attack.attackerPokemonInput}
-                          variant="attack"
-                          dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
-                        />
-                        <span>
-                          <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
-                          <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
-                          <em>{formatMobileAttackMeta(attack, scenario.adjustmentType)}</em>
-                        </span>
-                      </button>
-                    );
-                  })}
-                  <button
-                    className="mobile-attack-add"
-                    type="button"
-                    aria-label={`${scenario.label}に攻撃を追加`}
-                    onClick={() => onAddAttack(scenario.id)}
+              return (
+                <div
+                  className={`mobile-scenario-flow-row ${scenario.adjustmentType}${isTrickRoomSpeedScenario ? " trick-room" : ""}`}
+                  key={scenario.id}
+                >
+                  <article
+                    className={`mobile-scenario-summary ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
+                    ref={(node) => {
+                      if (node) {
+                        scenarioCardRefs.current.set(scenario.id, node);
+                      } else {
+                        scenarioCardRefs.current.delete(scenario.id);
+                      }
+                    }}
                   >
-                    +
-                  </button>
+                    <button
+                      className="mobile-scenario-summary-header"
+                      type="button"
+                      onClick={() => onOpenScenarioDetail(scenario.id)}
+                    >
+                      <span className="mobile-scenario-title">
+                        <strong>{scenario.label}</strong>
+                        <span>{currentAdjustmentLabel}</span>
+                      </span>
+                      <span className="mobile-scenario-meta">
+                        <span className="mobile-scenario-count">{scenario.attacks.length}攻撃</span>
+                        <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
+                      </span>
+                    </button>
+
+                    <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
+                      {scenario.attacks.map((attack, attackIndex) => {
+                        const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
+                        return (
+                          <button
+                            className="mobile-attack-summary"
+                            type="button"
+                            key={attack.id}
+                            onClick={() => onOpenScenarioDetail(scenario.id)}
+                          >
+                            <PokemonArtworkFrame
+                              match={attackerArtwork}
+                              fallbackLabel={attack.attackerPokemonInput}
+                              variant="attack"
+                              dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
+                            />
+                            <span>
+                              <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
+                              <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
+                              <em>{formatMobileAttackMeta(attack, scenario.adjustmentType)}</em>
+                            </span>
+                          </button>
+                        );
+                      })}
+                      <button
+                        className="mobile-attack-add"
+                        type="button"
+                        aria-label={`${scenario.label}に攻撃を追加`}
+                        onClick={() => onAddAttack(scenario.id)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </article>
                 </div>
-              </article>
-            ))}
+              );
+            })}
           </div>
         </section>
       </section>
