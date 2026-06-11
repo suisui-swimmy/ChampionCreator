@@ -1900,83 +1900,113 @@ function MobileOverview({
 
   return (
     <section className="mobile-overview" aria-label="スマホ用調整ボード">
-      <button className="mobile-target-mini" type="button" onClick={onOpenTarget}>
-        <PokemonArtworkFrame
-          match={targetArtwork}
-          fallbackLabel={targetForm.pokemonInput}
-          variant="attack"
-          dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
-        />
-        <span className="mobile-target-mini-main">
-          <strong>{targetForm.pokemonInput || "調整対象"}</strong>
-          <span>Lv{targetForm.level} / 合計SP {totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</span>
-        </span>
-        <span className="mobile-target-mini-spread">
-          {defenceStatKeys.map((key) => `${statLabels[key]}${targetForm.statPoints[key]}`).join(" / ")}
-        </span>
-      </button>
-
-      <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
-        <div className="mobile-board-heading">
-          <div>
-            <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
-            <span>縦にシナリオ、横に攻撃</span>
-          </div>
-          <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
-            追加
+      <section className="mobile-symmetric-board" aria-label="中央ライン調整ボード">
+        <div className="mobile-target-column">
+          <h2>調整対象</h2>
+          <button className="mobile-target-mini" type="button" onClick={onOpenTarget}>
+            <PokemonArtworkFrame
+              match={targetArtwork}
+              fallbackLabel={targetForm.pokemonInput}
+              variant="target"
+              dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
+            />
+            <span className="mobile-target-mini-main">
+              <strong>{targetForm.pokemonInput || "調整対象"}</strong>
+              <span>Lv{targetForm.level}</span>
+            </span>
+            <span className="mobile-target-mini-spread">
+              合計SP {totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}
+            </span>
+            <span className="mobile-target-stat-list" aria-label="調整対象の主要SP">
+              {statKeys.map((key) => (
+                <span key={key}>
+                  <StatIcon stat={key} />
+                  <b>{statLabels[key]}</b>
+                  <em>{targetForm.statPoints[key]}</em>
+                </span>
+              ))}
+            </span>
           </button>
         </div>
 
-        <div className="mobile-scenario-list">
-          {scenarios.map((scenario) => (
-            <article
-              className={`mobile-scenario-summary ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
-              key={scenario.id}
-            >
-              <button className="mobile-scenario-summary-header" type="button" onClick={onOpenScenarios}>
-                <span className="mobile-scenario-title">
-                  <strong>{scenario.label}</strong>
-                  <span>{getScenarioAdjustmentTypeLabel(scenario.adjustmentType)}</span>
-                </span>
-                <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
-              </button>
+        <nav className="mobile-action-spine" aria-label="中央ライン操作">
+          <span className="mobile-action-spine-line" aria-hidden="true" />
+          <button className="mobile-spine-action target" type="button" onClick={onOpenTarget}>
+            <img src={getAssetSrc("assets/ui/arrow-left-circle.svg")} alt="" aria-hidden="true" />
+            <span>調整対象<br />を編集</span>
+          </button>
+          <button className="mobile-spine-action scenario" type="button" onClick={onOpenScenarios}>
+            <img src={getAssetSrc("assets/ui/arrow-right-circle.svg")} alt="" aria-hidden="true" />
+            <span>シナリオ<br />を編集</span>
+          </button>
+          <button className="mobile-spine-action results" type="button" onClick={onOpenResults}>
+            <img src={getAssetSrc("assets/ui/arrow-up-circle.svg")} alt="" aria-hidden="true" />
+            <span>結果を表示<br />候補一覧へ</span>
+          </button>
+        </nav>
 
-              <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
-                {scenario.attacks.map((attack, attackIndex) => {
-                  const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
-                  return (
-                    <button
-                      className="mobile-attack-summary"
-                      type="button"
-                      key={attack.id}
-                      onClick={onOpenScenarios}
-                    >
-                      <PokemonArtworkFrame
-                        match={attackerArtwork}
-                        fallbackLabel={attack.attackerPokemonInput}
-                        variant="attack"
-                        dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
-                      />
-                      <span>
-                        <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
-                        <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
-                        <em>{formatMobileAttackMeta(attack, scenario.adjustmentType)}</em>
-                      </span>
-                    </button>
-                  );
-                })}
-                <button
-                  className="mobile-attack-add"
-                  type="button"
-                  aria-label={`${scenario.label}に攻撃を追加`}
-                  onClick={() => onAddAttack(scenario.id)}
-                >
-                  +
+        <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
+          <div className="mobile-board-heading">
+            <div>
+              <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
+              <span>攻撃は横スクロール</span>
+            </div>
+            <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
+              追加
+            </button>
+          </div>
+
+          <div className="mobile-scenario-list">
+            {scenarios.map((scenario) => (
+              <article
+                className={`mobile-scenario-summary ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
+                key={scenario.id}
+              >
+                <button className="mobile-scenario-summary-header" type="button" onClick={onOpenScenarios}>
+                  <span className="mobile-scenario-title">
+                    <strong>{scenario.label}</strong>
+                    <span>{getScenarioAdjustmentTypeLabel(scenario.adjustmentType)}</span>
+                  </span>
+                  <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
                 </button>
-              </div>
-            </article>
-          ))}
-        </div>
+
+                <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
+                  {scenario.attacks.map((attack, attackIndex) => {
+                    const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
+                    return (
+                      <button
+                        className="mobile-attack-summary"
+                        type="button"
+                        key={attack.id}
+                        onClick={onOpenScenarios}
+                      >
+                        <PokemonArtworkFrame
+                          match={attackerArtwork}
+                          fallbackLabel={attack.attackerPokemonInput}
+                          variant="attack"
+                          dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
+                        />
+                        <span>
+                          <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
+                          <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
+                          <em>{formatMobileAttackMeta(attack, scenario.adjustmentType)}</em>
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    className="mobile-attack-add"
+                    type="button"
+                    aria-label={`${scenario.label}に攻撃を追加`}
+                    onClick={() => onAddAttack(scenario.id)}
+                  >
+                    +
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       </section>
 
       <section className="mobile-candidate-dock" aria-labelledby="mobile-candidate-title">

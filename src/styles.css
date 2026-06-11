@@ -3316,6 +3316,15 @@ textarea {
     gap: 8px;
   }
 
+  .mobile-symmetric-board {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1.05fr);
+    align-items: start;
+    min-height: 610px;
+    border-bottom: 1px solid rgba(238, 241, 237, 0.22);
+    padding-bottom: 10px;
+  }
+
   .mobile-target-mini,
   .mobile-scenario-summary,
   .mobile-candidate-dock {
@@ -3325,22 +3334,38 @@ textarea {
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025), 0 10px 24px rgba(0, 0, 0, 0.2);
   }
 
-  .mobile-target-mini {
+  .mobile-target-column,
+  .mobile-scenario-board {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 9px;
-    width: 100%;
-    min-height: 68px;
-    border-color: #30383b;
-    color: var(--text);
-    padding: 9px;
-    text-align: left;
+    gap: 8px;
+    min-width: 0;
   }
 
-  .mobile-target-mini .pokemon-artwork.attack {
-    width: 48px;
-    height: 48px;
+  .mobile-target-column h2,
+  .mobile-board-heading h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .mobile-target-mini {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    width: 100%;
+    min-height: 318px;
+    border-color: #30383b;
+    color: var(--text);
+    padding: 10px;
+    text-align: center;
+  }
+
+  .mobile-target-mini .pokemon-artwork.target {
+    width: 100%;
+    min-height: 118px;
+    aspect-ratio: 1 / 1;
   }
 
   .mobile-target-mini-main,
@@ -3387,10 +3412,107 @@ textarea {
     color: var(--gold);
   }
 
-  .mobile-scenario-board {
+  .mobile-target-stat-list {
     display: grid;
-    gap: 7px;
+    gap: 5px;
     min-width: 0;
+  }
+
+  .mobile-target-stat-list span {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: center;
+    gap: 5px;
+    border-top: 1px solid rgba(238, 241, 237, 0.08);
+    padding-top: 5px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 850;
+    text-align: left;
+  }
+
+  .mobile-target-stat-list .stat-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .mobile-target-stat-list b {
+    color: #d7ded9;
+  }
+
+  .mobile-target-stat-list em {
+    color: var(--text);
+    font-style: normal;
+  }
+
+  .mobile-action-spine {
+    position: relative;
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    justify-items: center;
+    align-self: stretch;
+    min-height: 610px;
+    padding: 62px 0 12px;
+  }
+
+  .mobile-action-spine-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(238, 241, 237, 0.22),
+      rgba(238, 241, 237, 0.54) 12%,
+      rgba(238, 241, 237, 0.54) 88%,
+      rgba(238, 241, 237, 0.22)
+    );
+    transform: translateX(-50%);
+  }
+
+  .mobile-action-spine::after {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(238, 241, 237, 0.48);
+    border-radius: 50%;
+    background: var(--bg);
+    content: "";
+    transform: translateX(-50%);
+  }
+
+  .mobile-spine-action {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    align-content: start;
+    justify-items: center;
+    gap: 4px;
+    width: 62px;
+    border: 0;
+    background: transparent;
+    color: var(--gold);
+    padding: 0;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .mobile-spine-action img {
+    display: block;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(13, 15, 16, 0.82);
+    box-shadow: 0 0 0 1px rgba(238, 241, 237, 0.2), 0 8px 18px rgba(0, 0, 0, 0.24);
+  }
+
+  .mobile-scenario-board {
+    gap: 7px;
   }
 
   .mobile-board-heading,
@@ -3404,12 +3526,8 @@ textarea {
   }
 
   .mobile-board-heading {
-    padding: 2px 2px 0;
-  }
-
-  .mobile-board-heading h2 {
-    margin: 0;
-    font-size: 14px;
+    justify-content: stretch;
+    padding: 0;
   }
 
   .mobile-scenario-list {
@@ -3420,9 +3538,9 @@ textarea {
 
   .mobile-scenario-summary {
     display: grid;
-    gap: 8px;
+    gap: 7px;
     min-width: 0;
-    padding: 8px;
+    padding: 7px;
   }
 
   .mobile-scenario-summary.defence {
@@ -3456,8 +3574,8 @@ textarea {
     border-radius: 999px;
     background: #111516;
     color: var(--gold);
-    padding: 3px 7px;
-    font-size: 10px;
+    padding: 2px 6px;
+    font-size: 9px;
     font-weight: 900;
   }
 
@@ -3473,23 +3591,23 @@ textarea {
 
   .mobile-attack-summary {
     display: grid;
-    grid-template-columns: 42px 116px;
+    grid-template-columns: 32px 70px;
     align-items: center;
-    gap: 7px;
-    flex: 0 0 172px;
-    min-height: 58px;
+    gap: 6px;
+    flex: 0 0 118px;
+    min-height: 52px;
     border: 1px solid #30383b;
     border-radius: 7px;
     background: #111516;
     color: var(--text);
-    padding: 7px;
+    padding: 6px;
     scroll-snap-align: start;
     text-align: left;
   }
 
   .mobile-attack-summary .pokemon-artwork.attack {
-    width: 42px;
-    height: 42px;
+    width: 32px;
+    height: 32px;
   }
 
   .mobile-attack-summary em {
@@ -3497,8 +3615,8 @@ textarea {
   }
 
   .mobile-attack-add {
-    flex: 0 0 58px;
-    min-height: 58px;
+    flex: 0 0 42px;
+    min-height: 52px;
     border: 1px dashed var(--line-strong);
     border-radius: 7px;
     background: #111516;
@@ -3509,8 +3627,7 @@ textarea {
   }
 
   .mobile-candidate-dock {
-    position: sticky;
-    bottom: 8px;
+    position: static;
     z-index: 20;
     display: grid;
     gap: 7px;

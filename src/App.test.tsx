@@ -58,7 +58,9 @@ describe("App", () => {
     expect(html).not.toContain(">コピー</button>");
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain('aria-label="スマホ用調整ボード"');
-    expect(html).toContain("縦にシナリオ、横に攻撃");
+    expect(html).toContain('aria-label="中央ライン調整ボード"');
+    expect(html).toContain('aria-label="中央ライン操作"');
+    expect(html).toContain("攻撃は横スクロール");
     expect(html).toContain('class="mobile-candidate-dock"');
     expect(html).toContain('class="mobile-attack-rail"');
     expect(html).toContain('aria-label="シナリオ1 調整種別"');
