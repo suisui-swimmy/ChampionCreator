@@ -12,6 +12,7 @@ import {
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
   getDropdownEntityOptions,
+  getMobileScenarioNavigationTargets,
   getNatureModifierDirection,
   getScenarioPanelVisibleScenarios,
   isUnresolvedEntityInput,
@@ -65,6 +66,8 @@ describe("App", () => {
     expect(html).toContain('aria-label="シナリオ2: 火力調整。タップで素早さ調整に切り替え"');
     expect(html).toContain('aria-label="シナリオ3: 素早さ調整。タップで耐久調整に切り替え"');
     expect(html).toContain("攻撃は横スクロール");
+    expect(html).toContain('class="mobile-scenario-count"');
+    expect(html).toContain(">1攻撃</span>");
     expect(html).toContain('class="mobile-candidate-dock"');
     expect(html).toContain('class="mobile-attack-rail"');
     expect(html).toContain('aria-label="シナリオ1 調整種別"');
@@ -137,6 +140,14 @@ describe("App", () => {
       .toEqual(["シナリオ1", "シナリオ2", "シナリオ3"]);
     expect(getScenarioPanelVisibleScenarios(scenarios, "missing-scenario").map((scenario) => scenario.label))
       .toEqual(["シナリオ1", "シナリオ2", "シナリオ3"]);
+    expect(getMobileScenarioNavigationTargets(scenarios, scenarios[1].id)).toEqual({
+      currentIndex: 1,
+      total: 3,
+      previousId: scenarios[0].id,
+      nextId: scenarios[2].id,
+    });
+    expect(getMobileScenarioNavigationTargets(scenarios, scenarios[0].id)?.previousId).toBeNull();
+    expect(getMobileScenarioNavigationTargets(scenarios, "missing-scenario")).toBeNull();
   });
 
   it("normalizes full-width numeric input text before parsing", () => {
@@ -409,6 +420,9 @@ describe("App", () => {
 
     expect(html).toContain(">最厳条件<");
     expect(html).toContain(">H/A/B/C/D/S<");
+    expect(html).toContain('class="candidate-budget-value used"');
+    expect(html).toContain('class="candidate-budget-value remaining"');
+    expect(html).toContain('class="candidate-bottleneck"');
     expect(html).toContain('class="candidate-sp-bars"');
     expect(html).toContain('aria-label="SPバー: H 6 / A 0 / B 13 / C 0 / D 0 / S 0"');
     expect(html).toContain(">H</span><span>6</span>");

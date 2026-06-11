@@ -1067,6 +1067,8 @@ export function App() {
           onUpdateAttack={updateScenarioAttack}
           onUpdateAttackerEv={updateScenarioAttackerEv}
           mobileFocusedScenarioId={mobileSheet === "scenarios" ? mobileScenarioDetailId : null}
+          onFocusMobileScenario={setMobileScenarioDetailId}
+          onShowMobileScenarioList={() => setMobileScenarioDetailId(null)}
           onCloseMobileSheet={closeMobileSheet}
         />
         <section className="search-control-bar" aria-label="探索操作">
@@ -2010,7 +2012,10 @@ function MobileOverview({
                     <strong>{scenario.label}</strong>
                     <span>{getScenarioAdjustmentTypeLabel(scenario.adjustmentType)}</span>
                   </span>
-                  <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
+                  <span className="mobile-scenario-meta">
+                    <span className="mobile-scenario-count">{scenario.attacks.length}攻撃</span>
+                    <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
+                  </span>
                 </button>
 
                 <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
@@ -2068,6 +2073,25 @@ function MobileOverview({
             <span className="mobile-top-candidate empty">計算結果</span>
           )}
         </button>
+        {candidates.length > 0 ? (
+          <div className="mobile-candidate-preview-list" aria-label="上位候補プレビュー">
+            {candidates.slice(0, 3).map((candidate) => (
+              <button
+                className="mobile-candidate-preview-row"
+                type="button"
+                key={candidate.id}
+                onClick={onOpenResults}
+              >
+                <span className="mobile-candidate-preview-rank">{candidate.rank}位</span>
+                <CandidateStatPointSpread statPoints={candidate.appliedStatPoints} />
+                <span className="mobile-candidate-preview-budget">
+                  使用{candidate.usedStatPointBudget} / 残り{candidate.remainingStatPointBudget}
+                </span>
+                <em>{candidate.bottleneckLabel}</em>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="mobile-progress-line" aria-hidden="true">
           <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
         </div>
@@ -2542,6 +2566,8 @@ type ScenarioPanelProps = {
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
   mobileFocusedScenarioId?: string | null;
+  onFocusMobileScenario?: (id: string) => void;
+  onShowMobileScenarioList?: () => void;
   onCloseMobileSheet?: () => void;
 };
 
@@ -2555,6 +2581,27 @@ export const getScenarioPanelVisibleScenarios = (
 
   const focusedScenarios = scenarios.filter((scenario) => scenario.id === mobileFocusedScenarioId);
   return focusedScenarios.length > 0 ? focusedScenarios : scenarios;
+};
+
+export const getMobileScenarioNavigationTargets = (
+  scenarios: ScenarioFormState[],
+  mobileFocusedScenarioId?: string | null,
+) => {
+  if (!mobileFocusedScenarioId) {
+    return null;
+  }
+
+  const currentIndex = scenarios.findIndex((scenario) => scenario.id === mobileFocusedScenarioId);
+  if (currentIndex === -1) {
+    return null;
+  }
+
+  return {
+    currentIndex,
+    total: scenarios.length,
+    previousId: scenarios[currentIndex - 1]?.id ?? null,
+    nextId: scenarios[currentIndex + 1]?.id ?? null,
+  };
 };
 
 function ScenarioPanel({
@@ -2571,12 +2618,15 @@ function ScenarioPanel({
   onUpdateAttack,
   onUpdateAttackerEv,
   mobileFocusedScenarioId,
+  onFocusMobileScenario,
+  onShowMobileScenarioList,
   onCloseMobileSheet,
 }: ScenarioPanelProps) {
   const visibleScenarios = getScenarioPanelVisibleScenarios(scenarios, mobileFocusedScenarioId);
   const isMobileFocusedScenario = Boolean(
     mobileFocusedScenarioId && visibleScenarios.length === 1 && visibleScenarios[0].id === mobileFocusedScenarioId,
   );
+  const mobileScenarioNavigation = getMobileScenarioNavigationTargets(scenarios, mobileFocusedScenarioId);
   const headingLabel = isMobileFocusedScenario ? visibleScenarios[0].label : "仮想敵シナリオ";
 
   return (
@@ -2589,6 +2639,43 @@ function ScenarioPanel({
           閉じる
         </button>
       </div>
+
+      {isMobileFocusedScenario && mobileScenarioNavigation ? (
+        <div className="mobile-sheet-scenario-nav" aria-label="シナリオ移動">
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={!mobileScenarioNavigation.previousId || !onFocusMobileScenario}
+            onClick={() => {
+              if (mobileScenarioNavigation.previousId) {
+                onFocusMobileScenario?.(mobileScenarioNavigation.previousId);
+              }
+            }}
+          >
+            前へ
+          </Button>
+          <span>{mobileScenarioNavigation.currentIndex + 1} / {mobileScenarioNavigation.total}</span>
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={onShowMobileScenarioList}
+          >
+            一覧
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={!mobileScenarioNavigation.nextId || !onFocusMobileScenario}
+            onClick={() => {
+              if (mobileScenarioNavigation.nextId) {
+                onFocusMobileScenario?.(mobileScenarioNavigation.nextId);
+              }
+            }}
+          >
+            次へ
+          </Button>
+        </div>
+      ) : null}
 
       <div className="scenario-stack" aria-label="仮想敵シナリオ行">
         {visibleScenarios.map((scenario) => (
@@ -3701,9 +3788,9 @@ export function ResultsPanel({
                     <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
                     <CandidateStatPointSpread statPoints={candidate.appliedStatPoints} />
                     <span className="candidate-row-spacer" aria-hidden="true" />
-                    <span>{candidate.usedStatPointBudget}</span>
-                    <span>{candidate.remainingStatPointBudget}</span>
-                    <span>{candidate.bottleneckLabel}</span>
+                    <span className="candidate-budget-value used">{candidate.usedStatPointBudget}</span>
+                    <span className="candidate-budget-value remaining">{candidate.remainingStatPointBudget}</span>
+                    <span className="candidate-bottleneck">{candidate.bottleneckLabel}</span>
                     <span className="candidate-disclosure" aria-hidden="true">
                       <ChevronRightIcon className="disclosure-chevron" />
                     </span>
