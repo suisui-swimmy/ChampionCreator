@@ -596,6 +596,12 @@ textarea:focus-visible,
   align-items: start;
 }
 
+.mobile-overview,
+.mobile-sheet-backdrop,
+.mobile-sheet-close {
+  display: none;
+}
+
 .target-panel,
 .search-control-bar,
 .results-panel,
@@ -3194,6 +3200,20 @@ textarea {
     min-width: 0;
   }
 
+  .app-shell {
+    display: grid;
+    justify-items: center;
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  .topbar,
+  .workbench,
+  .app-footer {
+    width: 100%;
+  }
+
   .workbench {
     grid-template-columns: 1fr;
   }
@@ -3261,6 +3281,370 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  body {
+    background: #0b0d0e;
+  }
+
+  .app-shell {
+    max-width: 460px;
+    padding: 8px;
+  }
+
+  .topbar {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+  }
+
+  .brand-title img {
+    height: 38px;
+    max-width: 210px;
+  }
+
+  .topbar p {
+    font-size: 10px;
+  }
+
+  .readme-link {
+    width: 30px;
+    height: 30px;
+  }
+
+  .mobile-overview {
+    display: grid;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .mobile-target-mini,
+  .mobile-scenario-summary,
+  .mobile-candidate-dock {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025), 0 10px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .mobile-target-mini {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 68px;
+    border-color: #30383b;
+    color: var(--text);
+    padding: 9px;
+    text-align: left;
+  }
+
+  .mobile-target-mini .pokemon-artwork.attack {
+    width: 48px;
+    height: 48px;
+  }
+
+  .mobile-target-mini-main,
+  .mobile-board-heading div,
+  .mobile-candidate-dock-main > span:first-child,
+  .mobile-scenario-title,
+  .mobile-attack-summary span {
+    display: grid;
+    min-width: 0;
+  }
+
+  .mobile-target-mini-main strong,
+  .mobile-board-heading h2,
+  .mobile-candidate-dock-main strong,
+  .mobile-scenario-title strong,
+  .mobile-attack-summary strong {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-target-mini-main span,
+  .mobile-board-heading span,
+  .mobile-candidate-dock-main small,
+  .mobile-scenario-title span,
+  .mobile-attack-summary small,
+  .mobile-attack-summary em,
+  .mobile-target-mini-spread,
+  .mobile-candidate-actions > span {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-target-mini-spread {
+    color: var(--gold);
+  }
+
+  .mobile-scenario-board {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .mobile-board-heading,
+  .mobile-scenario-summary-header,
+  .mobile-candidate-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .mobile-board-heading {
+    padding: 2px 2px 0;
+  }
+
+  .mobile-board-heading h2 {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .mobile-scenario-list {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .mobile-scenario-summary {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .mobile-scenario-summary.defence {
+    border-color: rgba(0, 255, 114, 0.42);
+  }
+
+  .mobile-scenario-summary.offense {
+    border-color: rgba(255, 0, 0, 0.42);
+  }
+
+  .mobile-scenario-summary.speed {
+    border-color: rgba(0, 216, 240, 0.44);
+  }
+
+  .mobile-scenario-summary.disabled {
+    opacity: 0.62;
+  }
+
+  .mobile-scenario-summary-header {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    text-align: left;
+  }
+
+  .mobile-scenario-state {
+    flex: 0 0 auto;
+    border: 1px solid rgba(238, 241, 237, 0.14);
+    border-radius: 999px;
+    background: #111516;
+    color: var(--gold);
+    padding: 3px 7px;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .mobile-attack-rail {
+    display: flex;
+    gap: 7px;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 3px;
+    scroll-snap-type: x proximity;
+  }
+
+  .mobile-attack-summary {
+    display: grid;
+    grid-template-columns: 42px 116px;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 172px;
+    min-height: 58px;
+    border: 1px solid #30383b;
+    border-radius: 7px;
+    background: #111516;
+    color: var(--text);
+    padding: 7px;
+    scroll-snap-align: start;
+    text-align: left;
+  }
+
+  .mobile-attack-summary .pokemon-artwork.attack {
+    width: 42px;
+    height: 42px;
+  }
+
+  .mobile-attack-summary em {
+    color: rgba(245, 197, 66, 0.82);
+  }
+
+  .mobile-attack-add {
+    flex: 0 0 58px;
+    min-height: 58px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 7px;
+    background: #111516;
+    color: var(--gold);
+    font-size: 24px;
+    font-weight: 900;
+    scroll-snap-align: start;
+  }
+
+  .mobile-candidate-dock {
+    position: sticky;
+    bottom: 8px;
+    z-index: 20;
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .mobile-candidate-dock-main {
+    display: grid;
+    grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    text-align: left;
+  }
+
+  .mobile-top-candidate {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .mobile-top-candidate .candidate-stat-spread {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .mobile-top-candidate b {
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  .mobile-top-candidate em {
+    overflow: hidden;
+    max-width: 88px;
+    color: var(--muted);
+    font-size: 10px;
+    font-style: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-top-candidate.empty {
+    color: var(--muted);
+  }
+
+  .mobile-progress-line {
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #101415;
+  }
+
+  .mobile-progress-line span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(189, 141, 31, 0.72), rgba(245, 197, 66, 0.82));
+  }
+
+  .mobile-candidate-actions {
+    justify-content: end;
+  }
+
+  .mobile-candidate-actions > span {
+    margin-right: auto;
+  }
+
+  .mobile-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    display: block;
+    border: 0;
+    background: rgba(0, 0, 0, 0.58);
+    padding: 0;
+  }
+
+  .workbench {
+    display: block;
+    width: 100%;
+  }
+
+  .target-panel,
+  .scenario-panel,
+  .results-panel {
+    position: fixed;
+    right: auto;
+    bottom: 0;
+    left: 50%;
+    z-index: 70;
+    display: none;
+    width: min(100%, 460px);
+    max-height: 88vh;
+    overflow: auto;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 14px 14px 0 0;
+    transform: translateX(-50%);
+  }
+
+  .mobile-target-open .target-panel,
+  .mobile-scenarios-open .scenario-panel,
+  .mobile-results-open .results-panel {
+    display: block;
+  }
+
+  .search-control-bar {
+    display: none;
+  }
+
+  .mobile-sheet-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    border: 1px solid #30383b;
+    border-radius: 6px;
+    background: #111516;
+    color: #c5ccc8;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 850;
+  }
+
   .box-overlay {
     align-items: end;
     padding: 0;

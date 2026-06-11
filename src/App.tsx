@@ -361,6 +361,8 @@ export const formatScenarioResultStatusLabel = (passed: boolean): "PASS" | "FAIL
 const formatStatPointSpreadLabel = (statPoints: StatTable): string =>
   statKeys.map((key) => `${statLabels[key]} ${statPoints[key]}`).join(" / ");
 
+type MobileSheet = "target" | "scenarios" | "results";
+
 const selectInputValueOnFocus = (event: FocusEvent<HTMLInputElement>) => {
   try {
     event.currentTarget.select();
@@ -514,6 +516,7 @@ export function App() {
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [boxOpen, setBoxOpen] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState<MobileSheet | null>(null);
   const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(loadBoxEntriesFromBrowser);
   const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
   const [boxMessage, setBoxMessage] = useState<string | null>(null);
@@ -926,8 +929,16 @@ export function App() {
     applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
   };
 
+  const closeMobileSheet = () => setMobileSheet(null);
+
   return (
-    <div className={`app-shell${searchState.status === "running" ? " is-running" : ""}`}>
+    <div
+      className={[
+        "app-shell",
+        searchState.status === "running" ? "is-running" : "",
+        mobileSheet ? `mobile-sheet-open mobile-${mobileSheet}-open` : "",
+      ].filter(Boolean).join(" ")}
+    >
       <header className="topbar">
         <div className="brand-title">
           <div className="brand-line">
@@ -974,6 +985,41 @@ export function App() {
         />
       ) : null}
 
+      {mobileSheet ? (
+        <button
+          className="mobile-sheet-backdrop"
+          type="button"
+          aria-label="詳細シートを閉じる"
+          onClick={closeMobileSheet}
+        />
+      ) : null}
+
+      <MobileOverview
+        targetForm={targetForm}
+        targetArtwork={targetArtwork}
+        totalStatPoints={sumStatPoints(targetForm.statPoints)}
+        scenarios={scenarioForms}
+        candidates={searchState.candidates}
+        searchStatus={searchState.status}
+        searchProgress={searchState.progress}
+        searchedCandidates={searchState.searchedCandidates}
+        totalCandidates={searchState.totalCandidates}
+        hasEnabledDefenceScenario={hasEnabledDefenceScenario}
+        onOpenTarget={() => setMobileSheet("target")}
+        onOpenScenarios={() => setMobileSheet("scenarios")}
+        onOpenResults={() => setMobileSheet("results")}
+        onAddScenario={() => {
+          handleAddScenario();
+          setMobileSheet("scenarios");
+        }}
+        onAddAttack={(scenarioId) => {
+          handleAddAttack(scenarioId);
+          setMobileSheet("scenarios");
+        }}
+        onRun={handleRun}
+        onCancel={handleCancel}
+      />
+
       <main className="workbench">
         <TargetPanel
           targetForm={targetForm}
@@ -985,6 +1031,7 @@ export function App() {
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
           isBoxPanelOpen={boxOpen}
           onOpenBoxPanel={toggleBoxPanel}
+          onCloseMobileSheet={closeMobileSheet}
         />
         <ScenarioPanel
           scenarios={scenarioForms}
@@ -999,6 +1046,7 @@ export function App() {
           onRemoveAttack={handleRemoveAttack}
           onUpdateAttack={updateScenarioAttack}
           onUpdateAttackerEv={updateScenarioAttackerEv}
+          onCloseMobileSheet={closeMobileSheet}
         />
         <section className="search-control-bar" aria-label="探索操作">
           <div
@@ -1050,6 +1098,7 @@ export function App() {
           resultAlertMessage={resultAlertMessage}
           onSelectCandidate={handleSelectCandidate}
           onApplyCandidate={handleApplyCandidate}
+          onCloseMobileSheet={closeMobileSheet}
         />
       </main>
       <footer className="app-footer" aria-label="権利表記">
@@ -1791,7 +1840,187 @@ type TargetPanelProps = {
   onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
   onUpdateEv: (key: StatKey, value: number) => void;
   onOpenBoxPanel: () => void;
+  onCloseMobileSheet?: () => void;
 };
+
+type MobileOverviewProps = {
+  targetForm: TargetFormState;
+  targetArtwork: PokemonArtworkMatch | null;
+  totalStatPoints: number;
+  scenarios: ScenarioFormState[];
+  candidates: CandidateResult[];
+  searchStatus: string;
+  searchProgress: number;
+  searchedCandidates: number;
+  totalCandidates: number;
+  hasEnabledDefenceScenario: boolean;
+  onOpenTarget: () => void;
+  onOpenScenarios: () => void;
+  onOpenResults: () => void;
+  onAddScenario: () => void;
+  onAddAttack: (scenarioId: string) => void;
+  onRun: () => void;
+  onCancel: () => void;
+};
+
+function formatMobileAttackMeta(attack: ScenarioAttackFormState, adjustmentType: ScenarioAdjustmentType): string {
+  if (adjustmentType === "speed") {
+    return attack.speedTargetMode === "manual"
+      ? `任意S ${attack.speedTargetValue}`
+      : `${attack.speedMoveModifier === "trick-room" ? "トリル" : "抜き"} +${attack.speedRequiredOffset}`;
+  }
+
+  if (adjustmentType === "offense") {
+    return `KO ${attack.targetKoProbabilityPercent}%`;
+  }
+
+  return `${attack.requiredSurvivedHits}/${attack.repeat}耐え ${attack.minSurvivalProbabilityPercent}%`;
+}
+
+function MobileOverview({
+  targetForm,
+  targetArtwork,
+  totalStatPoints,
+  scenarios,
+  candidates,
+  searchStatus,
+  searchProgress,
+  searchedCandidates,
+  totalCandidates,
+  hasEnabledDefenceScenario,
+  onOpenTarget,
+  onOpenScenarios,
+  onOpenResults,
+  onAddScenario,
+  onAddAttack,
+  onRun,
+  onCancel,
+}: MobileOverviewProps) {
+  const topCandidate = candidates[0];
+
+  return (
+    <section className="mobile-overview" aria-label="スマホ用調整ボード">
+      <button className="mobile-target-mini" type="button" onClick={onOpenTarget}>
+        <PokemonArtworkFrame
+          match={targetArtwork}
+          fallbackLabel={targetForm.pokemonInput}
+          variant="attack"
+          dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
+        />
+        <span className="mobile-target-mini-main">
+          <strong>{targetForm.pokemonInput || "調整対象"}</strong>
+          <span>Lv{targetForm.level} / 合計SP {totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</span>
+        </span>
+        <span className="mobile-target-mini-spread">
+          {defenceStatKeys.map((key) => `${statLabels[key]}${targetForm.statPoints[key]}`).join(" / ")}
+        </span>
+      </button>
+
+      <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
+        <div className="mobile-board-heading">
+          <div>
+            <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
+            <span>縦にシナリオ、横に攻撃</span>
+          </div>
+          <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
+            追加
+          </button>
+        </div>
+
+        <div className="mobile-scenario-list">
+          {scenarios.map((scenario) => (
+            <article
+              className={`mobile-scenario-summary ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
+              key={scenario.id}
+            >
+              <button className="mobile-scenario-summary-header" type="button" onClick={onOpenScenarios}>
+                <span className="mobile-scenario-title">
+                  <strong>{scenario.label}</strong>
+                  <span>{getScenarioAdjustmentTypeLabel(scenario.adjustmentType)}</span>
+                </span>
+                <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
+              </button>
+
+              <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
+                {scenario.attacks.map((attack, attackIndex) => {
+                  const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
+                  return (
+                    <button
+                      className="mobile-attack-summary"
+                      type="button"
+                      key={attack.id}
+                      onClick={onOpenScenarios}
+                    >
+                      <PokemonArtworkFrame
+                        match={attackerArtwork}
+                        fallbackLabel={attack.attackerPokemonInput}
+                        variant="attack"
+                        dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
+                      />
+                      <span>
+                        <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
+                        <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
+                        <em>{formatMobileAttackMeta(attack, scenario.adjustmentType)}</em>
+                      </span>
+                    </button>
+                  );
+                })}
+                <button
+                  className="mobile-attack-add"
+                  type="button"
+                  aria-label={`${scenario.label}に攻撃を追加`}
+                  onClick={() => onAddAttack(scenario.id)}
+                >
+                  +
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mobile-candidate-dock" aria-labelledby="mobile-candidate-title">
+        <button className="mobile-candidate-dock-main" type="button" onClick={onOpenResults}>
+          <span>
+            <strong id="mobile-candidate-title">候補一覧</strong>
+            <small>{searchStatus === "running" ? "探索中" : `候補 ${candidates.length} 件`}</small>
+          </span>
+          {topCandidate ? (
+            <span className="mobile-top-candidate">
+              <b>1位</b>
+              <CandidateStatPointSpread statPoints={topCandidate.appliedStatPoints} />
+              <em>{topCandidate.bottleneckLabel}</em>
+            </span>
+          ) : (
+            <span className="mobile-top-candidate empty">計算結果</span>
+          )}
+        </button>
+        <div className="mobile-progress-line" aria-hidden="true">
+          <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
+        </div>
+        <div className="mobile-candidate-actions">
+          <span>{Math.round(searchProgress * 100)}% / {searchedCandidates} / {totalCandidates || "-"} 候補</span>
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={onCancel}
+            disabled={searchStatus !== "running"}
+          >
+            キャンセル
+          </Button>
+          <Button
+            variant="primary"
+            size="small"
+            onClick={onRun}
+            disabled={searchStatus === "running" || !hasEnabledDefenceScenario}
+          >
+            {searchStatus === "running" ? "計算中..." : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
+          </Button>
+        </div>
+      </section>
+    </section>
+  );
+}
 
 type BoxPanelProps = {
   entries: BoxEntry[];
@@ -1968,6 +2197,7 @@ function TargetPanel({
   onUpdateField,
   onUpdateEv,
   onOpenBoxPanel,
+  onCloseMobileSheet,
 }: TargetPanelProps) {
   const isSpLimitReached = totalStatPoints >= CHAMPIONS_TOTAL_STAT_POINTS;
   const abilityOptions = getPokemonAbilityInputOptions(
@@ -1988,6 +2218,9 @@ function TargetPanel({
           onClick={onOpenBoxPanel}
         >
           <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+        </button>
+        <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
+          閉じる
         </button>
       </div>
 
@@ -2235,6 +2468,7 @@ type ScenarioPanelProps = {
     value: ScenarioAttackFormState[K],
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
+  onCloseMobileSheet?: () => void;
 };
 
 function ScenarioPanel({
@@ -2250,6 +2484,7 @@ function ScenarioPanel({
   onRemoveAttack,
   onUpdateAttack,
   onUpdateAttackerEv,
+  onCloseMobileSheet,
 }: ScenarioPanelProps) {
   return (
     <section className="scenario-panel" aria-labelledby="scenario-title">
@@ -2257,6 +2492,9 @@ function ScenarioPanel({
         <div>
           <h2 id="scenario-title">仮想敵シナリオ</h2>
         </div>
+        <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
+          閉じる
+        </button>
       </div>
 
       <div className="scenario-stack" aria-label="仮想敵シナリオ行">
@@ -3206,6 +3444,7 @@ type ResultsPanelProps = {
   resultAlertMessage: string | null;
   onSelectCandidate: (id: string) => void;
   onApplyCandidate: (candidate: CandidateResult) => void;
+  onCloseMobileSheet?: () => void;
 };
 
 const getOffenseResultTone = (result: OffenseScenarioResult["result"]): "green" | "red" | "blue" | "purple" => {
@@ -3301,6 +3540,7 @@ export function ResultsPanel({
   resultAlertMessage,
   onSelectCandidate,
   onApplyCandidate,
+  onCloseMobileSheet = () => undefined,
 }: ResultsPanelProps) {
   const scenarioLabels = useMemo(
     () => new Map(scenarios.map((scenario) => [scenario.id, scenario.label])),
@@ -3318,6 +3558,9 @@ export function ResultsPanel({
           <h2 id="results-title">候補一覧</h2>
           <span>{status === "running" ? "探索中" : `候補 ${candidates.length} 件`}</span>
         </div>
+        <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
+          閉じる
+        </button>
       </div>
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
