@@ -71,8 +71,11 @@ describe("App", () => {
     expect(html).not.toContain('class="mobile-flow-edge-arrow"');
     expect(html).not.toContain('class="mobile-flow-edge-start-node"');
     expect(html).not.toContain('class="mobile-flow-edge-end-node-outer"');
-    expect(html).toContain('class="mobile-scenario-count"');
-    expect(html).toContain(">1攻撃</span>");
+    expect(html).toContain('class="mobile-target-stat-meter hp"');
+    expect(html).toContain('class="mobile-scenario-direction-icon"');
+    expect(html).toContain('class="mobile-scenario-state on"');
+    expect(html).toContain('role="switch"');
+    expect(html).not.toContain('class="mobile-scenario-count"');
     expect(html).toContain('class="mobile-candidate-dock"');
     expect(html).toContain('class="mobile-attack-rail"');
     expect(html).toContain('aria-label="シナリオ1 調整種別"');

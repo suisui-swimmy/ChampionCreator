@@ -1027,6 +1027,7 @@ export function App() {
           setMobileSheet("results");
         }}
         onToggleScenarioAdjustmentFromDirection={toggleScenarioAdjustmentFromDirection}
+        onToggleScenarioEnabled={(scenarioId, enabled) => updateScenario(scenarioId, "enabled", enabled)}
         onAddScenario={() => {
           handleAddScenario();
           openMobileScenarioSheet();
@@ -1881,6 +1882,7 @@ type MobileOverviewProps = {
   onOpenScenarioDetail: (scenarioId: string) => void;
   onOpenResults: () => void;
   onToggleScenarioAdjustmentFromDirection: (scenarioId: string) => void;
+  onToggleScenarioEnabled: (scenarioId: string, enabled: boolean) => void;
   onAddScenario: () => void;
   onAddAttack: (scenarioId: string) => void;
   onRun: () => void;
@@ -1952,6 +1954,14 @@ function shouldPlaceMobileFlowCapsuleAtTarget(adjustmentType: ScenarioAdjustment
   return adjustmentType === "defence" || isTrickRoom;
 }
 
+function getMobileScenarioDirectionIconPath(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean): string {
+  if (adjustmentType === "defence" || isTrickRoom) {
+    return "assets/ui/arrow-left-circle.svg";
+  }
+
+  return "assets/ui/arrow-right-circle.svg";
+}
+
 function MobileOverview({
   targetForm,
   targetArtwork,
@@ -1967,6 +1977,7 @@ function MobileOverview({
   onOpenScenarioDetail,
   onOpenResults,
   onToggleScenarioAdjustmentFromDirection,
+  onToggleScenarioEnabled,
   onAddScenario,
   onAddAttack,
   onRun,
@@ -2110,6 +2121,9 @@ function MobileOverview({
                 <span key={key}>
                   <StatIcon stat={key} />
                   <b>{statLabels[key]}</b>
+                  <span className={`mobile-target-stat-meter ${key}`} aria-hidden="true">
+                    <i style={{ width: `${(targetForm.statPoints[key] / CHAMPIONS_MAX_STAT_POINTS_PER_STAT) * 100}%` }} />
+                  </span>
                   <em>{targetForm.statPoints[key]}</em>
                 </span>
               ))}
@@ -2191,6 +2205,7 @@ function MobileOverview({
               const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
                 && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
               const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
+              const directionIconPath = getMobileScenarioDirectionIconPath(scenario.adjustmentType, isTrickRoomSpeedScenario);
 
               return (
                 <div
@@ -2207,20 +2222,34 @@ function MobileOverview({
                       }
                     }}
                   >
-                    <button
-                      className="mobile-scenario-summary-header"
-                      type="button"
-                      onClick={() => onOpenScenarioDetail(scenario.id)}
-                    >
-                      <span className="mobile-scenario-title">
-                        <strong>{scenario.label}</strong>
-                        <span>{currentAdjustmentLabel}</span>
-                      </span>
-                      <span className="mobile-scenario-meta">
-                        <span className="mobile-scenario-count">{scenario.attacks.length}攻撃</span>
-                        <span className="mobile-scenario-state">{scenario.enabled ? "ON" : "OFF"}</span>
-                      </span>
-                    </button>
+                    <img
+                      className="mobile-scenario-direction-icon"
+                      src={getAssetSrc(directionIconPath)}
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <div className="mobile-scenario-summary-header">
+                      <button
+                        className="mobile-scenario-summary-main"
+                        type="button"
+                        onClick={() => onOpenScenarioDetail(scenario.id)}
+                      >
+                        <span className="mobile-scenario-title">
+                          <strong>{scenario.label}</strong>
+                          <span>{currentAdjustmentLabel}</span>
+                        </span>
+                      </button>
+                      <button
+                        className={`mobile-scenario-state ${scenario.enabled ? "on" : "off"}`}
+                        type="button"
+                        role="switch"
+                        aria-checked={scenario.enabled}
+                        aria-label={`${scenario.label}を${scenario.enabled ? "無効化" : "有効化"}`}
+                        onClick={() => onToggleScenarioEnabled(scenario.id, !scenario.enabled)}
+                      >
+                        <span aria-hidden="true" />
+                      </button>
+                    </div>
 
                     <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
                       {scenario.attacks.map((attack, attackIndex) => {
@@ -2264,6 +2293,28 @@ function MobileOverview({
       </section>
 
       <section className="mobile-candidate-dock" aria-labelledby="mobile-candidate-title">
+        <div className="mobile-progress-line" aria-hidden="true">
+          <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
+        </div>
+        <div className="mobile-candidate-actions">
+          <span>{Math.round(searchProgress * 100)}% / {searchedCandidates} / {totalCandidates || "-"} 候補</span>
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={onCancel}
+            disabled={searchStatus !== "running"}
+          >
+            キャンセル
+          </Button>
+          <Button
+            variant="primary"
+            size="small"
+            onClick={onRun}
+            disabled={searchStatus === "running" || !hasEnabledDefenceScenario}
+          >
+            {searchStatus === "running" ? "計算中..." : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
+          </Button>
+        </div>
         <button className="mobile-candidate-dock-main" type="button" onClick={onOpenResults}>
           <span>
             <strong id="mobile-candidate-title">候補一覧</strong>
@@ -2298,28 +2349,6 @@ function MobileOverview({
             ))}
           </div>
         ) : null}
-        <div className="mobile-progress-line" aria-hidden="true">
-          <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
-        </div>
-        <div className="mobile-candidate-actions">
-          <span>{Math.round(searchProgress * 100)}% / {searchedCandidates} / {totalCandidates || "-"} 候補</span>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={onCancel}
-            disabled={searchStatus !== "running"}
-          >
-            キャンセル
-          </Button>
-          <Button
-            variant="primary"
-            size="small"
-            onClick={onRun}
-            disabled={searchStatus === "running" || !hasEnabledDefenceScenario}
-          >
-            {searchStatus === "running" ? "計算中..." : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
-          </Button>
-        </div>
       </section>
     </section>
   );

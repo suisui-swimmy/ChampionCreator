@@ -3426,7 +3426,7 @@ textarea {
 
   .mobile-target-stat-list span {
     display: grid;
-    grid-template-columns: 18px 1fr auto;
+    grid-template-columns: 18px 16px minmax(0, 1fr) auto;
     align-items: center;
     gap: 5px;
     border-top: 1px solid rgba(238, 241, 237, 0.08);
@@ -3444,6 +3444,48 @@ textarea {
 
   .mobile-target-stat-list b {
     color: #d7ded9;
+  }
+
+  .mobile-target-stat-meter {
+    display: block;
+    overflow: hidden;
+    height: 5px;
+    border: 1px solid rgba(238, 241, 237, 0.09);
+    border-radius: 999px;
+    background: rgba(238, 241, 237, 0.07);
+  }
+
+  .mobile-target-stat-meter i {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--stat-color, var(--gold));
+    box-shadow: 0 0 8px color-mix(in srgb, var(--stat-color, var(--gold)) 44%, transparent);
+  }
+
+  .mobile-target-stat-meter.hp {
+    --stat-color: var(--hp);
+  }
+
+  .mobile-target-stat-meter.atk {
+    --stat-color: var(--atk);
+  }
+
+  .mobile-target-stat-meter.def {
+    --stat-color: var(--def);
+  }
+
+  .mobile-target-stat-meter.spa {
+    --stat-color: var(--spa);
+  }
+
+  .mobile-target-stat-meter.spd {
+    --stat-color: var(--spd);
+  }
+
+  .mobile-target-stat-meter.spe {
+    --stat-color: var(--spe);
   }
 
   .mobile-target-stat-list em {
@@ -3527,6 +3569,7 @@ textarea {
   }
 
   .mobile-scenario-summary {
+    position: relative;
     display: grid;
     gap: 7px;
     min-width: 0;
@@ -3549,45 +3592,67 @@ textarea {
     opacity: 0.62;
   }
 
-  .mobile-scenario-summary-header {
-    width: 100%;
+  .mobile-scenario-summary-main {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
     border: 0;
     background: transparent;
     color: inherit;
-    padding: 0;
+    padding: 0 0 0 24px;
     text-align: left;
   }
 
+  .mobile-scenario-direction-icon {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(8, 16, 13, 0.78);
+    filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+  }
+
   .mobile-scenario-state {
+    position: relative;
     flex: 0 0 auto;
-    border: 1px solid rgba(238, 241, 237, 0.14);
+    width: 30px;
+    height: 16px;
+    border: 1px solid rgba(238, 241, 237, 0.16);
     border-radius: 999px;
     background: #111516;
-    color: var(--gold);
-    padding: 2px 6px;
-    font-size: 9px;
-    font-weight: 900;
+    padding: 0;
+    cursor: pointer;
   }
 
-  .mobile-scenario-meta {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 4px;
-    max-width: 68px;
+  .mobile-scenario-state span {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6f7772;
+    box-shadow: 0 0 7px rgba(0, 0, 0, 0.34);
+    transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
   }
 
-  .mobile-scenario-count {
-    overflow: hidden;
-    border: 1px solid rgba(238, 241, 237, 0.12);
-    border-radius: 999px;
-    color: #c5ccc8;
-    padding: 2px 5px;
-    font-size: 9px;
-    font-weight: 900;
-    line-height: 1.1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .mobile-scenario-state.on {
+    border-color: rgba(245, 197, 66, 0.46);
+    background: rgba(245, 197, 66, 0.14);
+  }
+
+  .mobile-scenario-state.on span {
+    background: var(--gold);
+    box-shadow: 0 0 9px rgba(245, 197, 66, 0.48);
+    transform: translateX(14px);
+  }
+
+  .mobile-scenario-state:focus-visible {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
   }
 
   .mobile-attack-rail {
@@ -4410,15 +4475,13 @@ textarea {
     font-size: 12px;
   }
 
-  .mobile-scenario-meta {
-    max-width: 58px;
-    gap: 3px;
+  .mobile-scenario-state {
+    width: 28px;
+    height: 16px;
   }
 
-  .mobile-scenario-count,
-  .mobile-scenario-state {
-    padding-inline: 4px;
-    font-size: 8px;
+  .mobile-scenario-state.on span {
+    transform: translateX(12px);
   }
 
   .mobile-attack-summary {
