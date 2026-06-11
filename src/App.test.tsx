@@ -13,6 +13,7 @@ import {
   formatScenarioResultStatusLabel,
   getDropdownEntityOptions,
   getNatureModifierDirection,
+  getScenarioPanelVisibleScenarios,
   isUnresolvedEntityInput,
   normalizeNumericInputText,
 } from "./App";
@@ -59,7 +60,10 @@ describe("App", () => {
     expect(html).toContain("仮想敵シナリオ");
     expect(html).toContain('aria-label="スマホ用調整ボード"');
     expect(html).toContain('aria-label="中央ライン調整ボード"');
-    expect(html).toContain('aria-label="中央ライン操作"');
+    expect(html).toContain('aria-label="シナリオ調整種別"');
+    expect(html).toContain('aria-label="シナリオ1: 耐久調整。タップで火力調整に切り替え"');
+    expect(html).toContain('aria-label="シナリオ2: 火力調整。タップで素早さ調整に切り替え"');
+    expect(html).toContain('aria-label="シナリオ3: 素早さ調整。タップで耐久調整に切り替え"');
     expect(html).toContain("攻撃は横スクロール");
     expect(html).toContain('class="mobile-candidate-dock"');
     expect(html).toContain('class="mobile-attack-rail"');
@@ -122,6 +126,17 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+  });
+
+  it("limits mobile scenario detail sheets to the selected scenario", () => {
+    const scenarios = createDefaultScenarioForms();
+
+    expect(getScenarioPanelVisibleScenarios(scenarios, scenarios[1].id).map((scenario) => scenario.label))
+      .toEqual(["シナリオ2"]);
+    expect(getScenarioPanelVisibleScenarios(scenarios, null).map((scenario) => scenario.label))
+      .toEqual(["シナリオ1", "シナリオ2", "シナリオ3"]);
+    expect(getScenarioPanelVisibleScenarios(scenarios, "missing-scenario").map((scenario) => scenario.label))
+      .toEqual(["シナリオ1", "シナリオ2", "シナリオ3"]);
   });
 
   it("normalizes full-width numeric input text before parsing", () => {

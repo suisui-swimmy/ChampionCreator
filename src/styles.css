@@ -3448,11 +3448,10 @@ textarea {
   .mobile-action-spine {
     position: relative;
     display: grid;
-    grid-template-rows: repeat(3, 1fr);
     justify-items: center;
     align-self: stretch;
     min-height: 610px;
-    padding: 62px 0 12px;
+    padding: 37px 0 12px;
   }
 
   .mobile-action-spine-line {
@@ -3484,14 +3483,21 @@ textarea {
     transform: translateX(-50%);
   }
 
-  .mobile-spine-action {
+  .mobile-spine-scenario-list {
     position: relative;
     z-index: 1;
     display: grid;
     align-content: start;
-    justify-items: center;
+    gap: 7px;
+    width: 100%;
+  }
+
+  .mobile-spine-action {
+    position: relative;
+    display: block;
     gap: 4px;
     width: 62px;
+    min-height: 110px;
     border: 0;
     background: transparent;
     color: var(--gold);
@@ -3503,12 +3509,36 @@ textarea {
   }
 
   .mobile-spine-action img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     display: block;
     width: 44px;
     height: 44px;
     border-radius: 50%;
     background: rgba(13, 15, 16, 0.82);
     box-shadow: 0 0 0 1px rgba(238, 241, 237, 0.2), 0 8px 18px rgba(0, 0, 0, 0.24);
+    transform: translate(-50%, -50%);
+  }
+
+  .mobile-spine-action span {
+    position: absolute;
+    top: calc(50% + 26px);
+    left: 50%;
+    width: 100%;
+    transform: translateX(-50%);
+  }
+
+  .mobile-spine-action.defence img {
+    box-shadow: 0 0 0 1px rgba(0, 255, 114, 0.28), 0 8px 18px rgba(0, 0, 0, 0.24);
+  }
+
+  .mobile-spine-action.offense img {
+    box-shadow: 0 0 0 1px rgba(255, 0, 0, 0.28), 0 8px 18px rgba(0, 0, 0, 0.24);
+  }
+
+  .mobile-spine-action.speed img {
+    box-shadow: 0 0 0 1px rgba(0, 216, 240, 0.3), 0 8px 18px rgba(0, 0, 0, 0.24);
   }
 
   .mobile-scenario-board {

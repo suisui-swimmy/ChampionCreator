@@ -517,6 +517,7 @@ export function App() {
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [boxOpen, setBoxOpen] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheet | null>(null);
+  const [mobileScenarioDetailId, setMobileScenarioDetailId] = useState<string | null>(null);
   const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(loadBoxEntriesFromBrowser);
   const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
   const [boxMessage, setBoxMessage] = useState<string | null>(null);
@@ -929,7 +930,18 @@ export function App() {
     applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
   };
 
-  const closeMobileSheet = () => setMobileSheet(null);
+  const closeMobileSheet = () => {
+    setMobileSheet(null);
+    setMobileScenarioDetailId(null);
+  };
+  const openMobileScenarioSheet = () => {
+    setMobileScenarioDetailId(null);
+    setMobileSheet("scenarios");
+  };
+  const openMobileScenarioDetail = (scenarioId: string) => {
+    setMobileScenarioDetailId(scenarioId);
+    setMobileSheet("scenarios");
+  };
 
   return (
     <div
@@ -1005,15 +1017,23 @@ export function App() {
         searchedCandidates={searchState.searchedCandidates}
         totalCandidates={searchState.totalCandidates}
         hasEnabledDefenceScenario={hasEnabledDefenceScenario}
-        onOpenTarget={() => setMobileSheet("target")}
-        onOpenScenarios={() => setMobileSheet("scenarios")}
-        onOpenResults={() => setMobileSheet("results")}
+        onOpenTarget={() => {
+          setMobileScenarioDetailId(null);
+          setMobileSheet("target");
+        }}
+        onOpenScenarioDetail={openMobileScenarioDetail}
+        onOpenResults={() => {
+          setMobileScenarioDetailId(null);
+          setMobileSheet("results");
+        }}
+        onToggleScenarioAdjustmentFromDirection={toggleScenarioAdjustmentFromDirection}
         onAddScenario={() => {
           handleAddScenario();
-          setMobileSheet("scenarios");
+          openMobileScenarioSheet();
         }}
         onAddAttack={(scenarioId) => {
           handleAddAttack(scenarioId);
+          setMobileScenarioDetailId(scenarioId);
           setMobileSheet("scenarios");
         }}
         onRun={handleRun}
@@ -1046,6 +1066,7 @@ export function App() {
           onRemoveAttack={handleRemoveAttack}
           onUpdateAttack={updateScenarioAttack}
           onUpdateAttackerEv={updateScenarioAttackerEv}
+          mobileFocusedScenarioId={mobileSheet === "scenarios" ? mobileScenarioDetailId : null}
           onCloseMobileSheet={closeMobileSheet}
         />
         <section className="search-control-bar" aria-label="探索操作">
@@ -1855,8 +1876,9 @@ type MobileOverviewProps = {
   totalCandidates: number;
   hasEnabledDefenceScenario: boolean;
   onOpenTarget: () => void;
-  onOpenScenarios: () => void;
+  onOpenScenarioDetail: (scenarioId: string) => void;
   onOpenResults: () => void;
+  onToggleScenarioAdjustmentFromDirection: (scenarioId: string) => void;
   onAddScenario: () => void;
   onAddAttack: (scenarioId: string) => void;
   onRun: () => void;
@@ -1889,8 +1911,9 @@ function MobileOverview({
   totalCandidates,
   hasEnabledDefenceScenario,
   onOpenTarget,
-  onOpenScenarios,
+  onOpenScenarioDetail,
   onOpenResults,
+  onToggleScenarioAdjustmentFromDirection,
   onAddScenario,
   onAddAttack,
   onRun,
@@ -1929,20 +1952,36 @@ function MobileOverview({
           </button>
         </div>
 
-        <nav className="mobile-action-spine" aria-label="中央ライン操作">
+        <nav className="mobile-action-spine" aria-label="シナリオ調整種別">
           <span className="mobile-action-spine-line" aria-hidden="true" />
-          <button className="mobile-spine-action target" type="button" onClick={onOpenTarget}>
-            <img src={getAssetSrc("assets/ui/arrow-left-circle.svg")} alt="" aria-hidden="true" />
-            <span>調整対象<br />を編集</span>
-          </button>
-          <button className="mobile-spine-action scenario" type="button" onClick={onOpenScenarios}>
-            <img src={getAssetSrc("assets/ui/arrow-right-circle.svg")} alt="" aria-hidden="true" />
-            <span>シナリオ<br />を編集</span>
-          </button>
-          <button className="mobile-spine-action results" type="button" onClick={onOpenResults}>
-            <img src={getAssetSrc("assets/ui/arrow-up-circle.svg")} alt="" aria-hidden="true" />
-            <span>結果を表示<br />候補一覧へ</span>
-          </button>
+          <div className="mobile-spine-scenario-list">
+            {scenarios.map((scenario) => {
+              const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
+                && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+              const iconPath = scenario.adjustmentType === "speed"
+                ? isTrickRoomSpeedScenario
+                  ? "assets/ui/arrow-down-circle.svg"
+                  : "assets/ui/arrow-up-circle.svg"
+                : scenario.adjustmentType === "offense"
+                  ? "assets/ui/arrow-right-circle.svg"
+                  : "assets/ui/arrow-left-circle.svg";
+              const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
+              const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(scenario.adjustmentType));
+
+              return (
+                <button
+                  className={`mobile-spine-action ${scenario.adjustmentType}${isTrickRoomSpeedScenario ? " trick-room" : ""}`}
+                  type="button"
+                  aria-label={`${scenario.label}: ${currentAdjustmentLabel}。タップで${nextAdjustmentLabel}に切り替え`}
+                  key={scenario.id}
+                  onClick={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
+                >
+                  <img src={getAssetSrc(iconPath)} alt="" aria-hidden="true" />
+                  <span>{currentAdjustmentLabel}</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
@@ -1962,7 +2001,11 @@ function MobileOverview({
                 className={`mobile-scenario-summary ${scenario.adjustmentType}${scenario.enabled ? "" : " disabled"}`}
                 key={scenario.id}
               >
-                <button className="mobile-scenario-summary-header" type="button" onClick={onOpenScenarios}>
+                <button
+                  className="mobile-scenario-summary-header"
+                  type="button"
+                  onClick={() => onOpenScenarioDetail(scenario.id)}
+                >
                   <span className="mobile-scenario-title">
                     <strong>{scenario.label}</strong>
                     <span>{getScenarioAdjustmentTypeLabel(scenario.adjustmentType)}</span>
@@ -1978,7 +2021,7 @@ function MobileOverview({
                         className="mobile-attack-summary"
                         type="button"
                         key={attack.id}
-                        onClick={onOpenScenarios}
+                        onClick={() => onOpenScenarioDetail(scenario.id)}
                       >
                         <PokemonArtworkFrame
                           match={attackerArtwork}
@@ -2498,7 +2541,20 @@ type ScenarioPanelProps = {
     value: ScenarioAttackFormState[K],
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
+  mobileFocusedScenarioId?: string | null;
   onCloseMobileSheet?: () => void;
+};
+
+export const getScenarioPanelVisibleScenarios = (
+  scenarios: ScenarioFormState[],
+  mobileFocusedScenarioId?: string | null,
+): ScenarioFormState[] => {
+  if (!mobileFocusedScenarioId) {
+    return scenarios;
+  }
+
+  const focusedScenarios = scenarios.filter((scenario) => scenario.id === mobileFocusedScenarioId);
+  return focusedScenarios.length > 0 ? focusedScenarios : scenarios;
 };
 
 function ScenarioPanel({
@@ -2514,13 +2570,20 @@ function ScenarioPanel({
   onRemoveAttack,
   onUpdateAttack,
   onUpdateAttackerEv,
+  mobileFocusedScenarioId,
   onCloseMobileSheet,
 }: ScenarioPanelProps) {
+  const visibleScenarios = getScenarioPanelVisibleScenarios(scenarios, mobileFocusedScenarioId);
+  const isMobileFocusedScenario = Boolean(
+    mobileFocusedScenarioId && visibleScenarios.length === 1 && visibleScenarios[0].id === mobileFocusedScenarioId,
+  );
+  const headingLabel = isMobileFocusedScenario ? visibleScenarios[0].label : "仮想敵シナリオ";
+
   return (
     <section className="scenario-panel" aria-labelledby="scenario-title">
       <div className="section-heading">
         <div>
-          <h2 id="scenario-title">仮想敵シナリオ</h2>
+          <h2 id="scenario-title">{headingLabel}</h2>
         </div>
         <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
           閉じる
@@ -2528,7 +2591,7 @@ function ScenarioPanel({
       </div>
 
       <div className="scenario-stack" aria-label="仮想敵シナリオ行">
-        {scenarios.map((scenario) => (
+        {visibleScenarios.map((scenario) => (
           <ScenarioRow
             key={scenario.id}
             scenario={scenario}
@@ -2544,9 +2607,11 @@ function ScenarioPanel({
             onUpdateAttackerEv={onUpdateAttackerEv}
           />
         ))}
-        <button className="scenario-add-row ui-button" type="button" onClick={onAddScenario}>
-          シナリオを追加
-        </button>
+        {isMobileFocusedScenario ? null : (
+          <button className="scenario-add-row ui-button" type="button" onClick={onAddScenario}>
+            シナリオを追加
+          </button>
+        )}
       </div>
     </section>
   );
