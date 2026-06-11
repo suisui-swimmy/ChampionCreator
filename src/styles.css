@@ -3517,10 +3517,9 @@ textarea {
     stroke-width: 2.5px;
   }
 
-  .mobile-flow-edge-ring-node-outer,
-  .mobile-flow-edge-ring-node-inner {
-    fill: rgba(8, 16, 13, 0.92);
-    stroke-width: 2.5px;
+  .mobile-flow-edge-capsule-node {
+    stroke: #08100d;
+    stroke-width: 2px;
   }
 
   .mobile-flow-edge:focus-visible .mobile-flow-edge-line {

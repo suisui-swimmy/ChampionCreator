@@ -1909,10 +1909,14 @@ type MobileFlowEdgeGeometry = {
   fromY: number;
   toX: number;
   toY: number;
+  pathStartX: number;
+  pathStartY: number;
+  pathEndX: number;
+  pathEndY: number;
   smallNodeX: number;
   smallNodeY: number;
-  ringNodeX: number;
-  ringNodeY: number;
+  capsuleX: number;
+  capsuleY: number;
   ariaLabel: string;
 };
 
@@ -1944,7 +1948,7 @@ function getMobileFlowPalette(adjustmentType: ScenarioAdjustmentType, isTrickRoo
   return { color: "#00ff72" };
 }
 
-function shouldPlaceMobileFlowRingAtTarget(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean): boolean {
+function shouldPlaceMobileFlowCapsuleAtTarget(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean): boolean {
   return adjustmentType === "defence" || isTrickRoom;
 }
 
@@ -2008,27 +2012,35 @@ function MobileOverview({
         const toX = cardRect.left - boardRect.left + 1;
         const toY = cardRect.top - boardRect.top + cardRect.height / 2;
         const gap = Math.max(toX - fromX, 24);
-        const start = { x: fromX, y: fromY };
-        const end = { x: toX, y: toY };
-        const controlA = { x: fromX + gap * 0.58, y: fromY };
-        const controlB = { x: toX - gap * 0.46, y: toY };
         const palette = getMobileFlowPalette(scenario.adjustmentType, isTrickRoom);
-        const ringAtTarget = shouldPlaceMobileFlowRingAtTarget(scenario.adjustmentType, isTrickRoom);
+        const capsuleAtTarget = shouldPlaceMobileFlowCapsuleAtTarget(scenario.adjustmentType, isTrickRoom);
+        const pathStart = capsuleAtTarget ? { x: toX, y: toY } : { x: fromX, y: fromY };
+        const pathEnd = capsuleAtTarget ? { x: fromX, y: fromY } : { x: toX, y: toY };
+        const controlA = capsuleAtTarget
+          ? { x: toX - gap * 0.46, y: toY }
+          : { x: fromX + gap * 0.58, y: fromY };
+        const controlB = capsuleAtTarget
+          ? { x: fromX + gap * 0.58, y: fromY }
+          : { x: toX - gap * 0.46, y: toY };
         const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
         const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(scenario.adjustmentType));
 
         return [{
           id: scenario.id,
-          path: `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${controlA.x.toFixed(1)} ${controlA.y.toFixed(1)}, ${controlB.x.toFixed(1)} ${controlB.y.toFixed(1)}, ${end.x.toFixed(1)} ${end.y.toFixed(1)}`,
+          path: `M ${pathStart.x.toFixed(1)} ${pathStart.y.toFixed(1)} C ${controlA.x.toFixed(1)} ${controlA.y.toFixed(1)}, ${controlB.x.toFixed(1)} ${controlB.y.toFixed(1)}, ${pathEnd.x.toFixed(1)} ${pathEnd.y.toFixed(1)}`,
           color: palette.color,
           fromX,
           fromY,
           toX,
           toY,
-          smallNodeX: ringAtTarget ? toX : fromX,
-          smallNodeY: ringAtTarget ? toY : fromY,
-          ringNodeX: ringAtTarget ? fromX : toX,
-          ringNodeY: ringAtTarget ? fromY : toY,
+          pathStartX: pathStart.x,
+          pathStartY: pathStart.y,
+          pathEndX: pathEnd.x,
+          pathEndY: pathEnd.y,
+          smallNodeX: pathStart.x,
+          smallNodeY: pathStart.y,
+          capsuleX: pathEnd.x,
+          capsuleY: pathEnd.y,
           ariaLabel: `${scenario.label}: ${currentAdjustmentLabel}。タップで${nextAdjustmentLabel}に切り替え`,
         }];
       });
@@ -2045,8 +2057,8 @@ function MobileOverview({
             edge.path,
             Math.round(edge.fromY),
             Math.round(edge.toY),
-            Math.round(edge.ringNodeX),
-            Math.round(edge.ringNodeY),
+            Math.round(edge.capsuleX),
+            Math.round(edge.capsuleY),
             edge.color,
           ].join(":")),
         ].join("|"),
@@ -2150,8 +2162,15 @@ function MobileOverview({
                 filter={`url(#mobile-flow-glow-${edge.id})`}
               />
               <circle className="mobile-flow-edge-small-node" cx={edge.smallNodeX} cy={edge.smallNodeY} r="5" fill={edge.color} />
-              <circle className="mobile-flow-edge-ring-node-outer" cx={edge.ringNodeX} cy={edge.ringNodeY} r="8" stroke={edge.color} />
-              <circle className="mobile-flow-edge-ring-node-inner" cx={edge.ringNodeX} cy={edge.ringNodeY} r="4" stroke={edge.color} />
+              <rect
+                className="mobile-flow-edge-capsule-node"
+                x={edge.capsuleX - 3}
+                y={edge.capsuleY - 13}
+                width="6"
+                height="26"
+                rx="3"
+                fill={edge.color}
+              />
             </g>
           ))}
         </svg>
