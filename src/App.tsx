@@ -1062,7 +1062,7 @@ export function App() {
           >
             {searchState.status === "running"
               ? "計算中..."
-              : hasEnabledDefenceScenario ? "計算開始" : "耐久シナリオなし"}
+              : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
           </Button>
         </section>
         <ResultsPanel
@@ -2035,11 +2035,11 @@ function TargetPanel({
             onChange={(event) => onUpdateField("abilityInput", event.target.value)}
             onSelectAbility={(value) => onUpdateField("abilityInput", value)}
           />
-          <label className="placeholder-field">
+          <label className="placeholder-field target-level-field">
+            <span>レベル</span>
             <input
               {...numericInputProps}
               value={targetForm.level}
-              placeholder="Lv."
               onFocus={selectInputValueOnFocus}
               onChange={(event) => onUpdateField("level", clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
             />
@@ -2721,7 +2721,7 @@ function AttackCard({
             {!isManualSpeedTarget ? speedOpponentStatSection : null}
             <div className={`speed-condition-grid attack-setting-section-body${isManualSpeedTarget ? " manual" : ""}`}>
               <div className="speed-target-mode" role="radiogroup" aria-label={`${attackLabel} 素早さ条件`}>
-                <div className="speed-target-mode-option">
+                <div className="speed-target-mode-option speed-target-mode-primary">
                   <label className="speed-target-radio-label">
                     <input
                       type="radio"
@@ -2743,26 +2743,28 @@ function AttackCard({
                     onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedRequiredOffset", value)}
                   />
                 </div>
-                <label className="speed-target-mode-option">
-                  <input
-                    type="radio"
-                    name={`${scenarioId}-${attack.id}-speed-target-mode`}
-                    checked={attack.speedTargetMode === "manual"}
-                    onChange={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
+                <div className="speed-target-mode-option speed-target-mode-manual">
+                  <label className="speed-target-radio-label">
+                    <input
+                      type="radio"
+                      name={`${scenarioId}-${attack.id}-speed-target-mode`}
+                      checked={attack.speedTargetMode === "manual"}
+                      onChange={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
+                    />
+                    <span>任意S値</span>
+                  </label>
+                  <ScenarioNumberField
+                    className="speed-manual-target-input"
+                    label="任意S値"
+                    showLabel={false}
+                    value={attack.speedTargetValue}
+                    min={0}
+                    max={10000}
+                    onFocus={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
+                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetValue", value)}
                   />
-                  <span>任意S値</span>
-                </label>
+                </div>
               </div>
-              <ScenarioNumberField
-                className="speed-manual-target-input"
-                label="任意S値"
-                showLabel={false}
-                value={attack.speedTargetValue}
-                min={0}
-                max={10000}
-                onFocus={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetValue", value)}
-              />
             </div>
           </section>
 

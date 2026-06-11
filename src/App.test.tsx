@@ -52,6 +52,7 @@ describe("App", () => {
     expect(html).toContain('aria-label="ボックス機能を開く"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain("assets/ui/pokebox.svg");
+    expect(html).toContain(">レベル</span>");
     expect(html).not.toContain(">条件JSON</button>");
     expect(html).not.toContain(">コピー</button>");
     expect(html).toContain("仮想敵シナリオ");

@@ -61,9 +61,11 @@ const isVariant = (option: PokemonOptionEntry, kind: PokemonFormVariantKind): bo
   return option.showdownName.endsWith("-Gmax") && Boolean(option.artwork);
 };
 
+const megaSearchPrefix = normalizeSearchText("メガ");
+
 const toMegaDisplayValue = (option: PokemonOptionEntry): string => {
   const labels = [option.label, option.searchText].flatMap((text) => text.split(/\s+/u));
-  return (labels.find((text) => normalizeSearchText(text).startsWith("メガ")) ?? option.label).normalize("NFKC");
+  return (labels.find((text) => normalizeSearchText(text).startsWith(megaSearchPrefix)) ?? option.label).normalize("NFKC");
 };
 
 const toVariantOption = (

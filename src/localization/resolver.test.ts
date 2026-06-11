@@ -152,6 +152,24 @@ describe("resolveEntity", () => {
     expect(values.every((value) => value.startsWith("リザー"))).toBe(true);
   });
 
+  it("matches katakana labels from pre-conversion hiragana input", () => {
+    expect(resolveEntity("pokemon", "ぴかちゅう")).toMatchObject({
+      status: "exact",
+      canonicalName: "Pikachu",
+      displayNameJa: "ピカチュウ",
+    });
+
+    expect(getMatchingEntityInputOptions("pokemon", "めがまふ").map((option) => option.value)).toContain(
+      "メガマフォクシー",
+    );
+    expect(getMatchingEntityInputOptions("move", "さいこき").map((option) => option.value)).toContain(
+      "サイコキネシス",
+    );
+    expect(getMatchingPokemonAbilityInputOptions("Kingambit", "ぷれ")?.map((option) => option.value)).toContain(
+      "プレッシャー",
+    );
+  });
+
   it("exposes all generated ability suggestions for a resolved Pokemon", () => {
     const kingambitOptions = getPokemonAbilityInputOptions("Kingambit");
     expect(kingambitOptions).toEqual([
