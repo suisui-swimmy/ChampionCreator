@@ -3,7 +3,10 @@ import {
   BOX_STORAGE_SCHEMA_VERSION,
   createBoxEntryFromState,
   createBoxEntrySummary,
+  duplicateBoxEntry,
+  loadBoxEntriesFromBrowser,
   parseBoxStorageDocument,
+  saveBoxEntriesToBrowser,
   stringifyBoxStorageDocument,
 } from "./boxStorage";
 import {
@@ -50,5 +53,51 @@ describe("boxStorage", () => {
       schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
       entries: [{ id: "bad", payload: { schemaVersion: 999 } }],
     }))).toEqual([]);
+  });
+
+  it("loads and saves entries through browser storage", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "box-storage",
+      now: "2026-06-11T00:00:00.000Z",
+    });
+
+    expect(saveBoxEntriesToBrowser([entry], storage)).toBeNull();
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual([entry]);
+  });
+
+  it("reports browser storage write failures", () => {
+    const storage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("quota exceeded");
+      },
+    };
+
+    expect(saveBoxEntriesToBrowser([], storage)).toBe("ブラウザ保存に失敗しました");
+  });
+
+  it("duplicates saved entries with a fresh id and copied name", () => {
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "box-original",
+      now: "2026-06-11T00:00:00.000Z",
+    });
+
+    expect(duplicateBoxEntry(entry, {
+      id: "box-copy",
+      now: "2026-06-11T01:00:00.000Z",
+    })).toMatchObject({
+      id: "box-copy",
+      name: "メガマフォクシー コピー",
+      createdAt: "2026-06-11T01:00:00.000Z",
+      updatedAt: "2026-06-11T01:00:00.000Z",
+      payload: entry.payload,
+    });
   });
 });

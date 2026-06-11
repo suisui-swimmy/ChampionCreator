@@ -60,11 +60,11 @@ import {
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
 import {
-  BOX_STORAGE_KEY,
   createBoxEntryFromState,
   createBoxEntrySummary,
-  parseBoxStorageDocument,
-  stringifyBoxStorageDocument,
+  duplicateBoxEntry,
+  loadBoxEntriesFromBrowser,
+  saveBoxEntriesToBrowser,
   type BoxEntry,
   type BoxEntrySummary,
 } from "./ui/boxStorage";
@@ -505,27 +505,6 @@ const createScenario = (index: number): ScenarioFormState => ({
 
 const BLANK_BOX_SLOT_ID = "blank-box-slot";
 
-const loadBoxEntriesFromBrowser = (): BoxEntry[] => {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  return parseBoxStorageDocument(window.localStorage.getItem(BOX_STORAGE_KEY));
-};
-
-const saveBoxEntriesToBrowser = (entries: BoxEntry[]): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    window.localStorage.setItem(BOX_STORAGE_KEY, stringifyBoxStorageDocument(entries));
-    return null;
-  } catch {
-    return "ブラウザ保存に失敗しました";
-  }
-};
-
 export function App() {
   const [targetForm, setTargetForm] = useState<TargetFormState>(() => createDefaultTargetForm());
   const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(() => createDefaultScenarioForms());
@@ -793,6 +772,13 @@ export function App() {
     activeRequestRef.current = null;
   };
 
+  const resetActiveSearch = () => {
+    activeRequestRef.current?.cancel();
+    activeRequestRef.current = null;
+    setSelectedCandidateId(null);
+    dispatchSearch({ type: "reset" });
+  };
+
   const persistBoxEntries = (nextEntries: BoxEntry[], message: string): boolean => {
     const error = saveBoxEntriesToBrowser(nextEntries);
     if (error) {
@@ -822,12 +808,9 @@ export function App() {
 
   const handleLoadBoxEntry = (entryId: string) => {
     if (entryId === BLANK_BOX_SLOT_ID) {
-      activeRequestRef.current?.cancel();
-      activeRequestRef.current = null;
+      resetActiveSearch();
       setTargetForm(createBlankTargetForm());
       setScenarioForms([createBlankScenario(0)]);
-      setSelectedCandidateId(null);
-      dispatchSearch({ type: "reset" });
       setBoxMessage(null);
       setBoxOpen(false);
       return;
@@ -839,12 +822,9 @@ export function App() {
       return;
     }
 
-    activeRequestRef.current?.cancel();
-    activeRequestRef.current = null;
+    resetActiveSearch();
     setTargetForm(entry.payload.target);
     setScenarioForms(entry.payload.scenarios);
-    setSelectedCandidateId(null);
-    dispatchSearch({ type: "reset" });
     setBoxMessage(null);
     setBoxOpen(false);
   };
@@ -906,14 +886,7 @@ export function App() {
       return;
     }
 
-    const now = new Date().toISOString();
-    const duplicatedEntry: BoxEntry = {
-      ...entry,
-      id: `box-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name: `${entry.name || entry.summary.pokemonName} コピー`,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const duplicatedEntry = duplicateBoxEntry(entry);
     if (persistBoxEntries([duplicatedEntry, ...boxEntries], "保存を複製しました")) {
       setSelectedBoxEntryId(duplicatedEntry.id);
     }
@@ -979,7 +952,6 @@ export function App() {
           target="_blank"
           rel="noreferrer"
           aria-label="README.mdを開く"
-          title="README.md"
         >
           <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
         </a>
@@ -1425,7 +1397,6 @@ function DropdownTextField({
           type="button"
           data-state={listOpen ? "open" : "closed"}
           aria-label={`${label}候補を開く`}
-          title={`${label}候補`}
           aria-expanded={listOpen}
           onPointerDown={(event) => event.preventDefault()}
           onClick={() => {
@@ -1737,7 +1708,6 @@ function IconToggleButton({ active, disabled = false, iconName, label, onClick }
       className={`mechanic-icon-button${active ? " active" : ""}`}
       type="button"
       aria-label={label}
-      title={label}
       disabled={disabled}
       onClick={onClick}
     >
@@ -1787,6 +1757,27 @@ function NumberStepper({ className, label, value, min, max, disabled = false, on
         +
       </button>
     </span>
+  );
+}
+
+type RankSelectFieldProps = {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+};
+
+function RankSelectField({ label, value, onChange }: RankSelectFieldProps) {
+  return (
+    <SelectField
+      compact
+      placeholderLabel
+      placeholderValue=""
+      className="target-rank-field"
+      label={label}
+      value={String(value)}
+      options={rankSelectOptions}
+      onChange={(nextValue) => onChange(toNumber(nextValue, 0))}
+    />
   );
 }
 
@@ -1994,7 +1985,6 @@ function TargetPanel({
           type="button"
           aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
           aria-expanded={isBoxPanelOpen}
-          title="ボックス機能"
           onClick={onOpenBoxPanel}
         >
           <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
@@ -2076,7 +2066,6 @@ function TargetPanel({
               {...numericInputProps}
               value={targetForm.statPoints[key]}
               aria-label={`${statLabels[key]} SP`}
-              title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
               onChange={(event) => onUpdateEv(key, toStatPointInput(event.target.value))}
             />
             <StatPointCellBar
@@ -2087,17 +2076,12 @@ function TargetPanel({
             {key === "hp" ? (
               <span className="target-rank-placeholder" aria-hidden="true" />
             ) : (
-              <SelectField
-                compact
-                placeholderLabel
-                placeholderValue=""
-                className="target-rank-field"
+              <RankSelectField
                 label={`${statLabels[key]}ランク`}
-                value={String(targetForm.boosts[key] ?? 0)}
-                options={rankSelectOptions}
+                value={targetForm.boosts[key] ?? 0}
                 onChange={(value) => onUpdateField("boosts", {
                   ...targetForm.boosts,
-                  [key]: toNumber(value, 0),
+                  [key]: value,
                 })}
               />
             )}
@@ -2419,7 +2403,6 @@ function ScenarioRow({
             size="icon"
             className="icon-button scenario-remove-button"
             aria-label={`${scenario.label}を削除`}
-            title={`${scenario.label}を削除`}
             onClick={() => onRemoveScenario(scenario.id)}
           >
             <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
@@ -2562,21 +2545,15 @@ function AttackCard({
             value={attack.attackerStatPoints.spe}
             aria-label={`${attackLabel} 相手S SP`}
             placeholder="S SP"
-            title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
             onFocus={selectInputValueOnFocus}
             onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, "spe", toStatPointInput(event.target.value))}
           />
-          <SelectField
-            compact
-            placeholderLabel
-            placeholderValue=""
-            className="target-rank-field"
+          <RankSelectField
             label={`${attackLabel} 相手Sランク`}
-            value={String(attack.attackerBoosts.spe ?? 0)}
-            options={rankSelectOptions}
+            value={attack.attackerBoosts.spe ?? 0}
             onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
               ...attack.attackerBoosts,
-              spe: toNumber(value, 0),
+              spe: value,
             })}
           />
         </div>
@@ -2590,7 +2567,6 @@ function AttackCard({
           className={`attack-direction-button ${adjustmentDirection}`}
           type="button"
           aria-label={`${attackLabel} ${currentAdjustmentLabel}。クリックで${nextAdjustmentLabel}に切り替え`}
-          title={`${currentAdjustmentLabel} / ${nextAdjustmentLabel}に切り替え`}
           onClick={onToggleAdjustmentType}
         >
           <img
@@ -2622,7 +2598,6 @@ function AttackCard({
           size="icon"
           className="icon-button attack-remove-button"
           aria-label={`${attackLabel}を削除`}
-          title={`${attackLabel}を削除`}
           disabled={!canRemove}
           onClick={() => onRemoveAttack(scenarioId, attack.id)}
         >
@@ -2890,22 +2865,16 @@ function AttackCard({
                       value={attack.attackerStatPoints[key]}
                       aria-label={`${attackLabel} 仮想敵${statLabels[key]} SP`}
                       placeholder={`${statLabels[key]} SP`}
-                      title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
                       onFocus={selectInputValueOnFocus}
                       onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
                     />
                     {key !== "hp" ? (
-                      <SelectField
-                        compact
-                        placeholderLabel
-                        placeholderValue=""
-                        className="target-rank-field"
+                      <RankSelectField
                         label={`${attackLabel} 仮想敵${statLabels[key]}ランク`}
-                        value={String(attack.attackerBoosts[key] ?? 0)}
-                        options={rankSelectOptions}
+                        value={attack.attackerBoosts[key] ?? 0}
                         onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
                           ...attack.attackerBoosts,
-                          [key]: toNumber(value, 0),
+                          [key]: value,
                         })}
                       />
                     ) : (
@@ -2948,7 +2917,7 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "requiredSurvivedHits", value)}
               />
               <ScenarioNumberField
-                label="耐久確立"
+                label="耐久確率"
                 showLabel
                 value={attack.minSurvivalProbabilityPercent}
                 min={0}
@@ -3026,7 +2995,6 @@ function AttackCard({
                           value={statPoints[key]}
                           aria-label={`${attackLabel} ${statLabels[key]} SP`}
                           placeholder={`${statLabels[key]} SP`}
-                          title="0-32SP。252などEV値を入れた場合は対応するSPへ変換します。"
                           onFocus={selectInputValueOnFocus}
                           onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
                         />
@@ -3034,17 +3002,12 @@ function AttackCard({
                         <span className="attacker-reference-sp">{statPoints[key]}</span>
                       )}
                       {isAttacker && key !== "hp" ? (
-                        <SelectField
-                          compact
-                          placeholderLabel
-                          placeholderValue=""
-                          className="target-rank-field"
+                        <RankSelectField
                           label={`${attackLabel} ${statLabels[key]}ランク`}
-                          value={String(attack.attackerBoosts[key] ?? 0)}
-                          options={rankSelectOptions}
+                          value={attack.attackerBoosts[key] ?? 0}
                           onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
                             ...attack.attackerBoosts,
-                            [key]: toNumber(value, 0),
+                            [key]: value,
                           })}
                         />
                       ) : (
@@ -3089,17 +3052,12 @@ function AttackCard({
                 {defenderRankKeys.map((key) => (
                   <div className="scenario-defender-rank" key={key}>
                     <StatIcon stat={key} />
-                    <SelectField
-                      compact
-                      placeholderLabel
-                      placeholderValue=""
-                      className="target-rank-field"
+                    <RankSelectField
                       label={`${attackLabel} 調整対象${statLabels[key]}ランク`}
-                      value={String(attack.defenderBoosts[key] ?? 0)}
-                      options={rankSelectOptions}
+                      value={attack.defenderBoosts[key] ?? 0}
                       onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
                         ...attack.defenderBoosts,
-                        [key]: toNumber(value, 0),
+                        [key]: value,
                       })}
                     />
                   </div>
@@ -3514,7 +3472,6 @@ export function CandidateStatPointBars({ statPoints }: { statPoints: StatTable }
     <span
       className="candidate-sp-bars"
       aria-label={`SPバー: ${formatStatPointSpreadLabel(statPoints)}`}
-      title={`SPバー: ${formatStatPointSpreadLabel(statPoints)}`}
     >
       {statKeys.map((key) => (
         <span
@@ -3534,7 +3491,6 @@ export function CandidateStatPointSpread({ statPoints }: { statPoints: StatTable
     <span
       className="allocation compact-allocation candidate-stat-spread"
       aria-label={`${formatStatPointSpreadLabel(statPoints)} SP`}
-      title={`${formatStatPointSpreadLabel(statPoints)} SP`}
     >
       {statKeys.map((key) => (
         <b className={`candidate-stat-value ${key}`} key={key}>

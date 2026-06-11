@@ -45,6 +45,7 @@ describe("App", () => {
 
     expect(html).toContain("ChampionCreator");
     expect(html).toContain('class="brand-line"');
+    expect(html).not.toContain("title=");
     expect(html).toContain(`app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`);
     expect(html).not.toContain("Pokemon Champions 自動耐久調整");
     expect(html).toContain("調整対象");
@@ -151,7 +152,7 @@ describe("App", () => {
     expect(html).not.toContain('id="scenario-defence-attack-a-stat-title">能力</h3>');
     expect(html).toContain(">調整対象条件<");
     expect(html).toContain(">耐久回数<");
-    expect(html).toContain(">耐久確立<");
+    expect(html).toContain(">耐久確率<");
     expect(html).not.toContain("<span>詳細補正</span>");
     expect(html).not.toContain(">補正なし<");
     expect(html).toContain(">攻撃回数<");

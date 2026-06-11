@@ -32,6 +32,8 @@ export type BoxStorageDocument = {
   entries: BoxEntry[];
 };
 
+type BoxBrowserStorage = Pick<Storage, "getItem" | "setItem">;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -175,4 +177,52 @@ export const stringifyBoxStorageDocument = (entries: BoxEntry[]): string => {
   };
 
   return JSON.stringify(document);
+};
+
+const getBrowserBoxStorage = (): BoxBrowserStorage | null => (
+  typeof window === "undefined" ? null : window.localStorage
+);
+
+export const loadBoxEntriesFromBrowser = (
+  storage: BoxBrowserStorage | null = getBrowserBoxStorage(),
+): BoxEntry[] => {
+  if (!storage) {
+    return [];
+  }
+
+  return parseBoxStorageDocument(storage.getItem(BOX_STORAGE_KEY));
+};
+
+export const saveBoxEntriesToBrowser = (
+  entries: BoxEntry[],
+  storage: BoxBrowserStorage | null = getBrowserBoxStorage(),
+): string | null => {
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    storage.setItem(BOX_STORAGE_KEY, stringifyBoxStorageDocument(entries));
+    return null;
+  } catch {
+    return "ブラウザ保存に失敗しました";
+  }
+};
+
+export const duplicateBoxEntry = (
+  entry: BoxEntry,
+  options: {
+    id?: string;
+    now?: string;
+  } = {},
+): BoxEntry => {
+  const now = options.now ?? new Date().toISOString();
+
+  return {
+    ...entry,
+    id: options.id ?? createBoxEntryId(),
+    name: `${entry.name || entry.summary.pokemonName} コピー`,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
