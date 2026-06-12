@@ -12,7 +12,8 @@ import {
   formatLocalizedDamageDescription,
   formatScenarioResultStatusLabel,
   getDropdownEntityOptions,
-  getMobileScenarioNavigationTargets,
+  getMobileAttackNavigationTargets,
+  getMobileScenarioDirectionIconPath,
   getNatureModifierDirection,
   getScenarioPanelVisibleScenarios,
   isUnresolvedEntityInput,
@@ -62,7 +63,9 @@ describe("App", () => {
     expect(html).toContain('aria-label="スマホ用調整ボード"');
     expect(html).toContain('aria-label="ノード接続調整ボード"');
     expect(html).toContain('aria-label="シナリオ調整種別"');
-    expect(html).toContain("攻撃は横スクロール");
+    expect(html).toContain('class="mobile-target-heading"');
+    expect(html).toContain('class="box-access-button mobile-box-access-button"');
+    expect(html).not.toContain("攻撃は横スクロール");
     expect(html).toContain('class="mobile-scenario-flow-list"');
     expect(html).toContain('class="mobile-scenario-flow-row defence"');
     expect(html).toContain('class="mobile-flow-edge-layer"');
@@ -73,7 +76,10 @@ describe("App", () => {
     expect(html).not.toContain('class="mobile-flow-edge-end-node-outer"');
     expect(html).toContain('class="mobile-target-stat-meter hp"');
     expect(html).toContain('class="mobile-scenario-direction-icon"');
+    expect(html).toContain('class="mobile-scenario-adjustment-row"');
     expect(html).toContain('class="mobile-scenario-state on"');
+    expect(html).toContain('class="icon-button scenario-remove-button mobile-scenario-remove-button"');
+    expect(html).toContain('aria-label="シナリオ1を削除"');
     expect(html).toContain('role="switch"');
     expect(html).not.toContain('class="mobile-scenario-count"');
     expect(html).toContain('class="mobile-candidate-dock"');
@@ -139,8 +145,22 @@ describe("App", () => {
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
   });
 
+  it("maps mobile scenario direction icons by adjustment type", () => {
+    expect(getMobileScenarioDirectionIconPath("defence", false)).toBe("assets/ui/arrow-left-circle.svg");
+    expect(getMobileScenarioDirectionIconPath("offense", false)).toBe("assets/ui/arrow-right-circle.svg");
+    expect(getMobileScenarioDirectionIconPath("speed", false)).toBe("assets/ui/arrow-up-circle.svg");
+    expect(getMobileScenarioDirectionIconPath("speed", true)).toBe("assets/ui/arrow-down-circle.svg");
+  });
+
   it("limits mobile scenario detail sheets to the selected scenario", () => {
     const scenarios = createDefaultScenarioForms();
+    const twoAttackScenario = {
+      ...scenarios[1],
+      attacks: [
+        scenarios[1].attacks[0],
+        { ...scenarios[1].attacks[0], id: "attack-b", label: "攻撃B" },
+      ],
+    };
 
     expect(getScenarioPanelVisibleScenarios(scenarios, scenarios[1].id).map((scenario) => scenario.label))
       .toEqual(["シナリオ2"]);
@@ -148,14 +168,17 @@ describe("App", () => {
       .toEqual(["シナリオ1", "シナリオ2", "シナリオ3"]);
     expect(getScenarioPanelVisibleScenarios(scenarios, "missing-scenario").map((scenario) => scenario.label))
       .toEqual(["シナリオ1", "シナリオ2", "シナリオ3"]);
-    expect(getMobileScenarioNavigationTargets(scenarios, scenarios[1].id)).toEqual({
+    expect(getMobileAttackNavigationTargets(twoAttackScenario, "attack-b")).toEqual({
       currentIndex: 1,
-      total: 3,
-      previousId: scenarios[0].id,
-      nextId: scenarios[2].id,
+      currentId: "attack-b",
+      currentLabel: "火力調整B",
+      total: 2,
+      previousId: scenarios[1].attacks[0].id,
+      nextId: null,
+      nextLabel: "火力調整C",
     });
-    expect(getMobileScenarioNavigationTargets(scenarios, scenarios[0].id)?.previousId).toBeNull();
-    expect(getMobileScenarioNavigationTargets(scenarios, "missing-scenario")).toBeNull();
+    expect(getMobileAttackNavigationTargets(scenarios[0], scenarios[0].attacks[0].id)?.previousId).toBeNull();
+    expect(getMobileAttackNavigationTargets({ ...scenarios[0], attacks: [] })).toBeNull();
   });
 
   it("normalizes full-width numeric input text before parsing", () => {

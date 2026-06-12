@@ -518,6 +518,7 @@ export function App() {
   const [boxOpen, setBoxOpen] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheet | null>(null);
   const [mobileScenarioDetailId, setMobileScenarioDetailId] = useState<string | null>(null);
+  const [mobileFocusedAttackId, setMobileFocusedAttackId] = useState<string | null>(null);
   const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(loadBoxEntriesFromBrowser);
   const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
   const [boxMessage, setBoxMessage] = useState<string | null>(null);
@@ -699,10 +700,15 @@ export function App() {
   };
 
   const handleAddAttack = (scenarioId: string) => {
+    const scenarioToExtend = scenarioForms.find((scenario) => scenario.id === scenarioId);
+    if (!scenarioToExtend) {
+      return null;
+    }
+
+    const nextAttack = createBlankAttack(scenarioToExtend.attacks.length);
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
         ? (() => {
-            const nextAttack = createBlankAttack(scenario.attacks.length);
             const requiredSurvivedHits = Math.min(
               10,
               scenario.attacks.reduce((total, attack) => total + Math.max(1, Math.trunc(attack.repeat)), 0) + 1,
@@ -721,9 +727,16 @@ export function App() {
           })()
         : scenario
     )));
+    return nextAttack.id;
   };
 
   const handleRemoveAttack = (scenarioId: string, attackId: string) => {
+    const scenario = scenarioForms.find((item) => item.id === scenarioId);
+    const attackIndex = scenario?.attacks.findIndex((attack) => attack.id === attackId) ?? -1;
+    const nextFocusedAttackId = scenario
+      ? scenario.attacks.filter((attack) => attack.id !== attackId)[Math.max(0, attackIndex - 1)]?.id ?? null
+      : null;
+
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
         ? {
@@ -734,6 +747,7 @@ export function App() {
           }
         : scenario
     )));
+    setMobileFocusedAttackId((current) => (current === attackId ? nextFocusedAttackId : current));
   };
 
   const handleAddScenario = () => {
@@ -933,13 +947,17 @@ export function App() {
   const closeMobileSheet = () => {
     setMobileSheet(null);
     setMobileScenarioDetailId(null);
+    setMobileFocusedAttackId(null);
   };
   const openMobileScenarioSheet = () => {
     setMobileScenarioDetailId(null);
+    setMobileFocusedAttackId(null);
     setMobileSheet("scenarios");
   };
-  const openMobileScenarioDetail = (scenarioId: string) => {
+  const openMobileScenarioDetail = (scenarioId: string, attackId?: string) => {
+    const scenario = scenarioForms.find((item) => item.id === scenarioId);
     setMobileScenarioDetailId(scenarioId);
+    setMobileFocusedAttackId(attackId ?? scenario?.attacks[0]?.id ?? null);
     setMobileSheet("scenarios");
   };
 
@@ -1017,13 +1035,17 @@ export function App() {
         searchedCandidates={searchState.searchedCandidates}
         totalCandidates={searchState.totalCandidates}
         hasEnabledDefenceScenario={hasEnabledDefenceScenario}
+        isBoxPanelOpen={boxOpen}
+        onOpenBoxPanel={toggleBoxPanel}
         onOpenTarget={() => {
           setMobileScenarioDetailId(null);
+          setMobileFocusedAttackId(null);
           setMobileSheet("target");
         }}
         onOpenScenarioDetail={openMobileScenarioDetail}
         onOpenResults={() => {
           setMobileScenarioDetailId(null);
+          setMobileFocusedAttackId(null);
           setMobileSheet("results");
         }}
         onToggleScenarioAdjustmentFromDirection={toggleScenarioAdjustmentFromDirection}
@@ -1032,10 +1054,11 @@ export function App() {
           handleAddScenario();
           openMobileScenarioSheet();
         }}
+        onRemoveScenario={handleRemoveScenario}
         onAddAttack={(scenarioId) => {
-          handleAddAttack(scenarioId);
-          setMobileScenarioDetailId(scenarioId);
-          setMobileSheet("scenarios");
+          const nextAttackId = handleAddAttack(scenarioId);
+          openMobileScenarioDetail(scenarioId, nextAttackId ?? undefined);
+          return nextAttackId;
         }}
         onRun={handleRun}
         onCancel={handleCancel}
@@ -1068,8 +1091,12 @@ export function App() {
           onUpdateAttack={updateScenarioAttack}
           onUpdateAttackerEv={updateScenarioAttackerEv}
           mobileFocusedScenarioId={mobileSheet === "scenarios" ? mobileScenarioDetailId : null}
-          onFocusMobileScenario={setMobileScenarioDetailId}
-          onShowMobileScenarioList={() => setMobileScenarioDetailId(null)}
+          mobileFocusedAttackId={mobileSheet === "scenarios" ? mobileFocusedAttackId : null}
+          onFocusMobileAttack={setMobileFocusedAttackId}
+          onShowMobileScenarioList={() => {
+            setMobileScenarioDetailId(null);
+            setMobileFocusedAttackId(null);
+          }}
           onCloseMobileSheet={closeMobileSheet}
         />
         <section className="search-control-bar" aria-label="探索操作">
@@ -1878,13 +1905,16 @@ type MobileOverviewProps = {
   searchedCandidates: number;
   totalCandidates: number;
   hasEnabledDefenceScenario: boolean;
+  isBoxPanelOpen: boolean;
+  onOpenBoxPanel: () => void;
   onOpenTarget: () => void;
-  onOpenScenarioDetail: (scenarioId: string) => void;
+  onOpenScenarioDetail: (scenarioId: string, attackId?: string) => void;
   onOpenResults: () => void;
   onToggleScenarioAdjustmentFromDirection: (scenarioId: string) => void;
   onToggleScenarioEnabled: (scenarioId: string, enabled: boolean) => void;
   onAddScenario: () => void;
-  onAddAttack: (scenarioId: string) => void;
+  onRemoveScenario: (scenarioId: string) => void;
+  onAddAttack: (scenarioId: string) => string | null;
   onRun: () => void;
   onCancel: () => void;
 };
@@ -1954,12 +1984,20 @@ function shouldPlaceMobileFlowCapsuleAtTarget(adjustmentType: ScenarioAdjustment
   return adjustmentType === "defence" || isTrickRoom;
 }
 
-function getMobileScenarioDirectionIconPath(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean): string {
-  if (adjustmentType === "defence" || isTrickRoom) {
+export function getMobileScenarioDirectionIconPath(adjustmentType: ScenarioAdjustmentType, isTrickRoom: boolean): string {
+  if (isTrickRoom) {
+    return "assets/ui/arrow-down-circle.svg";
+  }
+
+  if (adjustmentType === "defence") {
     return "assets/ui/arrow-left-circle.svg";
   }
 
-  return "assets/ui/arrow-right-circle.svg";
+  if (adjustmentType === "offense") {
+    return "assets/ui/arrow-right-circle.svg";
+  }
+
+  return "assets/ui/arrow-up-circle.svg";
 }
 
 function MobileOverview({
@@ -1973,12 +2011,15 @@ function MobileOverview({
   searchedCandidates,
   totalCandidates,
   hasEnabledDefenceScenario,
+  isBoxPanelOpen,
+  onOpenBoxPanel,
   onOpenTarget,
   onOpenScenarioDetail,
   onOpenResults,
   onToggleScenarioAdjustmentFromDirection,
   onToggleScenarioEnabled,
   onAddScenario,
+  onRemoveScenario,
   onAddAttack,
   onRun,
   onCancel,
@@ -2101,7 +2142,18 @@ function MobileOverview({
     <section className="mobile-overview" aria-label="スマホ用調整ボード">
       <section className="mobile-symmetric-board" aria-label="ノード接続調整ボード" ref={boardRef}>
         <div className="mobile-target-column">
-          <h2>調整対象</h2>
+          <div className="mobile-target-heading">
+            <h2>調整対象</h2>
+            <button
+              className={`box-access-button mobile-box-access-button${isBoxPanelOpen ? " active" : ""}`}
+              type="button"
+              aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
+              aria-expanded={isBoxPanelOpen}
+              onClick={onOpenBoxPanel}
+            >
+              <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+            </button>
+          </div>
           <button className="mobile-target-mini" type="button" onClick={onOpenTarget} ref={targetMiniRef}>
             <PokemonArtworkFrame
               match={targetArtwork}
@@ -2191,10 +2243,7 @@ function MobileOverview({
 
         <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
           <div className="mobile-board-heading">
-            <div>
-              <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
-              <span>攻撃は横スクロール</span>
-            </div>
+            <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
             <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
               追加
             </button>
@@ -2222,23 +2271,7 @@ function MobileOverview({
                       }
                     }}
                   >
-                    <img
-                      className="mobile-scenario-direction-icon"
-                      src={getAssetSrc(directionIconPath)}
-                      alt=""
-                      aria-hidden="true"
-                    />
                     <div className="mobile-scenario-summary-header">
-                      <button
-                        className="mobile-scenario-summary-main"
-                        type="button"
-                        onClick={() => onOpenScenarioDetail(scenario.id)}
-                      >
-                        <span className="mobile-scenario-title">
-                          <strong>{scenario.label}</strong>
-                          <span>{currentAdjustmentLabel}</span>
-                        </span>
-                      </button>
                       <button
                         className={`mobile-scenario-state ${scenario.enabled ? "on" : "off"}`}
                         type="button"
@@ -2249,7 +2282,39 @@ function MobileOverview({
                       >
                         <span aria-hidden="true" />
                       </button>
+                      <button
+                        className="mobile-scenario-summary-main"
+                        type="button"
+                        onClick={() => onOpenScenarioDetail(scenario.id)}
+                      >
+                        <span className="mobile-scenario-title">
+                          <strong>{scenario.label}</strong>
+                        </span>
+                      </button>
+                      <button
+                        className="icon-button scenario-remove-button mobile-scenario-remove-button"
+                        type="button"
+                        aria-label={`${scenario.label}を削除`}
+                        onClick={() => onRemoveScenario(scenario.id)}
+                      >
+                        <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+                      </button>
                     </div>
+
+                    <button
+                      className="mobile-scenario-adjustment-row"
+                      type="button"
+                      aria-label={`${scenario.label}: ${currentAdjustmentLabel}。タップで次の調整種別に切り替え`}
+                      onClick={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
+                    >
+                      <img
+                        className="mobile-scenario-direction-icon"
+                        src={getAssetSrc(directionIconPath)}
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span>{currentAdjustmentLabel}</span>
+                    </button>
 
                     <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
                       {scenario.attacks.map((attack, attackIndex) => {
@@ -2259,7 +2324,7 @@ function MobileOverview({
                             className="mobile-attack-summary"
                             type="button"
                             key={attack.id}
-                            onClick={() => onOpenScenarioDetail(scenario.id)}
+                            onClick={() => onOpenScenarioDetail(scenario.id, attack.id)}
                           >
                             <PokemonArtworkFrame
                               match={attackerArtwork}
@@ -2791,7 +2856,7 @@ type ScenarioPanelProps = {
     key: K,
     value: ScenarioFormState[K],
   ) => void;
-  onAddAttack: (scenarioId: string) => void;
+  onAddAttack: (scenarioId: string) => string | null;
   onRemoveAttack: (scenarioId: string, attackId: string) => void;
   onUpdateAttack: <K extends keyof ScenarioAttackFormState>(
     scenarioId: string,
@@ -2801,7 +2866,8 @@ type ScenarioPanelProps = {
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
   mobileFocusedScenarioId?: string | null;
-  onFocusMobileScenario?: (id: string) => void;
+  mobileFocusedAttackId?: string | null;
+  onFocusMobileAttack?: (id: string) => void;
   onShowMobileScenarioList?: () => void;
   onCloseMobileSheet?: () => void;
 };
@@ -2818,24 +2884,28 @@ export const getScenarioPanelVisibleScenarios = (
   return focusedScenarios.length > 0 ? focusedScenarios : scenarios;
 };
 
-export const getMobileScenarioNavigationTargets = (
-  scenarios: ScenarioFormState[],
-  mobileFocusedScenarioId?: string | null,
+export const getMobileAttackNavigationTargets = (
+  scenario: ScenarioFormState,
+  mobileFocusedAttackId?: string | null,
 ) => {
-  if (!mobileFocusedScenarioId) {
+  if (scenario.attacks.length === 0) {
     return null;
   }
 
-  const currentIndex = scenarios.findIndex((scenario) => scenario.id === mobileFocusedScenarioId);
-  if (currentIndex === -1) {
-    return null;
-  }
+  const requestedIndex = mobileFocusedAttackId
+    ? scenario.attacks.findIndex((attack) => attack.id === mobileFocusedAttackId)
+    : 0;
+  const currentIndex = requestedIndex >= 0 ? requestedIndex : 0;
+  const nextIndex = currentIndex + 1;
 
   return {
     currentIndex,
-    total: scenarios.length,
-    previousId: scenarios[currentIndex - 1]?.id ?? null,
-    nextId: scenarios[currentIndex + 1]?.id ?? null,
+    currentId: scenario.attacks[currentIndex].id,
+    currentLabel: formatScenarioAttackLabel(scenario.adjustmentType, currentIndex, scenario.attacks[currentIndex].label),
+    total: scenario.attacks.length,
+    previousId: scenario.attacks[currentIndex - 1]?.id ?? null,
+    nextId: scenario.attacks[nextIndex]?.id ?? null,
+    nextLabel: formatScenarioAttackLabel(scenario.adjustmentType, nextIndex, `攻撃${String.fromCharCode(65 + nextIndex)}`),
   };
 };
 
@@ -2853,7 +2923,8 @@ function ScenarioPanel({
   onUpdateAttack,
   onUpdateAttackerEv,
   mobileFocusedScenarioId,
-  onFocusMobileScenario,
+  mobileFocusedAttackId,
+  onFocusMobileAttack,
   onShowMobileScenarioList,
   onCloseMobileSheet,
 }: ScenarioPanelProps) {
@@ -2861,7 +2932,10 @@ function ScenarioPanel({
   const isMobileFocusedScenario = Boolean(
     mobileFocusedScenarioId && visibleScenarios.length === 1 && visibleScenarios[0].id === mobileFocusedScenarioId,
   );
-  const mobileScenarioNavigation = getMobileScenarioNavigationTargets(scenarios, mobileFocusedScenarioId);
+  const focusedScenario = isMobileFocusedScenario ? visibleScenarios[0] : null;
+  const mobileAttackNavigation = focusedScenario
+    ? getMobileAttackNavigationTargets(focusedScenario, mobileFocusedAttackId)
+    : null;
   const headingLabel = isMobileFocusedScenario ? visibleScenarios[0].label : "仮想敵シナリオ";
 
   return (
@@ -2875,21 +2949,21 @@ function ScenarioPanel({
         </button>
       </div>
 
-      {isMobileFocusedScenario && mobileScenarioNavigation ? (
-        <div className="mobile-sheet-scenario-nav" aria-label="シナリオ移動">
+      {isMobileFocusedScenario && mobileAttackNavigation ? (
+        <div className="mobile-sheet-scenario-nav" aria-label="同一シナリオ内の攻撃移動">
           <Button
             variant="ghost"
             size="small"
-            disabled={!mobileScenarioNavigation.previousId || !onFocusMobileScenario}
+            disabled={!mobileAttackNavigation.previousId || !onFocusMobileAttack}
             onClick={() => {
-              if (mobileScenarioNavigation.previousId) {
-                onFocusMobileScenario?.(mobileScenarioNavigation.previousId);
+              if (mobileAttackNavigation.previousId) {
+                onFocusMobileAttack?.(mobileAttackNavigation.previousId);
               }
             }}
           >
             前へ
           </Button>
-          <span>{mobileScenarioNavigation.currentIndex + 1} / {mobileScenarioNavigation.total}</span>
+          <span>{mobileAttackNavigation.currentLabel} / {mobileAttackNavigation.currentIndex + 1} / {mobileAttackNavigation.total}</span>
           <Button
             variant="ghost"
             size="small"
@@ -2900,14 +2974,22 @@ function ScenarioPanel({
           <Button
             variant="ghost"
             size="small"
-            disabled={!mobileScenarioNavigation.nextId || !onFocusMobileScenario}
+            disabled={!onFocusMobileAttack}
             onClick={() => {
-              if (mobileScenarioNavigation.nextId) {
-                onFocusMobileScenario?.(mobileScenarioNavigation.nextId);
+              if (mobileAttackNavigation.nextId) {
+                onFocusMobileAttack?.(mobileAttackNavigation.nextId);
+                return;
+              }
+
+              if (focusedScenario) {
+                const nextAttackId = onAddAttack(focusedScenario.id);
+                if (nextAttackId) {
+                  onFocusMobileAttack?.(nextAttackId);
+                }
               }
             }}
           >
-            次へ
+            {mobileAttackNavigation.nextId ? "次へ" : `${mobileAttackNavigation.nextLabel}追加`}
           </Button>
         </div>
       ) : null}
@@ -2927,6 +3009,8 @@ function ScenarioPanel({
             onUpdateScenario={onUpdateScenario}
             onUpdateAttack={onUpdateAttack}
             onUpdateAttackerEv={onUpdateAttackerEv}
+            mobileFocusedAttackId={isMobileFocusedScenario ? mobileAttackNavigation?.currentId ?? null : null}
+            hideAttackAddCard={isMobileFocusedScenario}
           />
         ))}
         {isMobileFocusedScenario ? null : (
@@ -2944,7 +3028,7 @@ type ScenarioRowProps = {
   attackerActualStats: Record<string, StatTable>;
   targetForm: TargetFormState;
   targetActualStats: StatTable | null;
-  onAddAttack: (scenarioId: string) => void;
+  onAddAttack: (scenarioId: string) => string | null;
   onRemoveAttack: (scenarioId: string, attackId: string) => void;
   onRemoveScenario: (id: string) => void;
   onToggleScenarioAdjustmentFromDirection: (id: string) => void;
@@ -2960,6 +3044,8 @@ type ScenarioRowProps = {
     value: ScenarioAttackFormState[K],
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
+  mobileFocusedAttackId?: string | null;
+  hideAttackAddCard?: boolean;
 };
 
 const scenarioAdjustmentTypeOptions: Array<{ value: ScenarioAdjustmentType; label: string }> = [
@@ -3022,9 +3108,15 @@ function ScenarioRow({
   onUpdateScenario,
   onUpdateAttack,
   onUpdateAttackerEv,
+  mobileFocusedAttackId,
+  hideAttackAddCard = false,
 }: ScenarioRowProps) {
   const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
     && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+  const visibleAttacks = mobileFocusedAttackId
+    ? scenario.attacks.filter((attack) => attack.id === mobileFocusedAttackId)
+    : scenario.attacks;
+  const attacksToRender = visibleAttacks.length > 0 ? visibleAttacks : scenario.attacks.slice(0, 1);
 
   return (
     <article
@@ -3066,36 +3158,41 @@ function ScenarioRow({
       </div>
 
       <div className="scenario-attack-lane">
-        {scenario.attacks.map((attack, attackIndex) => (
-          <AttackCard
-            key={attack.id}
-            attack={attack}
-            attackIndex={attackIndex}
-            scenarioId={scenario.id}
-            adjustmentType={scenario.adjustmentType}
-            actualStats={attackerActualStats[`${scenario.id}-${attack.id}-attacker`]}
-            targetForm={targetForm}
-            targetActualStats={targetActualStats}
-            supportsDoublesAttack={scenario.attacks.some((otherAttack) => (
-              otherAttack.id !== attack.id &&
-              Boolean(otherAttack.moveInput.trim()) &&
-              otherAttack.gameType === "doubles"
-            ))}
-            canRemove={scenario.attacks.length > 1}
-            onRemoveAttack={onRemoveAttack}
-            onToggleAdjustmentType={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
-            onUpdateAttack={onUpdateAttack}
-            onUpdateAttackerEv={onUpdateAttackerEv}
-          />
-        ))}
-        <button
-          className="attack-add-card ui-button"
-          type="button"
-          aria-label={`${scenario.label}に攻撃を追加`}
-          onClick={() => onAddAttack(scenario.id)}
-        >
-          <span>+</span>
-        </button>
+        {attacksToRender.map((attack) => {
+          const attackIndex = scenario.attacks.findIndex((item) => item.id === attack.id);
+          return (
+            <AttackCard
+              key={attack.id}
+              attack={attack}
+              attackIndex={attackIndex >= 0 ? attackIndex : 0}
+              scenarioId={scenario.id}
+              adjustmentType={scenario.adjustmentType}
+              actualStats={attackerActualStats[`${scenario.id}-${attack.id}-attacker`]}
+              targetForm={targetForm}
+              targetActualStats={targetActualStats}
+              supportsDoublesAttack={scenario.attacks.some((otherAttack) => (
+                otherAttack.id !== attack.id &&
+                Boolean(otherAttack.moveInput.trim()) &&
+                otherAttack.gameType === "doubles"
+              ))}
+              canRemove={scenario.attacks.length > 1}
+              onRemoveAttack={onRemoveAttack}
+              onToggleAdjustmentType={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
+              onUpdateAttack={onUpdateAttack}
+              onUpdateAttackerEv={onUpdateAttackerEv}
+            />
+          );
+        })}
+        {hideAttackAddCard ? null : (
+          <button
+            className="attack-add-card ui-button"
+            type="button"
+            aria-label={`${scenario.label}に攻撃を追加`}
+            onClick={() => onAddAttack(scenario.id)}
+          >
+            <span>+</span>
+          </button>
+        )}
       </div>
     </article>
   );

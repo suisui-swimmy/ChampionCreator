@@ -3345,15 +3345,39 @@ textarea {
     display: grid;
     gap: 8px;
     min-width: 0;
+    border: 1px solid rgba(238, 241, 237, 0.16);
+    border-radius: 8px;
+    background: rgba(13, 18, 19, 0.72);
+    padding: 8px;
   }
 
-  .mobile-target-column h2,
+  .mobile-target-heading h2,
   .mobile-board-heading h2 {
     margin: 0;
     color: var(--text);
     font-size: 15px;
     line-height: 1.2;
-    text-align: center;
+    text-align: left;
+  }
+
+  .mobile-target-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .mobile-box-access-button {
+    justify-self: end;
+    width: 30px;
+    height: 30px;
+    padding: 4px;
+  }
+
+  .mobile-box-access-button img {
+    width: 20px;
+    height: 20px;
   }
 
   .mobile-target-mini {
@@ -3362,7 +3386,8 @@ textarea {
     gap: 8px;
     width: 100%;
     min-height: 318px;
-    border-color: #30383b;
+    border-color: rgba(238, 241, 237, 0.12);
+    background: rgba(16, 21, 21, 0.76);
     color: var(--text);
     padding: 10px;
     text-align: center;
@@ -3375,7 +3400,6 @@ textarea {
   }
 
   .mobile-target-mini-main,
-  .mobile-board-heading div,
   .mobile-candidate-dock-main > span:first-child,
   .mobile-scenario-title,
   .mobile-attack-summary span {
@@ -3384,6 +3408,7 @@ textarea {
   }
 
   .mobile-target-mini-main strong,
+  .mobile-target-heading h2,
   .mobile-board-heading h2,
   .mobile-candidate-dock-main strong,
   .mobile-scenario-title strong,
@@ -3397,7 +3422,6 @@ textarea {
   }
 
   .mobile-target-mini-main span,
-  .mobile-board-heading span,
   .mobile-candidate-dock-main small,
   .mobile-scenario-title span,
   .mobile-attack-summary small,
@@ -3508,8 +3532,14 @@ textarea {
   }
 
   .mobile-board-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     justify-content: stretch;
     padding: 0;
+  }
+
+  .mobile-board-heading .ui-button-small {
+    justify-self: end;
   }
 
   .mobile-scenario-flow-list {
@@ -3525,7 +3555,7 @@ textarea {
   .mobile-flow-edge-layer {
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 4;
     width: 100%;
     height: 100%;
     overflow: visible;
@@ -3570,6 +3600,7 @@ textarea {
 
   .mobile-scenario-summary {
     position: relative;
+    z-index: 1;
     display: grid;
     gap: 7px;
     min-width: 0;
@@ -3599,20 +3630,53 @@ textarea {
     border: 0;
     background: transparent;
     color: inherit;
-    padding: 0 0 0 24px;
+    padding: 0;
+    text-align: left;
+  }
+
+  .mobile-scenario-summary-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .mobile-scenario-adjustment-row {
+    display: inline-grid;
+    grid-template-columns: 18px minmax(0, max-content);
+    align-items: center;
+    justify-content: start;
+    gap: 6px;
+    width: max-content;
+    max-width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 0;
     text-align: left;
   }
 
   .mobile-scenario-direction-icon {
-    position: absolute;
-    top: 7px;
-    left: 7px;
     width: 18px;
     height: 18px;
     border-radius: 50%;
     background: rgba(8, 16, 13, 0.78);
     filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.4));
     pointer-events: none;
+  }
+
+  .mobile-scenario-adjustment-row span {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-scenario-adjustment-row:focus-visible {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
+    border-radius: 5px;
   }
 
   .mobile-scenario-state {
@@ -3653,6 +3717,18 @@ textarea {
   .mobile-scenario-state:focus-visible {
     outline: 2px solid rgba(245, 197, 66, 0.55);
     outline-offset: 2px;
+  }
+
+  .mobile-scenario-remove-button {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    padding: 0;
+  }
+
+  .mobile-scenario-remove-button .ui-button-icon {
+    width: 13px;
+    height: 13px;
   }
 
   .mobile-attack-rail {
@@ -3863,10 +3939,12 @@ textarea {
     max-height: 88vh;
     overflow: auto;
     overscroll-behavior: contain;
+    isolation: isolate;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
     border-radius: 14px 14px 0 0;
+    background: #151819;
     transform: translateX(-50%);
   }
 
@@ -3875,17 +3953,18 @@ textarea {
   .mobile-sheet-open .results-panel .section-heading {
     position: sticky;
     top: 0;
-    z-index: 3;
+    z-index: 30;
     margin: -14px -14px 10px;
     border-bottom: 1px solid rgba(238, 241, 237, 0.1);
-    background: rgba(21, 24, 25, 0.96);
-    padding: 12px 14px;
+    background: #151819;
+    box-shadow: 0 -24px 0 24px #151819, 0 10px 16px rgba(0, 0, 0, 0.28);
+    padding: 8px 14px;
   }
 
   .mobile-sheet-scenario-nav {
     position: sticky;
-    top: 48px;
-    z-index: 2;
+    top: 40px;
+    z-index: 29;
     display: grid;
     grid-template-columns: auto minmax(38px, 1fr) auto auto;
     align-items: center;
@@ -3893,7 +3972,8 @@ textarea {
     margin: -2px 0 10px;
     border: 1px solid rgba(238, 241, 237, 0.1);
     border-radius: 7px;
-    background: rgba(17, 21, 22, 0.96);
+    background: #111516;
+    box-shadow: 0 8px 14px rgba(0, 0, 0, 0.22);
     padding: 6px;
   }
 
@@ -3982,18 +4062,17 @@ textarea {
   }
 
   .mobile-scenarios-open .scenario-attack-lane {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
     gap: 10px;
-    overflow: visible;
-    padding-bottom: 0;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 
   .mobile-scenarios-open .scenario-attack-lane > *,
   .mobile-scenarios-open .scenario-attack-lane > .attack-add-card {
-    width: 100%;
+    width: min(100%, 340px);
     min-width: 0;
-    flex-basis: auto;
+    flex: 0 0 min(100%, 340px);
   }
 
   .mobile-scenarios-open .attack-condition-card {
@@ -4374,12 +4453,12 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 28px;
+    min-height: 26px;
     border: 1px solid #30383b;
     border-radius: 6px;
     background: #111516;
     color: #c5ccc8;
-    padding: 0 10px;
+    padding: 0 9px;
     font-size: 12px;
     font-weight: 850;
   }
@@ -4468,6 +4547,7 @@ textarea {
   }
 
   .mobile-target-mini-main strong,
+  .mobile-target-heading h2,
   .mobile-board-heading h2,
   .mobile-candidate-dock-main strong,
   .mobile-scenario-title strong,

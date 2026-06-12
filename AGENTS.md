@@ -413,7 +413,7 @@ MVP UI の最低ライン:
 - デスクトップの一覧比較体験を壊さず、モバイルでは入力、候補確認、詳細確認を段階的に切り替えられる構成にする
 - hover 前提の操作は避け、タップ、フォーカス、キーボード操作で同じ機能へ到達できるようにする
 - テキスト、ボタン、入力欄、候補行、ポップオーバーが重ならないことを優先する
-- in-app Browser 確認が必要な場合は、この AGENTS の in-app Browser 方針に従い、通常は静的検証や代替確認を優先する
+- in-app Browser 確認が必要な場合は、この AGENTS の in-app Browser 方針に従う。`skipInAppBrowserCheck: true` のときだけ静的検証や代替確認を優先する
 
 実装対象:
 
@@ -493,16 +493,25 @@ npm run build
 
 ### in-app Browser 確認方針
 
-Codex in-app Browser / Browser plugin は `windows sandbox failed: spawn setup refresh` が再発しやすく、UI 作業のたびに復旧へ時間を使うと実装が止まりやすい。通常の UI 修正では in-app Browser 確認を既定でスキップし、静的検証・HTTP 確認・配信 CSS / DOM 相当の代替確認を優先する。
+Codex in-app Browser / Browser plugin は `windows sandbox failed: spawn setup refresh` が再発しやすい。現在は直近の健康診断で通っているため、in-app Browser 確認は通常工程として実施する。
+
+現在値:
+
+```yaml
+skipInAppBrowserCheck: false
+```
+
+- `false`: in-app Browser 確認を実施する。UI 表示に関わる変更では DOM snapshot、必要なクリック操作、スクリーンショット確認を行う。
+- `true`: in-app Browser / Browser plugin が壊れていて復旧に時間を取られる場合だけ、一時的に確認をパスし、静的検証・HTTP 確認・配信 CSS / DOM 相当の代替確認を優先する。
+- `true` に切り替えた場合は、最終報告と `PROGRESS.md` に「AGENTS の一時スルー方針に従い未実施」と代替確認の結果を明記する。
 
 方針:
 
 - UI 修正後は、`npm run typecheck`、対象テスト、`npm run build`、必要に応じて `npm run check` を実行する。
-- UI 表示に関わる変更では、dev / preview server の HTTP 200、配信中の CSS / JS / HTML、必要に応じて React の静的 render や対象関数テストで代替確認する。
-- in-app Browser の DOM snapshot、クリック、スクリーンショット確認は通常工程に含めない。
+- `skipInAppBrowserCheck: false` の場合、UI 表示に関わる変更では in-app Browser で DOM snapshot、対象操作、スクリーンショット確認を行う。
+- `skipInAppBrowserCheck: true` の場合、dev / preview server の HTTP 200、配信中の CSS / JS / HTML、必要に応じて React の静的 render や対象関数テストで代替確認する。
 - ユーザーが明示的に「in-app Browser で確認して」「スクショを取って」「Browser を直して」と依頼した場合だけ、`in-app Browser / node_repl 復旧メモ` に従って切り分ける。
 - Browser runtime の復旧に設定変更、wrapper、`--disable-sandbox` が必要な場合は、sandbox 隔離を弱めるためユーザーの明示承認を得る。
-- in-app Browser 確認をスキップした場合は、最終報告と `PROGRESS.md` に「AGENTS の一時スルー方針に従い未実施」と代替確認の結果を明記する。
 
 ## 長期保守ルール
 
