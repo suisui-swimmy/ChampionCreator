@@ -2600,18 +2600,20 @@ function TargetPanel({
         <div>
           <h2 id="target-title">調整対象</h2>
         </div>
-        <button
-          className={`box-access-button${isBoxPanelOpen ? " active" : ""}`}
-          type="button"
-          aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
-          aria-expanded={isBoxPanelOpen}
-          onClick={onOpenBoxPanel}
-        >
-          <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
-        </button>
-        <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
-          閉じる
-        </button>
+        <div className="mobile-sheet-heading-actions">
+          <button
+            className={`box-access-button${isBoxPanelOpen ? " active" : ""}`}
+            type="button"
+            aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
+            aria-expanded={isBoxPanelOpen}
+            onClick={onOpenBoxPanel}
+          >
+            <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+          </button>
+          <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
+            閉じる
+          </button>
+        </div>
       </div>
 
       <div className="target-identity">

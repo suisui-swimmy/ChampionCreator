@@ -3902,10 +3902,14 @@ textarea {
     right: auto;
     bottom: 0;
     left: 50%;
+    top: auto;
     z-index: var(--mobile-sheet-z);
     display: none;
     width: min(100%, 460px);
-    max-height: 90vh;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
     overflow: auto;
     overscroll-behavior: contain;
     isolation: isolate;
@@ -3964,6 +3968,31 @@ textarea {
     padding: 0 9px;
     font-size: 12px;
     font-weight: 850;
+  }
+
+  .mobile-target-open .target-panel {
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  .mobile-target-open .target-panel .section-heading,
+  .mobile-target-open .target-identity,
+  .mobile-target-open .target-summary.compact,
+  .mobile-target-open .ev-table,
+  .mobile-target-open .ev-header,
+  .mobile-target-open .ev-row,
+  .mobile-target-open .sp-summary {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
   }
 
   .mobile-scenarios-open .scenario-stack {
@@ -4382,7 +4411,7 @@ textarea {
   }
 
   .mobile-target-open .mechanic-toggle-row {
-    justify-content: space-between;
+    justify-content: flex-start;
   }
 
   .mobile-target-open .ev-header,
@@ -4497,7 +4526,10 @@ textarea {
 
   .box-window {
     width: 100%;
-    max-height: 86vh;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
