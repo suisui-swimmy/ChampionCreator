@@ -2932,7 +2932,10 @@ function ScenarioPanel({
   const headingLabel = isMobileFocusedScenario ? visibleScenarios[0].label : "仮想敵シナリオ";
 
   return (
-    <section className="scenario-panel" aria-labelledby="scenario-title">
+    <section
+      className={`scenario-panel${isMobileFocusedScenario ? " mobile-scenario-detail-panel" : ""}`}
+      aria-labelledby="scenario-title"
+    >
       <div className="section-heading">
         <div>
           <h2 id="scenario-title">{headingLabel}</h2>

@@ -3975,6 +3975,30 @@ textarea {
     padding: 10px;
   }
 
+  .mobile-scenarios-open .mobile-scenario-detail-panel {
+    max-width: 100vw;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .section-heading,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .mobile-sheet-scenario-nav,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-stack,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-row,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-row-header,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-row-actions,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-adjustment-cards,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-attack-lane,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .attack-condition-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
   .mobile-scenarios-open .scenario-row-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -4065,6 +4089,23 @@ textarea {
     min-height: 0;
     gap: 10px;
     padding: 10px;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-attack-lane {
+    overflow-x: hidden;
+    touch-action: pan-y;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-attack-lane > *,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-attack-lane > .attack-add-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .attack-condition-card {
+    touch-action: pan-y;
   }
 
   .mobile-scenarios-open .attack-add-card {
