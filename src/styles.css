@@ -697,7 +697,8 @@ textarea:focus-visible,
   margin-bottom: 12px;
 }
 
-.target-level-field {
+.target-level-field,
+.placeholder-field.target-level-field {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
@@ -3930,8 +3931,10 @@ textarea {
     margin: -14px -14px 10px;
     border-bottom: 1px solid rgba(238, 241, 237, 0.1);
     background: #151819;
-    box-shadow: 0 -24px 0 24px #151819, 0 10px 16px rgba(0, 0, 0, 0.28);
+    box-shadow: none;
     padding: 8px 14px;
+    width: auto;
+    max-width: none;
   }
 
   .mobile-sheet-scenario-nav {
@@ -3961,6 +3964,8 @@ textarea {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    justify-content: flex-end;
+    margin-left: auto;
   }
 
   .mobile-sheet-list-button {
@@ -3972,16 +3977,15 @@ textarea {
 
   .mobile-target-open .target-panel {
     max-width: 100vw;
-    height: 100vh;
-    height: 100dvh;
+    height: auto;
     max-height: 100vh;
     max-height: 100dvh;
     overflow-x: hidden;
+    overflow-y: auto;
     overscroll-behavior-x: none;
     touch-action: pan-y;
   }
 
-  .mobile-target-open .target-panel .section-heading,
   .mobile-target-open .target-identity,
   .mobile-target-open .target-summary.compact,
   .mobile-target-open .ev-table,
@@ -4011,7 +4015,6 @@ textarea {
     touch-action: pan-y;
   }
 
-  .mobile-scenarios-open .mobile-scenario-detail-panel .section-heading,
   .mobile-scenarios-open .mobile-scenario-detail-panel .mobile-sheet-scenario-nav,
   .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-stack,
   .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-row,
@@ -4509,6 +4512,7 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    margin-left: auto;
     min-height: 26px;
     border: 1px solid #30383b;
     border-radius: 6px;
