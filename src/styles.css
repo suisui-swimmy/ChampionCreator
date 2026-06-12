@@ -3936,7 +3936,7 @@ textarea {
     z-index: var(--mobile-sheet-z);
     display: none;
     width: min(100%, 460px);
-    max-height: 88vh;
+    max-height: 90vh;
     overflow: auto;
     overscroll-behavior: contain;
     isolation: isolate;
@@ -3966,7 +3966,7 @@ textarea {
     top: 40px;
     z-index: 29;
     display: grid;
-    grid-template-columns: auto minmax(38px, 1fr) auto auto;
+    grid-template-columns: auto minmax(38px, 1fr) auto;
     align-items: center;
     gap: 6px;
     margin: -2px 0 10px;
@@ -3982,6 +3982,19 @@ textarea {
     font-size: 11px;
     font-weight: 900;
     text-align: center;
+  }
+
+  .mobile-sheet-heading-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-sheet-list-button {
+    min-height: 26px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 850;
   }
 
   .mobile-scenarios-open .scenario-stack {
@@ -4041,6 +4054,10 @@ textarea {
     grid-template-columns: minmax(0, 1fr) 36px;
     gap: 8px;
     width: 100%;
+  }
+
+  .mobile-scenarios-open .scenario-row-actions.no-scenario-remove {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .mobile-scenarios-open .scenario-adjustment-cards {

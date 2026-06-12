@@ -2944,9 +2944,21 @@ function ScenarioPanel({
         <div>
           <h2 id="scenario-title">{headingLabel}</h2>
         </div>
-        <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
-          閉じる
-        </button>
+        <div className="mobile-sheet-heading-actions">
+          {isMobileFocusedScenario ? (
+            <Button
+              variant="ghost"
+              size="small"
+              className="mobile-sheet-list-button"
+              onClick={onShowMobileScenarioList}
+            >
+              一覧
+            </Button>
+          ) : null}
+          <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
+            閉じる
+          </button>
+        </div>
       </div>
 
       {isMobileFocusedScenario && mobileAttackNavigation ? (
@@ -2963,14 +2975,7 @@ function ScenarioPanel({
           >
             前へ
           </Button>
-          <span>{mobileAttackNavigation.currentLabel} / {mobileAttackNavigation.currentIndex + 1} / {mobileAttackNavigation.total}</span>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={onShowMobileScenarioList}
-          >
-            一覧
-          </Button>
+          <span>{mobileAttackNavigation.currentIndex + 1} / {mobileAttackNavigation.total}</span>
           <Button
             variant="ghost"
             size="small"
@@ -2989,7 +2994,7 @@ function ScenarioPanel({
               }
             }}
           >
-            {mobileAttackNavigation.nextId ? "次へ" : `${mobileAttackNavigation.nextLabel}追加`}
+            {mobileAttackNavigation.nextId ? "次へ" : "追加"}
           </Button>
         </div>
       ) : null}
@@ -3011,6 +3016,7 @@ function ScenarioPanel({
             onUpdateAttackerEv={onUpdateAttackerEv}
             mobileFocusedAttackId={isMobileFocusedScenario ? mobileAttackNavigation?.currentId ?? null : null}
             hideAttackAddCard={isMobileFocusedScenario}
+            hideScenarioRemoveButton={isMobileFocusedScenario}
           />
         ))}
         {isMobileFocusedScenario ? null : (
@@ -3046,6 +3052,7 @@ type ScenarioRowProps = {
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
   mobileFocusedAttackId?: string | null;
   hideAttackAddCard?: boolean;
+  hideScenarioRemoveButton?: boolean;
 };
 
 const scenarioAdjustmentTypeOptions: Array<{ value: ScenarioAdjustmentType; label: string }> = [
@@ -3110,6 +3117,7 @@ function ScenarioRow({
   onUpdateAttackerEv,
   mobileFocusedAttackId,
   hideAttackAddCard = false,
+  hideScenarioRemoveButton = false,
 }: ScenarioRowProps) {
   const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
     && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
@@ -3140,20 +3148,22 @@ function ScenarioRow({
             onChange={(event) => onUpdateScenario(scenario.id, "label", event.target.value)}
           />
         </div>
-        <div className="scenario-row-actions">
+        <div className={`scenario-row-actions${hideScenarioRemoveButton ? " no-scenario-remove" : ""}`}>
           <ScenarioAdjustmentTypeCards
             scenario={scenario}
             onChange={(value) => onUpdateScenario(scenario.id, "adjustmentType", value)}
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="icon-button scenario-remove-button"
-            aria-label={`${scenario.label}を削除`}
-            onClick={() => onRemoveScenario(scenario.id)}
-          >
-            <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
-          </Button>
+          {hideScenarioRemoveButton ? null : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="icon-button scenario-remove-button"
+              aria-label={`${scenario.label}を削除`}
+              onClick={() => onRemoveScenario(scenario.id)}
+            >
+              <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+            </Button>
+          )}
         </div>
       </div>
 
