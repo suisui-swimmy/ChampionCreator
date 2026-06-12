@@ -454,6 +454,7 @@ describe("App", () => {
     expect(html).toContain('class="candidate-budget-value used"');
     expect(html).toContain('class="candidate-budget-value remaining"');
     expect(html).toContain('class="candidate-bottleneck"');
+    expect(html).toContain("最厳条件: シナリオA +0.0%");
     expect(html).toContain('class="candidate-sp-bars"');
     expect(html).toContain('aria-label="SPバー: H 6 / A 0 / B 13 / C 0 / D 0 / S 0"');
     expect(html).toContain(">H</span><span>6</span>");
@@ -607,6 +608,7 @@ describe("App", () => {
     expect(html).toContain(">PASS</em>");
     expect(html).toContain("S12 メガマフォクシー → 任意S150 : 自分 151 / 相手 150 / 抜ける / こだわりスカーフ 1.5倍");
     expect(html).toContain('aria-label="SPバー: H 3 / A 0 / B 32 / C 2 / D 0 / S 12"');
+    expect(html).toContain("最厳条件: シナリオ1 +3.7%");
     expect(html).toContain("自分 151");
     expect(html).toContain("相手 150");
     expect(html).toContain("抜ける");

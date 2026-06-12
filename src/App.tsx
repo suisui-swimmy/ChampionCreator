@@ -2402,7 +2402,7 @@ function MobileOverview({
                 <span className="mobile-candidate-preview-budget">
                   使用{candidate.usedStatPointBudget} / 残り{candidate.remainingStatPointBudget}
                 </span>
-                <em>{candidate.bottleneckLabel}</em>
+                <em>{formatBottleneckDisplayLabel(candidate.bottleneckLabel)}</em>
               </button>
             ))}
           </div>
@@ -4008,6 +4008,8 @@ const formatOffenseCandidateDetail = (
   return `${sourceLabel} → ${defenderLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
 };
 
+const formatBottleneckDisplayLabel = (label: string): string => `最厳条件: ${label}`;
+
 const getSpeedResultTone = (result: SpeedAdjustmentResult): "green" | "red" | "blue" | "purple" => {
   if (result.status === "unresolved" || result.status === "invalid") {
     return "purple";
@@ -4130,7 +4132,7 @@ export function ResultsPanel({
                     <span className="candidate-row-spacer" aria-hidden="true" />
                     <span className="candidate-budget-value used">{candidate.usedStatPointBudget}</span>
                     <span className="candidate-budget-value remaining">{candidate.remainingStatPointBudget}</span>
-                    <span className="candidate-bottleneck">{candidate.bottleneckLabel}</span>
+                    <span className="candidate-bottleneck">{formatBottleneckDisplayLabel(candidate.bottleneckLabel)}</span>
                     <span className="candidate-disclosure" aria-hidden="true">
                       <ChevronRightIcon className="disclosure-chevron" />
                     </span>
