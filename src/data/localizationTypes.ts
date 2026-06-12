@@ -40,6 +40,8 @@ export interface LocalizedOptionEntry {
     nameSourceStatus?: SourceStatus;
     assetSourceStatus?: SourceStatus;
   };
+  minHits?: number;
+  maxHits?: number;
 }
 
 export interface LocalizedOptionPayload {

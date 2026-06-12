@@ -159,7 +159,7 @@ export const calculateSmogonFinalSpeed = (
 export const toSmogonMove = (hit: ScenarioHit): Move =>
   new Move(SMOGON_GENERATION, hit.move.canonicalName, {
     isCrit: hit.critical,
-    // ScenarioHit.repeat is a sequence concern for M4, not @smogon/calc's multi-hit Move.hits.
+    hits: hit.moveHits,
   });
 
 export const flattenDamageRolls = (damage: SmogonDamage): number[] => {
@@ -168,6 +168,18 @@ export const flattenDamageRolls = (damage: SmogonDamage): number[] => {
   }
 
   return damage.flat(Number.POSITIVE_INFINITY) as number[];
+};
+
+export const splitDamageRollsByHit = (damage: SmogonDamage): number[][] | undefined => {
+  if (!Array.isArray(damage) || !damage.some(Array.isArray)) {
+    return undefined;
+  }
+
+  return damage.map((hitDamage) => (
+    Array.isArray(hitDamage)
+      ? hitDamage.flat(Number.POSITIVE_INFINITY)
+      : [hitDamage]
+  )) as number[][];
 };
 
 export const calculateSmogonHit = (
@@ -196,6 +208,7 @@ export const calculateSmogonHit = (
   return {
     hitId: hit.id,
     damageRolls: flattenDamageRolls(result.damage),
+    damageRollsByHit: splitDamageRollsByHit(result.damage),
     damageRange: {
       min,
       max,

@@ -179,6 +179,37 @@ describe("calculateSmogonHit", () => {
     expect(directDefender.status).toBe("psn");
   });
 
+  it("passes explicit multi-hit counts through to @smogon/calc", () => {
+    const multiHit = {
+      ...hit,
+      move: mustResolve("move", "タネマシンガン"),
+      moveHits: 5,
+      repeat: 5,
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+    };
+    const adapterResult = calculateSmogonHit(defender, multiHit, { gameType: "singles", weather: "none", terrain: "none" });
+    const directAttacker = toSmogonPokemon(attacker);
+    const directDefender = toSmogonPokemon(defender);
+    const directMove = new Move(gen, "Bullet Seed", { hits: 5 });
+    const directResult = calculate(
+      gen,
+      directAttacker,
+      directDefender,
+      directMove,
+      new Field({ gameType: "Singles" }),
+    );
+    const [min, max] = directResult.range();
+
+    expect(adapterResult.damageRolls).toEqual(flattenDamageRolls(directResult.damage));
+    expect(adapterResult.damageRollsByHit).toEqual(directResult.damage);
+    expect(adapterResult.damageRange).toMatchObject({ min, max });
+    expect(adapterResult.description).toBe(directResult.desc());
+    expect(adapterResult.description).toContain("(5 hits)");
+  });
+
   it("maps an active ally's direct damage abilities to @smogon/calc field flags", () => {
     const doublesField = toSmogonField(
       { gameType: "doubles", weather: "sun", terrain: "none" },

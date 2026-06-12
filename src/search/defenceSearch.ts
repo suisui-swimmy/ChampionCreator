@@ -179,6 +179,11 @@ const expandDamageSequence = (
       continue;
     }
 
+    if (evaluation.damageRollsByHit) {
+      sequence.push(...evaluation.damageRollsByHit.slice(0, repeat));
+      continue;
+    }
+
     for (let index = 0; index < repeat; index += 1) {
       sequence.push(evaluation.damageRolls);
     }
@@ -210,8 +215,12 @@ const expandDamageCheckpoints = (
       continue;
     }
 
-    for (let index = 0; index < repeat; index += 1) {
-      sequence.push(evaluation.damageRolls);
+    if (evaluation.damageRollsByHit) {
+      sequence.push(...evaluation.damageRollsByHit.slice(0, repeat));
+    } else {
+      for (let index = 0; index < repeat; index += 1) {
+        sequence.push(evaluation.damageRolls);
+      }
     }
 
     if (hit.constraint?.enabled) {

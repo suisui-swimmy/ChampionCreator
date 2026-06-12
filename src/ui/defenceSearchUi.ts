@@ -36,6 +36,10 @@ import {
   type OffenseAdjustmentResult,
 } from "../search/offenseAdjustment";
 import {
+  getMoveHitCountRangeFromInput,
+  getMoveMaxHitsFromInput,
+} from "../domain/moveHitCounts";
+import {
   calculateSpeedAdjustment,
   type SpeedAdjustmentInput,
   type SpeedAdjustmentResult,
@@ -361,6 +365,34 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   tailwind: false,
 });
 
+export const applyMoveHitCountDefaults = (
+  attackForm: ScenarioAttackFormState,
+  moveInput: string,
+): ScenarioAttackFormState => {
+  const nextMaxHits = getMoveMaxHitsFromInput(moveInput);
+  const nextAttackForm = { ...attackForm, moveInput };
+
+  if (nextMaxHits && nextMaxHits > 1) {
+    return {
+      ...nextAttackForm,
+      repeat: nextMaxHits,
+      requiredSurvivedHits: nextMaxHits,
+    };
+  }
+
+  const previousMaxHits = getMoveMaxHitsFromInput(attackForm.moveInput);
+  const shouldClearPreviousAutoFill = (
+    previousMaxHits
+    && previousMaxHits > 1
+    && attackForm.repeat === previousMaxHits
+    && attackForm.requiredSurvivedHits === previousMaxHits
+  );
+
+  return shouldClearPreviousAutoFill
+    ? { ...nextAttackForm, repeat: 1, requiredSurvivedHits: 1 }
+    : nextAttackForm;
+};
+
 export const formatScenarioAttackLabel = (
   adjustmentType: ScenarioAdjustmentType,
   attackIndex: number,
@@ -507,7 +539,10 @@ const toScenarioHit = (
   hitsBefore: number,
   targetBoosts: StatBoostTable,
 ): ScenarioHit => {
-  const repeat = Math.max(1, clampInt(attackForm.repeat, 1, 10));
+  const moveHitRange = getMoveHitCountRangeFromInput(attackForm.moveInput);
+  const repeat = moveHitRange
+    ? clampInt(attackForm.repeat, moveHitRange.minHits, moveHitRange.maxHits)
+    : Math.max(1, clampInt(attackForm.repeat, 1, 10));
   const requiredSurvivedHits = Math.max(
     Math.max(1, clampInt(attackForm.requiredSurvivedHits, 1, 10)),
     Math.min(10, hitsBefore + 1),
@@ -532,6 +567,7 @@ const toScenarioHit = (
         .filter((ability): ability is NonNullable<typeof ability> => Boolean(ability))
       : undefined,
     move: mustResolve("move", attackForm.moveInput, "技"),
+    moveHits: moveHitRange ? repeat : undefined,
     field: toFieldState(attackForm),
     constraint: {
       enabled: true,

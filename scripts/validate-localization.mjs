@@ -92,6 +92,16 @@ for (const file of optionFiles) {
       }
     }
 
+    if ("minHits" in entry || "maxHits" in entry) {
+      if (!Number.isInteger(entry.minHits) || !Number.isInteger(entry.maxHits)) {
+        errors.push(`${file} ${key} minHits/maxHits must be integers`);
+      } else if (entry.minHits < 1 || entry.maxHits < 1 || entry.minHits > entry.maxHits) {
+        errors.push(`${file} ${key} has invalid hit count range: ${entry.minHits}-${entry.maxHits}`);
+      } else if (kind !== "move") {
+        errors.push(`${file} ${key} minHits/maxHits are only supported for move options`);
+      }
+    }
+
     for (const text of [entry.id, entry.showdownName, entry.label, ...(entry.searchText ?? "").split(/\s+/)]) {
       const normalized = normalize(text);
       if (!normalized) {

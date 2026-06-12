@@ -77,6 +77,7 @@ export interface ScenarioHit {
   defenderStatus?: Exclude<PokemonStatus, "none">;
   allyAbilities?: AbilityRef[];
   move: MoveRef;
+  moveHits?: number;
   field?: FieldState;
   constraint?: SurvivalConstraint;
   repeat: number;
@@ -112,6 +113,7 @@ export interface DamageRange {
 export interface ScenarioHitEvaluation {
   hitId: string;
   damageRolls: number[];
+  damageRollsByHit?: number[][];
   damageRange: DamageRange;
   description?: string;
 }

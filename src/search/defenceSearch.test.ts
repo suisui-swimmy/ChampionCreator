@@ -150,6 +150,24 @@ describe("evaluateScenario", () => {
     expect(repeatedResult.hitEvaluations[0].description).toContain("Thunderbolt");
   });
 
+  it("uses per-hit damage rolls from multi-hit move evaluations without repeating the flattened total", () => {
+    const defender = makeBuild("target", "カイリュー");
+    const attacker = makeBuild("attacker", "ピカチュウ");
+    const multiHit = makeScenario("multi-hit", [makeHit("bullet-seed", attacker, "タネマシンガン", 2)], 2, 1);
+
+    const result = evaluateScenario(defender, multiHit, {
+      calculateHit: () => ({
+        hitId: "bullet-seed",
+        damageRolls: [999],
+        damageRollsByHit: [[40], [40]],
+        damageRange: { min: 80, max: 80, percentMin: 50, percentMax: 50 },
+      }),
+    });
+
+    expect(result.passed).toBe(true);
+    expect(result.survivalProbability).toBe(1);
+  });
+
   it("passes hit-specific field state to the damage adapter", () => {
     const defender = makeBuild("target", "カイリュー");
     const attacker = makeBuild("attacker", "ピカチュウ");

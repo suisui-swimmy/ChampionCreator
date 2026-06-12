@@ -29,6 +29,7 @@ import {
 } from "./localization/resolver";
 import {
   applyCandidateToTarget,
+  applyMoveHitCountDefaults,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
   buildTargetBuildFromUi,
@@ -710,7 +711,11 @@ export function App() {
         ? {
             ...scenario,
             attacks: scenario.attacks.map((attack) => (
-              attack.id === attackId ? { ...attack, [key]: value } : attack
+              attack.id === attackId
+                ? key === "moveInput" && scenario.adjustmentType === "defence"
+                  ? applyMoveHitCountDefaults(attack, String(value))
+                  : { ...attack, [key]: value }
+                : attack
             )),
           }
         : scenario

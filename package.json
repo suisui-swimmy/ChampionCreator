@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "generate:localization-seed": "node scripts/generate-localization-seed.mjs",
+    "generate:move-hit-counts": "node scripts/add-move-hit-counts.mjs",
     "generate:pokemon-abilities": "node scripts/generate-pokemon-abilities.mjs",
     "validate:artwork-assets": "node scripts/validate-artwork-assets.mjs",
     "validate:localization": "node scripts/validate-localization.mjs",

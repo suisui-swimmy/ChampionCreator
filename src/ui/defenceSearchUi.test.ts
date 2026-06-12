@@ -6,6 +6,7 @@ import type {
 } from "../worker/defenceSearchWorkerClient";
 import {
   applyCandidateToTarget,
+  applyMoveHitCountDefaults,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
   applyTopCandidateToTarget,
@@ -405,6 +406,43 @@ describe("buildDefenceSearchInput", () => {
     const input = buildDefenceSearchInput(target, [multiAttackScenario]);
 
     expect(input.scenarios[0].hits[1].constraint?.requiredSurvivedHits).toBe(2);
+  });
+
+  it("auto-fills defence hit counts to the selected multi-hit move's maximum", () => {
+    const attack = createDefaultScenarioForms()[0].attacks[0];
+
+    const updated = applyMoveHitCountDefaults(attack, "タネマシンガン");
+
+    expect(updated.moveInput).toBe("タネマシンガン");
+    expect(updated.repeat).toBe(5);
+    expect(updated.requiredSurvivedHits).toBe(5);
+  });
+
+  it("clears previous multi-hit auto-fill when switching back to a single-hit move", () => {
+    const attack = applyMoveHitCountDefaults(createDefaultScenarioForms()[0].attacks[0], "タネマシンガン");
+
+    const updated = applyMoveHitCountDefaults(attack, "ふいうち");
+
+    expect(updated.moveInput).toBe("ふいうち");
+    expect(updated.repeat).toBe(1);
+    expect(updated.requiredSurvivedHits).toBe(1);
+  });
+
+  it("passes multi-hit move counts to the domain hit", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const multiHitAttack = applyMoveHitCountDefaults(defaultScenario.attacks[0], "タネマシンガン");
+
+    const input = buildDefenceSearchInput(target, [{
+      ...defaultScenario,
+      attacks: [multiHitAttack],
+    }]);
+
+    expect(input.scenarios[0].hits[0]).toMatchObject({
+      repeat: 5,
+      moveHits: 5,
+    });
+    expect(input.scenarios[0].hits[0].constraint?.requiredSurvivedHits).toBe(5);
   });
 
   it("treats completely blank attack cards as drafts", () => {
