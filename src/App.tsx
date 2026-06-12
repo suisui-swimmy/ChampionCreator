@@ -2024,7 +2024,6 @@ function MobileOverview({
   onRun,
   onCancel,
 }: MobileOverviewProps) {
-  const topCandidate = candidates[0];
   const boardRef = useRef<HTMLElement | null>(null);
   const targetMiniRef = useRef<HTMLButtonElement | null>(null);
   const scenarioCardRefs = useRef(new Map<string, HTMLElement>());
@@ -2353,6 +2352,14 @@ function MobileOverview({
                 </div>
               );
             })}
+            <button
+              className="mobile-scenario-add-card"
+              type="button"
+              aria-label="シナリオを追加"
+              onClick={onAddScenario}
+            >
+              <span aria-hidden="true">+</span>
+            </button>
           </div>
         </section>
       </section>
@@ -2380,21 +2387,7 @@ function MobileOverview({
             {searchStatus === "running" ? "計算中..." : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
           </Button>
         </div>
-        <button className="mobile-candidate-dock-main" type="button" onClick={onOpenResults}>
-          <span>
-            <strong id="mobile-candidate-title">候補一覧</strong>
-            <small>{searchStatus === "running" ? "探索中" : `候補 ${candidates.length} 件`}</small>
-          </span>
-          {topCandidate ? (
-            <span className="mobile-top-candidate">
-              <b>1位</b>
-              <CandidateStatPointSpread statPoints={topCandidate.appliedStatPoints} />
-              <em>{topCandidate.bottleneckLabel}</em>
-            </span>
-          ) : (
-            <span className="mobile-top-candidate empty">計算結果</span>
-          )}
-        </button>
+        <h2 id="mobile-candidate-title" className="mobile-candidate-title">候補一覧</h2>
         {candidates.length > 0 ? (
           <div className="mobile-candidate-preview-list" aria-label="上位候補プレビュー">
             {candidates.slice(0, 3).map((candidate) => (

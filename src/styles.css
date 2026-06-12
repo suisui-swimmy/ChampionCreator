@@ -3400,7 +3400,6 @@ textarea {
   }
 
   .mobile-target-mini-main,
-  .mobile-candidate-dock-main > span:first-child,
   .mobile-scenario-title,
   .mobile-attack-summary span {
     display: grid;
@@ -3410,7 +3409,6 @@ textarea {
   .mobile-target-mini-main strong,
   .mobile-target-heading h2,
   .mobile-board-heading h2,
-  .mobile-candidate-dock-main strong,
   .mobile-scenario-title strong,
   .mobile-attack-summary strong {
     overflow: hidden;
@@ -3422,7 +3420,6 @@ textarea {
   }
 
   .mobile-target-mini-main span,
-  .mobile-candidate-dock-main small,
   .mobile-scenario-title span,
   .mobile-attack-summary small,
   .mobile-attack-summary em,
@@ -3448,7 +3445,7 @@ textarea {
     min-width: 0;
   }
 
-  .mobile-target-stat-list span {
+  .mobile-target-stat-list > span {
     display: grid;
     grid-template-columns: 18px 16px minmax(0, 1fr) auto;
     align-items: center;
@@ -3550,6 +3547,23 @@ textarea {
 
   .mobile-scenario-flow-row {
     min-width: 0;
+  }
+
+  .mobile-scenario-add-card {
+    display: grid;
+    place-items: center;
+    min-height: 92px;
+    border: 1px dashed rgba(238, 241, 237, 0.22);
+    border-radius: 7px;
+    background: rgba(17, 21, 22, 0.72);
+    color: var(--gold);
+    font-size: 28px;
+    font-weight: 900;
+  }
+
+  .mobile-scenario-add-card:focus-visible {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
   }
 
   .mobile-flow-edge-layer {
@@ -3738,7 +3752,7 @@ textarea {
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     margin-inline: -2px;
-    padding: 0 44px 4px 2px;
+    padding: 0 2px 4px;
     scroll-snap-type: x proximity;
   }
 
@@ -3768,9 +3782,6 @@ textarea {
   }
 
   .mobile-attack-add {
-    position: sticky;
-    right: 0;
-    z-index: 2;
     flex: 0 0 42px;
     min-height: 52px;
     border: 1px dashed var(--line-strong);
@@ -3780,7 +3791,6 @@ textarea {
     font-size: 24px;
     font-weight: 900;
     scroll-snap-align: start;
-    box-shadow: -10px 0 16px rgba(13, 15, 16, 0.72);
   }
 
   .mobile-candidate-dock {
@@ -3791,52 +3801,11 @@ textarea {
     padding: 8px;
   }
 
-  .mobile-candidate-dock-main {
-    display: grid;
-    grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    padding: 0;
-    text-align: left;
-  }
-
-  .mobile-top-candidate {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 0;
+  .mobile-candidate-title {
+    margin: 0;
     color: var(--text);
-    font-size: 11px;
-    font-weight: 850;
-  }
-
-  .mobile-top-candidate .candidate-stat-spread {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .mobile-top-candidate b {
-    color: var(--gold);
-    white-space: nowrap;
-  }
-
-  .mobile-top-candidate em {
-    overflow: hidden;
-    max-width: 88px;
-    color: var(--muted);
-    font-size: 10px;
-    font-style: normal;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mobile-top-candidate.empty {
-    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.2;
   }
 
   .mobile-candidate-preview-list {
@@ -4566,7 +4535,6 @@ textarea {
   .mobile-target-mini-main strong,
   .mobile-target-heading h2,
   .mobile-board-heading h2,
-  .mobile-candidate-dock-main strong,
   .mobile-scenario-title strong,
   .mobile-attack-summary strong {
     font-size: 12px;
