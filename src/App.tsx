@@ -624,11 +624,25 @@ export function App() {
     };
   }, [scenarioForms, targetBuildPreview]);
 
+  const resetActiveSearch = () => {
+    activeRequestRef.current?.cancel();
+    activeRequestRef.current = null;
+    setSelectedCandidateId(null);
+    setAppliedCandidateId(null);
+    if (applyTimerRef.current !== null) {
+      window.clearTimeout(applyTimerRef.current);
+      applyTimerRef.current = null;
+    }
+    dispatchSearch({ type: "reset" });
+  };
+
   const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
+    resetActiveSearch();
     setTargetForm((current) => ({ ...current, [key]: value }));
   };
 
   const updateTargetEv = (key: StatKey, value: number) => {
+    resetActiveSearch();
     setTargetForm((current) => {
       const nextValue = clampTargetStatPointChange(current.statPoints, key, value);
       return {
@@ -643,12 +657,14 @@ export function App() {
     key: K,
     value: ScenarioFormState[K],
   ) => {
+    resetActiveSearch();
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === id ? { ...scenario, [key]: value } : scenario
     )));
   };
 
   const toggleScenarioAdjustmentFromDirection = (id: string) => {
+    resetActiveSearch();
     setScenarioForms((current) => current.map((scenario) => {
       if (scenario.id !== id) {
         return scenario;
@@ -666,6 +682,7 @@ export function App() {
   };
 
   const updateScenarioAttackerEv = (id: string, key: StatKey, value: number) => {
+    resetActiveSearch();
     const [scenarioId, attackId] = id.split(":");
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
@@ -687,6 +704,7 @@ export function App() {
     key: K,
     value: ScenarioAttackFormState[K],
   ) => {
+    resetActiveSearch();
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
         ? {
@@ -700,6 +718,7 @@ export function App() {
   };
 
   const handleAddAttack = (scenarioId: string) => {
+    resetActiveSearch();
     const scenarioToExtend = scenarioForms.find((scenario) => scenario.id === scenarioId);
     if (!scenarioToExtend) {
       return null;
@@ -731,6 +750,7 @@ export function App() {
   };
 
   const handleRemoveAttack = (scenarioId: string, attackId: string) => {
+    resetActiveSearch();
     const scenario = scenarioForms.find((item) => item.id === scenarioId);
     const attackIndex = scenario?.attacks.findIndex((attack) => attack.id === attackId) ?? -1;
     const nextFocusedAttackId = scenario
@@ -751,11 +771,13 @@ export function App() {
   };
 
   const handleAddScenario = () => {
+    resetActiveSearch();
     const nextScenario = createScenario(scenarioForms.length);
     setScenarioForms((current) => [...current, nextScenario]);
   };
 
   const handleRemoveScenario = (id: string) => {
+    resetActiveSearch();
     setScenarioForms((current) => (
       current.length <= 1 ? current : current.filter((scenario) => scenario.id !== id)
     ));
@@ -788,13 +810,6 @@ export function App() {
     activeRequestRef.current?.cancel();
     dispatchSearch({ type: "cancel", requestId: activeRequestRef.current?.requestId });
     activeRequestRef.current = null;
-  };
-
-  const resetActiveSearch = () => {
-    activeRequestRef.current?.cancel();
-    activeRequestRef.current = null;
-    setSelectedCandidateId(null);
-    dispatchSearch({ type: "reset" });
   };
 
   const persistBoxEntries = (nextEntries: BoxEntry[], message: string): boolean => {
@@ -1115,7 +1130,7 @@ export function App() {
             />
             <span className="search-progress-label" aria-live="polite">
               <strong>{Math.round(searchState.progress * 100)}%</strong>
-              <span>{searchState.searchedCandidates} / {searchState.totalCandidates || "-"} 候補</span>
+              <span>評価 {searchState.searchedCandidates} / {searchState.totalCandidates || "-"}</span>
             </span>
           </div>
           <Button
@@ -1159,16 +1174,27 @@ export function App() {
             本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します
           </span>
         </div>
-        <a
-          className="app-footer-contact"
-          href="https://x.com/peixe0307"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="不具合報告 / お問い合わせ: X @peixe0307"
-        >
-          <span>不具合報告 / お問い合わせ</span>
-          <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
-        </a>
+        <div className="app-footer-links" aria-label="不具合報告とお問い合わせ">
+          <a
+            className="app-footer-contact"
+            href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
+            target="_blank"
+            rel="noreferrer"
+          >
+            不具合報告
+          </a>
+          <span aria-hidden="true"> | </span>
+          <a
+            className="app-footer-contact"
+            href="https://x.com/peixe0307"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="お問い合わせ: X @peixe0307"
+          >
+            <span>お問い合わせ</span>
+            <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
+          </a>
+        </div>
       </footer>
     </div>
   );
@@ -2369,7 +2395,7 @@ function MobileOverview({
           <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
         </div>
         <div className="mobile-candidate-actions">
-          <span>{Math.round(searchProgress * 100)}% / {searchedCandidates} / {totalCandidates || "-"} 候補</span>
+          <span>{Math.round(searchProgress * 100)}% / 評価 {searchedCandidates} / {totalCandidates || "-"}</span>
           <Button
             variant="ghost"
             size="small"
@@ -4074,6 +4100,15 @@ export function ResultsPanel({
     () => new Map(scenarios.map((scenario) => [scenario.id, scenario])),
     [scenarios],
   );
+  const attackLabelsByScenarioId = useMemo(
+    () => new Map(scenarios.map((scenario) => [
+      scenario.id,
+      scenario.attacks
+        .filter((attack) => attack.moveInput.trim())
+        .map((attack, attackIndex) => formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)),
+    ])),
+    [scenarios],
+  );
 
   return (
     <section className="results-panel" aria-labelledby="results-title">
@@ -4163,16 +4198,20 @@ export function ResultsPanel({
                         </div>
                         {result.hitEvaluations.length > 0 ? (
                           <ul>
-                            {result.hitEvaluations.map((hit) => (
+                            {result.hitEvaluations.map((hit, hitIndex) => {
+                              const attackLabel = attackLabelsByScenarioId.get(result.scenarioId)?.[hitIndex];
+                              const detailLabel = attackLabel ? `${scenarioLabel} / ${attackLabel}` : scenarioLabel;
+                              return (
                               <li key={hit.hitId}>
-                                <strong>{scenarioLabel}</strong>
+                                <strong>{detailLabel}</strong>
                                 <span>
                                   {hit.description
                                     ? formatLocalizedDamageDescription(hit.description)
                                     : `被ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}
                                 </span>
                               </li>
-                            ))}
+                              );
+                            })}
                           </ul>
                         ) : null}
                       </section>

@@ -779,7 +779,7 @@ describe("buildSpeedAdjustmentInput", () => {
     expect(input.field.weather).toBe("rain");
     expect(input.opponentSide.tailwind).toBe(true);
     expect(input.orderMode).toBe("normal");
-    expect(input.comparison).toBe("outspeed");
+    expect(input.comparison).toBe("tie");
     expect(input.requiredSpeedOffset).toBe(3);
     expect(input.opponentItemMultiplier).toBe("1.5");
     expect(input.opponentAbilityMultiplier).toBe("2");

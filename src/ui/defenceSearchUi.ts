@@ -776,7 +776,7 @@ export const buildSpeedAdjustmentInput = (
     opponentBoosts: normalizeBoosts(attackForm.attackerBoosts),
     targetSide: { ...emptySide },
     opponentSide: { ...emptySide, tailwind: attackForm.speedMoveModifier === "tailwind" },
-    comparison: "outspeed",
+    comparison: attackForm.speedComparison,
     orderMode: attackForm.speedMoveModifier === "trick-room" ? "trick-room" : "normal",
     requiredSpeedOffset: hasManualTargetSpeed ? 0 : clampInt(attackForm.speedRequiredOffset, 0, 10000),
     manualTargetSpeed: hasManualTargetSpeed ? clampInt(attackForm.speedTargetValue, 0, 10000) : undefined,

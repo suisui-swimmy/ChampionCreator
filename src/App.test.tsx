@@ -125,7 +125,7 @@ describe("App", () => {
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
     expect(html).toContain('role="progressbar"');
-    expect(html).toContain("0 / - 候補");
+    expect(html).toContain("評価 0 / -");
     expect(html).toContain(">キャンセル<");
     expect(html).toContain(">計算開始<");
     expect(html).toContain("候補一覧");
@@ -134,10 +134,14 @@ describe("App", () => {
     expect(html).toContain('aria-label="権利表記"');
     expect(html).toContain("© 2026 suisui-swimmy");
     expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
+    expect(html).toContain('class="app-footer-links"');
     expect(html).not.toContain("ゲームフリーク に帰属します。");
+    expect(html).toContain('href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"');
     expect(html).toContain('href="https://x.com/peixe0307"');
-    expect(html).toContain("不具合報告 / お問い合わせ");
-    expect(html).not.toContain("不具合報告 / お問い合わせ :");
+    expect(html).toContain("不具合報告");
+    expect(html).toContain(" | ");
+    expect(html).toContain("お問い合わせ");
+    expect(html).not.toContain("不具合報告 / お問い合わせ");
     expect(html).toContain("assets/social/x-logo.svg");
     expect(html).not.toContain("火力ライン結果");
     expect(html).not.toContain("pokemon-artwork-meta");
@@ -466,7 +470,7 @@ describe("App", () => {
     expect(html).toContain('class="candidate-disclosure"');
     expect(html).not.toContain("▼");
     expect(html).not.toContain("▲");
-    expect(html).toContain("シナリオA</strong><span>A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    expect(html).toContain("シナリオA / 耐久調整A</strong><span>A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
     expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
     expect(html).toContain("シナリオ2</strong><span>C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
     expect(html).not.toContain("火力ライン結果");
@@ -476,6 +480,71 @@ describe("App", () => {
     expect(closedHtml).not.toContain("▲");
     expect(closedHtml).not.toContain("A32+ ドドゲザン ふいうち");
     expect(closedHtml).not.toContain("C7 メガマフォクシー サイコキネシス");
+  });
+
+  it("labels each expanded damage line with its attack card inside multi-attack scenarios", () => {
+    const candidate: CandidateResult = {
+      id: "candidate-multi",
+      rank: 1,
+      candidate: { hp: 8, def: 12, spd: 4 },
+      appliedStatPoints: { hp: 8, atk: 0, def: 12, spa: 0, spd: 4, spe: 0 },
+      appliedEvs: { hp: 60, atk: 0, def: 92, spa: 0, spd: 28, spe: 0 },
+      usedStatPointBudget: 24,
+      remainingStatPointBudget: 42,
+      usedEvBudget: 180,
+      remainingEvBudget: 328,
+      passed: true,
+      bottleneckLabel: "連続被弾 +1.0%",
+      scenarioResults: [{
+        scenarioId: "scenario-multi",
+        passed: true,
+        survivalProbability: 1,
+        requiredSurvivedHits: 2,
+        minSurvivalProbability: 1,
+        bottleneckLabel: "連続被弾 +1.0%",
+        hitEvaluations: [
+          {
+            hitId: "scenario-multi-hit-1",
+            damageRolls: [40],
+            damageRange: { min: 40, max: 40, percentMin: 25, percentMax: 25 },
+          },
+          {
+            hitId: "scenario-multi-hit-2",
+            damageRolls: [50],
+            damageRange: { min: 50, max: 50, percentMin: 31.3, percentMax: 31.3 },
+          },
+        ],
+      }],
+    };
+    const [baseScenario] = createDefaultScenarioForms();
+    const scenario = {
+      ...baseScenario,
+      id: "scenario-multi",
+      label: "連続被弾",
+      attacks: [
+        { ...baseScenario.attacks[0], id: "attack-a", label: "物理技A", moveInput: "ふいうち" },
+        { ...baseScenario.attacks[0], id: "attack-b", label: "特殊技B", moveInput: "サイコキネシス" },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[candidate]}
+        selectedCandidateId={candidate.id}
+        appliedCandidateId={null}
+        scenarios={[scenario]}
+        status="complete"
+        offenseResults={[]}
+        speedResults={[]}
+        strictestFailureLabel={null}
+        targetLabel="メガマフォクシー"
+        resultAlertMessage={null}
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("連続被弾 / 物理技A</strong><span>被ダメージ 40 (25.0-25.0%)");
+    expect(html).toContain("連続被弾 / 特殊技B</strong><span>被ダメージ 50 (31.3-31.3%)");
   });
 
   it("places integrated firepower failures in the candidate list", () => {

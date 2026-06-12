@@ -164,4 +164,25 @@ describe("shareState", () => {
 
     expect(parsed.scenarios[0].attacks[0].speedMoveModifier).toBe("tailwind");
   });
+
+  it("falls back to default speed settings when imported JSON contains invalid values", () => {
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: createDefaultScenarioForms().map((scenario) => ({
+        ...scenario,
+        adjustmentType: "speed",
+        attacks: scenario.attacks.map((attack) => ({
+          ...attack,
+          speedComparison: "slower",
+          speedItemMultiplier: "triple",
+          speedAbilityMultiplier: "half-ish",
+        })),
+      })),
+    }));
+
+    expect(parsed.scenarios[0].attacks[0].speedComparison).toBe("outspeed");
+    expect(parsed.scenarios[0].attacks[0].speedItemMultiplier).toBe("auto");
+    expect(parsed.scenarios[0].attacks[0].speedAbilityMultiplier).toBe("auto");
+  });
 });

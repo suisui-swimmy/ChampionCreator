@@ -30,7 +30,9 @@ const mergeObject = <T extends object>(base: T, value: unknown): T => (
 const pokemonStatuses = new Set<PokemonStatus>(["none", "slp", "psn", "brn", "frz", "par", "tox"]);
 const scenarioAdjustmentTypes = new Set<ScenarioAdjustmentType>(["defence", "offense", "speed"]);
 const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["opponent", "manual"]);
+const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["outspeed", "tie"]);
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
+const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
 
 const normalizePokemonStatus = (value: unknown, fallback: PokemonStatus): PokemonStatus =>
   typeof value === "string" && pokemonStatuses.has(value as PokemonStatus)
@@ -64,7 +66,10 @@ const normalizeAttack = (
   const input = mergeObject(defaults, value) as ScenarioAttackFormState & Record<string, unknown>;
   const hasDefenderStatus = isRecord(value) && "defenderStatus" in value;
   const hasSpeedTargetMode = isRecord(value) && "speedTargetMode" in value;
+  const hasSpeedComparison = isRecord(value) && "speedComparison" in value;
   const hasSpeedMoveModifier = isRecord(value) && "speedMoveModifier" in value;
+  const hasSpeedItemMultiplier = isRecord(value) && "speedItemMultiplier" in value;
+  const hasSpeedAbilityMultiplier = isRecord(value) && "speedAbilityMultiplier" in value;
   return {
     ...defaults,
     ...input,
@@ -74,11 +79,26 @@ const normalizeAttack = (
       && speedTargetModes.has(input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"])
       ? input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"]
       : Number(input.speedTargetValue) > 0 ? "manual" : defaults.speedTargetMode,
+    speedComparison: hasSpeedComparison
+      && typeof input.speedComparison === "string"
+      && speedComparisons.has(input.speedComparison as ScenarioAttackFormState["speedComparison"])
+      ? input.speedComparison as ScenarioAttackFormState["speedComparison"]
+      : defaults.speedComparison,
     speedMoveModifier: hasSpeedMoveModifier
       && typeof input.speedMoveModifier === "string"
       && speedMoveModifiers.has(input.speedMoveModifier as ScenarioAttackFormState["speedMoveModifier"])
       ? input.speedMoveModifier as ScenarioAttackFormState["speedMoveModifier"]
       : input.tailwind === true ? "tailwind" : defaults.speedMoveModifier,
+    speedItemMultiplier: hasSpeedItemMultiplier
+      && typeof input.speedItemMultiplier === "string"
+      && speedManualMultipliers.has(input.speedItemMultiplier as ScenarioAttackFormState["speedItemMultiplier"])
+      ? input.speedItemMultiplier as ScenarioAttackFormState["speedItemMultiplier"]
+      : defaults.speedItemMultiplier,
+    speedAbilityMultiplier: hasSpeedAbilityMultiplier
+      && typeof input.speedAbilityMultiplier === "string"
+      && speedManualMultipliers.has(input.speedAbilityMultiplier as ScenarioAttackFormState["speedAbilityMultiplier"])
+      ? input.speedAbilityMultiplier as ScenarioAttackFormState["speedAbilityMultiplier"]
+      : defaults.speedAbilityMultiplier,
     defenderStatus: hasDefenderStatus
       ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
       : legacyTargetStatus,
