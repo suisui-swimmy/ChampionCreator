@@ -2647,107 +2647,109 @@ function TargetPanel({
         </div>
       </div>
 
-      <div className="target-identity">
-        <PokemonArtworkFrame
-          match={artwork}
-          fallbackLabel={targetForm.pokemonInput}
-          variant="target"
-          dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
-        />
-        <div className="target-summary compact">
-          <EntityTextField
-            kind="pokemon"
-            label="ポケモン"
-            value={targetForm.pokemonInput}
-            onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
-            onSelectValue={(value) => onUpdateField("pokemonInput", value)}
+      <div className="target-sheet-body">
+        <div className="target-identity">
+          <PokemonArtworkFrame
+            match={artwork}
+            fallbackLabel={targetForm.pokemonInput}
+            variant="target"
+            dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
           />
-          <NatureMatrixField
-            label="性格"
-            value={targetForm.natureInput}
-            onChange={(value) => onUpdateField("natureInput", value)}
-          />
-          <EntityTextField
-            kind="item"
-            label="持ち物"
-            value={targetForm.itemInput}
-            onChange={(event) => onUpdateField("itemInput", event.target.value)}
-            onSelectValue={(value) => onUpdateField("itemInput", value)}
-          />
-          <AbilityTextField
-            label="特性"
-            value={targetForm.abilityInput}
-            pokemonAbilityOptions={abilityOptions}
-            onChange={(event) => onUpdateField("abilityInput", event.target.value)}
-            onSelectAbility={(value) => onUpdateField("abilityInput", value)}
-          />
-          <label className="placeholder-field target-level-field">
-            <span>レベル</span>
-            <input
-              {...numericInputProps}
-              value={targetForm.level}
-              onFocus={selectInputValueOnFocus}
-              onChange={(event) => onUpdateField("level", clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
+          <div className="target-summary compact">
+            <EntityTextField
+              kind="pokemon"
+              label="ポケモン"
+              value={targetForm.pokemonInput}
+              onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
+              onSelectValue={(value) => onUpdateField("pokemonInput", value)}
             />
-          </label>
-          <MechanicControls
-            pokemonInput={targetForm.pokemonInput}
-            teraEnabled={targetForm.teraEnabled}
-            dmaxEnabled={targetForm.dmaxEnabled}
-            teraTypeInput={targetForm.teraTypeInput}
-            teraLabel={targetForm.teraEnabled ? "テラスタル解除" : "テラスタル"}
-            onPokemonInputChange={(value) => onUpdateField("pokemonInput", value)}
-            onTeraEnabledChange={(value) => onUpdateField("teraEnabled", value)}
-            onDmaxEnabledChange={(value) => onUpdateField("dmaxEnabled", value)}
-            onTeraTypeInputChange={(value) => onUpdateField("teraTypeInput", value)}
-          />
-        </div>
-      </div>
-
-      <div className={`ev-table${isSpLimitReached ? " is-sp-max" : ""}`} aria-label="調整対象のSP">
-        <div className="ev-header">
-          <span>能力</span>
-          <span aria-hidden="true" />
-          <span>実数値</span>
-          <span>現在SP</span>
-          <span>SP配分</span>
-          <span>ランク</span>
-        </div>
-        {statKeys.map((key) => (
-          <div className={`ev-row ${key}`} key={key}>
-            <strong><StatIcon stat={key} /></strong>
-            <NatureStatModifier natureLabel={targetForm.natureInput} stat={key} />
-            <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
-            <input
-              {...numericInputProps}
-              value={targetForm.statPoints[key]}
-              aria-label={`${statLabels[key]} SP`}
-              onChange={(event) => onUpdateEv(key, toStatPointInput(event.target.value))}
+            <NatureMatrixField
+              label="性格"
+              value={targetForm.natureInput}
+              onChange={(value) => onUpdateField("natureInput", value)}
             />
-            <StatPointCellBar
-              stat={key}
-              value={targetForm.statPoints[key]}
-              onChange={(value) => onUpdateEv(key, value)}
+            <EntityTextField
+              kind="item"
+              label="持ち物"
+              value={targetForm.itemInput}
+              onChange={(event) => onUpdateField("itemInput", event.target.value)}
+              onSelectValue={(value) => onUpdateField("itemInput", value)}
             />
-            {key === "hp" ? (
-              <span className="target-rank-placeholder" aria-hidden="true" />
-            ) : (
-              <RankSelectField
-                label={`${statLabels[key]}ランク`}
-                value={targetForm.boosts[key] ?? 0}
-                onChange={(value) => onUpdateField("boosts", {
-                  ...targetForm.boosts,
-                  [key]: value,
-                })}
+            <AbilityTextField
+              label="特性"
+              value={targetForm.abilityInput}
+              pokemonAbilityOptions={abilityOptions}
+              onChange={(event) => onUpdateField("abilityInput", event.target.value)}
+              onSelectAbility={(value) => onUpdateField("abilityInput", value)}
+            />
+            <label className="placeholder-field target-level-field">
+              <span>レベル</span>
+              <input
+                {...numericInputProps}
+                value={targetForm.level}
+                onFocus={selectInputValueOnFocus}
+                onChange={(event) => onUpdateField("level", clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
               />
-            )}
+            </label>
+            <MechanicControls
+              pokemonInput={targetForm.pokemonInput}
+              teraEnabled={targetForm.teraEnabled}
+              dmaxEnabled={targetForm.dmaxEnabled}
+              teraTypeInput={targetForm.teraTypeInput}
+              teraLabel={targetForm.teraEnabled ? "テラスタル解除" : "テラスタル"}
+              onPokemonInputChange={(value) => onUpdateField("pokemonInput", value)}
+              onTeraEnabledChange={(value) => onUpdateField("teraEnabled", value)}
+              onDmaxEnabledChange={(value) => onUpdateField("dmaxEnabled", value)}
+              onTeraTypeInputChange={(value) => onUpdateField("teraTypeInput", value)}
+            />
           </div>
-        ))}
-      </div>
+        </div>
 
-      <div className={`sp-summary${isSpLimitReached ? " is-sp-max" : ""}`}>
-        <span>合計SP</span>
-        <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
+        <div className={`ev-table${isSpLimitReached ? " is-sp-max" : ""}`} aria-label="調整対象のSP">
+          <div className="ev-header">
+            <span>能力</span>
+            <span aria-hidden="true" />
+            <span>実数値</span>
+            <span>現在SP</span>
+            <span>SP配分</span>
+            <span>ランク</span>
+          </div>
+          {statKeys.map((key) => (
+            <div className={`ev-row ${key}`} key={key}>
+              <strong><StatIcon stat={key} /></strong>
+              <NatureStatModifier natureLabel={targetForm.natureInput} stat={key} />
+              <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
+              <input
+                {...numericInputProps}
+                value={targetForm.statPoints[key]}
+                aria-label={`${statLabels[key]} SP`}
+                onChange={(event) => onUpdateEv(key, toStatPointInput(event.target.value))}
+              />
+              <StatPointCellBar
+                stat={key}
+                value={targetForm.statPoints[key]}
+                onChange={(value) => onUpdateEv(key, value)}
+              />
+              {key === "hp" ? (
+                <span className="target-rank-placeholder" aria-hidden="true" />
+              ) : (
+                <RankSelectField
+                  label={`${statLabels[key]}ランク`}
+                  value={targetForm.boosts[key] ?? 0}
+                  onChange={(value) => onUpdateField("boosts", {
+                    ...targetForm.boosts,
+                    [key]: value,
+                  })}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className={`sp-summary${isSpLimitReached ? " is-sp-max" : ""}`}>
+          <span>合計SP</span>
+          <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
+        </div>
       </div>
     </section>
   );

@@ -705,6 +705,10 @@ textarea:focus-visible,
   margin-bottom: 12px;
 }
 
+.target-sheet-body {
+  display: contents;
+}
+
 .target-level-field,
 .placeholder-field.target-level-field {
   display: grid;
@@ -3984,16 +3988,37 @@ textarea {
   }
 
   .mobile-target-open .target-panel {
+    display: flex;
+    flex-direction: column;
     max-width: 100vw;
     height: auto;
     max-height: 100vh;
     max-height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior-x: none;
+    overflow: hidden;
+    overscroll-behavior: contain;
     touch-action: pan-y;
   }
 
+  .mobile-target-open .target-panel .section-heading {
+    position: relative;
+    top: auto;
+    z-index: 2;
+    flex: 0 0 auto;
+  }
+
+  .mobile-target-open .target-sheet-body {
+    display: block;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: calc(100vh - 52px);
+    max-height: calc(100dvh - 52px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-target-open .target-sheet-body,
   .mobile-target-open .target-identity,
   .mobile-target-open .target-summary.compact,
   .mobile-target-open .ev-table,
@@ -4527,7 +4552,10 @@ textarea {
     line-height: 1.05;
   }
 
-  .mobile-target-open .target-panel,
+  .mobile-target-open .target-panel {
+    display: flex;
+  }
+
   .mobile-scenarios-open .scenario-panel,
   .mobile-results-open .results-panel {
     display: block;
