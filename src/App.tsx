@@ -3499,7 +3499,7 @@ function AttackCard({
                     />
                     <span>{speedPrimaryConditionLabel}</span>
                     <strong>{actualStats?.spe ?? "-"}</strong>
-                    <span>{isTrickRoomSpeed ? "-" : "+"}</span>
+                    <span className="speed-offset-sign">{isTrickRoomSpeed ? "-" : "+"}</span>
                   </label>
                   <NumberStepper
                     className="speed-offset-input"

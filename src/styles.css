@@ -2273,10 +2273,20 @@ textarea {
   color: #ead8ff;
 }
 
-.speed-target-mode-option strong {
+.speed-target-mode-option strong,
+.speed-offset-sign {
   color: var(--text);
   font-size: 14px;
   font-weight: 900;
+}
+
+.speed-offset-sign {
+  display: inline;
+  line-height: 1;
+}
+
+.scenario-row.speed.trick-room .speed-offset-sign {
+  color: var(--text);
 }
 
 .speed-offset-input {
@@ -4004,6 +4014,7 @@ textarea {
     top: auto;
     z-index: 2;
     flex: 0 0 auto;
+    margin-bottom: 14px;
   }
 
   .mobile-target-open .target-sheet-body {
@@ -4015,6 +4026,7 @@ textarea {
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding-top: 2px;
     padding-bottom: calc(18px + env(safe-area-inset-bottom));
   }
 
@@ -4143,6 +4155,7 @@ textarea {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
     min-width: 0;
+    overflow: hidden;
   }
 
   .mobile-scenarios-open .scenario-adjustment-card {
@@ -4260,7 +4273,12 @@ textarea {
   }
 
   .mobile-scenarios-open .number-stepper {
+    grid-template-columns: 34px minmax(40px, 1fr) 34px;
     height: 36px;
+  }
+
+  .mobile-scenarios-open .speed-offset-input {
+    width: 120px;
   }
 
   .mobile-scenarios-open .number-stepper button {
@@ -4315,7 +4333,7 @@ textarea {
 
   .mobile-scenarios-open .attack-setting-section--target-condition .scenario-defender-ranks,
   .mobile-scenarios-open .scenario-defender-ranks {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 64px repeat(2, minmax(74px, 86px));
     gap: 6px;
   }
 
@@ -4409,7 +4427,7 @@ textarea {
 
   .mobile-results-open .candidate-bottleneck {
     grid-row: 3;
-    grid-column: 1 / -1;
+    grid-column: 2 / -1;
     color: #d7c58a;
     font-size: 11px;
     line-height: 1.35;
