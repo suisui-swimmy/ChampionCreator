@@ -64,6 +64,42 @@ describe("resolveEntity", () => {
     );
   });
 
+  it("resolves generated Pokemon form labels that would otherwise collide with internal variants", () => {
+    expect(resolveEntity("pokemon", "イッカネズミ")).toMatchObject({
+      status: "exact",
+      canonicalName: "Maushold",
+      displayNameJa: "イッカネズミ",
+    });
+    expect(resolveEntity("pokemon", "イッカネズミ ４ひきかぞく")).toMatchObject({
+      status: "exact",
+      canonicalName: "Maushold-Four",
+      displayNameJa: "イッカネズミ ４ひきかぞく",
+    });
+    expect(resolveEntity("pokemon", "イッカネズミ4ひきかぞく")).toMatchObject({
+      status: "exact",
+      canonicalName: "Maushold-Four",
+    });
+
+    expect(resolveEntity("pokemon", "オーガポン いしずえのめん")).toMatchObject({
+      status: "exact",
+      canonicalName: "Ogerpon-Cornerstone",
+      displayNameJa: "オーガポン いしずえのめん",
+    });
+    expect(resolveEntity("pokemon", "オーガポンいしずえのめん")).toMatchObject({
+      status: "exact",
+      canonicalName: "Ogerpon-Cornerstone",
+    });
+    expect(resolveEntity("pokemon", "オーガポン いしずえのかめん")).toMatchObject({
+      status: "alias",
+      canonicalName: "Ogerpon-Cornerstone",
+    });
+    expect(resolveEntity("pokemon", "オーガポン いしずえのめん テラスタル")).toMatchObject({
+      status: "exact",
+      canonicalName: "Ogerpon-Cornerstone-Tera",
+      displayNameJa: "オーガポン いしずえのめん テラスタル",
+    });
+  });
+
   it("resolves generated option data for other UI entity fields", () => {
     expect(resolveEntity("move", "インファイト")).toMatchObject({
       status: "exact",

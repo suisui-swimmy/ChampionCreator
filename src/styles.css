@@ -4016,11 +4016,32 @@ textarea {
     padding: 10px;
   }
 
-  .mobile-scenarios-open .mobile-scenario-detail-panel {
+  .mobile-scenarios-open .scenario-panel.mobile-scenario-detail-panel {
+    display: flex;
+    flex-direction: column;
     max-width: 100vw;
-    overflow-x: hidden;
-    overscroll-behavior-x: none;
+    overflow: hidden;
+    overscroll-behavior: contain;
     touch-action: pan-y;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .section-heading,
+  .mobile-scenarios-open .mobile-scenario-detail-panel .mobile-sheet-scenario-nav {
+    position: relative;
+    top: auto;
+    z-index: 2;
+    flex: 0 0 auto;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-stack {
+    align-content: start;
+    align-items: start;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
   }
 
   .mobile-scenarios-open .mobile-scenario-detail-panel .mobile-sheet-scenario-nav,

@@ -1,5 +1,41 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "m1-manual-overrides-2026-05-26",
-  "entries": []
+  "dataVersion": "manual-overrides-2026-06-13",
+  "entries": [
+    {
+      "kind": "pokemon",
+      "id": "maushold",
+      "displayNameJa": "イッカネズミ",
+      "sourceStatus": "manual",
+      "note": "Avoids the generated duplicate 4-family label so イッカネズミ ４ひきかぞく resolves to Maushold-Four."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerpontealtera",
+      "displayNameJa": "オーガポン みどりのめん テラスタル",
+      "sourceStatus": "manual",
+      "note": "Keeps normal mask labels unambiguous; Tera state is controlled separately in the UI."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerponcornerstonetera",
+      "displayNameJa": "オーガポン いしずえのめん テラスタル",
+      "sourceStatus": "manual",
+      "note": "Keeps normal mask labels unambiguous; Tera state is controlled separately in the UI."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerponhearthflametera",
+      "displayNameJa": "オーガポン かまどのめん テラスタル",
+      "sourceStatus": "manual",
+      "note": "Keeps normal mask labels unambiguous; Tera state is controlled separately in the UI."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerponwellspringtera",
+      "displayNameJa": "オーガポン いどのめん テラスタル",
+      "sourceStatus": "manual",
+      "note": "Keeps normal mask labels unambiguous; Tera state is controlled separately in the UI."
+    }
+  ]
 }

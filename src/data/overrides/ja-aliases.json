@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "m1-manual-overrides-2026-05-26",
+  "dataVersion": "manual-overrides-2026-06-13",
   "entries": [
     {
       "kind": "pokemon",
@@ -22,6 +22,34 @@
       "aliasesJa": ["10万ボルト", "十万ボルト"],
       "sourceStatus": "manual",
       "note": "Numeric spelling variants for Japanese input."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerpon",
+      "aliasesJa": ["オーガポン みどりのかめん"],
+      "sourceStatus": "manual",
+      "note": "Accepts mask wording variants for Ogerpon form input."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerponcornerstone",
+      "aliasesJa": ["オーガポン いしずえのかめん"],
+      "sourceStatus": "manual",
+      "note": "Accepts mask wording variants for Ogerpon form input."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerponhearthflame",
+      "aliasesJa": ["オーガポン かまどのかめん"],
+      "sourceStatus": "manual",
+      "note": "Accepts mask wording variants for Ogerpon form input."
+    },
+    {
+      "kind": "pokemon",
+      "id": "ogerponwellspring",
+      "aliasesJa": ["オーガポン いどのかめん"],
+      "sourceStatus": "manual",
+      "note": "Accepts mask wording variants for Ogerpon form input."
     }
   ]
 }

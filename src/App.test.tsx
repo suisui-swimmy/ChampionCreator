@@ -43,6 +43,12 @@ describe("App", () => {
     expect(getPokemonSuggestionKeyAction("Escape", 0, 2)).toEqual({ type: "close" });
   });
 
+  it("does not mark selectable Pokemon form suggestions as unresolved", () => {
+    expect(isUnresolvedEntityInput("pokemon", "イッカネズミ ４ひきかぞく")).toBe(false);
+    expect(isUnresolvedEntityInput("pokemon", "オーガポン いしずえのめん")).toBe(false);
+    expect(isUnresolvedEntityInput("pokemon", "オーガポン いしずえのかめん")).toBe(false);
+  });
+
   it("renders the M0 workbench sections", () => {
     const html = renderToStaticMarkup(<App />);
 
