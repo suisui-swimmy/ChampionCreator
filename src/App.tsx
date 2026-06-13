@@ -1009,10 +1009,10 @@ export function App() {
         </div>
         <a
           className="readme-link"
-          href="https://github.com/suisui-swimmy/ChampionCreator/blob/main/README.md"
+          href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage"
           target="_blank"
           rel="noreferrer"
-          aria-label="README.mdを開く"
+          aria-label="Usageを開く"
         >
           <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
         </a>
