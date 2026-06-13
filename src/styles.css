@@ -445,6 +445,7 @@ textarea:focus-visible,
 .box-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  align-content: start;
   gap: 8px;
   overflow: auto;
   padding: 12px;
@@ -4630,22 +4631,21 @@ textarea {
   }
 
   .box-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
     gap: 6px;
     padding: 10px;
   }
 
   .box-slot {
-    grid-template-columns: 44px minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    justify-items: start;
-    min-height: 62px;
-    padding: 8px;
-    text-align: left;
+    grid-template-columns: 1fr;
+    grid-template-rows: 46px auto auto;
+    justify-items: center;
+    min-height: 112px;
+    padding: 9px 7px;
+    text-align: center;
   }
 
   .box-slot-art {
-    grid-row: 1 / span 2;
     width: 42px;
     height: 42px;
   }
