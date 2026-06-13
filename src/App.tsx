@@ -4174,7 +4174,7 @@ export function ResultsPanel({
                     <span className="candidate-row-spacer" aria-hidden="true" />
                     <span className="candidate-budget-value used">{candidate.usedStatPointBudget}</span>
                     <span className="candidate-budget-value remaining">{candidate.remainingStatPointBudget}</span>
-                    <span className="candidate-bottleneck">{formatBottleneckDisplayLabel(candidate.bottleneckLabel)}</span>
+                    <span className="candidate-bottleneck">{candidate.bottleneckLabel}</span>
                     <span className="candidate-disclosure" aria-hidden="true">
                       <ChevronRightIcon className="disclosure-chevron" />
                     </span>

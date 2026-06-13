@@ -1,4 +1,4 @@
-<center><img src="readme-images/logo.png" alt="ChampionCreator"></center>
+<img src="readme-images/logo.png" alt="ChampionCreator">
 
 ChampionCreator は、複数の仮想敵シナリオ条件を同時に満たす能力ポイント配分を自動で計算するwebアプリです。
 
