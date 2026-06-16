@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CandidateResult } from "./domain/model";
 import {
@@ -25,6 +26,17 @@ import {
 import { appVersionInfo } from "./appVersion";
 
 describe("App", () => {
+  it("keeps mobile text controls large enough to avoid iOS focus zoom", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+    expect(css).toContain("iOS zooms focused text controls below 16px");
+    expect(css).toContain('.mobile-scenarios-open input:not([type="checkbox"]):not([type="radio"])');
+    expect(css).toContain('.box-overlay input:not([type="checkbox"]):not([type="radio"])');
+    expect(css).toMatch(/font-size: 16px;/);
+    expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
+  });
+
   it("keeps type and item dropdown candidates separated", () => {
     const typeOptions = getDropdownEntityOptions("type", "");
     const itemOptions = getDropdownEntityOptions("item", "");

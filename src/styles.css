@@ -4734,6 +4734,22 @@ textarea {
   .box-action-buttons .ui-button {
     flex: 1 1 68px;
   }
+
+  /* iOS zooms focused text controls below 16px and can trap users inside mobile sheets. */
+  .mobile-target-open input:not([type="checkbox"]):not([type="radio"]),
+  .mobile-target-open select,
+  .mobile-target-open textarea,
+  .mobile-scenarios-open input:not([type="checkbox"]):not([type="radio"]),
+  .mobile-scenarios-open select,
+  .mobile-scenarios-open textarea,
+  .mobile-results-open input:not([type="checkbox"]):not([type="radio"]),
+  .mobile-results-open select,
+  .mobile-results-open textarea,
+  .box-overlay input:not([type="checkbox"]):not([type="radio"]),
+  .box-overlay select,
+  .box-overlay textarea {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 380px) {
