@@ -11,6 +11,7 @@ import {
 import type {
   Build,
   CandidateResult,
+  DefenceSearchStatKey,
   DefenceStatPointCandidate,
   FieldState,
   Scenario,
@@ -25,8 +26,9 @@ const DEFAULT_MAX_RESULTS = 20;
 const SURVIVAL_EPSILON = 1e-12;
 const LEGACY_SHOWDOWN_EV_BUDGET = 508;
 
-const DEFENCE_SEARCH_KEYS = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
+const DEFENCE_SEARCH_KEYS = ["hp", "def", "spd"] as const satisfies readonly DefenceSearchStatKey[];
 const FIXED_EV_KEYS = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
+const ALL_STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 
 export type CalculateHit = (
   defenderBuild: Build,
@@ -35,9 +37,10 @@ export type CalculateHit = (
 ) => ScenarioHitEvaluation;
 
 export interface DefenceSearchOptions {
-  maxResults?: number;
+  maxResults?: number | null;
   calculateHit?: CalculateHit;
   minimumStatPoints?: Partial<StatTable>;
+  searchStatKeys?: readonly DefenceSearchStatKey[] | null;
 }
 
 interface ScenarioEvaluationOptions {
@@ -110,14 +113,22 @@ export const applyDefenceStatPointCandidate = (
 
 export const applyDefenceEvCandidate = applyDefenceStatPointCandidate;
 
-const isLegalFixedStatPointBudget = (build: Build): boolean =>
-  FIXED_EV_KEYS.every((key) => isLegalStatPointValue(getBuildStatPoints(build)[key]));
-
 const isLegalDefenceCandidate = (candidate: DefenceStatPointCandidate): boolean =>
   DEFENCE_SEARCH_KEYS.every((key) => isLegalStatPointValue(candidate[key]));
 
 const getCandidateDefenceBudget = (candidate: DefenceStatPointCandidate): number =>
   candidate.hp + candidate.def + candidate.spd;
+
+export const normalizeDefenceSearchStatKeys = (
+  searchStatKeys?: readonly DefenceSearchStatKey[] | null,
+): DefenceSearchStatKey[] => {
+  if (searchStatKeys === undefined || searchStatKeys === null) {
+    return [...DEFENCE_SEARCH_KEYS];
+  }
+
+  const requested = new Set(searchStatKeys);
+  return DEFENCE_SEARCH_KEYS.filter((key) => requested.has(key));
+};
 
 export const meetsMinimumStatPointRequirements = (
   candidate: DefenceStatPointCandidate,
@@ -126,38 +137,91 @@ export const meetsMinimumStatPointRequirements = (
   candidate[key] >= (minimumStatPoints[key] ?? 0)
 ));
 
-export function* iterateDefenceEvCandidates(build: Build): Generator<DefenceStatPointCandidate> {
-  if (!isLegalFixedStatPointBudget(build)) {
+export function* iterateDefenceEvCandidates(
+  build: Build,
+  options: Pick<DefenceSearchOptions, "searchStatKeys"> = {},
+): Generator<DefenceStatPointCandidate> {
+  const buildStatPoints = getBuildStatPoints(build);
+  if (!ALL_STAT_KEYS.every((key) => isLegalStatPointValue(buildStatPoints[key]))) {
     return;
   }
 
-  const fixedBudget = getFixedStatPointBudget(build);
+  const searchStatKeys = normalizeDefenceSearchStatKeys(options.searchStatKeys);
+  const searchStatKeySet = new Set<DefenceSearchStatKey>(searchStatKeys);
+  const fixedBudget = ALL_STAT_KEYS.reduce(
+    (total, key) => total + (searchStatKeySet.has(key as DefenceSearchStatKey) ? 0 : buildStatPoints[key]),
+    0,
+  );
   const remainingBudget = CHAMPIONS_TOTAL_STAT_POINTS - fixedBudget;
   if (remainingBudget < 0) {
     return;
   }
 
-  const maxSearchBudget = Math.min(remainingBudget, CHAMPIONS_MAX_STAT_POINTS_PER_STAT * DEFENCE_SEARCH_KEYS.length);
+  if (searchStatKeys.length === 0) {
+    const candidate = {
+      hp: buildStatPoints.hp,
+      def: buildStatPoints.def,
+      spd: buildStatPoints.spd,
+    };
+    if (isLegalDefenceCandidate(candidate)) {
+      yield candidate;
+    }
+    return;
+  }
+
+  const maxSearchBudget = Math.min(remainingBudget, CHAMPIONS_MAX_STAT_POINTS_PER_STAT * searchStatKeys.length);
+
+  function* assignSearchStats(
+    keyIndex: number,
+    remainingTotal: number,
+    assigned: DefenceStatPointCandidate,
+  ): Generator<DefenceStatPointCandidate> {
+    const key = searchStatKeys[keyIndex];
+    const isLastKey = keyIndex === searchStatKeys.length - 1;
+    const maxValue = Math.min(CHAMPIONS_MAX_STAT_POINTS_PER_STAT, remainingTotal);
+
+    if (isLastKey) {
+      if (remainingTotal <= CHAMPIONS_MAX_STAT_POINTS_PER_STAT) {
+        yield { ...assigned, [key]: remainingTotal };
+      }
+      return;
+    }
+
+    for (let value = 0; value <= maxValue; value += 1) {
+      yield* assignSearchStats(keyIndex + 1, remainingTotal - value, {
+        ...assigned,
+        [key]: value,
+      });
+    }
+  }
+
+  const baseCandidate = {
+    hp: buildStatPoints.hp,
+    def: buildStatPoints.def,
+    spd: buildStatPoints.spd,
+  };
 
   for (let total = 0; total <= maxSearchBudget; total += 1) {
-    for (let hp = 0; hp <= Math.min(CHAMPIONS_MAX_STAT_POINTS_PER_STAT, total); hp += 1) {
-      for (let def = 0; def <= Math.min(CHAMPIONS_MAX_STAT_POINTS_PER_STAT, total - hp); def += 1) {
-        const spd = total - hp - def;
-        const candidate = { hp, def, spd };
-        if (isLegalDefenceCandidate(candidate)) {
-          yield candidate;
-        }
+    for (const candidate of assignSearchStats(0, total, baseCandidate)) {
+      if (isLegalDefenceCandidate(candidate)) {
+        yield candidate;
       }
     }
   }
 }
 
-export const enumerateDefenceEvCandidates = (build: Build): DefenceStatPointCandidate[] =>
-  Array.from(iterateDefenceEvCandidates(build));
+export const enumerateDefenceEvCandidates = (
+  build: Build,
+  options: Pick<DefenceSearchOptions, "searchStatKeys"> = {},
+): DefenceStatPointCandidate[] =>
+  Array.from(iterateDefenceEvCandidates(build, options));
 
-export const countDefenceEvCandidates = (build: Build): number => {
+export const countDefenceEvCandidates = (
+  build: Build,
+  options: Pick<DefenceSearchOptions, "searchStatKeys"> = {},
+): number => {
   let count = 0;
-  for (const _candidate of iterateDefenceEvCandidates(build)) {
+  for (const _candidate of iterateDefenceEvCandidates(build, options)) {
     count += 1;
   }
   return count;
@@ -462,11 +526,11 @@ export const finalizeDefenceSearchResults = (
   passingResults: CandidateResult[],
   options: DefenceSearchOptions = {},
 ): CandidateResult[] => {
-  const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+  const maxResults = options.maxResults === undefined ? DEFAULT_MAX_RESULTS : options.maxResults;
   const topCandidates = passingResults
     .filter((result) => meetsMinimumStatPointRequirements(result.candidate, options.minimumStatPoints))
     .sort(compareCandidateResults)
-    .slice(0, maxResults);
+    .slice(0, maxResults === null ? undefined : maxResults);
   const revalidatedCandidates = topCandidates
     .map((result) => evaluateCandidate(defenderBuild, scenarios, result.candidate, options))
     .filter((result) => (
@@ -474,7 +538,7 @@ export const finalizeDefenceSearchResults = (
       && meetsMinimumStatPointRequirements(result.candidate, options.minimumStatPoints)
     ))
     .sort(compareCandidateResults)
-    .slice(0, maxResults);
+    .slice(0, maxResults === null ? undefined : maxResults);
 
   return rankCandidateResults(revalidatedCandidates);
 };
@@ -484,15 +548,15 @@ export const searchDefenceCandidates = (
   scenarios: Scenario[],
   options: DefenceSearchOptions = {},
 ): CandidateResult[] => {
-  const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
-  if (maxResults <= 0) {
+  const maxResults = options.maxResults === undefined ? DEFAULT_MAX_RESULTS : options.maxResults;
+  if (maxResults !== null && maxResults <= 0) {
     return [];
   }
 
   const passingResults: CandidateResult[] = [];
   let acceptedDefenceBudgetCeiling: number | null = null;
 
-  for (const candidate of iterateDefenceEvCandidates(defenderBuild)) {
+  for (const candidate of iterateDefenceEvCandidates(defenderBuild, options)) {
     const defenceBudget = getCandidateDefenceBudget(candidate);
     if (acceptedDefenceBudgetCeiling !== null && defenceBudget > acceptedDefenceBudgetCeiling) {
       break;
@@ -505,7 +569,11 @@ export const searchDefenceCandidates = (
     const result = evaluateCandidate(defenderBuild, scenarios, candidate, options);
     if (result.passed) {
       passingResults.push(result);
-      if (passingResults.length >= maxResults && acceptedDefenceBudgetCeiling === null) {
+      if (
+        maxResults !== null
+        && passingResults.length >= maxResults
+        && acceptedDefenceBudgetCeiling === null
+      ) {
         acceptedDefenceBudgetCeiling = defenceBudget;
       }
     }

@@ -1,4 +1,4 @@
-import type { Build, CandidateResult, Scenario, StatTable } from "../domain/model";
+import type { Build, CandidateResult, DefenceSearchStatKey, Scenario, StatTable } from "../domain/model";
 import {
   compareFailureCandidateResults,
   countDefenceEvCandidates,
@@ -10,8 +10,10 @@ import {
 } from "../search/defenceSearch";
 
 export interface DefenceSearchWorkerRunOptions {
-  maxResults?: number;
+  maxResults?: number | null;
+  partialResultLimit?: number;
   minimumStatPoints?: Partial<StatTable>;
+  searchStatKeys?: DefenceSearchStatKey[];
   progressInterval?: number;
   partialResultInterval?: number;
   yieldEvery?: number;
@@ -46,12 +48,14 @@ export interface DefenceSearchWorkerPartialResultMessage {
   type: "partialResult";
   requestId: string;
   candidates: CandidateResult[];
+  passingCandidateCount: number;
 }
 
 export interface DefenceSearchWorkerCompleteMessage {
   type: "complete";
   requestId: string;
   candidates: CandidateResult[];
+  passingCandidateCount: number;
   strictestFailureLabel?: string | null;
 }
 
@@ -74,6 +78,7 @@ const DEFAULT_PROGRESS_INTERVAL = 250;
 const DEFAULT_PARTIAL_RESULT_INTERVAL = 1;
 const DEFAULT_YIELD_EVERY = 250;
 const DEFAULT_MAX_RESULTS = 20;
+const DEFAULT_PARTIAL_RESULT_LIMIT = 20;
 
 const yieldToWorker = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -91,22 +96,29 @@ export const runDefenceSearchWorkerTask = async (
 ): Promise<void> => {
   const { requestId, build, scenarios } = request;
   const options = request.options ?? {};
-  const maxResults = Math.max(0, Math.trunc(options.maxResults ?? DEFAULT_MAX_RESULTS));
+  const maxResults = options.maxResults === undefined
+    ? DEFAULT_MAX_RESULTS
+    : options.maxResults === null
+      ? null
+      : Math.max(0, Math.trunc(options.maxResults));
+  const partialResultLimit = Math.max(0, Math.trunc(options.partialResultLimit ?? DEFAULT_PARTIAL_RESULT_LIMIT));
   const progressInterval = Math.max(1, Math.trunc(options.progressInterval ?? DEFAULT_PROGRESS_INTERVAL));
   const partialResultInterval = Math.max(1, Math.trunc(options.partialResultInterval ?? DEFAULT_PARTIAL_RESULT_INTERVAL));
   const yieldEvery = Math.max(1, Math.trunc(options.yieldEvery ?? DEFAULT_YIELD_EVERY));
   const searchOptions: DefenceSearchOptions = {
     maxResults,
     minimumStatPoints: options.minimumStatPoints,
+    searchStatKeys: options.searchStatKeys,
   };
 
   try {
-    const totalCandidates = countDefenceEvCandidates(build);
-    if (maxResults <= 0) {
+    const totalCandidates = countDefenceEvCandidates(build, searchOptions);
+    if (maxResults !== null && maxResults <= 0) {
       emit({
         type: "complete",
         requestId,
         candidates: [],
+        passingCandidateCount: 0,
         strictestFailureLabel: null,
       });
       return;
@@ -118,7 +130,7 @@ export const runDefenceSearchWorkerTask = async (
     let partialResultCount = 0;
     let acceptedDefenceBudgetCeiling: number | null = null;
 
-    for (const candidate of iterateDefenceEvCandidates(build)) {
+    for (const candidate of iterateDefenceEvCandidates(build, searchOptions)) {
       if (isCanceled(requestId)) {
         return;
       }
@@ -160,7 +172,11 @@ export const runDefenceSearchWorkerTask = async (
       if (result.passed) {
         passingResults.push(result);
         partialResultCount += 1;
-        if (passingResults.length >= maxResults && acceptedDefenceBudgetCeiling === null) {
+        if (
+          maxResults !== null
+          && passingResults.length >= maxResults
+          && acceptedDefenceBudgetCeiling === null
+        ) {
           acceptedDefenceBudgetCeiling = defenceBudget;
         }
 
@@ -168,7 +184,11 @@ export const runDefenceSearchWorkerTask = async (
           emit({
             type: "partialResult",
             requestId,
-            candidates: finalizeDefenceSearchResults(build, scenarios, passingResults, searchOptions),
+            candidates: finalizeDefenceSearchResults(build, scenarios, passingResults, {
+              ...searchOptions,
+              maxResults: partialResultLimit,
+            }),
+            passingCandidateCount: passingResults.length,
           });
         }
       } else if (
@@ -206,6 +226,7 @@ export const runDefenceSearchWorkerTask = async (
       type: "complete",
       requestId,
       candidates: finalCandidates,
+      passingCandidateCount: finalCandidates.length,
       strictestFailureLabel: finalCandidates.length === 0 ? closestFailedResult?.bottleneckLabel ?? null : null,
     });
   } catch (error) {

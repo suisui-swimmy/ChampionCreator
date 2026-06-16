@@ -8,6 +8,7 @@ import {
   CandidateStatPointSpread,
   ResultsPanel,
   clampTargetStatPointChange,
+  compareResultCandidates,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
@@ -359,6 +360,87 @@ describe("App", () => {
     expect(html).toContain('class="candidate-sp-bar def"');
     expect(html).toContain('style="width:93.75%"');
     expect(html).toContain('class="candidate-sp-bar spa"');
+  });
+
+  it("renders only the first 20 result candidates on the initial page", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const candidates: CandidateResult[] = Array.from({ length: 25 }, (_, index) => {
+      const rank = index + 1;
+      return {
+        id: `candidate-${rank}`,
+        rank,
+        candidate: { hp: rank, def: 0, spd: 0 },
+        appliedStatPoints: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+        appliedEvs: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+        usedStatPointBudget: rank,
+        remainingStatPointBudget: 66 - rank,
+        usedEvBudget: rank,
+        remainingEvBudget: 66 - rank,
+        passed: true,
+        scenarioResults: [],
+        bottleneckLabel: `表示候補${rank}`,
+      };
+    });
+
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={candidates}
+        passingCandidateCount={25}
+        selectedCandidateId={null}
+        appliedCandidateId={null}
+        scenarios={[scenario]}
+        status="complete"
+        offenseResults={[]}
+        speedResults={[]}
+        strictestFailureLabel={null}
+        targetLabel="メガマフォクシー"
+        resultAlertMessage={null}
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("候補 25 件 / 1-20 件目");
+    expect(html).toContain("1 / 2");
+    expect(html).toContain("表示候補20");
+    expect(html).not.toContain("表示候補21");
+  });
+
+  it("sorts result candidates by the selected full-list key before pagination", () => {
+    const makeCandidate = (
+      id: string,
+      rank: number,
+      statPoints: CandidateResult["appliedStatPoints"],
+      margin: number,
+    ): CandidateResult => ({
+      id,
+      rank,
+      candidate: { hp: statPoints.hp, def: statPoints.def, spd: statPoints.spd },
+      appliedStatPoints: statPoints,
+      appliedEvs: statPoints,
+      usedStatPointBudget: statPoints.hp + statPoints.atk + statPoints.def + statPoints.spa + statPoints.spd + statPoints.spe,
+      remainingStatPointBudget: 66 - statPoints.hp - statPoints.atk - statPoints.def - statPoints.spa - statPoints.spd - statPoints.spe,
+      usedEvBudget: 0,
+      remainingEvBudget: 0,
+      passed: true,
+      bottleneckLabel: `${id} ${margin}`,
+      scenarioResults: [{
+        scenarioId: "scenario-a",
+        passed: true,
+        survivalProbability: 0.5 + margin,
+        requiredSurvivedHits: 1,
+        minSurvivalProbability: 0.5,
+        hitEvaluations: [],
+        bottleneckLabel: `${id} ${margin}`,
+      }],
+    });
+    const lowHp = makeCandidate("low-hp", 1, { hp: 1, atk: 0, def: 1, spa: 0, spd: 0, spe: 0 }, 0.01);
+    const highHp = makeCandidate("high-hp", 2, { hp: 20, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, 0.2);
+
+    expect(compareResultCandidates(highHp, lowHp, "hp", "desc")).toBeLessThan(0);
+    expect(compareResultCandidates(lowHp, highHp, "used", "asc")).toBeLessThan(0);
+    expect(compareResultCandidates(highHp, lowHp, "margin", "desc")).toBeLessThan(0);
+    expect(compareResultCandidates(lowHp, highHp, "recommended", "asc")).toBeLessThan(0);
   });
 
   it("labels failed scenario results as FAIL", () => {

@@ -7,6 +7,7 @@ import { createDefenceSearchRequestId } from "../worker/defenceSearchWorkerClien
 import type {
   Build,
   CandidateResult,
+  DefenceSearchStatKey,
   EntityRef,
   FieldState,
   GameType,
@@ -39,6 +40,7 @@ import {
   getMoveHitCountRangeFromInput,
   getMoveMaxHitsFromInput,
 } from "../domain/moveHitCounts";
+import { getMoveDefenderStatKeys } from "../domain/moveStatReference";
 import {
   calculateSpeedAdjustment,
   type SpeedAdjustmentInput,
@@ -142,6 +144,7 @@ export interface DefenceSearchInput {
   build: Build;
   scenarios: Scenario[];
   minimumStatPoints?: Partial<StatPointTable>;
+  searchStatKeys?: DefenceSearchStatKey[];
 }
 
 export interface OffenseScenarioResult {
@@ -184,6 +187,7 @@ export interface SearchUiState {
   totalCandidates: number;
   progress: number;
   candidates: CandidateResult[];
+  passingCandidateCount: number;
   errorMessage: string | null;
   strictestFailureLabel: string | null;
 }
@@ -197,8 +201,14 @@ export type SearchUiAction =
       totalCandidates: number;
       progress: number;
     }
-  | { type: "partialResult"; requestId: string; candidates: CandidateResult[] }
-  | { type: "complete"; requestId: string; candidates: CandidateResult[]; strictestFailureLabel?: string | null }
+  | { type: "partialResult"; requestId: string; candidates: CandidateResult[]; passingCandidateCount?: number }
+  | {
+      type: "complete";
+      requestId: string;
+      candidates: CandidateResult[];
+      passingCandidateCount?: number;
+      strictestFailureLabel?: string | null;
+    }
   | { type: "error"; requestId?: string; message: string }
   | { type: "cancel"; requestId?: string }
   | { type: "validationError"; message: string }
@@ -221,6 +231,7 @@ export const createInitialSearchUiState = (): SearchUiState => ({
   totalCandidates: 0,
   progress: 0,
   candidates: [],
+  passingCandidateCount: 0,
   errorMessage: null,
   strictestFailureLabel: null,
 });
@@ -604,6 +615,41 @@ const toFieldState = (form: { gameType?: GameType; weather: Weather; terrain: Te
 const hasDamageMove = (form: ScenarioAttackFormState): boolean =>
   Boolean(form.moveInput.trim());
 
+const defenceSearchStatKeyOrder = ["hp", "def", "spd"] as const satisfies readonly DefenceSearchStatKey[];
+
+const mergeDefenceSearchStatKeys = (
+  ...keyGroups: Array<readonly DefenceSearchStatKey[] | undefined>
+): DefenceSearchStatKey[] => {
+  const requested = new Set<DefenceSearchStatKey>();
+  for (const keyGroup of keyGroups) {
+    for (const key of keyGroup ?? []) {
+      requested.add(key);
+    }
+  }
+
+  return defenceSearchStatKeyOrder.filter((key) => requested.has(key));
+};
+
+const getDefenceSearchStatKeysFromScenarioForms = (
+  scenarioForms: ScenarioFormState[],
+): DefenceSearchStatKey[] => mergeDefenceSearchStatKeys(
+  scenarioForms.flatMap((scenario) => (
+    scenario.attacks
+      .filter(hasDamageMove)
+      .flatMap((attack) => getMoveDefenderStatKeys(attack.moveInput, {
+        teraEnabled: attack.attackerTeraEnabled,
+      }))
+      .filter((key): key is DefenceSearchStatKey => (
+        key === "hp" || key === "def" || key === "spd"
+      ))
+  )),
+);
+
+const getDefenceSearchStatKeysFromMinimums = (
+  minimumStatPoints: Partial<Pick<StatPointTable, "hp" | "def" | "spd">>,
+): DefenceSearchStatKey[] =>
+  defenceSearchStatKeyOrder.filter((key) => (minimumStatPoints[key] ?? 0) > 0);
+
 const toScenarioHits = (
   scenarioForm: ScenarioFormState,
   activeAttacks: ScenarioAttackFormState[],
@@ -631,6 +677,7 @@ export const buildDefenceSearchInput = (
 
   return {
     build: toBuild(targetForm, "target"),
+    searchStatKeys: getDefenceSearchStatKeysFromScenarioForms(activeScenarioForms),
     scenarios: activeScenarioForms.map((form): Scenario => {
       const activeAttacks = form.attacks.filter(hasDamageMove);
       if (activeAttacks.length === 0) {
@@ -1204,9 +1251,14 @@ export const buildIntegratedDefenceSearchInput = (
     );
   }
 
+  const defenceInput = buildDefenceSearchInput(integratedTargetForm, scenarioForms);
   return {
-    ...buildDefenceSearchInput(integratedTargetForm, scenarioForms),
+    ...defenceInput,
     minimumStatPoints: requirements.minimumStatPoints,
+    searchStatKeys: mergeDefenceSearchStatKeys(
+      defenceInput.searchStatKeys,
+      getDefenceSearchStatKeysFromMinimums(requirements.minimumStatPoints),
+    ),
   };
 };
 
@@ -1232,6 +1284,7 @@ export const searchUiReducer = (
         totalCandidates: 0,
         progress: 0,
         candidates: [],
+        passingCandidateCount: 0,
         errorMessage: null,
         strictestFailureLabel: null,
       };
@@ -1246,6 +1299,7 @@ export const searchUiReducer = (
       return {
         ...state,
         candidates: action.candidates,
+        passingCandidateCount: action.passingCandidateCount ?? action.candidates.length,
       };
     case "complete":
       return {
@@ -1254,6 +1308,7 @@ export const searchUiReducer = (
         activeRequestId: null,
         progress: 1,
         candidates: action.candidates,
+        passingCandidateCount: action.passingCandidateCount ?? action.candidates.length,
         strictestFailureLabel: action.strictestFailureLabel ?? null,
       };
     case "error":
@@ -1290,7 +1345,7 @@ export const startDefenceSearchFromUi = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
   dispatch: SearchUiDispatch,
-  options: { requestId?: string; maxResults?: number } = {},
+  options: { requestId?: string; maxResults?: number | null; partialResultLimit?: number } = {},
 ): { request: ActiveDefenceSearchRequest; input: DefenceSearchInput } => {
   const input = buildIntegratedDefenceSearchInput(targetForm, scenarioForms);
   const requestId = options.requestId ?? createDefenceSearchRequestId();
@@ -1298,8 +1353,10 @@ export const startDefenceSearchFromUi = (
 
   const request = client.start(input.build, input.scenarios, {
     requestId,
-    maxResults: options.maxResults ?? 20,
+    maxResults: options.maxResults ?? null,
+    partialResultLimit: options.partialResultLimit ?? 20,
     minimumStatPoints: input.minimumStatPoints,
+    searchStatKeys: input.searchStatKeys,
     progressInterval: 250,
     partialResultInterval: 1,
     yieldEvery: 250,
@@ -1315,11 +1372,13 @@ export const startDefenceSearchFromUi = (
         type: "partialResult",
         requestId: message.requestId,
         candidates: message.candidates,
+        passingCandidateCount: message.passingCandidateCount,
       }),
       onComplete: (message) => dispatch({
         type: "complete",
         requestId: message.requestId,
         candidates: message.candidates,
+        passingCandidateCount: message.passingCandidateCount,
         strictestFailureLabel: message.strictestFailureLabel ?? null,
       }),
       onError: (message) => dispatch({

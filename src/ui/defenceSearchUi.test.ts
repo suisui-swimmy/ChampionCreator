@@ -164,6 +164,7 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].attacker.evs.atk).toBe(252);
     expect(input.scenarios[0].hits[0].attacker.evs.spa).toBe(252);
     expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
+    expect(input.searchStatKeys).toEqual(["hp", "def"]);
     expect(input.scenarios).toHaveLength(1);
     expect(scenarios).toHaveLength(3);
     expect(scenarios[0].attacks[0].minSurvivalProbabilityPercent).toBe(90);
@@ -200,6 +201,34 @@ describe("buildDefenceSearchInput", () => {
       orderMode: "normal",
       requiredSpeedOffset: 1,
     });
+  });
+
+  it("derives defence search stats from the active move category", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const physicalInput = buildDefenceSearchInput(createDefaultTargetForm(), [defaultScenario]);
+    const specialInput = buildDefenceSearchInput(createDefaultTargetForm(), [{
+      ...defaultScenario,
+      attacks: defaultScenario.attacks.map((attack) => ({
+        ...attack,
+        moveInput: "サイコキネシス",
+      })),
+    }]);
+    const mixedInput = buildDefenceSearchInput(createDefaultTargetForm(), [
+      defaultScenario,
+      {
+        ...defaultScenario,
+        id: "scenario-special",
+        label: "特殊",
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          moveInput: "サイコキネシス",
+        })),
+      },
+    ]);
+
+    expect(physicalInput.searchStatKeys).toEqual(["hp", "def"]);
+    expect(specialInput.searchStatKeys).toEqual(["hp", "spd"]);
+    expect(mixedInput.searchStatKeys).toEqual(["hp", "def", "spd"]);
   });
 
   it("passes a Tera type only when the field is explicitly enabled", () => {
@@ -989,6 +1018,7 @@ describe("resolveIntegratedOffenseRequirements", () => {
     expect(input.build.statPoints?.hp).toBe(0);
     expect(input.build.statPoints?.def).toBe(0);
     expect(input.minimumStatPoints?.def).toBeGreaterThanOrEqual(0);
+    expect(input.searchStatKeys).toEqual(["hp", "def"]);
     expect(input.scenarios).toHaveLength(1);
   });
 });
@@ -1081,11 +1111,13 @@ describe("searchUiReducer", () => {
       type: "partialResult",
       requestId: "request-a",
       candidates: [candidate],
+      passingCandidateCount: 4,
     });
     state = searchUiReducer(state, {
       type: "complete",
       requestId: "request-a",
       candidates: [candidate],
+      passingCandidateCount: 5,
       strictestFailureLabel: null,
     });
 
@@ -1093,6 +1125,7 @@ describe("searchUiReducer", () => {
     expect(state.progress).toBe(1);
     expect(state.searchedCandidates).toBe(5);
     expect(state.candidates).toEqual([candidate]);
+    expect(state.passingCandidateCount).toBe(5);
     expect(state.strictestFailureLabel).toBeNull();
   });
 
@@ -1104,6 +1137,7 @@ describe("searchUiReducer", () => {
       type: "complete",
       requestId: "request-empty",
       candidates: [],
+      passingCandidateCount: 0,
       strictestFailureLabel: "シナリオ1 -6.3%",
     });
 
@@ -1123,6 +1157,7 @@ describe("searchUiReducer", () => {
       type: "complete",
       requestId: "old-request",
       candidates: [staleCandidate],
+      passingCandidateCount: 1,
       strictestFailureLabel: "stale -100.0%",
     });
 
@@ -1134,14 +1169,17 @@ describe("searchUiReducer", () => {
       type: "partialResult",
       requestId: "old-request",
       candidates: [staleCandidate],
+      passingCandidateCount: 1,
     });
     state = searchUiReducer(state, {
       type: "partialResult",
       requestId: "new-request",
       candidates: [currentCandidate],
+      passingCandidateCount: 7,
     });
 
     expect(state.candidates).toEqual([currentCandidate]);
+    expect(state.passingCandidateCount).toBe(7);
   });
 });
 
@@ -1167,6 +1205,8 @@ describe("startDefenceSearchFromUi", () => {
     expect(client.build?.pokemon.canonicalName).toBe("Delphox-Mega");
     expect(client.scenarios[0].hits[0].move.canonicalName).toBe("Sucker Punch");
     expect(client.options?.maxResults).toBe(3);
+    expect(client.options?.partialResultLimit).toBe(20);
+    expect(client.options?.searchStatKeys).toEqual(["hp", "def"]);
 
     client.options?.callbacks?.onProgress?.({
       type: "progress",
@@ -1179,17 +1219,36 @@ describe("startDefenceSearchFromUi", () => {
       type: "partialResult",
       requestId: "request-ui",
       candidates: [candidate],
+      passingCandidateCount: 4,
     });
     client.options?.callbacks?.onComplete?.({
       type: "complete",
       requestId: "request-ui",
       candidates: [candidate],
+      passingCandidateCount: 5,
       strictestFailureLabel: null,
     });
 
     expect(state.status).toBe("complete");
     expect(state.searchedCandidates).toBe(10);
     expect(state.candidates).toEqual([candidate]);
+    expect(state.passingCandidateCount).toBe(5);
+  });
+
+  it("starts normal UI searches in all-results mode with a 20-candidate preview", () => {
+    const client = new FakeWorkerClient();
+    const dispatch = () => undefined;
+
+    startDefenceSearchFromUi(
+      client,
+      createDefaultTargetForm(),
+      createDefaultScenarioForms(),
+      dispatch,
+      { requestId: "request-defaults" },
+    );
+
+    expect(client.options?.maxResults).toBeNull();
+    expect(client.options?.partialResultLimit).toBe(20);
   });
 });
 

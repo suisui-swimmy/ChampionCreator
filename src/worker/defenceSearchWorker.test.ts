@@ -149,6 +149,7 @@ describe("runDefenceSearchWorkerTask", () => {
     );
 
     const complete = messages.find((message) => message.type === "complete");
+    const partial = messages.find((message) => message.type === "partialResult");
 
     expect(messages.some((message) => message.type === "progress")).toBe(true);
     expect(messages.some((message) => message.type === "partialResult")).toBe(true);
@@ -161,8 +162,79 @@ describe("runDefenceSearchWorkerTask", () => {
     expect(complete?.type === "complete" ? complete.candidates : []).toEqual(
       searchDefenceCandidates(defender, scenarios, { maxResults: 1 }),
     );
+    expect(partial?.type === "partialResult" ? partial.passingCandidateCount : 0).toBeGreaterThan(0);
+    expect(complete?.type === "complete" ? complete.passingCandidateCount : 0).toBe(1);
     expect(complete?.type === "complete" ? complete.candidates[0].scenarioResults[0].hitEvaluations[0].description : "")
       .toContain("Thunderbolt");
+  });
+
+  it("keeps partial results capped while completing with every passing candidate", async () => {
+    const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
+    const attacker = makeBuild("attacker", "ピチュー", zeroEvs, 1);
+    const scenarios = [
+      makeScenario("easy", [makeHit("quick-attack", attacker, "でんこうせっか")], 1, 1),
+    ];
+    const messages: DefenceSearchWorkerMessage[] = [];
+
+    await runDefenceSearchWorkerTask(
+      {
+        type: "start",
+        requestId: "request-all",
+        build: defender,
+        scenarios,
+        options: { maxResults: null, partialResultLimit: 2, progressInterval: 1, partialResultInterval: 1, yieldEvery: 1 },
+      },
+      (message) => messages.push(message),
+    );
+
+    const partials = messages.filter((message) => message.type === "partialResult");
+    const complete = messages.find((message) => message.type === "complete");
+    const allCandidates = searchDefenceCandidates(defender, scenarios, { maxResults: null });
+
+    expect(partials.length).toBeGreaterThan(0);
+    expect(partials.every((message) => message.type === "partialResult" && message.candidates.length <= 2)).toBe(true);
+    expect(Math.max(...partials.map((message) => message.type === "partialResult" ? message.passingCandidateCount : 0)))
+      .toBeGreaterThan(2);
+    expect(complete?.type === "complete" ? complete.candidates : []).toEqual(allCandidates);
+    expect(complete?.type === "complete" ? complete.passingCandidateCount : 0).toBe(allCandidates.length);
+  });
+
+  it("uses requested defence search stats for progress totals and final candidates", async () => {
+    const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
+    const attacker = makeBuild("attacker", "ピチュー", zeroEvs, 1);
+    const scenarios = [
+      makeScenario("easy", [makeHit("quick-attack", attacker, "でんこうせっか")], 1, 1),
+    ];
+    const messages: DefenceSearchWorkerMessage[] = [];
+
+    await runDefenceSearchWorkerTask(
+      {
+        type: "start",
+        requestId: "request-hb",
+        build: defender,
+        scenarios,
+        options: {
+          maxResults: null,
+          searchStatKeys: ["hp", "def"],
+          progressInterval: 1,
+          partialResultInterval: 1,
+          yieldEvery: 1,
+        },
+      },
+      (message) => messages.push(message),
+    );
+
+    const progressMessages = messages.filter((message) => message.type === "progress");
+    const complete = messages.find((message) => message.type === "complete");
+    const expectedCandidates = searchDefenceCandidates(defender, scenarios, {
+      maxResults: null,
+      searchStatKeys: ["hp", "def"],
+    });
+
+    expect(progressMessages.every((message) => message.type === "progress" && message.totalCandidates === 6)).toBe(true);
+    expect(complete?.type === "complete" ? complete.candidates : []).toEqual(expectedCandidates);
+    expect(complete?.type === "complete" ? complete.candidates.every((candidate) => candidate.appliedStatPoints.spd === 0) : false)
+      .toBe(true);
   });
 
   it("includes the closest failed candidate bottleneck when no candidates pass", async () => {
@@ -187,6 +259,7 @@ describe("runDefenceSearchWorkerTask", () => {
     const complete = messages.find((message) => message.type === "complete");
 
     expect(complete?.type === "complete" ? complete.candidates : []).toEqual([]);
+    expect(complete?.type === "complete" ? complete.passingCandidateCount : -1).toBe(0);
     expect(complete?.type === "complete" ? complete.strictestFailureLabel : null).toBe("missing missing hits");
   });
 
@@ -245,8 +318,8 @@ describe("runDefenceSearchWorkerTask", () => {
 
 describe("DefenceSearchWorkerClient", () => {
   it("discards messages whose requestId does not match the active request", () => {
-    expect(isCurrentWorkerMessage({ type: "complete", requestId: "old", candidates: [] }, "current")).toBe(false);
-    expect(isCurrentWorkerMessage({ type: "complete", requestId: "current", candidates: [] }, "current")).toBe(true);
+    expect(isCurrentWorkerMessage({ type: "complete", requestId: "old", candidates: [], passingCandidateCount: 0 }, "current")).toBe(false);
+    expect(isCurrentWorkerMessage({ type: "complete", requestId: "current", candidates: [], passingCandidateCount: 0 }, "current")).toBe(true);
   });
 
   it("posts start and cancel messages and does not adopt canceled request results", () => {
@@ -279,7 +352,7 @@ describe("DefenceSearchWorkerClient", () => {
       progress: 0.25,
     });
     activeRequest.cancel();
-    worker.emit({ type: "complete", requestId: "request-client", candidates: [] });
+    worker.emit({ type: "complete", requestId: "request-client", candidates: [], passingCandidateCount: 0 });
 
     expect(worker.sentMessages[0]).toMatchObject({ type: "start", requestId: "request-client" });
     expect(worker.sentMessages[1]).toEqual({ type: "cancel", requestId: "request-client" });

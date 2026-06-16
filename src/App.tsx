@@ -100,6 +100,69 @@ const statIconFiles: Record<StatKey, string> = {
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
+const RESULTS_PAGE_SIZE = 20;
+
+type CandidateSortKey = "recommended" | "used" | "remaining" | "margin" | StatKey;
+type CandidateSortDirection = "asc" | "desc";
+
+const candidateSortOptions: Array<{ value: CandidateSortKey; label: string }> = [
+  { value: "recommended", label: "推奨順" },
+  { value: "used", label: "使用SP" },
+  { value: "remaining", label: "残りSP" },
+  { value: "margin", label: "余裕" },
+  { value: "hp", label: "H" },
+  { value: "atk", label: "A" },
+  { value: "def", label: "B" },
+  { value: "spa", label: "C" },
+  { value: "spd", label: "D" },
+  { value: "spe", label: "S" },
+];
+
+const candidateSortDirectionOptions: Array<{ value: CandidateSortDirection; label: string }> = [
+  { value: "asc", label: "昇順" },
+  { value: "desc", label: "降順" },
+];
+
+const getDefaultCandidateSortDirection = (sortKey: CandidateSortKey): CandidateSortDirection =>
+  sortKey === "recommended" || sortKey === "used" ? "asc" : "desc";
+
+const getCandidateWorstMargin = (candidate: CandidateResult): number => {
+  if (candidate.scenarioResults.length === 0) {
+    return 0;
+  }
+
+  return candidate.scenarioResults.reduce((worstMargin, result) => (
+    Math.min(worstMargin, result.survivalProbability - result.minSurvivalProbability)
+  ), Number.POSITIVE_INFINITY);
+};
+
+const getCandidateSortValue = (candidate: CandidateResult, sortKey: CandidateSortKey): number => {
+  switch (sortKey) {
+    case "recommended":
+      return candidate.rank;
+    case "used":
+      return candidate.usedStatPointBudget;
+    case "remaining":
+      return candidate.remainingStatPointBudget;
+    case "margin":
+      return getCandidateWorstMargin(candidate);
+    default:
+      return candidate.appliedStatPoints[sortKey];
+  }
+};
+
+export const compareResultCandidates = (
+  left: CandidateResult,
+  right: CandidateResult,
+  sortKey: CandidateSortKey,
+  sortDirection: CandidateSortDirection,
+): number => {
+  const leftValue = getCandidateSortValue(left, sortKey);
+  const rightValue = getCandidateSortValue(right, sortKey);
+  const valueComparison = leftValue === rightValue ? 0 : leftValue - rightValue;
+  const directedComparison = sortDirection === "asc" ? valueComparison : -valueComparison;
+  return directedComparison || left.rank - right.rank;
+};
 
 const getOffenseDefenderStatKeysFromMoveContext = (
   moveInput: string,
@@ -1131,6 +1194,7 @@ export function App() {
         totalStatPoints={sumStatPoints(targetForm.statPoints)}
         scenarios={scenarioForms}
         candidates={searchState.candidates}
+        passingCandidateCount={searchState.passingCandidateCount}
         searchStatus={searchState.status}
         searchProgress={searchState.progress}
         searchedCandidates={searchState.searchedCandidates}
@@ -1239,6 +1303,7 @@ export function App() {
         </section>
         <ResultsPanel
           candidates={searchState.candidates}
+          passingCandidateCount={searchState.passingCandidateCount}
           selectedCandidateId={selectedCandidateId}
           appliedCandidateId={appliedCandidateId}
           scenarios={scenarioForms}
@@ -2012,6 +2077,7 @@ type MobileOverviewProps = {
   totalStatPoints: number;
   scenarios: ScenarioFormState[];
   candidates: CandidateResult[];
+  passingCandidateCount: number;
   searchStatus: string;
   searchProgress: number;
   searchedCandidates: number;
@@ -2118,6 +2184,7 @@ function MobileOverview({
   totalStatPoints,
   scenarios,
   candidates,
+  passingCandidateCount,
   searchStatus,
   searchProgress,
   searchedCandidates,
@@ -2481,7 +2548,7 @@ function MobileOverview({
           <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
         </div>
         <div className="mobile-candidate-actions">
-          <span>{Math.round(searchProgress * 100)}% / 評価 {searchedCandidates} / {totalCandidates || "-"}</span>
+          <span>{Math.round(searchProgress * 100)}% / 評価 {searchedCandidates} / {totalCandidates || "-"} / 合格 {passingCandidateCount}</span>
           <Button
             variant="ghost"
             size="small"
@@ -4083,6 +4150,7 @@ function ScenarioNumberField({
 
 type ResultsPanelProps = {
   candidates: CandidateResult[];
+  passingCandidateCount?: number;
   selectedCandidateId: string | null;
   appliedCandidateId: string | null;
   scenarios: ScenarioFormState[];
@@ -4181,6 +4249,7 @@ const formatSpeedResultDetail = (
 
 export function ResultsPanel({
   candidates,
+  passingCandidateCount = candidates.length,
   selectedCandidateId,
   appliedCandidateId,
   scenarios,
@@ -4194,6 +4263,9 @@ export function ResultsPanel({
   onApplyCandidate,
   onCloseMobileSheet = () => undefined,
 }: ResultsPanelProps) {
+  const [candidateSortKey, setCandidateSortKey] = useState<CandidateSortKey>("recommended");
+  const [candidateSortDirection, setCandidateSortDirection] = useState<CandidateSortDirection>("asc");
+  const [candidatePage, setCandidatePage] = useState(1);
   const scenarioLabels = useMemo(
     () => new Map(scenarios.map((scenario) => [scenario.id, scenario.label])),
     [scenarios],
@@ -4211,18 +4283,88 @@ export function ResultsPanel({
     ])),
     [scenarios],
   );
+  const sortedCandidates = useMemo(
+    () => [...candidates].sort((left, right) => (
+      compareResultCandidates(left, right, candidateSortKey, candidateSortDirection)
+    )),
+    [candidateSortDirection, candidateSortKey, candidates],
+  );
+  const totalCandidatePages = Math.max(1, Math.ceil(sortedCandidates.length / RESULTS_PAGE_SIZE));
+  const safeCandidatePage = Math.min(candidatePage, totalCandidatePages);
+  const pageStartIndex = sortedCandidates.length === 0 ? 0 : (safeCandidatePage - 1) * RESULTS_PAGE_SIZE;
+  const pageEndIndex = Math.min(sortedCandidates.length, pageStartIndex + RESULTS_PAGE_SIZE);
+  const displayedCandidates = sortedCandidates.slice(pageStartIndex, pageEndIndex);
+  const resultCountLabel = status === "running"
+    ? `探索中 / 合格候補 ${passingCandidateCount} 件 / プレビュー${RESULTS_PAGE_SIZE}件まで`
+    : candidates.length > 0
+      ? `候補 ${candidates.length} 件 / ${pageStartIndex + 1}-${pageEndIndex} 件目`
+      : `候補 ${candidates.length} 件`;
+
+  useEffect(() => {
+    setCandidatePage(1);
+  }, [candidateSortDirection, candidateSortKey, candidates.length]);
+
+  useEffect(() => {
+    setCandidatePage((currentPage) => Math.min(currentPage, totalCandidatePages));
+  }, [totalCandidatePages]);
 
   return (
     <section className="results-panel" aria-labelledby="results-title">
       <div className="section-heading">
         <div>
           <h2 id="results-title">候補一覧</h2>
-          <span>{status === "running" ? "探索中" : `候補 ${candidates.length} 件`}</span>
+          <span>{resultCountLabel}</span>
         </div>
         <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
           閉じる
         </button>
       </div>
+
+      {candidates.length > 0 ? (
+        <div className="candidate-toolbar" aria-label="候補一覧の表示操作">
+          <SelectField
+            compact
+            className="candidate-sort-field"
+            label="並び替え"
+            value={candidateSortKey}
+            options={candidateSortOptions}
+            onChange={(nextSortKey) => {
+              setCandidateSortKey(nextSortKey);
+              setCandidateSortDirection(getDefaultCandidateSortDirection(nextSortKey));
+            }}
+          />
+          <SelectField
+            compact
+            className="candidate-sort-direction-field"
+            label="順序"
+            value={candidateSortDirection}
+            options={candidateSortDirectionOptions}
+            onChange={setCandidateSortDirection}
+          />
+          <span className="candidate-page-status" aria-live="polite">
+            {pageStartIndex + 1}-{pageEndIndex} / {candidates.length}
+          </span>
+          <div className="candidate-page-actions" aria-label="候補一覧のページ操作">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => setCandidatePage((currentPage) => Math.max(1, currentPage - 1))}
+              disabled={safeCandidatePage <= 1}
+            >
+              前へ
+            </Button>
+            <span>{safeCandidatePage} / {totalCandidatePages}</span>
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => setCandidatePage((currentPage) => Math.min(totalCandidatePages, currentPage + 1))}
+              disabled={safeCandidatePage >= totalCandidatePages}
+            >
+              次へ
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
         <div className="candidate-row header" role="row">
@@ -4247,7 +4389,7 @@ export function ResultsPanel({
               "計算結果"
             )}
           </div>
-        ) : candidates.map((candidate) => {
+        ) : displayedCandidates.map((candidate) => {
           const expanded = selectedCandidateId === candidate.id;
           return (
             <Collapsible.Root

@@ -123,6 +123,25 @@ describe("enumerateDefenceEvCandidates", () => {
       && candidate.hp + candidate.def + candidate.spd + 64 <= 66
     ))).toBe(true);
   });
+
+  it("enumerates only requested defence stats and keeps inactive defence stats fixed", () => {
+    const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
+
+    const candidates = enumerateDefenceEvCandidates(defender, { searchStatKeys: ["hp", "def"] });
+
+    expect(candidates).toHaveLength(6);
+    expect(candidates).toEqual(
+      expect.arrayContaining([
+        { hp: 0, def: 0, spd: 0 },
+        { hp: 0, def: 1, spd: 0 },
+        { hp: 1, def: 0, spd: 0 },
+        { hp: 0, def: 2, spd: 0 },
+        { hp: 1, def: 1, spd: 0 },
+        { hp: 2, def: 0, spd: 0 },
+      ]),
+    );
+    expect(candidates.every((candidate) => candidate.spd === 0)).toBe(true);
+  });
 });
 
 describe("calculateSurvivalProbability", () => {
@@ -292,5 +311,42 @@ describe("searchDefenceCandidates", () => {
 
     expect(results).not.toHaveLength(0);
     expect(results.every((result) => result.candidate.hp >= 2 && result.candidate.def >= 1)).toBe(true);
+  });
+
+  it("collects every passing candidate when maxResults is null", () => {
+    const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
+    const scenario = makeScenario("easy", [makeHit("hit", makeBuild("attacker", "ピチュー"), "でんこうせっか")], 1, 1);
+    const calculateHit: CalculateHit = () => ({
+      hitId: "hit",
+      damageRolls: [1],
+      damageRange: { min: 1, max: 1, percentMin: 1, percentMax: 1 },
+    });
+
+    const limitedResults = searchDefenceCandidates(defender, [scenario], { maxResults: 3, calculateHit });
+    const allResults = searchDefenceCandidates(defender, [scenario], { maxResults: null, calculateHit });
+
+    expect(limitedResults).toHaveLength(3);
+    expect(allResults).toHaveLength(enumerateDefenceEvCandidates(defender).length);
+    expect(allResults.length).toBeGreaterThan(limitedResults.length);
+    expect(allResults.map((result) => result.rank)).toEqual(Array.from({ length: allResults.length }, (_, index) => index + 1));
+  });
+
+  it("collects all passing candidates only across requested defence stats", () => {
+    const defender = makeBuild("target", "カイリュー", { ...zeroEvs, atk: 252, spa: 252 });
+    const scenario = makeScenario("easy", [makeHit("hit", makeBuild("attacker", "ピチュー"), "でんこうせっか")], 1, 1);
+    const calculateHit: CalculateHit = () => ({
+      hitId: "hit",
+      damageRolls: [1],
+      damageRange: { min: 1, max: 1, percentMin: 1, percentMax: 1 },
+    });
+
+    const results = searchDefenceCandidates(defender, [scenario], {
+      maxResults: null,
+      calculateHit,
+      searchStatKeys: ["hp", "def"],
+    });
+
+    expect(results).toHaveLength(6);
+    expect(results.every((result) => result.candidate.spd === 0 && result.appliedStatPoints.spd === 0)).toBe(true);
   });
 });
