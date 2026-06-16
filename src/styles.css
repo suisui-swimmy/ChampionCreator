@@ -527,7 +527,8 @@ textarea:focus-visible,
 .box-message {
   margin: 0;
   border-top: 1px solid var(--line);
-  padding: 8px 14px;
+  padding: 8px 18px;
+  text-align: center;
 }
 
 .primary-button,

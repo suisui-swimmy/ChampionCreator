@@ -78,4 +78,41 @@ describe("golden UI scenario", () => {
     );
     expect(results.every((result) => result.passed)).toBe(true);
   });
+
+  it("resolves base Vivillon and finds candidates for Jolly Garchomp Rock Slide in doubles", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "ビビヨン はなぞののもよう",
+      natureInput: "おくびょう",
+      abilityInput: "",
+      statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    };
+    const [defaultScenario] = createDefaultScenarioForms();
+    const scenarios = [{
+      ...defaultScenario,
+      label: "対ガブリアス",
+      attacks: defaultScenario.attacks.map((attack) => ({
+        ...attack,
+        attackerPokemonInput: "ガブリアス",
+        attackerNatureInput: "ようき",
+        attackerAbilityInput: "",
+        attackerItemInput: "",
+        attackerStatPoints: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 },
+        moveInput: "いわなだれ",
+        gameType: "doubles" as const,
+        requiredSurvivedHits: 1,
+        minSurvivalProbabilityPercent: 100,
+      })),
+    }];
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    const results = searchDefenceCandidates(input.build, input.scenarios, { maxResults: 1 });
+
+    expect(input.build.pokemon.canonicalName).toBe("Vivillon");
+    expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Garchomp");
+    expect(input.scenarios[0].hits[0].move.canonicalName).toBe("Rock Slide");
+    expect(input.scenarios[0].hits[0].field?.gameType).toBe("doubles");
+    expect(results).toHaveLength(1);
+    expect(results.every((result) => result.passed)).toBe(true);
+  });
 });

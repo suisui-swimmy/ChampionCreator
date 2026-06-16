@@ -98,6 +98,22 @@ describe("resolveEntity", () => {
       canonicalName: "Ogerpon-Cornerstone-Tera",
       displayNameJa: "オーガポン いしずえのめん テラスタル",
     });
+
+    expect(resolveEntity("pokemon", "ビビヨン はなぞののもよう")).toMatchObject({
+      status: "exact",
+      canonicalName: "Vivillon",
+      displayNameJa: "ビビヨン はなぞののもよう",
+    });
+    expect(resolveEntity("pokemon", "ビビヨン ファンシーなもよう")).toMatchObject({
+      status: "exact",
+      canonicalName: "Vivillon-Fancy",
+      displayNameJa: "ビビヨン ファンシーなもよう",
+    });
+    expect(resolveEntity("pokemon", "ビビヨン ボールのもよう")).toMatchObject({
+      status: "exact",
+      canonicalName: "Vivillon-Pokeball",
+      displayNameJa: "ビビヨン ボールのもよう",
+    });
   });
 
   it("resolves generated option data for other UI entity fields", () => {

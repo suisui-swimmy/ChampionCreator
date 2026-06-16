@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "manual-overrides-2026-06-13",
+  "dataVersion": "manual-overrides-2026-06-16",
   "entries": [
     {
       "kind": "pokemon",
@@ -36,6 +36,20 @@
       "displayNameJa": "オーガポン いどのめん テラスタル",
       "sourceStatus": "manual",
       "note": "Keeps normal mask labels unambiguous; Tera state is controlled separately in the UI."
+    },
+    {
+      "kind": "pokemon",
+      "id": "vivillonfancy",
+      "displayNameJa": "ビビヨン ファンシーなもよう",
+      "sourceStatus": "manual",
+      "note": "Avoids colliding with the base Vivillon garden-pattern label in generated data."
+    },
+    {
+      "kind": "pokemon",
+      "id": "vivillonpokeball",
+      "displayNameJa": "ビビヨン ボールのもよう",
+      "sourceStatus": "manual",
+      "note": "Avoids colliding with the base Vivillon garden-pattern label in generated data."
     }
   ]
 }
