@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   BOX_STORAGE_SCHEMA_VERSION,
+  createBoxBackupFileName,
   createBoxEntryFromState,
   createBoxEntrySummary,
   duplicateBoxEntry,
   loadBoxEntriesFromBrowser,
+  parseBoxBackupDocument,
   parseBoxStorageDocument,
   saveBoxEntriesToBrowser,
+  stringifyBoxBackupDocument,
   stringifyBoxStorageDocument,
 } from "./boxStorage";
 import {
@@ -99,5 +102,71 @@ describe("boxStorage", () => {
       updatedAt: "2026-06-11T01:00:00.000Z",
       payload: entry.payload,
     });
+  });
+
+  it("round-trips all entries as a readable backup document", () => {
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "box-backup",
+      now: "2026-06-11T00:00:00.000Z",
+    });
+
+    const result = parseBoxBackupDocument(stringifyBoxBackupDocument(
+      [entry],
+      "2026-06-12T00:00:00.000Z",
+    ));
+
+    expect(result).toMatchObject({
+      status: "success",
+      entries: [entry],
+      skippedCount: 0,
+      warnings: [],
+    });
+  });
+
+  it("reports unsupported or malformed backup documents", () => {
+    expect(parseBoxBackupDocument("not-json")).toMatchObject({
+      status: "error",
+      message: "バックアップJSONを読み込めません",
+    });
+    expect(parseBoxBackupDocument(JSON.stringify({
+      schemaVersion: 999,
+      entries: [],
+    }))).toMatchObject({
+      status: "error",
+      message: "対応していないバックアップです (schemaVersion 1 のみ対応)",
+    });
+    expect(parseBoxBackupDocument(JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+    }))).toMatchObject({
+      status: "error",
+      message: "バックアップJSONに entries がありません",
+    });
+  });
+
+  it("imports readable backup entries and warns about skipped slots", () => {
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "box-readable",
+      now: "2026-06-11T00:00:00.000Z",
+    });
+    const result = parseBoxBackupDocument(JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [
+        entry,
+        { id: "bad", payload: { schemaVersion: 999 } },
+      ],
+    }));
+
+    expect(result).toMatchObject({
+      status: "success",
+      entries: [entry],
+      skippedCount: 1,
+      warnings: ["1件の保存スロットを読み込めませんでした"],
+    });
+  });
+
+  it("creates stable backup filenames from dates", () => {
+    expect(createBoxBackupFileName(new Date("2026-06-12T09:30:00.000Z"))).toBe(
+      "championcreator-box-backup-2026-06-12.json",
+    );
   });
 });

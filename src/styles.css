@@ -391,6 +391,17 @@ textarea:focus-visible,
   font-weight: 700;
 }
 
+.box-window-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.box-action-label-short {
+  display: none;
+}
+
 .box-close-button {
   min-height: 28px;
   border: 1px solid var(--line-strong);
@@ -4652,6 +4663,30 @@ textarea {
   .box-current-row,
   .box-action-row {
     padding: 11px 12px;
+  }
+
+  .box-window-header {
+    align-items: flex-start;
+  }
+
+  .box-window-actions {
+    flex-wrap: nowrap;
+    gap: 5px;
+    max-width: none;
+  }
+
+  .box-window-actions .ui-button-small,
+  .box-close-button {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .box-action-label-full {
+    display: none;
+  }
+
+  .box-action-label-short {
+    display: inline;
   }
 
   .box-current-row {

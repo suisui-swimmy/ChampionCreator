@@ -11,6 +11,7 @@ import type { StatPointTable } from "../domain/championsStats";
 
 export const BOX_STORAGE_KEY = "championcreator.box.v1";
 export const BOX_STORAGE_SCHEMA_VERSION = 1;
+export const BOX_BACKUP_FILE_PREFIX = "championcreator-box-backup";
 
 export type BoxEntrySummary = {
   pokemonName: string;
@@ -31,6 +32,23 @@ export type BoxStorageDocument = {
   schemaVersion: typeof BOX_STORAGE_SCHEMA_VERSION;
   entries: BoxEntry[];
 };
+
+export type BoxBackupDocument = BoxStorageDocument & {
+  exportedAt: string;
+};
+
+export type BoxBackupImportResult =
+  | {
+      status: "success";
+      entries: BoxEntry[];
+      skippedCount: number;
+      warnings: string[];
+    }
+  | {
+      status: "error";
+      message: string;
+      warnings: string[];
+    };
 
 type BoxBrowserStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -177,6 +195,95 @@ export const stringifyBoxStorageDocument = (entries: BoxEntry[]): string => {
   };
 
   return JSON.stringify(document);
+};
+
+export const stringifyBoxBackupDocument = (
+  entries: BoxEntry[],
+  exportedAt = new Date().toISOString(),
+): string => {
+  const document: BoxBackupDocument = {
+    schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+    exportedAt,
+    entries,
+  };
+
+  return `${JSON.stringify(document, null, 2)}\n`;
+};
+
+export const createBoxBackupFileName = (date = new Date()): string => {
+  const stamp = date.toISOString().slice(0, 10);
+  return `${BOX_BACKUP_FILE_PREFIX}-${stamp}.json`;
+};
+
+export const parseBoxBackupDocument = (raw: string): BoxBackupImportResult => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {
+      status: "error",
+      message: "バックアップJSONを読み込めません",
+      warnings: [],
+    };
+  }
+
+  if (!isRecord(parsed)) {
+    return {
+      status: "error",
+      message: "バックアップJSONの形式が不正です",
+      warnings: [],
+    };
+  }
+
+  if (parsed.schemaVersion !== BOX_STORAGE_SCHEMA_VERSION) {
+    return {
+      status: "error",
+      message: `対応していないバックアップです (schemaVersion ${BOX_STORAGE_SCHEMA_VERSION} のみ対応)`,
+      warnings: [],
+    };
+  }
+
+  if (!Array.isArray(parsed.entries)) {
+    return {
+      status: "error",
+      message: "バックアップJSONに entries がありません",
+      warnings: [],
+    };
+  }
+
+  const entries: BoxEntry[] = [];
+  let skippedCount = 0;
+  for (const entry of parsed.entries) {
+    const normalized = normalizeBoxEntry(entry);
+    if (normalized) {
+      entries.push(normalized);
+    } else {
+      skippedCount += 1;
+    }
+  }
+
+  if (entries.length === 0 && parsed.entries.length > 0) {
+    return {
+      status: "error",
+      message: "読み込める保存スロットがありません",
+      warnings: [`${skippedCount}件の保存スロットを読み込めませんでした`],
+    };
+  }
+
+  const warnings = skippedCount > 0
+    ? [`${skippedCount}件の保存スロットを読み込めませんでした`]
+    : [];
+
+  if (entries.length === 0) {
+    warnings.push("バックアップ内の保存スロットは0件です");
+  }
+
+  return {
+    status: "success",
+    entries,
+    skippedCount,
+    warnings,
+  };
 };
 
 const getBrowserBoxStorage = (): BoxBrowserStorage | null => (

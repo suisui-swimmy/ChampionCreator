@@ -61,11 +61,14 @@ import {
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
 import {
+  createBoxBackupFileName,
   createBoxEntryFromState,
   createBoxEntrySummary,
   duplicateBoxEntry,
   loadBoxEntriesFromBrowser,
+  parseBoxBackupDocument,
   saveBoxEntriesToBrowser,
+  stringifyBoxBackupDocument,
   type BoxEntry,
   type BoxEntrySummary,
 } from "./ui/boxStorage";
@@ -526,6 +529,7 @@ export function App() {
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
+  const boxImportInputRef = useRef<HTMLInputElement | null>(null);
 
   const previewInput = useMemo(() => {
     try {
@@ -951,6 +955,73 @@ export function App() {
     }
   };
 
+  const handleExportBoxBackup = () => {
+    if (boxEntries.length === 0) {
+      setBoxMessage("書き出せる保存がありません");
+      return;
+    }
+
+    const backupJson = stringifyBoxBackupDocument(boxEntries);
+    const blob = new Blob([backupJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = createBoxBackupFileName();
+    link.rel = "noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setBoxMessage(`保存${boxEntries.length}件のバックアップを書き出しました`);
+  };
+
+  const handleRequestImportBoxBackup = () => {
+    boxImportInputRef.current?.click();
+  };
+
+  const handleImportBoxBackup = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const result = parseBoxBackupDocument(await file.text());
+      if (result.status === "error") {
+        setBoxMessage(result.message);
+        return;
+      }
+
+      const warningText = result.warnings.length > 0 ? `\n${result.warnings.join("\n")}` : "";
+      const shouldImport = boxEntries.length === 0
+        || (typeof window !== "undefined" && window.confirm(
+          `現在の保存${boxEntries.length}件を、バックアップ${result.entries.length}件で置き換えますか？${warningText}`,
+        ));
+      if (!shouldImport) {
+        return;
+      }
+
+      const error = saveBoxEntriesToBrowser(result.entries);
+      if (error) {
+        setBoxMessage(error);
+        return;
+      }
+
+      setBoxEntries(result.entries);
+      setSelectedBoxEntryId(result.entries[0]?.id ?? BLANK_BOX_SLOT_ID);
+      setBoxMessage(
+        result.warnings.length > 0
+          ? `バックアップを読み込みました（${result.entries.length}件 / ${result.warnings.join("、")}）`
+          : `バックアップを読み込みました（${result.entries.length}件）`,
+      );
+    } catch {
+      setBoxMessage("バックアップの読み込みに失敗しました");
+    } finally {
+      input.value = "";
+    }
+  };
+
   const handleSelectCandidate = (id: string) => {
     setSelectedCandidateId((current) => current === id ? null : id);
   };
@@ -1032,8 +1103,18 @@ export function App() {
           onRenameEntry={handleRenameBoxEntry}
           onDuplicateEntry={handleDuplicateBoxEntry}
           onDeleteEntry={handleDeleteBoxEntry}
+          onExportEntries={handleExportBoxBackup}
+          onRequestImport={handleRequestImportBoxBackup}
         />
       ) : null}
+      <input
+        ref={boxImportInputRef}
+        className="visually-hidden"
+        type="file"
+        accept="application/json,.json"
+        aria-label="ボックスバックアップを読み込む"
+        onChange={handleImportBoxBackup}
+      />
 
       {mobileSheet ? (
         <button
@@ -2456,6 +2537,8 @@ type BoxPanelProps = {
   onRenameEntry: (entryId: string, name: string) => void;
   onDuplicateEntry: (entryId: string) => void;
   onDeleteEntry: (entryId: string) => void;
+  onExportEntries: () => void;
+  onRequestImport: () => void;
 };
 
 function BoxSlotArtwork({ entry }: { entry: BoxEntry }) {
@@ -2494,6 +2577,8 @@ function BoxPanel({
   onRenameEntry,
   onDuplicateEntry,
   onDeleteEntry,
+  onExportEntries,
+  onRequestImport,
 }: BoxPanelProps) {
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
   const isBlankSlotSelected = selectedEntryId === BLANK_BOX_SLOT_ID;
@@ -2508,9 +2593,19 @@ function BoxPanel({
             <h2 id="box-title">ボックス</h2>
             <span>ブラウザに保存</span>
           </div>
-          <button className="box-close-button" type="button" onClick={onClose}>
-            閉じる
-          </button>
+          <div className="box-window-actions">
+            <Button variant="ghost" size="small" aria-label="バックアップを書き出す" onClick={onExportEntries}>
+              <span className="box-action-label-full">バックアップを書き出す</span>
+              <span className="box-action-label-short" aria-hidden="true">書き出す</span>
+            </Button>
+            <Button variant="ghost" size="small" aria-label="バックアップを読み込む" onClick={onRequestImport}>
+              <span className="box-action-label-full">バックアップを読み込む</span>
+              <span className="box-action-label-short" aria-hidden="true">読み込む</span>
+            </Button>
+            <button className="box-close-button" type="button" onClick={onClose}>
+              閉じる
+            </button>
+          </div>
         </header>
 
         <div className="box-current-row" aria-label="編集中のシナリオ">
