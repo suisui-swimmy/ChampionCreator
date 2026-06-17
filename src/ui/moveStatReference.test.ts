@@ -51,6 +51,7 @@ describe("getMoveStatReferencePlan", () => {
   it("returns the defender stats that affect KO thresholds", () => {
     expect(getMoveDefenderStatKeys("ふいうち")).toEqual(["hp", "def"]);
     expect(getMoveDefenderStatKeys("サイコキネシス")).toEqual(["hp", "spd"]);
+    expect(getMoveDefenderStatKeys("くさむすび")).toEqual(["hp", "spd"]);
     expect(getMoveDefenderStatKeys("サイコショック")).toEqual(["hp", "def"]);
     expect(getMoveDefenderStatKeys("いのちがけ")).toEqual(["hp"]);
     expect(getMoveDefenderStatKeys("テラバースト", { teraEnabled: true })).toEqual(["hp", "def", "spd"]);

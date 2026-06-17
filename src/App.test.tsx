@@ -584,6 +584,70 @@ describe("App", () => {
     expect(closedHtml).not.toContain("C7 メガマフォクシー サイコキネシス");
   });
 
+  it("shows standalone firepower line results when no defence scenario is enabled", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const offenseScenario = {
+      ...scenario,
+      id: "scenario-offense-only",
+      label: "火力のみ",
+      enabled: true,
+      adjustmentType: "offense" as const,
+      attacks: [{
+        ...scenario.attacks[0],
+        id: "attack-grass-knot",
+        label: "くさむすび",
+        attackerPokemonInput: "カビゴン",
+        moveInput: "くさむすび",
+      }],
+    };
+    const offenseResults = [{
+      id: "scenario-offense-only-attack-grass-knot-spa",
+      scenarioId: "scenario-offense-only",
+      scenarioLabel: "火力のみ",
+      attackId: "attack-grass-knot",
+      attackLabel: "くさむすび",
+      result: {
+        id: "spa-line",
+        status: "pass" as const,
+        passed: true,
+        label: "Cライン",
+        owner: "attacker" as const,
+        stat: "spa" as const,
+        role: "damage" as const,
+        canApply: true,
+        requiredStatPoints: 12,
+        actualStat: 156,
+        koProbability: 1,
+        targetKoProbability: 1,
+        damageRange: { min: 180, max: 216, percentMin: 102.8, percentMax: 123.4 },
+        reason: "Cライン 12 SPでKO条件を満たします",
+      },
+    }];
+
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        candidates={[]}
+        selectedCandidateId={null}
+        appliedCandidateId={null}
+        scenarios={[offenseScenario]}
+        status="idle"
+        offenseResults={offenseResults}
+        speedResults={[]}
+        strictestFailureLabel={null}
+        targetLabel="メガライチュウ"
+        resultAlertMessage={null}
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("火力・素早さライン結果");
+    expect(html).toContain(">Cライン</strong>");
+    expect(html).toContain("火力のみ / くさむすび");
+    expect(html).toContain("KO 100.0%");
+    expect(html).not.toContain(">計算結果</div>");
+  });
+
   it("labels each expanded damage line with its attack card inside multi-attack scenarios", () => {
     const candidate: CandidateResult = {
       id: "candidate-multi",

@@ -156,6 +156,22 @@ describe("calculateOffenseAdjustment", () => {
     expect(result).toMatchObject({ stat: "atk", label: "Aライン" });
   });
 
+  it("lets @smogon/calc resolve weight-based power from the defender species", () => {
+    const lightTarget = calculateOffenseAdjustment(makeInput("くさむすび", {
+      attackerBuild: makeBuild("attacker", "ライチュウ", "ひかえめ", { ...zeroStatPoints, spa: 32 }),
+      defenderBuild: makeBuild("defender", "ピチュー"),
+    }))[0];
+    const heavyTarget = calculateOffenseAdjustment(makeInput("くさむすび", {
+      attackerBuild: makeBuild("attacker", "ライチュウ", "ひかえめ", { ...zeroStatPoints, spa: 32 }),
+      defenderBuild: makeBuild("defender", "カビゴン"),
+    }))[0];
+
+    expect(lightTarget).toMatchObject({ stat: "spa", label: "Cライン" });
+    expect(heavyTarget).toMatchObject({ stat: "spa", label: "Cライン" });
+    expect(lightTarget.description).toContain("Grass Knot (20 BP)");
+    expect(heavyTarget.description).toContain("Grass Knot (120 BP)");
+  });
+
   it("reports Foul Play as an opponent A reference that cannot be applied to the target", () => {
     const result = calculateOffenseAdjustment(makeInput("イカサマ"))[0];
 

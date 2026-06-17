@@ -632,6 +632,13 @@ export function App() {
   const hasEnabledDefenceScenario = scenarioForms.some((scenario) => (
     scenario.enabled && scenario.adjustmentType === "defence"
   ));
+  const hasStandaloneAdjustmentResults = offenseResults.length > 0 || speedResults.length > 0;
+  const canRunAdjustment = hasEnabledDefenceScenario || hasStandaloneAdjustmentResults;
+  const runButtonLabel = hasEnabledDefenceScenario
+    ? "計算開始"
+    : hasStandaloneAdjustmentResults
+      ? "結果確認"
+      : "シナリオなし";
 
   const resultAlertMessage =
     (hasEnabledDefenceScenario && previewInput.error && !isCanonicalResolutionMessage(previewInput.error))
@@ -857,6 +864,12 @@ export function App() {
 
   const handleRun = () => {
     if (searchState.status === "running") {
+      return;
+    }
+
+    if (!hasEnabledDefenceScenario) {
+      setSelectedCandidateId(null);
+      setMobileSheet("results");
       return;
     }
 
@@ -1199,7 +1212,8 @@ export function App() {
         searchProgress={searchState.progress}
         searchedCandidates={searchState.searchedCandidates}
         totalCandidates={searchState.totalCandidates}
-        hasEnabledDefenceScenario={hasEnabledDefenceScenario}
+        canRunAdjustment={canRunAdjustment}
+        runButtonLabel={runButtonLabel}
         isBoxPanelOpen={boxOpen}
         onOpenBoxPanel={toggleBoxPanel}
         onOpenTarget={() => {
@@ -1294,11 +1308,11 @@ export function App() {
             variant="primary"
             id="runButton"
             onClick={handleRun}
-            disabled={searchState.status === "running" || !hasEnabledDefenceScenario}
+            disabled={searchState.status === "running" || !canRunAdjustment}
           >
             {searchState.status === "running"
               ? "計算中..."
-              : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
+              : runButtonLabel}
           </Button>
         </section>
         <ResultsPanel
@@ -2082,7 +2096,8 @@ type MobileOverviewProps = {
   searchProgress: number;
   searchedCandidates: number;
   totalCandidates: number;
-  hasEnabledDefenceScenario: boolean;
+  canRunAdjustment: boolean;
+  runButtonLabel: string;
   isBoxPanelOpen: boolean;
   onOpenBoxPanel: () => void;
   onOpenTarget: () => void;
@@ -2189,7 +2204,8 @@ function MobileOverview({
   searchProgress,
   searchedCandidates,
   totalCandidates,
-  hasEnabledDefenceScenario,
+  canRunAdjustment,
+  runButtonLabel,
   isBoxPanelOpen,
   onOpenBoxPanel,
   onOpenTarget,
@@ -2561,9 +2577,9 @@ function MobileOverview({
             variant="primary"
             size="small"
             onClick={onRun}
-            disabled={searchStatus === "running" || !hasEnabledDefenceScenario}
+            disabled={searchStatus === "running" || !canRunAdjustment}
           >
-            {searchStatus === "running" ? "計算中..." : hasEnabledDefenceScenario ? "計算開始" : "シナリオなし"}
+            {searchStatus === "running" ? "計算中..." : runButtonLabel}
           </Button>
         </div>
         <h2 id="mobile-candidate-title" className="mobile-candidate-title">候補一覧</h2>
@@ -4196,6 +4212,9 @@ const formatOffenseCandidateDetail = (
     ? `${statLabels[entry.result.stat]}${entry.result.requiredStatPoints ?? "-"}`
     : entry.result.label;
   const sourceLabel = [statPointLabel, targetLabel.trim() || "調整対象", moveLabel].join(" ");
+  if (entry.result.description) {
+    return `${formatLocalizedDamageDescription(entry.result.description)} / KO率 ${formatPercent(entry.result.koProbability)}`;
+  }
   const damageLabel = entry.result.damageRange
     ? `${formatDamageRange(entry.result.damageRange.min, entry.result.damageRange.max)} `
       + `(${entry.result.damageRange.percentMin.toFixed(1)}-${entry.result.damageRange.percentMax.toFixed(1)}%)`
@@ -4247,6 +4266,54 @@ const formatSpeedResultDetail = (
     + `自分 ${actualSpeedLabel} / 相手 ${entry.result.targetSpeed} / ${formatSpeedRelationLabel(entry.result)}${noteLabel}`;
 };
 
+type StandaloneAdjustmentResultsProps = {
+  offenseResults: OffenseScenarioResult[];
+  speedResults: SpeedScenarioResult[];
+  targetLabel: string;
+  scenariosById: Map<string, ScenarioFormState>;
+};
+
+function StandaloneAdjustmentResults({
+  offenseResults,
+  speedResults,
+  targetLabel,
+  scenariosById,
+}: StandaloneAdjustmentResultsProps) {
+  return (
+    <div className="adjustment-result-list" aria-label="火力・素早さライン結果">
+      <strong className="adjustment-result-list-title">火力・素早さライン結果</strong>
+      {offenseResults.map((entry) => (
+        <div className="adjustment-result-row" key={entry.id}>
+          <StatusBadge tone={getOffenseResultTone(entry.result)} />
+          <strong>{entry.result.label}</strong>
+          <span className="adjustment-result-source">{entry.scenarioLabel} / {entry.attackLabel}</span>
+          <span className="adjustment-result-metric">KO {formatPercent(entry.result.koProbability)}</span>
+          <em className={entry.result.passed ? "" : "fail-badge"}>
+            {formatScenarioResultStatusLabel(entry.result.passed)}
+          </em>
+          <small>
+            {formatOffenseCandidateDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
+            {" / "}
+            {entry.result.reason}
+          </small>
+        </div>
+      ))}
+      {speedResults.map((entry) => (
+        <div className="adjustment-result-row" key={entry.id}>
+          <StatusBadge tone={getSpeedResultTone(entry.result)} />
+          <strong>{entry.result.label}</strong>
+          <span className="adjustment-result-source">{entry.scenarioLabel} / {entry.attackLabel}</span>
+          <span className="adjustment-result-metric">相手S {entry.result.targetSpeed || "-"}</span>
+          <em className={entry.result.passed ? "" : "fail-badge"}>
+            {formatScenarioResultStatusLabel(entry.result.passed)}
+          </em>
+          <small>{formatSpeedResultDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ResultsPanel({
   candidates,
   passingCandidateCount = candidates.length,
@@ -4273,6 +4340,14 @@ export function ResultsPanel({
   const scenariosById = useMemo(
     () => new Map(scenarios.map((scenario) => [scenario.id, scenario])),
     [scenarios],
+  );
+  const hasEnabledDefenceScenario = scenarios.some((scenario) => (
+    scenario.enabled && scenario.adjustmentType === "defence"
+  ));
+  const showStandaloneAdjustmentResults = (
+    candidates.length === 0
+    && !hasEnabledDefenceScenario
+    && (offenseResults.length > 0 || speedResults.length > 0)
   );
   const attackLabelsByScenarioId = useMemo(
     () => new Map(scenarios.map((scenario) => [
@@ -4378,7 +4453,14 @@ export function ResultsPanel({
           </div>
         ) : null}
         {candidates.length === 0 ? (
-          resultAlertMessage ? null : <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
+          resultAlertMessage ? null : showStandaloneAdjustmentResults ? (
+            <StandaloneAdjustmentResults
+              offenseResults={offenseResults}
+              speedResults={speedResults}
+              targetLabel={targetLabel}
+              scenariosById={scenariosById}
+            />
+          ) : <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
             {status === "complete" ? (
               <>
                 <strong>FAIL</strong>
