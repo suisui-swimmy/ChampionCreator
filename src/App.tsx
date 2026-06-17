@@ -368,6 +368,9 @@ const localizeDamageDescriptionNames = (description: string): string =>
     description,
   );
 
+const formatDamageDescriptionPowerLabels = (description: string): string =>
+  description.replace(/\((\d+)\s+BP\)/g, "($1 DMG)");
+
 const formatLocalizedDamageResult = (resultText: string): string =>
   resultText
     .replace(/\s+-\s+/g, "-")
@@ -381,7 +384,7 @@ const formatFallbackLocalizedDamageDescription = (description: string): string =
   Object.entries(damageDescriptionStatCodes)
     .reduce(
       (current, [english, japanese]) => current.replace(new RegExp(`\\b${english}\\b`, "g"), japanese),
-      localizeDamageDescriptionNames(description),
+      formatDamageDescriptionPowerLabels(localizeDamageDescriptionNames(description)),
     )
     .replace(/\s+vs\.\s+/g, " → ")
     .replace(/:\s+/g, " : ")
@@ -409,7 +412,7 @@ export const formatLocalizedDamageDescription = (description: string): string =>
 
   return [
     `${formatDamageDescriptionStatCode(attackStat)}${formatDamageDescriptionStatPoint(attackInvestment)}${attackNature}`,
-    localizeDamageDescriptionNames(attackerAndMove),
+    formatDamageDescriptionPowerLabels(localizeDamageDescriptionNames(attackerAndMove)),
     "→",
     `H${formatDamageDescriptionStatPoint(defenderHpInvestment)}`,
     "/",

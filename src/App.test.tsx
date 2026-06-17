@@ -455,6 +455,9 @@ describe("App", () => {
     expect(formatLocalizedDamageDescription(
       "252+ Atk Kingambit Sucker Punch vs. 68 HP / 236 Def Delphox-Mega: 134-158 (84.2 - 99.3%) -- guaranteed 2HKO",
     )).toBe("A32+ ドドゲザン ふいうち → H9 / B30 メガマフォクシー : 134-158 (84.2-99.3%) / 確定2発");
+    expect(formatLocalizedDamageDescription(
+      "252 SpA Raichu Grass Knot (120 BP) vs. 0 HP / 0 SpD Snorlax: 186-220 (79.1 - 93.6%) -- guaranteed 2HKO",
+    )).toBe("C32 ライチュウ くさむすび (120 DMG) → H0 / D0 カビゴン : 186-220 (79.1-93.6%) / 確定2発");
   });
 
   it("integrates the selected candidate detail into the candidate list", () => {
