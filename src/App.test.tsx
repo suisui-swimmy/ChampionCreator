@@ -648,6 +648,8 @@ describe("App", () => {
     expect(html).toContain(">Cライン</strong>");
     expect(html).toContain("火力のみ / くさむすび");
     expect(html).toContain("KO 100.0%");
+    expect(html).toContain('aria-label="Cラインを調整対象へ適用"');
+    expect(html).toContain(">適用</button>");
     expect(html).not.toContain(">計算結果</div>");
   });
 
@@ -913,6 +915,7 @@ describe("App", () => {
     expect(html).not.toContain("Sライン結果");
     expect(html).not.toContain("自動補正なし");
     expect(html).not.toContain("抜ける /");
+    expect(html).toContain('aria-label="Sラインを調整対象へ適用"');
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {

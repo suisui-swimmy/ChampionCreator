@@ -29,6 +29,8 @@ import {
 } from "./localization/resolver";
 import {
   applyCandidateToTarget,
+  applyOffenseAdjustmentToTarget,
+  applySpeedAdjustmentToTarget,
   applyMoveHitCountDefaults,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
@@ -583,6 +585,7 @@ export function App() {
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [appliedCandidateId, setAppliedCandidateId] = useState<string | null>(null);
+  const [appliedAdjustmentId, setAppliedAdjustmentId] = useState<string | null>(null);
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [boxOpen, setBoxOpen] = useState(false);
@@ -1105,13 +1108,35 @@ export function App() {
     setSelectedCandidateId((current) => current === id ? null : id);
   };
 
-  const handleApplyCandidate = (candidate: CandidateResult) => {
-    setTargetForm((current) => applyCandidateToTarget(current, candidate));
-    setAppliedCandidateId(candidate.id);
+  const clearAppliedMarkerAfterDelay = () => {
     if (applyTimerRef.current !== null) {
       window.clearTimeout(applyTimerRef.current);
     }
-    applyTimerRef.current = window.setTimeout(() => setAppliedCandidateId(null), 1200);
+    applyTimerRef.current = window.setTimeout(() => {
+      setAppliedCandidateId(null);
+      setAppliedAdjustmentId(null);
+    }, 1200);
+  };
+
+  const handleApplyCandidate = (candidate: CandidateResult) => {
+    setTargetForm((current) => applyCandidateToTarget(current, candidate));
+    setAppliedCandidateId(candidate.id);
+    setAppliedAdjustmentId(null);
+    clearAppliedMarkerAfterDelay();
+  };
+
+  const handleApplyOffenseAdjustment = (entry: OffenseScenarioResult) => {
+    setTargetForm((current) => applyOffenseAdjustmentToTarget(current, entry.result));
+    setAppliedCandidateId(null);
+    setAppliedAdjustmentId(entry.id);
+    clearAppliedMarkerAfterDelay();
+  };
+
+  const handleApplySpeedAdjustment = (entry: SpeedScenarioResult) => {
+    setTargetForm((current) => applySpeedAdjustmentToTarget(current, entry.result));
+    setAppliedCandidateId(null);
+    setAppliedAdjustmentId(entry.id);
+    clearAppliedMarkerAfterDelay();
   };
 
   const closeMobileSheet = () => {
@@ -1323,6 +1348,7 @@ export function App() {
           passingCandidateCount={searchState.passingCandidateCount}
           selectedCandidateId={selectedCandidateId}
           appliedCandidateId={appliedCandidateId}
+          appliedAdjustmentId={appliedAdjustmentId}
           scenarios={scenarioForms}
           status={searchState.status}
           offenseResults={offenseResults}
@@ -1332,6 +1358,8 @@ export function App() {
           resultAlertMessage={resultAlertMessage}
           onSelectCandidate={handleSelectCandidate}
           onApplyCandidate={handleApplyCandidate}
+          onApplyOffenseResult={handleApplyOffenseAdjustment}
+          onApplySpeedResult={handleApplySpeedAdjustment}
           onCloseMobileSheet={closeMobileSheet}
         />
       </main>
@@ -4172,6 +4200,7 @@ type ResultsPanelProps = {
   passingCandidateCount?: number;
   selectedCandidateId: string | null;
   appliedCandidateId: string | null;
+  appliedAdjustmentId?: string | null;
   scenarios: ScenarioFormState[];
   status: string;
   offenseResults: OffenseScenarioResult[];
@@ -4181,6 +4210,8 @@ type ResultsPanelProps = {
   resultAlertMessage: string | null;
   onSelectCandidate: (id: string) => void;
   onApplyCandidate: (candidate: CandidateResult) => void;
+  onApplyOffenseResult?: (entry: OffenseScenarioResult) => void;
+  onApplySpeedResult?: (entry: SpeedScenarioResult) => void;
   onCloseMobileSheet?: () => void;
 };
 
@@ -4274,6 +4305,9 @@ type StandaloneAdjustmentResultsProps = {
   speedResults: SpeedScenarioResult[];
   targetLabel: string;
   scenariosById: Map<string, ScenarioFormState>;
+  appliedAdjustmentId: string | null;
+  onApplyOffenseResult: (entry: OffenseScenarioResult) => void;
+  onApplySpeedResult: (entry: SpeedScenarioResult) => void;
 };
 
 function StandaloneAdjustmentResults({
@@ -4281,6 +4315,9 @@ function StandaloneAdjustmentResults({
   speedResults,
   targetLabel,
   scenariosById,
+  appliedAdjustmentId,
+  onApplyOffenseResult,
+  onApplySpeedResult,
 }: StandaloneAdjustmentResultsProps) {
   return (
     <div className="adjustment-result-list" aria-label="火力・素早さライン結果">
@@ -4294,6 +4331,16 @@ function StandaloneAdjustmentResults({
           <em className={entry.result.passed ? "" : "fail-badge"}>
             {formatScenarioResultStatusLabel(entry.result.passed)}
           </em>
+          <Button
+            variant="primary"
+            size="small"
+            className="candidate-apply-button adjustment-apply-button"
+            onClick={() => onApplyOffenseResult(entry)}
+            disabled={!entry.result.canApply}
+            aria-label={`${entry.result.label}を調整対象へ適用`}
+          >
+            {appliedAdjustmentId === entry.id ? "適用済み" : "適用"}
+          </Button>
           <small>
             {formatOffenseCandidateDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
             {" / "}
@@ -4310,6 +4357,16 @@ function StandaloneAdjustmentResults({
           <em className={entry.result.passed ? "" : "fail-badge"}>
             {formatScenarioResultStatusLabel(entry.result.passed)}
           </em>
+          <Button
+            variant="primary"
+            size="small"
+            className="candidate-apply-button adjustment-apply-button"
+            onClick={() => onApplySpeedResult(entry)}
+            disabled={!entry.result.canApply}
+            aria-label={`${entry.result.label}を調整対象へ適用`}
+          >
+            {appliedAdjustmentId === entry.id ? "適用済み" : "適用"}
+          </Button>
           <small>{formatSpeedResultDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}</small>
         </div>
       ))}
@@ -4322,6 +4379,7 @@ export function ResultsPanel({
   passingCandidateCount = candidates.length,
   selectedCandidateId,
   appliedCandidateId,
+  appliedAdjustmentId = null,
   scenarios,
   status,
   offenseResults,
@@ -4331,6 +4389,8 @@ export function ResultsPanel({
   resultAlertMessage,
   onSelectCandidate,
   onApplyCandidate,
+  onApplyOffenseResult = () => undefined,
+  onApplySpeedResult = () => undefined,
   onCloseMobileSheet = () => undefined,
 }: ResultsPanelProps) {
   const [candidateSortKey, setCandidateSortKey] = useState<CandidateSortKey>("recommended");
@@ -4462,6 +4522,9 @@ export function ResultsPanel({
               speedResults={speedResults}
               targetLabel={targetLabel}
               scenariosById={scenariosById}
+              appliedAdjustmentId={appliedAdjustmentId}
+              onApplyOffenseResult={onApplyOffenseResult}
+              onApplySpeedResult={onApplySpeedResult}
             />
           ) : <div className={`empty-result${status === "complete" ? " impossible-result" : ""}`}>
             {status === "complete" ? (
