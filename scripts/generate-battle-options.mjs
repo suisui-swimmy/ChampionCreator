@@ -117,6 +117,8 @@ const UNSUPPORTED_MOVE_IDS = new Set(["nomove", "paleowave", "polarflare", "shad
 const SPECIAL_ABILITY_LABELS_JA = {
   noability: "とくせいなし",
   dragonize: "ドラゴンスキン",
+  eelevate: "うなぎのぼり",
+  firemane: "ほのおのたてがみ",
   megasol: "メガソーラー",
   piercingdrill: "かんつうドリル",
   spicyspray: "とびだすハバネロ",
