@@ -39,7 +39,7 @@ if (pokemonAbilities.kind !== "pokemon-abilities") {
   errors.push("pokemon-abilities.gen.json kind must be pokemon-abilities");
 }
 
-const expectedDataVersion = `calc-${calcPackage.version}-gen9`;
+const expectedDataVersion = pokemonOptions.dataVersion ?? `calc-${calcPackage.version}-gen9`;
 if (pokemonAbilities.dataVersion !== expectedDataVersion) {
   errors.push(`pokemon-abilities.gen.json dataVersion mismatch: ${pokemonAbilities.dataVersion} != ${expectedDataVersion}`);
 }

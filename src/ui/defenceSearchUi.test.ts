@@ -277,16 +277,15 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios[0].hits[0].attacker.isDynamaxed).toBe(true);
   });
 
-  it("treats explicit Gmax forms as Dynamaxed builds", () => {
+  it("rejects Gmax form labels that upstream calc no longer exposes", () => {
     const target = {
       ...createDefaultTargetForm(),
       pokemonInput: "フシギバナ キョダイマックスのすがた",
     };
 
-    const input = buildDefenceSearchInput(target, createDefaultScenarioForms());
-
-    expect(input.build.pokemon.canonicalName).toBe("Venusaur-Gmax");
-    expect(input.build.isDynamaxed).toBe(true);
+    expect(() => buildDefenceSearchInput(target, createDefaultScenarioForms())).toThrow(
+      "ポケモン「フシギバナ キョダイマックスのすがた」を canonical name に解決できません",
+    );
   });
 
   it("converts generated option data from all free-text UI fields", () => {

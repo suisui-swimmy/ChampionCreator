@@ -24,20 +24,15 @@ describe("pokemonFormVariants", () => {
     );
   });
 
-  it("returns gmax options only when a matching image-backed form exists", () => {
-    expect(getPokemonFormVariantOptions("フシギバナ", "gmax")).toEqual([
-      expect.objectContaining({
-        value: "フシギバナ キョダイマックスのすがた",
-        showdownName: "Venusaur-Gmax",
-      }),
-    ]);
+  it("does not return Gmax choices when upstream calc no longer exposes Gmax species", () => {
+    expect(getPokemonFormVariantOptions("フシギバナ", "gmax")).toEqual([]);
     expect(getPokemonFormVariantOptions("ガブリアス", "gmax")).toEqual([]);
   });
 
   it("returns from a variant form to the base label", () => {
     expect(isPokemonFormVariant("メガフシギバナ", "mega")).toBe(true);
     expect(getPokemonBaseFormValue("メガフシギバナ")).toBe("フシギバナ");
-    expect(isPokemonFormVariant("フシギバナ キョダイマックスのすがた", "gmax")).toBe(true);
-    expect(getPokemonBaseFormValue("フシギバナ キョダイマックスのすがた")).toBe("フシギバナ");
+    expect(isPokemonFormVariant("フシギバナ キョダイマックスのすがた", "gmax")).toBe(false);
+    expect(getPokemonBaseFormValue("フシギバナ キョダイマックスのすがた")).toBeNull();
   });
 });

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "generate:battle-options": "node scripts/generate-battle-options.mjs",
     "generate:localization-seed": "node scripts/generate-localization-seed.mjs",
     "generate:move-hit-counts": "node scripts/add-move-hit-counts.mjs",
     "generate:pokemon-abilities": "node scripts/generate-pokemon-abilities.mjs",
@@ -22,7 +23,7 @@
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
-    "@smogon/calc": "^0.11.0",
+    "@smogon/calc": "file:vendor/smogon-calc-0.11.0-49d4d86.tgz",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -239,8 +239,8 @@ describe("resolveEntity", () => {
     const starmieMegaOptions = getPokemonAbilityInputOptions("Starmie-Mega");
     expect(starmieMegaOptions).toEqual([
       expect.objectContaining({
-        value: "はっこう",
-        canonicalName: "Illuminate",
+        value: "ちからもち",
+        canonicalName: "Huge Power",
       }),
     ]);
     expect(starmieMegaOptions?.some((option) => option.value === "もうか")).toBe(false);

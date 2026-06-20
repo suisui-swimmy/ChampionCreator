@@ -32,12 +32,19 @@ Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 ### Damage calculation boundary
 
 - ダメージ計算エンジンは `@smogon/calc` に依存します
-- 現在の直接依存は `@smogon/calc@^0.11.0` です
+- 現在の直接依存は、`@smogon/calc@0.11.0` を upstream master `49d4d86` から作成した vendor tarball です
 - 計算世代は `Generations.get(9)` を使用します
 - `src/calc/smogonAdapter.ts` が `Pokemon` / `Move` / `Field` / `Side` への変換境界です
 - アプリ側では独自のダメージ計算式、独自のタイプ相性、独自の乱数分布を主計算として実装しません
 - 最終候補の合否判定は、resolver 済み canonical name を `@smogon/calc` に渡して再評価します
 - 公式画像、タイプ色、日本語表示名は UI 表示用であり、計算結果には影響しません
+
+### Dynamax / Gigantamax note
+
+- 通常ダイマックスは、ポケモンの別 species ではなく、計算条件のフラグとして扱います
+- 2026-06-20 時点で取り込んだ upstream `@smogon/calc` では `-Gmax` species が候補データから外れているため、ChampionCreator でもキョダイマックスフォームを canonical species としては受け付けません
+- Pokemon Champions 側で今後キョダイマックス相当のゲーム内実装が追加される可能性はあるため、将来対応する場合は通常ダイマックスとは別の mechanics として設計し、`@smogon/calc` 側の対応または明示された仕様に追従します
+- `@smogon/calc` に存在しない `-Gmax` species や専用効果を、アプリ側の独自ダメージ補正として先行実装しません
 
 ### Japanese localization layer
 
@@ -120,6 +127,7 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 - 本ツールは非公式のファンツールです。ゲーム内の結果と完全に一致することは保証しません
 - Pokemon Champions と Showdown の仕様差、未対応データ、特殊処理により、実際のゲーム内結果と異なる可能性があります
 - 一部のフォーム違い、技、特性、持ち物は未対応または仮対応の場合があります
+- キョダイマックスは将来ゲーム内実装される可能性がありますが、現時点では `@smogon/calc` の canonical species として存在しないため未対応です
 - `@smogon/calc` に存在しないデータは、原則として計算の正として扱いません
 - 条件が複雑なほど探索に時間がかかります
 - 重要な調整は実機でも確認してください

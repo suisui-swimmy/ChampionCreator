@@ -244,9 +244,10 @@ const multiAbilityPokemon = entries.filter((entry) => entry.abilities.length > 1
 
 const payload = {
   schemaVersion: 1,
-  dataVersion: `calc-${calcPackage.version}-gen9`,
+  dataVersion: pokemonOptions.dataVersion ?? `calc-${calcPackage.version}-gen9`,
   source: {
     speciesData: "@smogon/calc SPECIES[9]",
+    calcPackageVersion: calcPackage.version,
     pokemonOptions: "src/data/generated/pokemon-options.gen.json",
     abilityOptions: "src/data/generated/ability-options.gen.json",
     pokeapiPokemon: "others/pokeapi/data/v2/csv/pokemon.csv",

@@ -22,12 +22,18 @@ const pokemonOptions = pokemonOptionsPayload.entries as PokemonOptionEntry[];
 
 const optionByExactKey = new Map<string, PokemonOptionEntry>();
 const optionByShowdownName = new Map<string, PokemonOptionEntry>();
+const megaSearchPrefix = normalizeSearchText("メガ");
 
 const addExactKey = (rawKey: string, option: PokemonOptionEntry) => {
   const key = normalizeSearchText(rawKey);
   if (key && !optionByExactKey.has(key)) {
     optionByExactKey.set(key, option);
   }
+};
+
+const getMegaDisplayLabel = (option: PokemonOptionEntry): string | undefined => {
+  const labels = [option.label, option.searchText].flatMap((text) => text.split(/\s+/u));
+  return labels.find((text) => normalizeSearchText(text).startsWith(megaSearchPrefix));
 };
 
 for (const option of pokemonOptions) {
@@ -37,6 +43,12 @@ for (const option of pokemonOptions) {
   addExactKey(option.showdownName, option);
   for (const text of option.searchText.split(/\s+/u)) {
     addExactKey(text, option);
+  }
+  if (/-Mega(?:-[XY])?$/u.test(option.showdownName)) {
+    const megaDisplayLabel = getMegaDisplayLabel(option);
+    if (megaDisplayLabel) {
+      addExactKey(megaDisplayLabel, option);
+    }
   }
 }
 
@@ -61,11 +73,8 @@ const isVariant = (option: PokemonOptionEntry, kind: PokemonFormVariantKind): bo
   return option.showdownName.endsWith("-Gmax") && Boolean(option.artwork);
 };
 
-const megaSearchPrefix = normalizeSearchText("メガ");
-
 const toMegaDisplayValue = (option: PokemonOptionEntry): string => {
-  const labels = [option.label, option.searchText].flatMap((text) => text.split(/\s+/u));
-  return (labels.find((text) => normalizeSearchText(text).startsWith(megaSearchPrefix)) ?? option.label).normalize("NFKC");
+  return (getMegaDisplayLabel(option) ?? option.label).normalize("NFKC");
 };
 
 const toVariantOption = (
