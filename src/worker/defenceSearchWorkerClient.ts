@@ -1,4 +1,5 @@
 import type { Build, Scenario } from "../domain/model";
+import type { MaximizeRemainingBulkInput } from "../search/maximizeRemainingBulk";
 import type {
   DefenceSearchWorkerCancelRequest,
   DefenceSearchWorkerMessage,
@@ -8,10 +9,15 @@ import type {
   DefenceSearchWorkerErrorMessage,
   DefenceSearchWorkerRunOptions,
   DefenceSearchWorkerStartRequest,
+  MaximizeRemainingBulkWorkerCompleteMessage,
+  MaximizeRemainingBulkWorkerErrorMessage,
+  MaximizeRemainingBulkWorkerProgressMessage,
+  MaximizeRemainingBulkWorkerRunOptions,
+  MaximizeRemainingBulkWorkerStartRequest,
 } from "./defenceSearchWorker";
 
 export interface DefenceSearchWorkerLike {
-  postMessage: (message: DefenceSearchWorkerStartRequest | DefenceSearchWorkerCancelRequest) => void;
+  postMessage: (message: DefenceSearchWorkerStartRequest | MaximizeRemainingBulkWorkerStartRequest | DefenceSearchWorkerCancelRequest) => void;
   addEventListener: (
     type: "message",
     listener: (event: MessageEvent<DefenceSearchWorkerMessage>) => void,
@@ -28,11 +34,22 @@ export interface DefenceSearchWorkerClientCallbacks {
   onPartialResult?: (message: DefenceSearchWorkerPartialResultMessage) => void;
   onComplete?: (message: DefenceSearchWorkerCompleteMessage) => void;
   onError?: (message: DefenceSearchWorkerErrorMessage) => void;
+  onBulkProgress?: (message: MaximizeRemainingBulkWorkerProgressMessage) => void;
+  onBulkComplete?: (message: MaximizeRemainingBulkWorkerCompleteMessage) => void;
+  onBulkError?: (message: MaximizeRemainingBulkWorkerErrorMessage) => void;
 }
 
 export interface StartDefenceSearchWorkerOptions extends DefenceSearchWorkerRunOptions {
   requestId?: string;
   callbacks?: DefenceSearchWorkerClientCallbacks;
+}
+
+export interface StartMaximizeRemainingBulkWorkerOptions extends MaximizeRemainingBulkWorkerRunOptions {
+  requestId?: string;
+  callbacks?: Pick<
+    DefenceSearchWorkerClientCallbacks,
+    "onBulkProgress" | "onBulkComplete" | "onBulkError"
+  >;
 }
 
 export interface ActiveDefenceSearchRequest {
@@ -46,6 +63,14 @@ export const createDefenceSearchRequestId = (): string => {
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2);
   return `defence-search-${randomSuffix}`;
+};
+
+export const createBulkMaximizeRequestId = (): string => {
+  const randomSuffix =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
+  return `bulk-maximize-${randomSuffix}`;
 };
 
 export const isCurrentWorkerMessage = (
@@ -82,8 +107,25 @@ export class DefenceSearchWorkerClient {
       return;
     }
 
+    if (message.type === "error") {
+      this.activeRequestId = null;
+      this.callbacks.onError?.(message);
+      return;
+    }
+
+    if (message.type === "bulkProgress") {
+      this.callbacks.onBulkProgress?.(message);
+      return;
+    }
+
+    if (message.type === "bulkComplete") {
+      this.activeRequestId = null;
+      this.callbacks.onBulkComplete?.(message);
+      return;
+    }
+
     this.activeRequestId = null;
-    this.callbacks.onError?.(message);
+    this.callbacks.onBulkError?.(message);
   };
 
   constructor(private readonly worker: DefenceSearchWorkerLike = createDefaultDefenceSearchWorker()) {
@@ -103,6 +145,26 @@ export class DefenceSearchWorkerClient {
       requestId,
       build,
       scenarios,
+      options: runOptions,
+    });
+
+    return {
+      requestId,
+      cancel: () => this.cancel(requestId),
+    };
+  }
+
+  maximizeRemainingBulk(
+    input: MaximizeRemainingBulkInput,
+    options: StartMaximizeRemainingBulkWorkerOptions = {},
+  ): ActiveDefenceSearchRequest {
+    const { callbacks = {}, requestId = createBulkMaximizeRequestId(), ...runOptions } = options;
+    this.activeRequestId = requestId;
+    this.callbacks = callbacks;
+    this.worker.postMessage({
+      type: "maximizeRemainingBulk",
+      requestId,
+      input,
       options: runOptions,
     });
 

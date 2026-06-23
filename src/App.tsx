@@ -29,22 +29,27 @@ import {
 } from "./localization/resolver";
 import {
   applyCandidateToTarget,
+  applyMaximizeRemainingBulkToTarget,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
   applyMoveHitCountDefaults,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
   buildTargetBuildFromUi,
+  bulkMaximizeUiReducer,
   calculateOffenseAdjustmentsForCandidateRanking,
   calculateSpeedAdjustmentsForCandidateRanking,
   createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
+  createInitialBulkMaximizeUiState,
   createInitialSearchUiState,
   formatScenarioAttackLabel,
   searchUiReducer,
   startDefenceSearchFromUi,
+  startMaximizeRemainingBulkFromUi,
+  type BulkMaximizeUiState,
   type OffenseScenarioResult,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
@@ -52,6 +57,7 @@ import {
   type SpeedScenarioResult,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import type { MaximizeRemainingBulkResult } from "./search/maximizeRemainingBulk";
 import type { SpeedAdjustmentResult, SpeedManualMultiplier } from "./search/speedAdjustment";
 import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
@@ -328,6 +334,9 @@ const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
 
+const formatBulkIndex = (value: number): string =>
+  Number.isInteger(value) ? String(value) : value.toFixed(1);
+
 const damageDescriptionEntityKinds = ["pokemon", "move", "item", "ability", "type"] as const satisfies readonly EntityKind[];
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -583,6 +592,12 @@ export function App() {
   const [targetForm, setTargetForm] = useState<TargetFormState>(() => createDefaultTargetForm());
   const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(() => createDefaultScenarioForms());
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
+  const [bulkMaximizeState, dispatchBulkMaximize] = useReducer(
+    bulkMaximizeUiReducer,
+    undefined,
+    createInitialBulkMaximizeUiState,
+  );
+  const [allowBulkNatureChange, setAllowBulkNatureChange] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [appliedCandidateId, setAppliedCandidateId] = useState<string | null>(null);
   const [appliedAdjustmentId, setAppliedAdjustmentId] = useState<string | null>(null);
@@ -715,6 +730,7 @@ export function App() {
       applyTimerRef.current = null;
     }
     dispatchSearch({ type: "reset" });
+    dispatchBulkMaximize({ type: "reset" });
   };
 
   const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
@@ -898,8 +914,60 @@ export function App() {
   };
 
   const handleCancel = () => {
+    const activeRequest = activeRequestRef.current;
+    activeRequest?.cancel();
+    if (activeRequest) {
+      dispatchSearch({ type: "cancel", requestId: activeRequest.requestId });
+    }
+    activeRequestRef.current = null;
+  };
+
+  const handleAllowBulkNatureChange = (value: boolean) => {
+    const activeRequest = activeRequestRef.current;
+    activeRequest?.cancel();
+    if (activeRequest) {
+      dispatchSearch({ type: "cancel", requestId: activeRequest.requestId });
+    }
+    activeRequestRef.current = null;
+    dispatchBulkMaximize({ type: "reset" });
+    setAllowBulkNatureChange(value);
+  };
+
+  const handleRunBulkMaximize = () => {
+    if (bulkMaximizeState.status === "running") {
+      return;
+    }
+
+    const activeRequest = activeRequestRef.current;
+    activeRequest?.cancel();
+    if (activeRequest) {
+      dispatchSearch({ type: "cancel", requestId: activeRequest.requestId });
+    }
+
+    try {
+      workerClientRef.current ??= new DefenceSearchWorkerClient();
+      const { request } = startMaximizeRemainingBulkFromUi(
+        workerClientRef.current,
+        targetForm,
+        scenarioForms,
+        dispatchBulkMaximize,
+        { allowNatureChange: allowBulkNatureChange },
+      );
+      activeRequestRef.current = request;
+      setSelectedCandidateId(null);
+      setAppliedCandidateId(null);
+      setAppliedAdjustmentId(null);
+    } catch (error) {
+      dispatchBulkMaximize({
+        type: "validationError",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const handleCancelBulkMaximize = () => {
     activeRequestRef.current?.cancel();
-    dispatchSearch({ type: "cancel", requestId: activeRequestRef.current?.requestId });
+    dispatchBulkMaximize({ type: "cancel", requestId: activeRequestRef.current?.requestId });
     activeRequestRef.current = null;
   };
 
@@ -1139,6 +1207,13 @@ export function App() {
     clearAppliedMarkerAfterDelay();
   };
 
+  const handleApplyBulkMaximize = () => {
+    setTargetForm((current) => applyMaximizeRemainingBulkToTarget(current, bulkMaximizeState.result));
+    setAppliedCandidateId(null);
+    setAppliedAdjustmentId("bulk-maximize");
+    clearAppliedMarkerAfterDelay();
+  };
+
   const closeMobileSheet = () => {
     setMobileSheet(null);
     setMobileScenarioDetailId(null);
@@ -1280,8 +1355,15 @@ export function App() {
           artwork={targetArtwork}
           actualStats={actualStats}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
+          bulkMaximizeState={bulkMaximizeState}
+          allowBulkNatureChange={allowBulkNatureChange}
+          bulkMaximizeApplied={appliedAdjustmentId === "bulk-maximize"}
           isBoxPanelOpen={boxOpen}
           onOpenBoxPanel={toggleBoxPanel}
+          onAllowBulkNatureChange={handleAllowBulkNatureChange}
+          onRunBulkMaximize={handleRunBulkMaximize}
+          onCancelBulkMaximize={handleCancelBulkMaximize}
+          onApplyBulkMaximize={handleApplyBulkMaximize}
           onCloseMobileSheet={closeMobileSheet}
         />
         <ScenarioPanel
@@ -2109,9 +2191,16 @@ type TargetPanelProps = {
   artwork: PokemonArtworkMatch | null;
   actualStats: StatTable | null;
   totalStatPoints: number;
+  bulkMaximizeState: BulkMaximizeUiState;
+  allowBulkNatureChange: boolean;
+  bulkMaximizeApplied: boolean;
   isBoxPanelOpen: boolean;
   onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
   onUpdateEv: (key: StatKey, value: number) => void;
+  onAllowBulkNatureChange: (value: boolean) => void;
+  onRunBulkMaximize: () => void;
+  onCancelBulkMaximize: () => void;
+  onApplyBulkMaximize: () => void;
   onOpenBoxPanel: () => void;
   onCloseMobileSheet?: () => void;
 };
@@ -2142,6 +2231,127 @@ type MobileOverviewProps = {
   onRun: () => void;
   onCancel: () => void;
 };
+
+type BulkMaximizeResultPreviewProps = {
+  state: BulkMaximizeUiState;
+  applied: boolean;
+  onApply: () => void;
+};
+
+function formatBulkStatSpread(result: MaximizeRemainingBulkResult): string {
+  const { statPoints } = result.candidate;
+  return `H${statPoints.hp} / B${statPoints.def} / D${statPoints.spd}`;
+}
+
+function formatBulkDerivedSpread(result: MaximizeRemainingBulkResult): string {
+  const { derivedStats } = result.candidate;
+  return `H${derivedStats.hp} / B${derivedStats.def} / D${derivedStats.spd}`;
+}
+
+function formatBulkGain(value: number): string {
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${formatBulkIndex(value)}`;
+}
+
+function BulkMaximizeResultPreview({
+  state,
+  applied,
+  onApply,
+}: BulkMaximizeResultPreviewProps) {
+  if (state.status === "idle") {
+    return null;
+  }
+
+  if (state.status === "running") {
+    return (
+      <div className="bulk-maximize-preview" aria-live="polite">
+        <div className="bulk-maximize-preview-header">
+          <strong>耐久最大化を計算中</strong>
+          <span>{Math.round(state.progress * 100)}%</span>
+        </div>
+        <div className="bulk-maximize-meter" aria-hidden="true">
+          <span style={{ width: `${Math.round(state.progress * 100)}%` }} />
+        </div>
+        <p>評価 {state.searchedCandidates} / {state.totalCandidates || "-"}</p>
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="bulk-maximize-preview error" role="alert">
+        {state.errorMessage ?? "耐久最大化に失敗しました"}
+      </div>
+    );
+  }
+
+  if (state.status === "canceled") {
+    return (
+      <div className="bulk-maximize-preview muted" aria-live="polite">
+        耐久最大化を中止しました
+      </div>
+    );
+  }
+
+  if (!state.result) {
+    return (
+      <div className="bulk-maximize-preview muted" aria-live="polite">
+        現在の物理耐久・特殊耐久を両方維持できる再配分がありません
+      </div>
+    );
+  }
+
+  const result = state.result;
+  const sideEffectNotes = result.natureChangeImpact.notes;
+
+  return (
+    <div className="bulk-maximize-preview" aria-live="polite">
+      <div className="bulk-maximize-preview-header">
+        <strong>耐久最大化候補</strong>
+        <Button
+          variant="primary"
+          size="small"
+          onClick={onApply}
+        >
+          {applied ? "適用済み" : "適用"}
+        </Button>
+      </div>
+      <dl className="bulk-maximize-grid">
+        <div>
+          <dt>推奨性格</dt>
+          <dd>{result.candidate.nature}</dd>
+        </div>
+        <div>
+          <dt>推奨SP</dt>
+          <dd>{formatBulkStatSpread(result)}</dd>
+        </div>
+        <div>
+          <dt>実数値</dt>
+          <dd>{formatBulkDerivedSpread(result)}</dd>
+        </div>
+        <div>
+          <dt>物理耐久</dt>
+          <dd>{formatBulkIndex(result.score.physicalBulk)}</dd>
+        </div>
+        <div>
+          <dt>特殊耐久</dt>
+          <dd>{formatBulkIndex(result.score.specialBulk)}</dd>
+        </div>
+        <div>
+          <dt>総合耐久</dt>
+          <dd>
+            {formatBulkIndex(result.score.overallBulk)}
+            <span>{formatBulkGain(result.score.overallBulkGain)}</span>
+          </dd>
+        </div>
+      </dl>
+      <p>{result.explanation}</p>
+      {sideEffectNotes.length > 0 ? (
+        <p className="bulk-maximize-warning">{sideEffectNotes.join(" / ")}</p>
+      ) : null}
+    </div>
+  );
+}
 
 function formatMobileAttackMeta(attack: ScenarioAttackFormState, adjustmentType: ScenarioAdjustmentType): string {
   if (adjustmentType === "speed") {
@@ -2823,9 +3033,16 @@ function TargetPanel({
   artwork,
   actualStats,
   totalStatPoints,
+  bulkMaximizeState,
+  allowBulkNatureChange,
+  bulkMaximizeApplied,
   isBoxPanelOpen,
   onUpdateField,
   onUpdateEv,
+  onAllowBulkNatureChange,
+  onRunBulkMaximize,
+  onCancelBulkMaximize,
+  onApplyBulkMaximize,
   onOpenBoxPanel,
   onCloseMobileSheet,
 }: TargetPanelProps) {
@@ -2956,9 +3173,40 @@ function TargetPanel({
         </div>
 
         <div className={`sp-summary${isSpLimitReached ? " is-sp-max" : ""}`}>
-          <span>合計SP</span>
-          <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
+          <div className="sp-summary-actions">
+            <Button
+              variant="ghost"
+              size="small"
+              className="bulk-maximize-button"
+              onClick={onRunBulkMaximize}
+              disabled={bulkMaximizeState.status === "running"}
+            >
+              {bulkMaximizeState.status === "running" ? "計算中..." : "残りSPで耐久最大化"}
+            </Button>
+            {bulkMaximizeState.status === "running" ? (
+              <Button variant="ghost" size="small" onClick={onCancelBulkMaximize}>
+                中止
+              </Button>
+            ) : null}
+            <label className="bulk-nature-toggle">
+              <input
+                type="checkbox"
+                checked={allowBulkNatureChange}
+                onChange={(event) => onAllowBulkNatureChange(event.target.checked)}
+              />
+              <span>性格変更を許可する</span>
+            </label>
+          </div>
+          <div className="sp-summary-total">
+            <span>合計SP</span>
+            <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
+          </div>
         </div>
+        <BulkMaximizeResultPreview
+          state={bulkMaximizeState}
+          applied={bulkMaximizeApplied}
+          onApply={onApplyBulkMaximize}
+        />
       </div>
     </section>
   );

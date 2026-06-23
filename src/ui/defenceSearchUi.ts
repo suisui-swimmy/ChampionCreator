@@ -2,8 +2,9 @@ import type { EntityKind } from "../data/localizationTypes";
 import type {
   ActiveDefenceSearchRequest,
   StartDefenceSearchWorkerOptions,
+  StartMaximizeRemainingBulkWorkerOptions,
 } from "../worker/defenceSearchWorkerClient";
-import { createDefenceSearchRequestId } from "../worker/defenceSearchWorkerClient";
+import { createBulkMaximizeRequestId, createDefenceSearchRequestId } from "../worker/defenceSearchWorkerClient";
 import type {
   Build,
   CandidateResult,
@@ -48,6 +49,13 @@ import {
   type SpeedComparisonMode,
   type SpeedManualMultiplier,
 } from "../search/speedAdjustment";
+import {
+  getBuildDerivedStats,
+  type BulkNatureCandidate,
+  type MaximizeRemainingBulkInput,
+  type MaximizeRemainingBulkResult,
+} from "../search/maximizeRemainingBulk";
+import natureOptionsData from "../data/generated/nature-options.gen.json";
 
 export type SpeedTargetMode = "opponent" | "manual";
 export type SpeedMoveModifier = "none" | "tailwind" | "trick-room";
@@ -222,7 +230,49 @@ export interface DefenceSearchWorkerClientAdapter {
   ) => ActiveDefenceSearchRequest;
 }
 
+export interface BulkMaximizeWorkerClientAdapter {
+  maximizeRemainingBulk: (
+    input: MaximizeRemainingBulkInput,
+    options?: StartMaximizeRemainingBulkWorkerOptions,
+  ) => ActiveDefenceSearchRequest;
+}
+
 export type SearchUiDispatch = (action: SearchUiAction) => void;
+
+export type BulkMaximizeStatus = "idle" | "running" | "complete" | "error" | "canceled";
+
+export interface BulkMaximizeUiState {
+  status: BulkMaximizeStatus;
+  activeRequestId: string | null;
+  searchedCandidates: number;
+  totalCandidates: number;
+  progress: number;
+  result: MaximizeRemainingBulkResult | null;
+  errorMessage: string | null;
+}
+
+export type BulkMaximizeUiAction =
+  | { type: "start"; requestId: string }
+  | {
+      type: "progress";
+      requestId: string;
+      searchedCandidates: number;
+      totalCandidates: number;
+      progress: number;
+    }
+  | {
+      type: "complete";
+      requestId: string;
+      result: MaximizeRemainingBulkResult | null;
+      searchedCandidates: number;
+      totalCandidates: number;
+    }
+  | { type: "error"; requestId?: string; message: string }
+  | { type: "cancel"; requestId?: string }
+  | { type: "validationError"; message: string }
+  | { type: "reset" };
+
+export type BulkMaximizeUiDispatch = (action: BulkMaximizeUiAction) => void;
 
 export const createInitialSearchUiState = (): SearchUiState => ({
   status: "idle",
@@ -234,6 +284,16 @@ export const createInitialSearchUiState = (): SearchUiState => ({
   passingCandidateCount: 0,
   errorMessage: null,
   strictestFailureLabel: null,
+});
+
+export const createInitialBulkMaximizeUiState = (): BulkMaximizeUiState => ({
+  status: "idle",
+  activeRequestId: null,
+  searchedCandidates: 0,
+  totalCandidates: 0,
+  progress: 0,
+  result: null,
+  errorMessage: null,
 });
 
 const zeroStatPoints: StatPointTable = {
@@ -1262,7 +1322,95 @@ export const buildIntegratedDefenceSearchInput = (
   };
 };
 
+type GeneratedNatureOption = {
+  label: string;
+};
+
+const generatedNatureOptions = natureOptionsData.entries as GeneratedNatureOption[];
+
+const createBulkNatureCandidates = (): BulkNatureCandidate[] =>
+  generatedNatureOptions.map((option) => ({
+    nature: mustResolve("nature", option.label, "性格候補"),
+  }));
+
+const getProtectedActualStatsForBulkMaximize = (
+  build: Build,
+  offenseRequirements: IntegratedOffenseRequirements,
+  speedRequirements: IntegratedSpeedRequirements,
+): Partial<Pick<StatPointTable, "atk" | "spa" | "spe">> => {
+  const stats = getBuildDerivedStats(build);
+  const protectedStats: Partial<Pick<StatPointTable, "atk" | "spa" | "spe">> = {};
+
+  if (offenseRequirements.selectedResults.some((entry) => entry.result.stat === "atk")) {
+    protectedStats.atk = stats.atk;
+  }
+  if (offenseRequirements.selectedResults.some((entry) => entry.result.stat === "spa")) {
+    protectedStats.spa = stats.spa;
+  }
+  if (speedRequirements.selectedResults.length > 0) {
+    protectedStats.spe = stats.spe;
+  }
+
+  return protectedStats;
+};
+
+export const buildMaximizeRemainingBulkInputFromUi = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+  options: { allowNatureChange: boolean },
+): MaximizeRemainingBulkInput => {
+  const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
+  const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
+  const offenseRequirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
+  const speedResults = calculateSpeedAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
+  const speedRequirements = resolveIntegratedSpeedRequirements(baselineTargetForm, speedResults);
+
+  if (offenseRequirements.blockingReasons.length > 0) {
+    throw new Error(`火力調整条件を耐久最大化へ統合できません: ${offenseRequirements.blockingReasons.join(" / ")}`);
+  }
+  if (speedRequirements.blockingReasons.length > 0) {
+    throw new Error(`素早さ調整条件を耐久最大化へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
+  }
+
+  const integratedTargetForm = applyIntegratedSpeedRequirementsToTargetForm(
+    applyIntegratedOffenseRequirementsToTargetForm(targetForm, offenseRequirements),
+    speedRequirements,
+  );
+  const fixedBudget =
+    integratedTargetForm.statPoints.atk
+    + integratedTargetForm.statPoints.spa
+    + integratedTargetForm.statPoints.spe;
+  const minimumDefenceBudget =
+    (offenseRequirements.minimumStatPoints.hp ?? 0)
+    + (offenseRequirements.minimumStatPoints.def ?? 0)
+    + (offenseRequirements.minimumStatPoints.spd ?? 0);
+
+  if (fixedBudget + minimumDefenceBudget > CHAMPIONS_TOTAL_STAT_POINTS) {
+    throw new Error(
+      `火力/素早さ調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
+      + ` (固定 ${fixedBudget} + 火力最低 ${minimumDefenceBudget})`,
+    );
+  }
+
+  const build = buildTargetBuildFromUi(integratedTargetForm, "target-bulk-maximize");
+  return {
+    build,
+    allowNatureChange: options.allowNatureChange,
+    natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined,
+    minimumStatPoints: offenseRequirements.minimumStatPoints,
+    protectedActualStats: getProtectedActualStatsForBulkMaximize(
+      build,
+      offenseRequirements,
+      speedRequirements,
+    ),
+    keepCurrentPhysicalSpecialBulk: true,
+  };
+};
+
 const isActiveRequest = (state: SearchUiState, requestId: string): boolean =>
+  state.activeRequestId === requestId;
+
+const isActiveBulkRequest = (state: BulkMaximizeUiState, requestId: string): boolean =>
   state.activeRequestId === requestId;
 
 export const searchUiReducer = (
@@ -1340,6 +1488,73 @@ export const searchUiReducer = (
   }
 };
 
+export const bulkMaximizeUiReducer = (
+  state: BulkMaximizeUiState,
+  action: BulkMaximizeUiAction,
+): BulkMaximizeUiState => {
+  if ("requestId" in action && action.requestId && !isActiveBulkRequest(state, action.requestId)) {
+    if (action.type !== "start") {
+      return state;
+    }
+  }
+
+  switch (action.type) {
+    case "start":
+      return {
+        status: "running",
+        activeRequestId: action.requestId,
+        searchedCandidates: 0,
+        totalCandidates: 0,
+        progress: 0,
+        result: null,
+        errorMessage: null,
+      };
+    case "progress":
+      return {
+        ...state,
+        searchedCandidates: action.searchedCandidates,
+        totalCandidates: action.totalCandidates,
+        progress: action.progress,
+      };
+    case "complete":
+      return {
+        ...state,
+        status: "complete",
+        activeRequestId: null,
+        searchedCandidates: action.searchedCandidates,
+        totalCandidates: action.totalCandidates,
+        progress: 1,
+        result: action.result,
+        errorMessage: null,
+      };
+    case "error":
+      return {
+        ...state,
+        status: "error",
+        activeRequestId: null,
+        errorMessage: action.message,
+      };
+    case "cancel":
+      return {
+        ...state,
+        status: "canceled",
+        activeRequestId: null,
+      };
+    case "validationError":
+      return {
+        ...state,
+        status: "error",
+        activeRequestId: null,
+        result: null,
+        errorMessage: action.message,
+      };
+    case "reset":
+      return createInitialBulkMaximizeUiState();
+    default:
+      return state;
+  }
+};
+
 export const startDefenceSearchFromUi = (
   client: DefenceSearchWorkerClientAdapter,
   targetForm: TargetFormState,
@@ -1382,6 +1597,50 @@ export const startDefenceSearchFromUi = (
         strictestFailureLabel: message.strictestFailureLabel ?? null,
       }),
       onError: (message) => dispatch({
+        type: "error",
+        requestId: message.requestId,
+        message: message.message,
+      }),
+    },
+  });
+
+  return { request, input };
+};
+
+export const startMaximizeRemainingBulkFromUi = (
+  client: BulkMaximizeWorkerClientAdapter,
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+  dispatch: BulkMaximizeUiDispatch,
+  options: { requestId?: string; allowNatureChange: boolean; maxResults?: number } = {
+    allowNatureChange: false,
+  },
+): { request: ActiveDefenceSearchRequest; input: MaximizeRemainingBulkInput } => {
+  const input = buildMaximizeRemainingBulkInputFromUi(targetForm, scenarioForms, {
+    allowNatureChange: options.allowNatureChange,
+  });
+  const requestId = options.requestId ?? createBulkMaximizeRequestId();
+  dispatch({ type: "start", requestId });
+
+  const request = client.maximizeRemainingBulk(input, {
+    requestId,
+    maxResults: options.maxResults ?? 1,
+    callbacks: {
+      onBulkProgress: (message) => dispatch({
+        type: "progress",
+        requestId: message.requestId,
+        searchedCandidates: message.searchedCandidates,
+        totalCandidates: message.totalCandidates,
+        progress: message.progress,
+      }),
+      onBulkComplete: (message) => dispatch({
+        type: "complete",
+        requestId: message.requestId,
+        result: message.result,
+        searchedCandidates: message.searchedCandidates,
+        totalCandidates: message.totalCandidates,
+      }),
+      onBulkError: (message) => dispatch({
         type: "error",
         requestId: message.requestId,
         message: message.message,
@@ -1454,5 +1713,20 @@ export const applySpeedAdjustmentToTarget = (
       ...targetForm.statPoints,
       spe: cappedValue,
     },
+  };
+};
+
+export const applyMaximizeRemainingBulkToTarget = (
+  targetForm: TargetFormState,
+  result: MaximizeRemainingBulkResult | null | undefined,
+): TargetFormState => {
+  if (!result) {
+    return targetForm;
+  }
+
+  return {
+    ...targetForm,
+    natureInput: result.candidate.natureCanonicalName ? result.candidate.nature : targetForm.natureInput,
+    statPoints: { ...result.candidate.statPoints },
   };
 };

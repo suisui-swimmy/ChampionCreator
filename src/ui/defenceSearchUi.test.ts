@@ -6,14 +6,17 @@ import type {
 } from "../worker/defenceSearchWorkerClient";
 import {
   applyCandidateToTarget,
+  applyMaximizeRemainingBulkToTarget,
   applyMoveHitCountDefaults,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
   applyTopCandidateToTarget,
+  buildMaximizeRemainingBulkInputFromUi,
   buildOffenseAdjustmentInput,
   buildDefenceSearchInput,
   buildIntegratedDefenceSearchInput,
   buildSpeedAdjustmentInput,
+  bulkMaximizeUiReducer,
   calculateOffenseAdjustmentFromUi,
   calculateOffenseAdjustmentsForCandidateRanking,
   calculateOffenseAdjustmentsFromScenarios,
@@ -24,6 +27,7 @@ import {
   createDefaultOffenseAdjustmentForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
+  createInitialBulkMaximizeUiState,
   createInitialSearchUiState,
   resolveIntegratedOffenseRequirements,
   resolveIntegratedSpeedRequirements,
@@ -32,12 +36,15 @@ import {
   formatScenarioAttackLabel,
   searchUiReducer,
   startDefenceSearchFromUi,
+  startMaximizeRemainingBulkFromUi,
+  type BulkMaximizeWorkerClientAdapter,
   type DefenceSearchWorkerClientAdapter,
   type OffenseScenarioResult,
   type SpeedScenarioResult,
 } from "./defenceSearchUi";
 import type { OffenseAdjustmentResult } from "../search/offenseAdjustment";
 import type { SpeedAdjustmentResult } from "../search/speedAdjustment";
+import type { MaximizeRemainingBulkInput, MaximizeRemainingBulkResult } from "../search/maximizeRemainingBulk";
 
 class FakeWorkerClient implements DefenceSearchWorkerClientAdapter {
   build: Build | null = null;
@@ -58,6 +65,27 @@ class FakeWorkerClient implements DefenceSearchWorkerClientAdapter {
       requestId: options?.requestId ?? "fake-request",
       cancel: () => {
         this.canceledRequestIds.push(options?.requestId ?? "fake-request");
+      },
+    };
+  }
+}
+
+class FakeBulkWorkerClient implements BulkMaximizeWorkerClientAdapter {
+  input: MaximizeRemainingBulkInput | null = null;
+  options: Parameters<BulkMaximizeWorkerClientAdapter["maximizeRemainingBulk"]>[1];
+  canceledRequestIds: string[] = [];
+
+  maximizeRemainingBulk(
+    input: MaximizeRemainingBulkInput,
+    options?: Parameters<BulkMaximizeWorkerClientAdapter["maximizeRemainingBulk"]>[1],
+  ): ActiveDefenceSearchRequest {
+    this.input = input;
+    this.options = options;
+
+    return {
+      requestId: options?.requestId ?? "fake-bulk-request",
+      cancel: () => {
+        this.canceledRequestIds.push(options?.requestId ?? "fake-bulk-request");
       },
     };
   }
@@ -133,6 +161,36 @@ const makeSpeedResult = (
     reason: result.reason ?? "Sライン 0 SPで達成します",
     reference: result.reference,
   },
+});
+
+const makeBulkResult = (): MaximizeRemainingBulkResult => ({
+  candidate: {
+    nature: "ずぶとい",
+    natureCanonicalName: "Bold",
+    statPoints: { hp: 20, atk: 2, def: 24, spa: 4, spd: 16, spe: 0 },
+    spOrEvs: { hp: 20, atk: 2, def: 24, spa: 4, spd: 16, spe: 0 },
+    derivedStats: { hp: 180, atk: 100, def: 150, spa: 120, spd: 130, spe: 90 },
+    usedTotal: 66,
+    remaining: 0,
+  },
+  score: {
+    physicalBulk: 27000,
+    specialBulk: 23400,
+    overallBulk: 12535.714285714286,
+    currentPhysicalBulk: 20000,
+    currentSpecialBulk: 21000,
+    currentOverallBulk: 10243.90243902439,
+    overallBulkGain: 2291.811846689895,
+  },
+  natureChangeImpact: {
+    changed: true,
+    from: "おくびょう",
+    to: "ずぶとい",
+    loweredStats: ["atk", "spe"],
+    raisedStats: ["def"],
+    notes: ["S実数値が現在より下がります"],
+  },
+  explanation: "性格を おくびょう から ずぶとい に変更し、H20 / B24 / D16 に再配分します。",
 });
 
 describe("buildDefenceSearchInput", () => {
@@ -1093,6 +1151,92 @@ describe("resolveIntegratedSpeedRequirements", () => {
   });
 });
 
+describe("buildMaximizeRemainingBulkInputFromUi", () => {
+  it("keeps current H/B/D, folds fixed A/C/S requirements, and supplies nature candidates on demand", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      statPoints: { hp: 8, atk: 4, def: 6, spa: 0, spd: 5, spe: 10 },
+    };
+    const scenarios = [
+      defaultScenario,
+      {
+        ...defaultScenario,
+        id: "scenario-speed",
+        label: "素早さ調整",
+        adjustmentType: "speed" as const,
+        attacks: defaultScenario.attacks.map((attack) => ({
+          ...attack,
+          attackerPokemonInput: "",
+          speedTargetMode: "manual" as const,
+          speedTargetValue: 120,
+        })),
+      },
+    ];
+
+    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, {
+      allowNatureChange: true,
+    });
+
+    expect(input.build.statPoints).toMatchObject({ hp: 8, def: 6, spd: 5 });
+    expect(input.build.statPoints?.atk).toBe(4);
+    expect(input.build.statPoints?.spe).toBeGreaterThanOrEqual(10);
+    expect(input.natureCandidates?.length).toBe(25);
+    expect(input.protectedActualStats?.spe).toBeGreaterThan(0);
+  });
+
+  it("does not require an active defence scenario for standalone bulk maximization", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => (
+      scenario.adjustmentType === "defence"
+        ? { ...scenario, enabled: false }
+        : scenario
+    ));
+
+    const input = buildMaximizeRemainingBulkInputFromUi(createDefaultTargetForm(), scenarios, {
+      allowNatureChange: false,
+    });
+
+    expect(input.build.pokemon.canonicalName).toBe("Delphox-Mega");
+    expect(input.natureCandidates).toBeUndefined();
+  });
+});
+
+describe("bulkMaximizeUiReducer", () => {
+  it("reflects progress and complete messages only for the active request", () => {
+    const result = makeBulkResult();
+    let state = createInitialBulkMaximizeUiState();
+
+    state = bulkMaximizeUiReducer(state, { type: "start", requestId: "bulk-a" });
+    state = bulkMaximizeUiReducer(state, {
+      type: "progress",
+      requestId: "old-bulk",
+      searchedCandidates: 10,
+      totalCandidates: 20,
+      progress: 0.5,
+    });
+    expect(state.searchedCandidates).toBe(0);
+
+    state = bulkMaximizeUiReducer(state, {
+      type: "progress",
+      requestId: "bulk-a",
+      searchedCandidates: 10,
+      totalCandidates: 20,
+      progress: 0.5,
+    });
+    state = bulkMaximizeUiReducer(state, {
+      type: "complete",
+      requestId: "bulk-a",
+      result,
+      searchedCandidates: 20,
+      totalCandidates: 20,
+    });
+
+    expect(state.status).toBe("complete");
+    expect(state.result).toEqual(result);
+    expect(state.progress).toBe(1);
+  });
+});
+
 describe("searchUiReducer", () => {
   it("reflects progress, partialResult, and complete messages for the active request", () => {
     const candidate = makeCandidate("candidate-1", 1, 4, 0, 0);
@@ -1251,6 +1395,51 @@ describe("startDefenceSearchFromUi", () => {
   });
 });
 
+describe("startMaximizeRemainingBulkFromUi", () => {
+  it("calls the Worker client and wires bulk callbacks into UI state", () => {
+    const client = new FakeBulkWorkerClient();
+    let state = createInitialBulkMaximizeUiState();
+    const dispatch = (action: Parameters<typeof bulkMaximizeUiReducer>[1]) => {
+      state = bulkMaximizeUiReducer(state, action);
+    };
+    const result = makeBulkResult();
+
+    const { request } = startMaximizeRemainingBulkFromUi(
+      client,
+      createDefaultTargetForm(),
+      createDefaultScenarioForms(),
+      dispatch,
+      { requestId: "bulk-ui", allowNatureChange: true },
+    );
+
+    expect(request.requestId).toBe("bulk-ui");
+    expect(state.status).toBe("running");
+    expect(client.input?.build.pokemon.canonicalName).toBe("Delphox-Mega");
+    expect(client.input?.natureCandidates?.length).toBe(25);
+    expect(client.options?.maxResults).toBe(1);
+
+    client.options?.callbacks?.onBulkProgress?.({
+      type: "bulkProgress",
+      requestId: "bulk-ui",
+      searchedCandidates: 10,
+      totalCandidates: 40,
+      progress: 0.25,
+    });
+    client.options?.callbacks?.onBulkComplete?.({
+      type: "bulkComplete",
+      requestId: "bulk-ui",
+      result,
+      results: [result],
+      searchedCandidates: 40,
+      totalCandidates: 40,
+    });
+
+    expect(state.status).toBe("complete");
+    expect(state.searchedCandidates).toBe(40);
+    expect(state.result).toEqual(result);
+  });
+});
+
 describe("applyTopCandidateToTarget", () => {
   it("applies the first candidate full SP spread to the target form", () => {
     const target = createDefaultTargetForm();
@@ -1278,6 +1467,16 @@ describe("applyTopCandidateToTarget", () => {
     );
 
     expect(applied.statPoints).toEqual(candidate.appliedStatPoints);
+  });
+});
+
+describe("applyMaximizeRemainingBulkToTarget", () => {
+  it("applies the recommended nature and full SP spread", () => {
+    const target = createDefaultTargetForm();
+    const applied = applyMaximizeRemainingBulkToTarget(target, makeBulkResult());
+
+    expect(applied.natureInput).toBe("ずぶとい");
+    expect(applied.statPoints).toEqual({ hp: 20, atk: 2, def: 24, spa: 4, spd: 16, spe: 0 });
   });
 });
 

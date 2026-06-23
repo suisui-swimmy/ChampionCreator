@@ -8,6 +8,12 @@ import {
   meetsMinimumStatPointRequirements,
   type DefenceSearchOptions,
 } from "../search/defenceSearch";
+import {
+  countMaximizeRemainingBulkCandidates,
+  maximizeRemainingBulk,
+  type MaximizeRemainingBulkInput,
+  type MaximizeRemainingBulkResult,
+} from "../search/maximizeRemainingBulk";
 
 export interface DefenceSearchWorkerRunOptions {
   maxResults?: number | null;
@@ -32,8 +38,20 @@ export interface DefenceSearchWorkerCancelRequest {
   requestId: string;
 }
 
+export interface MaximizeRemainingBulkWorkerRunOptions {
+  maxResults?: number;
+}
+
+export interface MaximizeRemainingBulkWorkerStartRequest {
+  type: "maximizeRemainingBulk";
+  requestId: string;
+  input: MaximizeRemainingBulkInput;
+  options?: MaximizeRemainingBulkWorkerRunOptions;
+}
+
 export type DefenceSearchWorkerRequest =
   | DefenceSearchWorkerStartRequest
+  | MaximizeRemainingBulkWorkerStartRequest
   | DefenceSearchWorkerCancelRequest;
 
 export interface DefenceSearchWorkerProgressMessage {
@@ -65,11 +83,37 @@ export interface DefenceSearchWorkerErrorMessage {
   message: string;
 }
 
+export interface MaximizeRemainingBulkWorkerProgressMessage {
+  type: "bulkProgress";
+  requestId: string;
+  searchedCandidates: number;
+  totalCandidates: number;
+  progress: number;
+}
+
+export interface MaximizeRemainingBulkWorkerCompleteMessage {
+  type: "bulkComplete";
+  requestId: string;
+  result: MaximizeRemainingBulkResult | null;
+  results: MaximizeRemainingBulkResult[];
+  searchedCandidates: number;
+  totalCandidates: number;
+}
+
+export interface MaximizeRemainingBulkWorkerErrorMessage {
+  type: "bulkError";
+  requestId: string;
+  message: string;
+}
+
 export type DefenceSearchWorkerMessage =
   | DefenceSearchWorkerProgressMessage
   | DefenceSearchWorkerPartialResultMessage
   | DefenceSearchWorkerCompleteMessage
-  | DefenceSearchWorkerErrorMessage;
+  | DefenceSearchWorkerErrorMessage
+  | MaximizeRemainingBulkWorkerProgressMessage
+  | MaximizeRemainingBulkWorkerCompleteMessage
+  | MaximizeRemainingBulkWorkerErrorMessage;
 
 export type DefenceSearchWorkerEmit = (message: DefenceSearchWorkerMessage) => void;
 export type DefenceSearchWorkerCancelCheck = (requestId: string) => boolean;
@@ -240,6 +284,59 @@ export const runDefenceSearchWorkerTask = async (
   }
 };
 
+export const runMaximizeRemainingBulkWorkerTask = async (
+  request: MaximizeRemainingBulkWorkerStartRequest,
+  emit: DefenceSearchWorkerEmit,
+  isCanceled: DefenceSearchWorkerCancelCheck = () => false,
+): Promise<void> => {
+  const { requestId, input } = request;
+  const maxResults = Math.max(1, Math.trunc(request.options?.maxResults ?? 1));
+
+  try {
+    const totalCandidates = countMaximizeRemainingBulkCandidates(input);
+    emit({
+      type: "bulkProgress",
+      requestId,
+      searchedCandidates: 0,
+      totalCandidates,
+      progress: totalCandidates === 0 ? 1 : 0,
+    });
+
+    if (isCanceled(requestId)) {
+      return;
+    }
+
+    const results = maximizeRemainingBulk(input, { maxResults });
+    if (isCanceled(requestId)) {
+      return;
+    }
+
+    emit({
+      type: "bulkProgress",
+      requestId,
+      searchedCandidates: totalCandidates,
+      totalCandidates,
+      progress: 1,
+    });
+    emit({
+      type: "bulkComplete",
+      requestId,
+      result: results[0] ?? null,
+      results,
+      searchedCandidates: totalCandidates,
+      totalCandidates,
+    });
+  } catch (error) {
+    if (!isCanceled(requestId)) {
+      emit({
+        type: "bulkError",
+        requestId,
+        message: toErrorMessage(error),
+      });
+    }
+  }
+};
+
 const canceledRequestIds = new Set<string>();
 
 const bindWorker = (): void => {
@@ -260,6 +357,15 @@ const bindWorker = (): void => {
     }
 
     canceledRequestIds.delete(message.requestId);
+    if (message.type === "maximizeRemainingBulk") {
+      void runMaximizeRemainingBulkWorkerTask(
+        message,
+        (workerMessage) => scope.postMessage(workerMessage),
+        (requestId) => canceledRequestIds.has(requestId),
+      );
+      return;
+    }
+
     void runDefenceSearchWorkerTask(
       message,
       (workerMessage) => scope.postMessage(workerMessage),

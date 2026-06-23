@@ -1729,13 +1729,145 @@ textarea {
 
 .sp-summary {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding-top: 10px;
   font-weight: 700;
 }
 
+.sp-summary-actions,
+.sp-summary-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp-summary-actions {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.sp-summary-total {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .sp-summary.is-sp-max strong {
   color: #ff6666;
+}
+
+.bulk-maximize-button {
+  white-space: nowrap;
+}
+
+.bulk-nature-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bulk-nature-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.bulk-maximize-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(13, 20, 20, 0.72);
+  padding: 10px;
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.bulk-maximize-preview.error {
+  border-color: rgba(255, 102, 102, 0.58);
+  color: #ffb3b3;
+}
+
+.bulk-maximize-preview.muted {
+  color: var(--muted);
+}
+
+.bulk-maximize-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bulk-maximize-meter {
+  overflow: hidden;
+  width: 100%;
+  height: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bulk-maximize-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hp);
+}
+
+.bulk-maximize-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.bulk-maximize-grid div {
+  min-width: 0;
+}
+
+.bulk-maximize-grid dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.bulk-maximize-grid dd {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin: 2px 0 0;
+  font-weight: 800;
+}
+
+.bulk-maximize-grid dd span,
+.bulk-maximize-warning {
+  color: #ffd166;
+}
+
+.bulk-maximize-preview p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .sp-summary {
+    align-items: flex-start;
+  }
+
+  .sp-summary-total {
+    margin-left: 0;
+  }
+
+  .bulk-maximize-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .scenario-stack {

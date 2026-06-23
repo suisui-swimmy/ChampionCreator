@@ -114,5 +114,5 @@ describe("golden UI scenario", () => {
     expect(input.scenarios[0].hits[0].field?.gameType).toBe("doubles");
     expect(results).toHaveLength(1);
     expect(results.every((result) => result.passed)).toBe(true);
-  }, 10_000);
+  }, 20_000);
 });

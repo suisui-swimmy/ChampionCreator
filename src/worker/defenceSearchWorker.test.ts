@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EntityKind } from "../data/localizationTypes";
+import { statPointTableToSmogonEvs } from "../domain/championsStats";
 import type { Build, EntityRef, FieldState, Scenario, ScenarioHit, SideState, StatTable } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
@@ -11,6 +12,7 @@ import {
 } from "./defenceSearchWorkerClient";
 import {
   runDefenceSearchWorkerTask,
+  runMaximizeRemainingBulkWorkerTask,
   type DefenceSearchWorkerMessage,
   type DefenceSearchWorkerRequest,
 } from "./defenceSearchWorker";
@@ -316,6 +318,61 @@ describe("runDefenceSearchWorkerTask", () => {
   });
 });
 
+describe("runMaximizeRemainingBulkWorkerTask", () => {
+  it("emits progress and complete messages for remaining bulk maximization", async () => {
+    const statPoints = { hp: 8, atk: 0, def: 4, spa: 0, spd: 6, spe: 12 };
+    const defender: Build = {
+      ...makeBuild("target", "カイリュー", statPointTableToSmogonEvs(statPoints), 50, "おくびょう"),
+      statPoints,
+    };
+    const messages: DefenceSearchWorkerMessage[] = [];
+
+    await runMaximizeRemainingBulkWorkerTask(
+      {
+        type: "maximizeRemainingBulk",
+        requestId: "bulk-request",
+        input: {
+          build: defender,
+          allowNatureChange: true,
+          natureCandidates: [
+            { nature: mustResolve("nature", "ずぶとい") },
+            { nature: mustResolve("nature", "おだやか") },
+          ],
+        },
+      },
+      (message) => messages.push(message),
+    );
+
+    const complete = messages.find((message) => message.type === "bulkComplete");
+
+    expect(messages.some((message) => message.type === "bulkProgress")).toBe(true);
+    expect(complete?.type === "bulkComplete" ? complete.result?.candidate.usedTotal : 0).toBe(66);
+    expect(complete?.type === "bulkComplete" ? complete.result?.score.overallBulkGain : 0).toBeGreaterThan(0);
+  });
+
+  it("stops before emitting complete when canceled", async () => {
+    const statPoints = { hp: 8, atk: 0, def: 4, spa: 0, spd: 6, spe: 12 };
+    const defender: Build = {
+      ...makeBuild("target", "カイリュー", statPointTableToSmogonEvs(statPoints), 50, "おくびょう"),
+      statPoints,
+    };
+    const messages: DefenceSearchWorkerMessage[] = [];
+
+    await runMaximizeRemainingBulkWorkerTask(
+      {
+        type: "maximizeRemainingBulk",
+        requestId: "bulk-cancel",
+        input: { build: defender },
+      },
+      (message) => messages.push(message),
+      () => true,
+    );
+
+    expect(messages.some((message) => message.type === "bulkProgress")).toBe(true);
+    expect(messages.some((message) => message.type === "bulkComplete")).toBe(false);
+  });
+});
+
 describe("DefenceSearchWorkerClient", () => {
   it("discards messages whose requestId does not match the active request", () => {
     expect(isCurrentWorkerMessage({ type: "complete", requestId: "old", candidates: [], passingCandidateCount: 0 }, "current")).toBe(false);
@@ -356,6 +413,60 @@ describe("DefenceSearchWorkerClient", () => {
 
     expect(worker.sentMessages[0]).toMatchObject({ type: "start", requestId: "request-client" });
     expect(worker.sentMessages[1]).toEqual({ type: "cancel", requestId: "request-client" });
+    expect(progressMessages).toHaveLength(1);
+    expect(completeMessages).toHaveLength(0);
+
+    client.dispose();
+  });
+
+  it("posts bulk maximize requests and ignores stale bulk responses", () => {
+    const worker = new FakeWorker();
+    const progressMessages: DefenceSearchWorkerMessage[] = [];
+    const completeMessages: DefenceSearchWorkerMessage[] = [];
+    const client = new DefenceSearchWorkerClient(worker);
+    const statPoints = { hp: 8, atk: 0, def: 4, spa: 0, spd: 6, spe: 12 };
+    const defender: Build = {
+      ...makeBuild("target", "カイリュー", statPointTableToSmogonEvs(statPoints), 50, "おくびょう"),
+      statPoints,
+    };
+
+    const activeRequest = client.maximizeRemainingBulk({
+      build: defender,
+      allowNatureChange: false,
+    }, {
+      requestId: "bulk-client",
+      callbacks: {
+        onBulkProgress: (message) => progressMessages.push(message),
+        onBulkComplete: (message) => completeMessages.push(message),
+      },
+    });
+
+    worker.emit({
+      type: "bulkProgress",
+      requestId: "stale-bulk",
+      searchedCandidates: 1,
+      totalCandidates: 2,
+      progress: 0.5,
+    });
+    worker.emit({
+      type: "bulkProgress",
+      requestId: "bulk-client",
+      searchedCandidates: 1,
+      totalCandidates: 2,
+      progress: 0.5,
+    });
+    activeRequest.cancel();
+    worker.emit({
+      type: "bulkComplete",
+      requestId: "bulk-client",
+      result: null,
+      results: [],
+      searchedCandidates: 2,
+      totalCandidates: 2,
+    });
+
+    expect(worker.sentMessages[0]).toMatchObject({ type: "maximizeRemainingBulk", requestId: "bulk-client" });
+    expect(worker.sentMessages[1]).toEqual({ type: "cancel", requestId: "bulk-client" });
     expect(progressMessages).toHaveLength(1);
     expect(completeMessages).toHaveLength(0);
 
