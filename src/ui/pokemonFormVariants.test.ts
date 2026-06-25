@@ -24,6 +24,25 @@ describe("pokemonFormVariants", () => {
     );
   });
 
+  it("only offers Mega Floette from Eternal Flower Floette", () => {
+    expect(getPokemonFormVariantOptions("フラエッテ あかいはな", "mega")).toEqual([]);
+    expect(getPokemonFormVariantOptions("フラエッテ えいえんのはな", "mega")).toEqual([
+      expect.objectContaining({
+        value: "メガフラエッテ",
+        showdownName: "Floette-Mega",
+      }),
+    ]);
+  });
+
+  it("keeps mega forms that do not have an explicit mega stone mapping", () => {
+    expect(getPokemonFormVariantOptions("レックウザ", "mega")).toEqual([
+      expect.objectContaining({
+        value: "メガレックウザ",
+        showdownName: "Rayquaza-Mega",
+      }),
+    ]);
+  });
+
   it("does not return Gmax choices when upstream calc no longer exposes Gmax species", () => {
     expect(getPokemonFormVariantOptions("フシギバナ", "gmax")).toEqual([]);
     expect(getPokemonFormVariantOptions("ガブリアス", "gmax")).toEqual([]);

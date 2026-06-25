@@ -1,4 +1,5 @@
 import pokemonOptionsPayload from "../data/generated/pokemon-options.gen.json";
+import itemOptionsPayload from "../data/generated/item-options.gen.json";
 import { normalizeSearchText } from "../localization/normalize";
 
 type PokemonOptionEntry = {
@@ -7,6 +8,13 @@ type PokemonOptionEntry = {
   showdownName: string;
   searchText: string;
   artwork?: string;
+};
+
+type ItemOptionEntry = {
+  megaStone?: {
+    baseSpecies: string;
+    megaSpecies: string;
+  };
 };
 
 export type PokemonFormVariantKind = "mega" | "gmax";
@@ -19,9 +27,11 @@ export type PokemonFormVariantOption = {
 };
 
 const pokemonOptions = pokemonOptionsPayload.entries as PokemonOptionEntry[];
+const itemOptions = itemOptionsPayload.entries as ItemOptionEntry[];
 
 const optionByExactKey = new Map<string, PokemonOptionEntry>();
 const optionByShowdownName = new Map<string, PokemonOptionEntry>();
+const megaBaseByVariantShowdownName = new Map<string, string>();
 const megaSearchPrefix = normalizeSearchText("メガ");
 
 const addExactKey = (rawKey: string, option: PokemonOptionEntry) => {
@@ -35,6 +45,13 @@ const getMegaDisplayLabel = (option: PokemonOptionEntry): string | undefined => 
   const labels = [option.label, option.searchText].flatMap((text) => text.split(/\s+/u));
   return labels.find((text) => normalizeSearchText(text).startsWith(megaSearchPrefix));
 };
+
+for (const item of itemOptions) {
+  if (!item.megaStone) {
+    continue;
+  }
+  megaBaseByVariantShowdownName.set(item.megaStone.megaSpecies, item.megaStone.baseSpecies);
+}
 
 for (const option of pokemonOptions) {
   optionByShowdownName.set(option.showdownName, option);
@@ -53,7 +70,7 @@ for (const option of pokemonOptions) {
 }
 
 const getBaseShowdownName = (showdownName: string): string =>
-  showdownName.replace(/-(Mega(?:-[XY])?|Gmax)$/u, "");
+  megaBaseByVariantShowdownName.get(showdownName) ?? showdownName.replace(/-(Mega(?:-[XY])?|Gmax)$/u, "");
 
 const findOption = (input: string): PokemonOptionEntry | undefined =>
   optionByExactKey.get(normalizeSearchText(input));
@@ -101,9 +118,17 @@ export const getPokemonFormVariantOptions = (
     return [];
   }
 
-  const baseShowdownName = getBaseShowdownName(baseOption.showdownName);
+  const baseShowdownName = baseOption.showdownName;
   return pokemonOptions
-    .filter((option) => getBaseShowdownName(option.showdownName) === baseShowdownName)
+    .filter((option) => {
+      if (kind === "mega") {
+        const explicitMegaBase = megaBaseByVariantShowdownName.get(option.showdownName);
+        return explicitMegaBase
+          ? explicitMegaBase === baseShowdownName
+          : getBaseShowdownName(option.showdownName) === baseShowdownName;
+      }
+      return getBaseShowdownName(option.showdownName) === baseShowdownName;
+    })
     .filter((option) => isVariant(option, kind))
     .map((option) => toVariantOption(option, kind));
 };
