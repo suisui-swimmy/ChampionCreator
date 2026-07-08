@@ -520,6 +520,42 @@ function NatureStatModifier({
   );
 }
 
+export const applyScenarioAdjustmentTypeDefaults = (
+  scenario: ScenarioFormState,
+  adjustmentType: ScenarioAdjustmentType,
+): ScenarioFormState => ({
+  ...scenario,
+  adjustmentType,
+  attacks: scenario.attacks.map((attack) => ({
+    ...attack,
+    attackerStatPoints: adjustmentType === "speed" && attack.attackerStatPoints.spe === 0
+      ? { ...attack.attackerStatPoints, spe: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }
+      : attack.attackerStatPoints,
+    speedMoveModifier: "none",
+  })),
+});
+
+export const applySpeedMoveModifierDefaults = (
+  attack: ScenarioAttackFormState,
+  speedMoveModifier: ScenarioAttackFormState["speedMoveModifier"],
+): ScenarioAttackFormState => {
+  const currentSpe = attack.attackerStatPoints.spe;
+  const nextDefaultSpe = speedMoveModifier === "trick-room"
+    ? 0
+    : CHAMPIONS_MAX_STAT_POINTS_PER_STAT;
+  const shouldApplyDefault = speedMoveModifier === "trick-room"
+    ? currentSpe === CHAMPIONS_MAX_STAT_POINTS_PER_STAT
+    : currentSpe === 0;
+
+  return {
+    ...attack,
+    speedMoveModifier,
+    attackerStatPoints: shouldApplyDefault
+      ? { ...attack.attackerStatPoints, spe: nextDefaultSpe }
+      : attack.attackerStatPoints,
+  };
+};
+
 const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   ...createDefaultScenarioAttackForm(`attack-${Date.now()}-${index}`, `攻撃${String.fromCharCode(65 + index)}`),
   attackerPokemonInput: "",
@@ -576,11 +612,11 @@ const createBlankScenario = (index: number): ScenarioFormState => ({
   ...createDefaultScenarioForms()[0],
   id: `scenario-${Date.now()}-${index}`,
   label: `シナリオ${index + 1}`,
-  enabled: false,
+  enabled: true,
   attacks: [createBlankAttack(0)],
 });
 
-const createScenario = (index: number): ScenarioFormState => ({
+export const createScenario = (index: number): ScenarioFormState => ({
   ...createBlankScenario(index),
   id: `scenario-${Date.now()}-${index}`,
   label: `シナリオ${index + 1}`,
@@ -756,7 +792,11 @@ export function App() {
   ) => {
     resetActiveSearch();
     setScenarioForms((current) => current.map((scenario) => (
-      scenario.id === id ? { ...scenario, [key]: value } : scenario
+      scenario.id === id
+        ? key === "adjustmentType"
+          ? applyScenarioAdjustmentTypeDefaults(scenario, value as ScenarioAdjustmentType)
+          : { ...scenario, [key]: value }
+        : scenario
     )));
   };
 
@@ -767,14 +807,7 @@ export function App() {
         return scenario;
       }
 
-      return {
-        ...scenario,
-        adjustmentType: nextScenarioAdjustmentType(scenario.adjustmentType),
-        attacks: scenario.attacks.map((attack) => ({
-          ...attack,
-          speedMoveModifier: "none",
-        })),
-      };
+      return applyScenarioAdjustmentTypeDefaults(scenario, nextScenarioAdjustmentType(scenario.adjustmentType));
     }));
   };
 
@@ -810,6 +843,11 @@ export function App() {
               attack.id === attackId
                 ? key === "moveInput" && scenario.adjustmentType === "defence"
                   ? applyMoveHitCountDefaults(attack, String(value))
+                  : key === "speedMoveModifier"
+                    ? applySpeedMoveModifierDefaults(
+                        attack,
+                        value as ScenarioAttackFormState["speedMoveModifier"],
+                      )
                   : { ...attack, [key]: value }
                 : attack
             )),

@@ -7,8 +7,11 @@ import {
   CandidateStatPointBars,
   CandidateStatPointSpread,
   ResultsPanel,
+  applyScenarioAdjustmentTypeDefaults,
+  applySpeedMoveModifierDefaults,
   clampTargetStatPointChange,
   compareResultCandidates,
+  createScenario,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
@@ -207,6 +210,64 @@ describe("App", () => {
     });
     expect(getMobileAttackNavigationTargets(scenarios[0], scenarios[0].attacks[0].id)?.previousId).toBeNull();
     expect(getMobileAttackNavigationTargets({ ...scenarios[0], attacks: [] })).toBeNull();
+  });
+
+  it("creates added scenarios as enabled by default", () => {
+    const scenario = createScenario(3);
+
+    expect(scenario).toMatchObject({
+      label: "シナリオ4",
+      enabled: true,
+      adjustmentType: "defence",
+    });
+  });
+
+  it("defaults opponent S SP to 32 when a scenario becomes a speed adjustment", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const speedScenario = applyScenarioAdjustmentTypeDefaults({
+      ...scenario,
+      adjustmentType: "defence",
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        attackerStatPoints: { ...attack.attackerStatPoints, spe: 0 },
+        speedMoveModifier: "trick-room" as const,
+      })),
+    }, "speed");
+
+    expect(speedScenario.adjustmentType).toBe("speed");
+    expect(speedScenario.attacks[0].attackerStatPoints.spe).toBe(32);
+    expect(speedScenario.attacks[0].speedMoveModifier).toBe("none");
+  });
+
+  it("defaults opponent S SP to 0 for Trick Room speed adjustment", () => {
+    const speedAttack = {
+      ...createDefaultScenarioForms()[2].attacks[0],
+      attackerStatPoints: {
+        ...createDefaultScenarioForms()[2].attacks[0].attackerStatPoints,
+        spe: 32,
+      },
+    };
+
+    const trickRoomAttack = applySpeedMoveModifierDefaults(speedAttack, "trick-room");
+    expect(trickRoomAttack.speedMoveModifier).toBe("trick-room");
+    expect(trickRoomAttack.attackerStatPoints.spe).toBe(0);
+
+    const normalAttack = applySpeedMoveModifierDefaults(trickRoomAttack, "none");
+    expect(normalAttack.speedMoveModifier).toBe("none");
+    expect(normalAttack.attackerStatPoints.spe).toBe(32);
+  });
+
+  it("does not overwrite manually edited opponent S SP for Trick Room", () => {
+    const speedAttack = {
+      ...createDefaultScenarioForms()[2].attacks[0],
+      attackerStatPoints: {
+        ...createDefaultScenarioForms()[2].attacks[0].attackerStatPoints,
+        spe: 12,
+      },
+    };
+
+    const trickRoomAttack = applySpeedMoveModifierDefaults(speedAttack, "trick-room");
+    expect(trickRoomAttack.attackerStatPoints.spe).toBe(12);
   });
 
   it("normalizes full-width numeric input text before parsing", () => {
