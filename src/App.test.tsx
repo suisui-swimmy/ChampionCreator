@@ -77,7 +77,7 @@ describe("App", () => {
     expect(css).toMatch(/\.brand-title\s*\{[^}]*flex:\s*1 1 auto;/s);
     expect(css).toMatch(/\.topbar-meta\s*\{[^}]*justify-items:\s*end;/s);
     expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*font-size:\s*9px;[^}]*text-align:\s*right;/s);
-    expect(html).toContain("<title>ポケモンチャンピオンズ SP自動計算・耐久調整ツール | ChampionCreator</title>");
+    expect(html).toContain("<title>ChampionCreator | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール</title>");
     expect(html).toContain('name="description"');
     expect(html).toContain("能力ポイント（SP・努力値相当）の候補配分を自動計算");
     expect(html).toContain('name="robots" content="index, follow, max-image-preview:large"');
