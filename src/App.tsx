@@ -1309,24 +1309,29 @@ export function App({
                 alt="ChampionCreator"
               />
             </h1>
-            <p>
-              app v{appVersionInfo.appVersion}
-              {" / "}
-              calc {appVersionInfo.smogonCalcVersion}
-              {" / "}
-              data {appVersionInfo.localizationEntries}
+            <p className="brand-description">
+              ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール
             </p>
           </div>
         </div>
-        <a
-          className="readme-link"
-          href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Usageを開く"
-        >
-          <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
-        </a>
+        <div className="topbar-meta">
+          <a
+            className="readme-link"
+            href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Usageを開く"
+          >
+            <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
+          </a>
+          <p className="brand-version">
+            app v{appVersionInfo.appVersion}
+            {" / "}
+            calc {appVersionInfo.smogonCalcVersion}
+            {" / "}
+            data {appVersionInfo.localizationEntries}
+          </p>
+        </div>
       </header>
 
       {boxOpen ? (

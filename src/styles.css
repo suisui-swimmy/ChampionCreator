@@ -184,15 +184,23 @@ textarea:focus-visible,
 }
 
 .brand-title {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
   min-width: 0;
 }
 
 .brand-line {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px 12px;
+  min-width: 0;
+}
+
+.brand-line h1 {
+  flex: 0 0 auto;
   min-width: 0;
 }
 
@@ -200,7 +208,7 @@ textarea:focus-visible,
   display: block;
   width: auto;
   height: 48px;
-  max-width: min(330px, 42vw);
+  max-width: min(330px, 26vw);
   object-fit: contain;
   object-position: left center;
 }
@@ -212,11 +220,33 @@ textarea:focus-visible,
   font-size: 11px;
 }
 
-.topbar p {
+.topbar .brand-version {
   min-width: 0;
   margin: 0;
   color: rgba(238, 241, 237, 0.62);
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: right;
   white-space: nowrap;
+}
+
+.topbar .brand-description {
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+  color: rgba(238, 241, 237, 0.76);
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+}
+
+.topbar-meta {
+  display: grid;
+  flex: 0 0 auto;
+  align-self: stretch;
+  align-content: space-between;
+  justify-items: end;
+  gap: 4px;
 }
 
 .readme-link {
@@ -3564,11 +3594,25 @@ textarea {
 
   .brand-title img {
     height: 38px;
-    max-width: 210px;
+    max-width: min(210px, 26vw);
   }
 
   .topbar p {
     font-size: 10px;
+  }
+
+  .topbar .brand-version {
+    max-width: 96px;
+    font-size: 8px;
+    white-space: normal;
+  }
+
+  .brand-line {
+    gap: 8px;
+  }
+
+  .topbar-meta {
+    gap: 3px;
   }
 
   .readme-link {

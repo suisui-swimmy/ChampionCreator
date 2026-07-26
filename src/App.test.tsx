@@ -69,6 +69,25 @@ describe("App", () => {
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
 
+  it("publishes indexable metadata and a canonical sitemap URL", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+    const sitemap = readFileSync(new URL("../public/sitemap.xml", import.meta.url), "utf8");
+
+    expect(css).toMatch(/\.brand-title\s*\{[^}]*flex:\s*1 1 auto;/s);
+    expect(css).toMatch(/\.topbar-meta\s*\{[^}]*justify-items:\s*end;/s);
+    expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*font-size:\s*9px;[^}]*text-align:\s*right;/s);
+    expect(html).toContain("<title>ポケモンチャンピオンズ SP自動計算・耐久調整ツール | ChampionCreator</title>");
+    expect(html).toContain('name="description"');
+    expect(html).toContain("能力ポイント（SP・努力値相当）の候補配分を自動計算");
+    expect(html).toContain('name="robots" content="index, follow, max-image-preview:large"');
+    expect(html).toContain('rel="canonical" href="https://suisui-swimmy.github.io/ChampionCreator/"');
+    expect(html).toContain('property="og:url" content="https://suisui-swimmy.github.io/ChampionCreator/"');
+    expect(html).toContain('name="twitter:card" content="summary"');
+    expect(sitemap).toContain("<loc>https://suisui-swimmy.github.io/ChampionCreator/</loc>");
+    expect(sitemap).not.toContain("localhost");
+  });
+
   it("keeps type and item dropdown candidates separated", () => {
     const typeOptions = getDropdownEntityOptions("type", "");
     const itemOptions = getDropdownEntityOptions("item", "");
@@ -98,8 +117,13 @@ describe("App", () => {
 
     expect(html).toContain("ChampionCreator");
     expect(html).toContain('class="brand-line"');
+    expect(html).toContain("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール");
+    expect(html).toContain('class="topbar-meta"');
     expect(html).not.toContain("title=");
     expect(html).toContain(`app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`);
+    expect(html.indexOf("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール")).toBeLessThan(
+      html.indexOf(`app v${appVersionInfo.appVersion}`),
+    );
     expect(html).not.toContain("Pokemon Champions 自動耐久調整");
     expect(html).toContain("調整対象");
     expect(html).toContain('class="target-sheet-body"');

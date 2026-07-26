@@ -1,7 +1,7 @@
 {
   "name": "ChampionCreator",
   "short_name": "ChampionCreator",
-  "description": "「神調整」を誰にでも ― 能力ポイント自動調整ツール",
+  "description": "ポケモンチャンピオンズ向けの能力ポイント（SP）候補配分を自動計算する耐久・火力・素早さ調整ツール",
   "lang": "ja",
   "start_url": ".",
   "scope": ".",
