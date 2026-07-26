@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  BOX_DEFAULT_EXAMPLE_SEEDED_KEY,
   BOX_STORAGE_SCHEMA_VERSION,
+  BOX_STORAGE_KEY,
+  DEFAULT_BOX_EXAMPLE_ID,
   createBoxBackupFileName,
+  createDefaultBoxExampleEntry,
   createBoxEntryFromState,
   createBoxEntrySummary,
   duplicateBoxEntry,
@@ -50,6 +54,27 @@ describe("boxStorage", () => {
     expect(parsed[0]?.payload.target.pokemonInput).toBe("メガマフォクシー");
   });
 
+  it("creates the Mega Delphox adjustment as the default box example", () => {
+    const entry = createDefaultBoxExampleEntry("2026-07-27T00:00:00.000Z");
+
+    expect(entry).toMatchObject({
+      id: DEFAULT_BOX_EXAMPLE_ID,
+      name: "調整例：メガマフォクシー",
+      createdAt: "2026-07-27T00:00:00.000Z",
+      updatedAt: "2026-07-27T00:00:00.000Z",
+      summary: {
+        pokemonName: "メガマフォクシー",
+        conditionSummary: "耐久 1 / 火力 1 / 素早さ 1",
+      },
+      payload: {
+        target: {
+          pokemonInput: "メガマフォクシー",
+        },
+      },
+    });
+    expect(entry.payload.scenarios).toHaveLength(3);
+  });
+
   it("ignores invalid localStorage payloads instead of throwing", () => {
     expect(parseBoxStorageDocument("not-json")).toEqual([]);
     expect(parseBoxStorageDocument(JSON.stringify({
@@ -58,7 +83,7 @@ describe("boxStorage", () => {
     }))).toEqual([]);
   });
 
-  it("loads and saves entries through browser storage", () => {
+  it("seeds the default example once while preserving saved browser entries", () => {
     const values = new Map<string, string>();
     const storage = {
       getItem: (key: string) => values.get(key) ?? null,
@@ -72,7 +97,33 @@ describe("boxStorage", () => {
     });
 
     expect(saveBoxEntriesToBrowser([entry], storage)).toBeNull();
-    expect(loadBoxEntriesFromBrowser(storage)).toEqual([entry]);
+    const firstLoad = loadBoxEntriesFromBrowser(storage);
+    const secondLoad = loadBoxEntriesFromBrowser(storage);
+
+    expect(firstLoad).toHaveLength(2);
+    expect(firstLoad[0]).toMatchObject({
+      id: DEFAULT_BOX_EXAMPLE_ID,
+      name: "調整例：メガマフォクシー",
+    });
+    expect(firstLoad[1]).toEqual(entry);
+    expect(secondLoad).toEqual(firstLoad);
+    expect(values.get(BOX_DEFAULT_EXAMPLE_SEEDED_KEY)).toBe("1");
+    expect(parseBoxStorageDocument(values.get(BOX_STORAGE_KEY) ?? null)).toEqual(firstLoad);
+  });
+
+  it("does not restore the default example after it has been removed", () => {
+    const values = new Map<string, string>([
+      [BOX_STORAGE_KEY, stringifyBoxStorageDocument([])],
+      [BOX_DEFAULT_EXAMPLE_SEEDED_KEY, "1"],
+    ]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual([]);
   });
 
   it("reports browser storage write failures", () => {

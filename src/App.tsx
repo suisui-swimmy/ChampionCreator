@@ -635,9 +635,21 @@ export const createScenario = (index: number): ScenarioFormState => ({
 
 const BLANK_BOX_SLOT_ID = "blank-box-slot";
 
-export function App() {
-  const [targetForm, setTargetForm] = useState<TargetFormState>(() => createDefaultTargetForm());
-  const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(() => createDefaultScenarioForms());
+type AppProps = {
+  initialTargetForm?: TargetFormState;
+  initialScenarioForms?: ScenarioFormState[];
+};
+
+export function App({
+  initialTargetForm,
+  initialScenarioForms,
+}: AppProps = {}) {
+  const [targetForm, setTargetForm] = useState<TargetFormState>(
+    () => initialTargetForm ?? createBlankTargetForm(),
+  );
+  const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(
+    () => initialScenarioForms ?? [createBlankScenario(0)],
+  );
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [bulkMaximizeState, dispatchBulkMaximize] = useReducer(
     bulkMaximizeUiReducer,

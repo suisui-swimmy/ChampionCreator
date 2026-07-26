@@ -27,8 +27,16 @@ import {
 } from "./App";
 import {
   createDefaultScenarioForms,
+  createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
+
+const renderExampleApp = (): string => renderToStaticMarkup(
+  <App
+    initialTargetForm={createDefaultTargetForm()}
+    initialScenarioForms={createDefaultScenarioForms()}
+  />,
+);
 
 describe("App", () => {
   it("only treats field-wide or ally-targeting abilities as move-less support cards", () => {
@@ -86,7 +94,7 @@ describe("App", () => {
   });
 
   it("renders the M0 workbench sections", () => {
-    const html = renderToStaticMarkup(<App />);
+    const html = renderExampleApp();
 
     expect(html).toContain("ChampionCreator");
     expect(html).toContain('class="brand-line"');
@@ -194,6 +202,18 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+  });
+
+  it("starts with the same blank condition shown by the empty box slot", () => {
+    const html = renderToStaticMarkup(<App />);
+
+    expect(html).toContain('aria-label="性格: 未選択"');
+    expect(html).toContain('aria-label="シナリオ1 調整種別"');
+    expect(html).not.toContain('aria-label="シナリオ2 調整種別"');
+    expect(html).not.toContain('value="メガマフォクシー"');
+    expect(html).not.toContain('value="ドドゲザン"');
+    expect(html).not.toContain('value="メガゲンガー"');
+    expect(html).not.toContain('value="サイコキネシス"');
   });
 
   it("maps mobile scenario direction icons by adjustment type", () => {
@@ -315,7 +335,7 @@ describe("App", () => {
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {
-    const html = renderToStaticMarkup(<App />);
+    const html = renderExampleApp();
 
     expect(html).toContain(">耐久条件<");
     expect(html).toContain(">状況条件<");
@@ -352,7 +372,7 @@ describe("App", () => {
     expect(getOffenseDefenderStatKeys("ジャイロボール")).toEqual(["hp", "def", "spe"]);
     expect(getOffenseDefenderStatKeys("")).toEqual(["hp", "def", "spd"]);
 
-    const html = renderToStaticMarkup(<App />);
+    const html = renderExampleApp();
 
     expect(html).toContain('aria-label="火力調整A 仮想敵能力"');
     expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
@@ -375,7 +395,7 @@ describe("App", () => {
     expect(getNatureModifierDirection("ひかえめ", "hp")).toBeNull();
     expect(getNatureModifierDirection("がんばりや", "atk")).toBeNull();
 
-    const html = renderToStaticMarkup(<App />);
+    const html = renderExampleApp();
 
     expect(html).toContain('class="nature-stat-modifier up" aria-label="S 上昇"');
     expect(html).toContain('class="nature-stat-modifier down" aria-label="A 下降"');
@@ -1004,7 +1024,7 @@ describe("App", () => {
   });
 
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {
-    const html = renderToStaticMarkup(<App />);
+    const html = renderExampleApp();
 
     expect(html).toContain('value="ドドゲザン"');
     expect(html).toContain('value="メガマフォクシー"');

@@ -4,14 +4,18 @@ import {
   type ShareStateDocument,
 } from "./shareState";
 import {
+  createDefaultScenarioForms,
+  createDefaultTargetForm,
   type ScenarioFormState,
   type TargetFormState,
 } from "./defenceSearchUi";
 import type { StatPointTable } from "../domain/championsStats";
 
 export const BOX_STORAGE_KEY = "championcreator.box.v1";
+export const BOX_DEFAULT_EXAMPLE_SEEDED_KEY = "championcreator.box.default-example.v1";
 export const BOX_STORAGE_SCHEMA_VERSION = 1;
 export const BOX_BACKUP_FILE_PREFIX = "championcreator-box-backup";
+export const DEFAULT_BOX_EXAMPLE_ID = "default-example-mega-delphox";
 
 export type BoxEntrySummary = {
   pokemonName: string;
@@ -128,6 +132,18 @@ export const createBoxEntryFromState = (
     payload: createShareStateDocument(target, scenarios),
   };
 };
+
+export const createDefaultBoxExampleEntry = (
+  now = new Date().toISOString(),
+): BoxEntry => createBoxEntryFromState(
+  createDefaultTargetForm(),
+  createDefaultScenarioForms(),
+  {
+    id: DEFAULT_BOX_EXAMPLE_ID,
+    name: "調整例：メガマフォクシー",
+    now,
+  },
+);
 
 const normalizeBoxEntry = (value: unknown): BoxEntry | null => {
   if (!isRecord(value)) {
@@ -297,7 +313,22 @@ export const loadBoxEntriesFromBrowser = (
     return [];
   }
 
-  return parseBoxStorageDocument(storage.getItem(BOX_STORAGE_KEY));
+  let entries: BoxEntry[] = [];
+  try {
+    entries = parseBoxStorageDocument(storage.getItem(BOX_STORAGE_KEY));
+    if (storage.getItem(BOX_DEFAULT_EXAMPLE_SEEDED_KEY) === "1") {
+      return entries;
+    }
+
+    const seededEntries = entries.some((entry) => entry.id === DEFAULT_BOX_EXAMPLE_ID)
+      ? entries
+      : [createDefaultBoxExampleEntry(), ...entries];
+    storage.setItem(BOX_STORAGE_KEY, stringifyBoxStorageDocument(seededEntries));
+    storage.setItem(BOX_DEFAULT_EXAMPLE_SEEDED_KEY, "1");
+    return seededEntries;
+  } catch {
+    return entries;
+  }
 };
 
 export const saveBoxEntriesToBrowser = (
