@@ -587,6 +587,55 @@ describe("buildDefenceSearchInput", () => {
     ]);
   });
 
+  it("keeps self-only skin abilities out of ally support while retaining field-wide auras", () => {
+    const target = createDefaultTargetForm();
+    const [defaultScenario] = createDefaultScenarioForms();
+    const skinAbilities = [
+      "フェアリースキン",
+      "スカイスキン",
+      "フリーズスキン",
+      "エレキスキン",
+      "ノーマルスキン",
+      "ドラゴンスキン",
+    ];
+    const supportCards = [
+      ...skinAbilities.map((attackerAbilityInput, index) => ({
+        ...defaultScenario.attacks[0],
+        id: `skin-${index}`,
+        label: `スキン${index + 1}`,
+        attackerPokemonInput: "",
+        attackerAbilityInput,
+        moveInput: "",
+        gameType: "doubles" as const,
+      })),
+      {
+        ...defaultScenario.attacks[0],
+        id: "fairy-aura",
+        label: "オーラ",
+        attackerPokemonInput: "ゼルネアス",
+        attackerAbilityInput: "フェアリーオーラ",
+        moveInput: "",
+        gameType: "doubles" as const,
+      },
+    ];
+
+    const input = buildDefenceSearchInput(target, [{
+      ...defaultScenario,
+      attacks: [
+        {
+          ...defaultScenario.attacks[0],
+          gameType: "doubles" as const,
+        },
+        ...supportCards,
+      ],
+    }]);
+
+    expect(input.scenarios[0].hits).toHaveLength(1);
+    expect(input.scenarios[0].hits[0].allyAbilities?.map((ability) => ability.canonicalName)).toEqual([
+      "Fairy Aura",
+    ]);
+  });
+
   it("passes Friend Guard as a defender-side effect only in doubles", () => {
     const target = createDefaultTargetForm();
     const [defaultScenario] = createDefaultScenarioForms();

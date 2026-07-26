@@ -30,6 +30,7 @@ import {
   sumStatPoints,
   type StatPointTable,
 } from "../domain/championsStats";
+import { isActiveAllyAbilityCanonicalName } from "../domain/allyAbilitySupport";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 import {
@@ -636,6 +637,7 @@ const toScenarioHit = (
           `${allyForm.label || "味方"}の特性`,
         ))
         .filter((ability): ability is NonNullable<typeof ability> => Boolean(ability))
+        .filter((ability) => isActiveAllyAbilityCanonicalName(ability.canonicalName))
       : undefined,
     move: mustResolve("move", attackForm.moveInput, "技"),
     moveHits: moveHitRange ? repeat : undefined,

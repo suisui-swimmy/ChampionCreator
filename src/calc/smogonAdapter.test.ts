@@ -248,6 +248,160 @@ describe("calculateSmogonHit", () => {
     });
   });
 
+  it("applies each type-converting skin ability only from the move user's own ability", () => {
+    const neutralDefender = {
+      ...defender,
+      pokemon: mustResolve("pokemon", "ミュウ"),
+      ability: undefined,
+      item: undefined,
+      teraType: undefined,
+      level: 50,
+      evs: zeroEvs,
+    };
+    const skinAttacker = {
+      ...attacker,
+      pokemon: mustResolve("pokemon", "ニンフィア"),
+      nature: mustResolve("nature", "ひかえめ"),
+      ability: undefined,
+      item: undefined,
+      level: 50,
+      evs: { ...zeroEvs, spa: 252 },
+    };
+    const normalMoveHit = {
+      ...hit,
+      attacker: skinAttacker,
+      move: mustResolve("move", "ハイパーボイス"),
+      repeat: 1,
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+    };
+    const baseline = calculateSmogonHit(
+      neutralDefender,
+      normalMoveHit,
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    for (const [abilityInput, canonicalName] of [
+      ["フェアリースキン", "Pixilate"],
+      ["スカイスキン", "Aerilate"],
+      ["フリーズスキン", "Refrigerate"],
+      ["エレキスキン", "Galvanize"],
+      ["ノーマルスキン", "Normalize"],
+      ["ドラゴンスキン", "Dragonize"],
+    ] as const) {
+      const result = calculateSmogonHit(
+        neutralDefender,
+        {
+          ...normalMoveHit,
+          attacker: {
+            ...skinAttacker,
+            ability: mustResolve("ability", abilityInput),
+          },
+        },
+        { gameType: "singles", weather: "none", terrain: "none" },
+      );
+
+      expect(result.damageRange.max).toBeGreaterThan(baseline.damageRange.max);
+      expect(result.description).toContain(canonicalName);
+    }
+  });
+
+  it("applies Fairy Aura and Dark Aura from either the user or an active field ally", () => {
+    const auraAttacker = {
+      ...attacker,
+      pokemon: mustResolve("pokemon", "ミュウ"),
+      nature: mustResolve("nature", "ひかえめ"),
+      ability: undefined,
+      item: undefined,
+      level: 50,
+      evs: { ...zeroEvs, spa: 252 },
+    };
+    const auraDefender = {
+      ...defender,
+      pokemon: mustResolve("pokemon", "ミュウ"),
+      ability: undefined,
+      item: undefined,
+      teraType: undefined,
+      level: 50,
+      evs: zeroEvs,
+    };
+    const doublesField = { gameType: "doubles", weather: "none", terrain: "none" } as const;
+
+    for (const [abilityInput, moveInput] of [
+      ["フェアリーオーラ", "ムーンフォース"],
+      ["ダークオーラ", "あくのはどう"],
+    ] as const) {
+      const auraAbility = mustResolve("ability", abilityInput);
+      const auraHit = {
+        ...hit,
+        attacker: auraAttacker,
+        move: mustResolve("move", moveInput),
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      };
+      const baseline = calculateSmogonHit(auraDefender, auraHit, doublesField);
+      const userAura = calculateSmogonHit(auraDefender, {
+        ...auraHit,
+        attacker: { ...auraAttacker, ability: auraAbility },
+      }, doublesField);
+      const allyAura = calculateSmogonHit(auraDefender, {
+        ...auraHit,
+        allyAbilities: [auraAbility],
+      }, doublesField);
+
+      expect(userAura.damageRange.max).toBeGreaterThan(baseline.damageRange.max);
+      expect(allyAura.damageRange).toEqual(userAura.damageRange);
+      expect(userAura.description).toContain(auraAbility.canonicalName);
+    }
+  });
+
+  it("lets an active ally's Aura Break reverse a field aura", () => {
+    const auraHit = {
+      ...hit,
+      attacker: {
+        ...attacker,
+        pokemon: mustResolve("pokemon", "ミュウ"),
+        nature: mustResolve("nature", "ひかえめ"),
+        ability: undefined,
+        item: undefined,
+        level: 50,
+        evs: { ...zeroEvs, spa: 252 },
+      },
+      move: mustResolve("move", "ムーンフォース"),
+      repeat: 1,
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+      allyAbilities: [mustResolve("ability", "フェアリーオーラ")],
+    };
+    const auraDefender = {
+      ...defender,
+      pokemon: mustResolve("pokemon", "ミュウ"),
+      ability: undefined,
+      item: undefined,
+      teraType: undefined,
+      level: 50,
+      evs: zeroEvs,
+    };
+    const doublesField = { gameType: "doubles", weather: "none", terrain: "none" } as const;
+    const withAura = calculateSmogonHit(auraDefender, auraHit, doublesField);
+    const withAuraBreak = calculateSmogonHit(auraDefender, {
+      ...auraHit,
+      allyAbilities: [
+        ...auraHit.allyAbilities,
+        mustResolve("ability", "オーラブレイク"),
+      ],
+    }, doublesField);
+
+    expect(withAuraBreak.damageRange.max).toBeLessThan(withAura.damageRange.max);
+  });
+
   it("maps defender-side Friend Guard to @smogon/calc", () => {
     const friendGuardField = toSmogonField(
       { gameType: "doubles", weather: "none", terrain: "none" },

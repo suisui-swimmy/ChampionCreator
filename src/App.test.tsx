@@ -21,6 +21,7 @@ import {
   getMobileScenarioDirectionIconPath,
   getNatureModifierDirection,
   getScenarioPanelVisibleScenarios,
+  isAbilitySupportCard,
   isUnresolvedEntityInput,
   normalizeNumericInputText,
 } from "./App";
@@ -30,6 +31,25 @@ import {
 import { appVersionInfo } from "./appVersion";
 
 describe("App", () => {
+  it("only treats field-wide or ally-targeting abilities as move-less support cards", () => {
+    for (const skinAbility of [
+      "フェアリースキン",
+      "スカイスキン",
+      "フリーズスキン",
+      "エレキスキン",
+      "ノーマルスキン",
+      "ドラゴンスキン",
+    ]) {
+      expect(isAbilitySupportCard("defence", "", skinAbility)).toBe(false);
+    }
+
+    expect(isAbilitySupportCard("defence", "", "フェアリーオーラ")).toBe(true);
+    expect(isAbilitySupportCard("defence", "", "ダークオーラ")).toBe(true);
+    expect(isAbilitySupportCard("defence", "", "オーラブレイク")).toBe(true);
+    expect(isAbilitySupportCard("defence", "ムーンフォース", "フェアリーオーラ")).toBe(false);
+    expect(isAbilitySupportCard("offense", "", "フェアリーオーラ")).toBe(false);
+  });
+
   it("keeps mobile text controls large enough to avoid iOS focus zoom", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");

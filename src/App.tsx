@@ -8,6 +8,7 @@ import {
   smogonEvToStatPoints,
   sumStatPoints,
 } from "./domain/championsStats";
+import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
 import type {
   CandidateResult,
   GameType,
@@ -287,6 +288,16 @@ const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | u
   const result = resolveEntity(kind, input);
   return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
 };
+
+export const isAbilitySupportCard = (
+  adjustmentType: ScenarioAdjustmentType,
+  moveInput: string,
+  abilityInput: string,
+): boolean => (
+  adjustmentType === "defence"
+  && !moveInput.trim()
+  && isActiveAllyAbilityCanonicalName(resolveCanonicalEntityName("ability", abilityInput))
+);
 
 export const isUnresolvedEntityInput = (kind: EntityKind, input: string): boolean => {
   if (!input.trim()) {
@@ -3782,8 +3793,10 @@ function AttackCard({
   const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
   const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(adjustmentType));
   const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(adjustmentType);
-  const isAbilitySupport = Boolean(
-    !isOffenseAdjustment && !isSpeedAdjustment && !attack.moveInput.trim() && attack.attackerAbilityInput.trim(),
+  const isAbilitySupport = isAbilitySupportCard(
+    adjustmentType,
+    attack.moveInput,
+    attack.attackerAbilityInput,
   );
   const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
   const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
