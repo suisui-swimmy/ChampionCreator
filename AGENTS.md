@@ -358,9 +358,6 @@ MVP UI の最低ライン:
 - canonical name / domain model / adapter / search / worker の境界を維持している
 - 代表シナリオで `A / C` ラインと `S` ラインの回帰テストがある
 - `npm test` と `npm run build` が通る
-  
-## 追記
-- ブランチ「experiment/ac-adjustment-scenarios」で育てます
 
 ### M8.1: ボックス機能
 

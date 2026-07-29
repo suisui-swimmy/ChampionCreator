@@ -128,9 +128,10 @@ describe("App", () => {
     expect(html).toContain("調整対象");
     expect(html).toContain('class="target-sheet-body"');
     expect(html).toContain('class="box-access-button"');
-    expect(html).toContain('aria-label="ボックス機能を開く"');
+    expect(html.match(/aria-label="調整対象ボックスを開く"/g)).toHaveLength(2);
+    expect(html.match(/aria-label="仮想敵ボックスを開く"/g)).toHaveLength(2);
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain("assets/ui/pokebox.svg");
+    expect(html.match(/assets\/ui\/pokebox\.svg/g)?.length).toBeGreaterThanOrEqual(4);
     expect(html).toContain(">レベル</span>");
     expect(html).toContain(">残りSPで耐久最大化</button>");
     expect(html).toContain(">性格変更を許可する</span>");
@@ -144,6 +145,7 @@ describe("App", () => {
     expect(html).toContain('aria-label="シナリオ調整種別"');
     expect(html).toContain('class="mobile-target-heading"');
     expect(html).toContain('class="box-access-button mobile-box-access-button"');
+    expect(html).toContain('class="mobile-board-heading-actions"');
     expect(html).not.toContain("攻撃は横スクロール");
     expect(html).toContain('class="mobile-scenario-flow-list"');
     expect(html).toContain('class="mobile-scenario-flow-row defence"');

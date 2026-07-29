@@ -81,6 +81,17 @@ import {
   type BoxEntry,
   type BoxEntrySummary,
 } from "./ui/boxStorage";
+import {
+  createEnemyBoxBackupFileName,
+  createEnemyBoxEntryFromScenarios,
+  createEnemyBoxEntrySummary,
+  duplicateEnemyBoxEntry,
+  loadEnemyBoxEntriesFromBrowser,
+  parseEnemyBoxBackupDocument,
+  saveEnemyBoxEntriesToBrowser,
+  stringifyEnemyBoxBackupDocument,
+  type EnemyBoxEntry,
+} from "./ui/enemyBoxStorage";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
 import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
@@ -634,6 +645,7 @@ export const createScenario = (index: number): ScenarioFormState => ({
 });
 
 const BLANK_BOX_SLOT_ID = "blank-box-slot";
+const BLANK_ENEMY_BOX_SLOT_ID = "blank-enemy-box-slot";
 
 type AppProps = {
   initialTargetForm?: TargetFormState;
@@ -663,16 +675,23 @@ export function App({
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [boxOpen, setBoxOpen] = useState(false);
+  const [enemyBoxOpen, setEnemyBoxOpen] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheet | null>(null);
   const [mobileScenarioDetailId, setMobileScenarioDetailId] = useState<string | null>(null);
   const [mobileFocusedAttackId, setMobileFocusedAttackId] = useState<string | null>(null);
   const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(loadBoxEntriesFromBrowser);
   const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
   const [boxMessage, setBoxMessage] = useState<string | null>(null);
+  const [enemyBoxEntries, setEnemyBoxEntries] = useState<EnemyBoxEntry[]>(
+    loadEnemyBoxEntriesFromBrowser,
+  );
+  const [selectedEnemyBoxEntryId, setSelectedEnemyBoxEntryId] = useState<string | null>(null);
+  const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
   const boxImportInputRef = useRef<HTMLInputElement | null>(null);
+  const enemyBoxImportInputRef = useRef<HTMLInputElement | null>(null);
 
   const previewInput = useMemo(() => {
     try {
@@ -698,6 +717,10 @@ export function App({
   const currentBoxSummary = useMemo(
     () => createBoxEntrySummary(targetForm, scenarioForms),
     [targetForm, scenarioForms],
+  );
+  const currentEnemyBoxSummary = useMemo(
+    () => createEnemyBoxEntrySummary(scenarioForms),
+    [scenarioForms],
   );
 
   const offenseResults = useMemo(
@@ -1049,6 +1072,7 @@ export function App({
       setSelectedBoxEntryId(BLANK_BOX_SLOT_ID);
     }
     setBoxMessage(null);
+    setEnemyBoxOpen(false);
     setBoxOpen((current) => !current);
   };
 
@@ -1233,6 +1257,209 @@ export function App({
     }
   };
 
+  const persistEnemyBoxEntries = (
+    nextEntries: EnemyBoxEntry[],
+    message: string,
+  ): boolean => {
+    const error = saveEnemyBoxEntriesToBrowser(nextEntries);
+    if (error) {
+      setEnemyBoxMessage(error);
+      return false;
+    }
+
+    setEnemyBoxEntries(nextEntries);
+    setEnemyBoxMessage(message);
+    return true;
+  };
+
+  const toggleEnemyBoxPanel = () => {
+    if (!enemyBoxOpen && !selectedEnemyBoxEntryId) {
+      setSelectedEnemyBoxEntryId(BLANK_ENEMY_BOX_SLOT_ID);
+    }
+    setEnemyBoxMessage(null);
+    setBoxOpen(false);
+    setEnemyBoxOpen((current) => !current);
+  };
+
+  const handleSaveCurrentEnemyBox = () => {
+    const entry = createEnemyBoxEntryFromScenarios(scenarioForms);
+    if (persistEnemyBoxEntries([entry, ...enemyBoxEntries], "今の仮想敵を保存しました")) {
+      setSelectedEnemyBoxEntryId(entry.id);
+    }
+  };
+
+  const handleLoadEnemyBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
+      resetActiveSearch();
+      setScenarioForms([createBlankScenario(0)]);
+      setEnemyBoxMessage(null);
+      setEnemyBoxOpen(false);
+      return;
+    }
+
+    const entry = enemyBoxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setEnemyBoxMessage("仮想敵スロットが見つかりません");
+      return;
+    }
+
+    resetActiveSearch();
+    setScenarioForms(entry.payload.scenarios);
+    setEnemyBoxMessage(null);
+    setEnemyBoxOpen(false);
+  };
+
+  const handleOverwriteEnemyBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
+      setEnemyBoxMessage("空スロットは上書きできません");
+      return;
+    }
+
+    const entry = enemyBoxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setEnemyBoxMessage("仮想敵スロットが見つかりません");
+      return;
+    }
+
+    const updatedEntry = createEnemyBoxEntryFromScenarios(scenarioForms, {
+      id: entry.id,
+      name: entry.name,
+      createdAt: entry.createdAt,
+    });
+    const nextEntries = enemyBoxEntries.map((candidate) => (
+      candidate.id === entryId ? updatedEntry : candidate
+    ));
+    if (persistEnemyBoxEntries(nextEntries, "選択中の仮想敵を上書きしました")) {
+      setSelectedEnemyBoxEntryId(entryId);
+    }
+  };
+
+  const handleRenameEnemyBoxEntry = (entryId: string, name: string) => {
+    if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const nextEntries = enemyBoxEntries.map((entry) => (
+      entry.id === entryId
+        ? { ...entry, name, updatedAt: now }
+        : entry
+    ));
+    const error = saveEnemyBoxEntriesToBrowser(nextEntries);
+    if (error) {
+      setEnemyBoxMessage(error);
+      return;
+    }
+
+    setEnemyBoxEntries(nextEntries);
+  };
+
+  const handleDuplicateEnemyBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
+      setEnemyBoxMessage("空スロットは複製できません");
+      return;
+    }
+
+    const entry = enemyBoxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setEnemyBoxMessage("仮想敵スロットが見つかりません");
+      return;
+    }
+
+    const duplicatedEntry = duplicateEnemyBoxEntry(entry);
+    if (persistEnemyBoxEntries([duplicatedEntry, ...enemyBoxEntries], "仮想敵を複製しました")) {
+      setSelectedEnemyBoxEntryId(duplicatedEntry.id);
+    }
+  };
+
+  const handleDeleteEnemyBoxEntry = (entryId: string) => {
+    if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
+      setEnemyBoxMessage("空スロットは削除できません");
+      return;
+    }
+
+    const entry = enemyBoxEntries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      setEnemyBoxMessage("仮想敵スロットが見つかりません");
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm(`${entry.name} を削除しますか？`)) {
+      return;
+    }
+
+    const nextEntries = enemyBoxEntries.filter((candidate) => candidate.id !== entryId);
+    if (persistEnemyBoxEntries(nextEntries, "仮想敵を削除しました")) {
+      setSelectedEnemyBoxEntryId(nextEntries[0]?.id ?? BLANK_ENEMY_BOX_SLOT_ID);
+    }
+  };
+
+  const handleExportEnemyBoxBackup = () => {
+    if (enemyBoxEntries.length === 0) {
+      setEnemyBoxMessage("書き出せる仮想敵がありません");
+      return;
+    }
+
+    const backupJson = stringifyEnemyBoxBackupDocument(enemyBoxEntries);
+    const blob = new Blob([backupJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = createEnemyBoxBackupFileName();
+    link.rel = "noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setEnemyBoxMessage(`仮想敵${enemyBoxEntries.length}件のバックアップを書き出しました`);
+  };
+
+  const handleRequestImportEnemyBoxBackup = () => {
+    enemyBoxImportInputRef.current?.click();
+  };
+
+  const handleImportEnemyBoxBackup = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const result = parseEnemyBoxBackupDocument(await file.text());
+      if (result.status === "error") {
+        setEnemyBoxMessage(result.message);
+        return;
+      }
+
+      const warningText = result.warnings.length > 0 ? `\n${result.warnings.join("\n")}` : "";
+      const shouldImport = enemyBoxEntries.length === 0
+        || (typeof window !== "undefined" && window.confirm(
+          `現在の仮想敵${enemyBoxEntries.length}件を、バックアップ${result.entries.length}件で置き換えますか？${warningText}`,
+        ));
+      if (!shouldImport) {
+        return;
+      }
+
+      const error = saveEnemyBoxEntriesToBrowser(result.entries);
+      if (error) {
+        setEnemyBoxMessage(error);
+        return;
+      }
+
+      setEnemyBoxEntries(result.entries);
+      setSelectedEnemyBoxEntryId(result.entries[0]?.id ?? BLANK_ENEMY_BOX_SLOT_ID);
+      setEnemyBoxMessage(
+        result.warnings.length > 0
+          ? `仮想敵バックアップを読み込みました（${result.entries.length}件 / ${result.warnings.join("、")}）`
+          : `仮想敵バックアップを読み込みました（${result.entries.length}件）`,
+      );
+    } catch {
+      setEnemyBoxMessage("仮想敵バックアップの読み込みに失敗しました");
+    } finally {
+      input.value = "";
+    }
+  };
+
   const handleSelectCandidate = (id: string) => {
     setSelectedCandidateId((current) => current === id ? null : id);
   };
@@ -1336,6 +1563,13 @@ export function App({
 
       {boxOpen ? (
         <BoxPanel
+          title="調整対象ボックス"
+          dialogId="target-box-title"
+          blankSlotId={BLANK_BOX_SLOT_ID}
+          currentLabel="編集中の調整条件"
+          currentRowAriaLabel="編集中の調整条件"
+          gridAriaLabel="保存済み調整対象ボックス"
+          emptyMessage="今の調整条件を保存するとここに表示されます"
           entries={boxEntries}
           selectedEntryId={selectedBoxEntryId}
           currentSummary={currentBoxSummary}
@@ -1352,6 +1586,31 @@ export function App({
           onRequestImport={handleRequestImportBoxBackup}
         />
       ) : null}
+      {enemyBoxOpen ? (
+        <BoxPanel
+          title="仮想敵ボックス"
+          dialogId="enemy-box-title"
+          blankSlotId={BLANK_ENEMY_BOX_SLOT_ID}
+          currentLabel="編集中の仮想敵"
+          currentRowAriaLabel="編集中の仮想敵"
+          gridAriaLabel="保存済み仮想敵ボックス"
+          emptyMessage="今の仮想敵シナリオを保存するとここに表示されます"
+          entries={enemyBoxEntries}
+          selectedEntryId={selectedEnemyBoxEntryId}
+          currentSummary={currentEnemyBoxSummary}
+          message={enemyBoxMessage}
+          onClose={() => setEnemyBoxOpen(false)}
+          onSaveCurrent={handleSaveCurrentEnemyBox}
+          onSelectEntry={setSelectedEnemyBoxEntryId}
+          onLoadEntry={handleLoadEnemyBoxEntry}
+          onOverwriteEntry={handleOverwriteEnemyBoxEntry}
+          onRenameEntry={handleRenameEnemyBoxEntry}
+          onDuplicateEntry={handleDuplicateEnemyBoxEntry}
+          onDeleteEntry={handleDeleteEnemyBoxEntry}
+          onExportEntries={handleExportEnemyBoxBackup}
+          onRequestImport={handleRequestImportEnemyBoxBackup}
+        />
+      ) : null}
       <input
         ref={boxImportInputRef}
         className="visually-hidden"
@@ -1359,6 +1618,14 @@ export function App({
         accept="application/json,.json"
         aria-label="ボックスバックアップを読み込む"
         onChange={handleImportBoxBackup}
+      />
+      <input
+        ref={enemyBoxImportInputRef}
+        className="visually-hidden"
+        type="file"
+        accept="application/json,.json"
+        aria-label="仮想敵ボックスバックアップを読み込む"
+        onChange={handleImportEnemyBoxBackup}
       />
 
       {mobileSheet ? (
@@ -1385,6 +1652,8 @@ export function App({
         runButtonLabel={runButtonLabel}
         isBoxPanelOpen={boxOpen}
         onOpenBoxPanel={toggleBoxPanel}
+        isEnemyBoxPanelOpen={enemyBoxOpen}
+        onOpenEnemyBoxPanel={toggleEnemyBoxPanel}
         onOpenTarget={() => {
           setMobileScenarioDetailId(null);
           setMobileFocusedAttackId(null);
@@ -1452,6 +1721,8 @@ export function App({
             setMobileScenarioDetailId(null);
             setMobileFocusedAttackId(null);
           }}
+          isEnemyBoxPanelOpen={enemyBoxOpen}
+          onOpenEnemyBoxPanel={toggleEnemyBoxPanel}
           onCloseMobileSheet={closeMobileSheet}
         />
         <section className="search-control-bar" aria-label="探索操作">
@@ -2286,6 +2557,8 @@ type MobileOverviewProps = {
   runButtonLabel: string;
   isBoxPanelOpen: boolean;
   onOpenBoxPanel: () => void;
+  isEnemyBoxPanelOpen: boolean;
+  onOpenEnemyBoxPanel: () => void;
   onOpenTarget: () => void;
   onOpenScenarioDetail: (scenarioId: string, attackId?: string) => void;
   onOpenResults: () => void;
@@ -2515,6 +2788,8 @@ function MobileOverview({
   runButtonLabel,
   isBoxPanelOpen,
   onOpenBoxPanel,
+  isEnemyBoxPanelOpen,
+  onOpenEnemyBoxPanel,
   onOpenTarget,
   onOpenScenarioDetail,
   onOpenResults,
@@ -2648,7 +2923,7 @@ function MobileOverview({
             <button
               className={`box-access-button mobile-box-access-button${isBoxPanelOpen ? " active" : ""}`}
               type="button"
-              aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
+              aria-label={isBoxPanelOpen ? "調整対象ボックスを閉じる" : "調整対象ボックスを開く"}
               aria-expanded={isBoxPanelOpen}
               onClick={onOpenBoxPanel}
             >
@@ -2745,9 +3020,20 @@ function MobileOverview({
         <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
           <div className="mobile-board-heading">
             <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
-            <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
-              追加
-            </button>
+            <div className="mobile-board-heading-actions">
+              <button
+                className={`box-access-button mobile-box-access-button${isEnemyBoxPanelOpen ? " active" : ""}`}
+                type="button"
+                aria-label={isEnemyBoxPanelOpen ? "仮想敵ボックスを閉じる" : "仮想敵ボックスを開く"}
+                aria-expanded={isEnemyBoxPanelOpen}
+                onClick={onOpenEnemyBoxPanel}
+              >
+                <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+              </button>
+              <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
+                追加
+              </button>
+            </div>
           </div>
 
           <div className="mobile-scenario-flow-list" aria-label="シナリオ調整種別">
@@ -2914,8 +3200,21 @@ function MobileOverview({
   );
 }
 
+type BoxPanelEntry = {
+  id: string;
+  name: string;
+  summary: BoxEntrySummary;
+};
+
 type BoxPanelProps = {
-  entries: BoxEntry[];
+  title: string;
+  dialogId: string;
+  blankSlotId: string;
+  currentLabel: string;
+  currentRowAriaLabel: string;
+  gridAriaLabel: string;
+  emptyMessage: string;
+  entries: BoxPanelEntry[];
   selectedEntryId: string | null;
   currentSummary: BoxEntrySummary;
   message: string | null;
@@ -2931,7 +3230,7 @@ type BoxPanelProps = {
   onRequestImport: () => void;
 };
 
-function BoxSlotArtwork({ entry }: { entry: BoxEntry }) {
+function BoxSlotArtwork({ entry }: { entry: BoxPanelEntry }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const artwork = findPokemonArtwork({ input: entry.summary.pokemonName });
   const canShowImage = artwork && failedSrc !== artwork.artworkUrl;
@@ -2955,6 +3254,13 @@ function BoxSlotArtwork({ entry }: { entry: BoxEntry }) {
 }
 
 function BoxPanel({
+  title,
+  dialogId,
+  blankSlotId,
+  currentLabel,
+  currentRowAriaLabel,
+  gridAriaLabel,
+  emptyMessage,
   entries,
   selectedEntryId,
   currentSummary,
@@ -2971,16 +3277,16 @@ function BoxPanel({
   onRequestImport,
 }: BoxPanelProps) {
   const selectedEntry = entries.find((entry) => entry.id === selectedEntryId) ?? null;
-  const isBlankSlotSelected = selectedEntryId === BLANK_BOX_SLOT_ID;
+  const isBlankSlotSelected = selectedEntryId === blankSlotId;
   const hasSelectedSlot = isBlankSlotSelected || selectedEntry !== null;
 
   return (
     <div className="box-overlay">
       <div className="box-backdrop" aria-hidden="true" onClick={onClose} />
-      <section className="box-window" role="dialog" aria-modal="true" aria-labelledby="box-title">
+      <section className="box-window" role="dialog" aria-modal="true" aria-labelledby={dialogId}>
         <header className="box-window-header">
           <div>
-            <h2 id="box-title">ボックス</h2>
+            <h2 id={dialogId}>{title}</h2>
             <span>ブラウザに保存</span>
           </div>
           <div className="box-window-actions">
@@ -2998,9 +3304,9 @@ function BoxPanel({
           </div>
         </header>
 
-        <div className="box-current-row" aria-label="編集中のシナリオ">
+        <div className="box-current-row" aria-label={currentRowAriaLabel}>
           <div>
-            <span>編集中のシナリオ</span>
+            <span>{currentLabel}</span>
             <strong>{currentSummary.pokemonName}</strong>
           </div>
           <small>{currentSummary.conditionSummary}</small>
@@ -3009,12 +3315,12 @@ function BoxPanel({
           </Button>
         </div>
 
-        <div className="box-grid" aria-label="保存済みボックス">
+        <div className="box-grid" aria-label={gridAriaLabel}>
           <button
             className={`box-slot blank${isBlankSlotSelected ? " selected" : ""}`}
             type="button"
             aria-pressed={isBlankSlotSelected}
-            onClick={() => onSelectEntry(BLANK_BOX_SLOT_ID)}
+            onClick={() => onSelectEntry(blankSlotId)}
           >
             <span className="box-slot-art blank" aria-hidden="true">
               <strong>+</strong>
@@ -3042,7 +3348,7 @@ function BoxPanel({
 
         {entries.length === 0 ? (
           <div className="box-empty-note" role="status">
-            今のシナリオを保存するとここに表示されます
+            {emptyMessage}
           </div>
         ) : null}
 
@@ -3064,7 +3370,7 @@ function BoxPanel({
                 )}
               </div>
               <div className="box-action-buttons">
-                <Button variant="primary" size="small" onClick={() => onLoadEntry(selectedEntry?.id ?? BLANK_BOX_SLOT_ID)}>
+                <Button variant="primary" size="small" onClick={() => onLoadEntry(selectedEntry?.id ?? blankSlotId)}>
                   読込
                 </Button>
                 {selectedEntry ? (
@@ -3127,7 +3433,7 @@ function TargetPanel({
           <button
             className={`box-access-button${isBoxPanelOpen ? " active" : ""}`}
             type="button"
-            aria-label={isBoxPanelOpen ? "ボックス機能を閉じる" : "ボックス機能を開く"}
+            aria-label={isBoxPanelOpen ? "調整対象ボックスを閉じる" : "調整対象ボックスを開く"}
             aria-expanded={isBoxPanelOpen}
             onClick={onOpenBoxPanel}
           >
@@ -3420,6 +3726,8 @@ type ScenarioPanelProps = {
   mobileFocusedAttackId?: string | null;
   onFocusMobileAttack?: (id: string) => void;
   onShowMobileScenarioList?: () => void;
+  isEnemyBoxPanelOpen: boolean;
+  onOpenEnemyBoxPanel: () => void;
   onCloseMobileSheet?: () => void;
 };
 
@@ -3477,6 +3785,8 @@ function ScenarioPanel({
   mobileFocusedAttackId,
   onFocusMobileAttack,
   onShowMobileScenarioList,
+  isEnemyBoxPanelOpen,
+  onOpenEnemyBoxPanel,
   onCloseMobileSheet,
 }: ScenarioPanelProps) {
   const visibleScenarios = getScenarioPanelVisibleScenarios(scenarios, mobileFocusedScenarioId);
@@ -3499,6 +3809,15 @@ function ScenarioPanel({
           <h2 id="scenario-title">{headingLabel}</h2>
         </div>
         <div className="mobile-sheet-heading-actions">
+          <button
+            className={`box-access-button${isEnemyBoxPanelOpen ? " active" : ""}`}
+            type="button"
+            aria-label={isEnemyBoxPanelOpen ? "仮想敵ボックスを閉じる" : "仮想敵ボックスを開く"}
+            aria-expanded={isEnemyBoxPanelOpen}
+            onClick={onOpenEnemyBoxPanel}
+          >
+            <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+          </button>
           {isMobileFocusedScenario ? (
             <Button
               variant="ghost"
