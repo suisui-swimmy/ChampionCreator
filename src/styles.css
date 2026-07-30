@@ -3843,15 +3843,6 @@ textarea {
     padding: 0;
   }
 
-  .mobile-board-heading-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .mobile-board-heading .ui-button-small,
   .mobile-board-heading .mobile-box-access-button {
     justify-self: end;
   }
@@ -4336,6 +4327,10 @@ textarea {
     min-width: 0;
     overflow-x: hidden;
     overscroll-behavior-x: none;
+  }
+
+  .mobile-scenarios-open .scenario-panel:not(.mobile-scenario-detail-panel) {
+    padding-top: 0;
   }
 
   .mobile-scenarios-open .scenario-stack {

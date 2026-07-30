@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import {
@@ -692,6 +692,7 @@ export function App({
   const applyTimerRef = useRef<number | null>(null);
   const boxImportInputRef = useRef<HTMLInputElement | null>(null);
   const enemyBoxImportInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileScenarioPanelRef = useRef<HTMLElement | null>(null);
 
   const previewInput = useMemo(() => {
     try {
@@ -759,6 +760,23 @@ export function App({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (mobileSheet !== "scenarios") {
+      return;
+    }
+
+    const panel = mobileScenarioPanelRef.current;
+    if (!panel) {
+      return;
+    }
+
+    panel.scrollTop = 0;
+    const scenarioStack = panel.querySelector<HTMLElement>(".scenario-stack");
+    if (scenarioStack) {
+      scenarioStack.scrollTop = 0;
+    }
+  }, [mobileFocusedAttackId, mobileScenarioDetailId, mobileSheet]);
 
   useEffect(() => {
     let canceled = false;
@@ -955,10 +973,11 @@ export function App({
     setMobileFocusedAttackId((current) => (current === attackId ? nextFocusedAttackId : current));
   };
 
-  const handleAddScenario = () => {
+  const handleAddScenario = (): ScenarioFormState => {
     resetActiveSearch();
     const nextScenario = createScenario(scenarioForms.length);
     setScenarioForms((current) => [...current, nextScenario]);
+    return nextScenario;
   };
 
   const handleRemoveScenario = (id: string) => {
@@ -1507,11 +1526,6 @@ export function App({
     setMobileScenarioDetailId(null);
     setMobileFocusedAttackId(null);
   };
-  const openMobileScenarioSheet = () => {
-    setMobileScenarioDetailId(null);
-    setMobileFocusedAttackId(null);
-    setMobileSheet("scenarios");
-  };
   const openMobileScenarioDetail = (scenarioId: string, attackId?: string) => {
     const scenario = scenarioForms.find((item) => item.id === scenarioId);
     setMobileScenarioDetailId(scenarioId);
@@ -1668,8 +1682,8 @@ export function App({
         onToggleScenarioAdjustmentFromDirection={toggleScenarioAdjustmentFromDirection}
         onToggleScenarioEnabled={(scenarioId, enabled) => updateScenario(scenarioId, "enabled", enabled)}
         onAddScenario={() => {
-          handleAddScenario();
-          openMobileScenarioSheet();
+          const nextScenario = handleAddScenario();
+          openMobileScenarioDetail(nextScenario.id, nextScenario.attacks[0]?.id);
         }}
         onRemoveScenario={handleRemoveScenario}
         onAddAttack={(scenarioId) => {
@@ -1702,6 +1716,7 @@ export function App({
           onCloseMobileSheet={closeMobileSheet}
         />
         <ScenarioPanel
+          panelRef={mobileScenarioPanelRef}
           scenarios={scenarioForms}
           attackerActualStats={attackerActualStats}
           targetForm={targetForm}
@@ -3020,20 +3035,15 @@ function MobileOverview({
         <section className="mobile-scenario-board" aria-labelledby="mobile-scenario-title">
           <div className="mobile-board-heading">
             <h2 id="mobile-scenario-title">仮想敵シナリオ</h2>
-            <div className="mobile-board-heading-actions">
-              <button
-                className={`box-access-button mobile-box-access-button${isEnemyBoxPanelOpen ? " active" : ""}`}
-                type="button"
-                aria-label={isEnemyBoxPanelOpen ? "仮想敵ボックスを閉じる" : "仮想敵ボックスを開く"}
-                aria-expanded={isEnemyBoxPanelOpen}
-                onClick={onOpenEnemyBoxPanel}
-              >
-                <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
-              </button>
-              <button className="ghost-button ui-button-small" type="button" onClick={onAddScenario}>
-                追加
-              </button>
-            </div>
+            <button
+              className={`box-access-button mobile-box-access-button${isEnemyBoxPanelOpen ? " active" : ""}`}
+              type="button"
+              aria-label={isEnemyBoxPanelOpen ? "仮想敵ボックスを閉じる" : "仮想敵ボックスを開く"}
+              aria-expanded={isEnemyBoxPanelOpen}
+              onClick={onOpenEnemyBoxPanel}
+            >
+              <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+            </button>
           </div>
 
           <div className="mobile-scenario-flow-list" aria-label="シナリオ調整種別">
@@ -3701,6 +3711,7 @@ function PokemonArtworkFrame({
 }
 
 type ScenarioPanelProps = {
+  panelRef?: Ref<HTMLElement>;
   scenarios: ScenarioFormState[];
   attackerActualStats: Record<string, StatTable>;
   targetForm: TargetFormState;
@@ -3769,6 +3780,7 @@ export const getMobileAttackNavigationTargets = (
 };
 
 function ScenarioPanel({
+  panelRef,
   scenarios,
   attackerActualStats,
   targetForm,
@@ -3801,6 +3813,7 @@ function ScenarioPanel({
 
   return (
     <section
+      ref={panelRef}
       className={`scenario-panel${isMobileFocusedScenario ? " mobile-scenario-detail-panel" : ""}`}
       aria-labelledby="scenario-title"
     >

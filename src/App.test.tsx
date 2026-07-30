@@ -65,6 +65,7 @@ describe("App", () => {
     expect(css).toContain("iOS zooms focused text controls below 16px");
     expect(css).toContain('.mobile-scenarios-open input:not([type="checkbox"]):not([type="radio"])');
     expect(css).toContain('.box-overlay input:not([type="checkbox"]):not([type="radio"])');
+    expect(css).toMatch(/\.mobile-scenarios-open \.scenario-panel:not\(\.mobile-scenario-detail-panel\)\s*\{[^}]*padding-top:\s*0;/s);
     expect(css).toMatch(/font-size: 16px;/);
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
@@ -145,7 +146,8 @@ describe("App", () => {
     expect(html).toContain('aria-label="シナリオ調整種別"');
     expect(html).toContain('class="mobile-target-heading"');
     expect(html).toContain('class="box-access-button mobile-box-access-button"');
-    expect(html).toContain('class="mobile-board-heading-actions"');
+    expect(html).not.toContain('class="mobile-board-heading-actions"');
+    expect(html).not.toContain(">追加</button>");
     expect(html).not.toContain("攻撃は横スクロール");
     expect(html).toContain('class="mobile-scenario-flow-list"');
     expect(html).toContain('class="mobile-scenario-flow-row defence"');
