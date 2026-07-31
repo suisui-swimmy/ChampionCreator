@@ -70,10 +70,11 @@ describe("App", () => {
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
 
-  it("publishes indexable metadata and a canonical sitemap URL", () => {
+  it("publishes indexable metadata and canonical XML and text sitemaps", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
     const sitemap = readFileSync(new URL("../public/sitemap.xml", import.meta.url), "utf8");
+    const textSitemap = readFileSync(new URL("../public/sitemap.txt", import.meta.url), "utf8");
 
     expect(css).toMatch(/\.brand-title\s*\{[^}]*flex:\s*1 1 auto;/s);
     expect(css).toMatch(/\.topbar-meta\s*\{[^}]*justify-items:\s*end;/s);
@@ -87,6 +88,8 @@ describe("App", () => {
     expect(html).toContain('name="twitter:card" content="summary"');
     expect(sitemap).toContain("<loc>https://suisui-swimmy.github.io/ChampionCreator/</loc>");
     expect(sitemap).not.toContain("localhost");
+    expect(textSitemap.trim()).toBe("https://suisui-swimmy.github.io/ChampionCreator/");
+    expect(textSitemap.trim().split(/\r?\n/)).toHaveLength(1);
   });
 
   it("keeps type and item dropdown candidates separated", () => {
