@@ -153,7 +153,7 @@ describe("App", () => {
     expect(html).toContain('class="mobile-target-heading"');
     expect(html).toContain('class="box-access-button mobile-box-access-button"');
     expect(html).not.toContain('class="mobile-board-heading-actions"');
-    expect(html).not.toContain(">追加</button>");
+    expect(html.match(/>追加<\/button>/g)).toHaveLength(2);
     expect(html).not.toContain("攻撃は横スクロール");
     expect(html).toContain('class="mobile-scenario-flow-list"');
     expect(html).toContain('class="mobile-scenario-flow-row defence"');
@@ -210,8 +210,9 @@ describe("App", () => {
     expect(html).toContain('aria-label="素早さ調整A 素早さ調整。クリックで耐久調整に切り替え"');
     expect(html).toContain("assets/ui/arrow-up-circle.svg");
     expect(html).not.toContain("assets/ui/arrow-down-circle.svg");
-    expect(html.match(/>HP推移<\/span>/g)).toHaveLength(2);
-    expect(html.match(/>HP変化を追加<\/button>/g)).toHaveLength(2);
+    expect(html.match(/>定数ダメージ・回復<\/span>/g)).toHaveLength(2);
+    expect(html.match(/>追加する効果<\/span>/g)).toHaveLength(2);
+    expect(html.match(/>追加<\/button>/g)).toHaveLength(2);
     expect(html).not.toContain('aria-label="Sライン結果"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
@@ -269,10 +270,11 @@ describe("App", () => {
     );
 
     expect(html).toContain("<summary>");
-    expect(html).toContain(">HP推移</span>");
+    expect(html).toContain(">定数ダメージ・回復</span>");
     expect(html).toContain(">2件</span>");
     expect(html).toContain("すなあらしダメージ");
     expect(html).toContain("いのちのたま反動");
+    expect(html).toContain("icon-button scenario-remove-button hp-event-remove-button");
     expect(html).toContain("最大HPの1/16（切り捨て・最低1）");
     expect(html).toContain("ターン終了時・ターンごと");
     expect(html).toContain("技使用後・技ごと");
@@ -281,7 +283,7 @@ describe("App", () => {
     expect(html).not.toContain("直前の技使用後 → 今回の攻撃前に1回");
     expect(html).not.toMatch(/select-field-label[^>]*>対象<\/span>/);
     expect(html).not.toMatch(/select-field-label[^>]*>タイミング<\/span>/);
-    expect(html).toContain("HP変化2");
+    expect(html).toContain("効果2");
   });
 
   it("shows offense HP event targets from each effect without a subject selector", () => {
@@ -378,10 +380,12 @@ describe("App", () => {
     expect(html).not.toContain("被弾側の特性が「さめはだ／てつのトゲ」ではありません");
     expect(mismatchHtml).toContain("被弾側の持ち物が「ゴツゴツメット」ではありません。発動前提で計算します");
     expect(mismatchHtml).toContain("被弾側の特性が「さめはだ／てつのトゲ」ではありません。発動前提で計算します");
-    expect(html).toContain("ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。");
+    expect(html).toContain("Wikiの定数ダメージ・回復");
+    expect(html).toContain('href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage#定数ダメージ回復"');
+    expect(html).not.toContain("ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。");
   });
 
-  it("only shows direct-damage mechanics as automatic notices in ordinary line UI", () => {
+  it("keeps current-HP move recalculation separate from configured HP effects", () => {
     const [baseScenario] = createDefaultScenarioForms();
     const baseAttack = baseScenario.attacks[0];
     const scenario = {
@@ -421,27 +425,31 @@ describe("App", () => {
       />,
     );
 
-    expect(html.match(/>自動1件<\/span>/g)).toHaveLength(2);
+    expect(html).not.toContain(">自動1件</span>");
     expect(html).not.toContain(">自動2件</span>");
-    expect(html.match(/>技から自動適用<\/p>/g)).toHaveLength(2);
+    expect(html).not.toContain(">技から自動適用</p>");
     expect(html).not.toContain("みがわりのHP消費");
     expect(html).not.toContain("最大HPの1/4（切り捨て・最低1）");
-    expect(html).toContain("カタストロフィの現在HP計算");
-    expect(html).toContain("相手の現在HPの1/2（切り捨て・最低1）");
+    expect(html).not.toContain("カタストロフィの現在HP計算");
+    expect(html).not.toContain("相手の現在HPの1/2（切り捨て・最低1）");
     expect(html).not.toContain("ワイルドボルトの反動");
     expect(html).not.toContain("実際に与えたダメージの1/4（四捨五入・最低1）");
-    expect(html).toContain("いのちがけの現在HP計算");
-    expect(html).toContain("使用者の現在HP");
+    expect(html).not.toContain("いのちがけの現在HP計算");
+    expect(html).not.toContain("使用者の現在HP");
     expect(html).not.toContain("いのちがけの使用者ひんし");
     expect(html).not.toContain("ダメージを与えた使用者がひんし");
-    expect(html.match(/<span class="hp-event-auto-badge">自動<\/span>/g)).toHaveLength(2);
-    expect(html.match(/<strong>適用<\/strong><span>選択技から自動<\/span>/g)).toHaveLength(2);
+    expect(html).not.toContain('class="hp-event-auto-badge"');
+    expect(html).not.toContain("<strong>適用</strong><span>選択技から自動</span>");
     expect(html).not.toContain('aria-label="みがわりのHP消費を削除"');
     expect(html).not.toContain('aria-label="ワイルドボルトの反動を削除"');
-    expect(html).toContain("HP変化自動1");
+    expect(html.match(/>定数ダメージ・回復<\/span><span class="active-adjustment-empty">なし<\/span>/g)).toHaveLength(4);
+    expect(html.match(/HP依存技は、変化後のHPから自動計算されます。/g)).toHaveLength(2);
+    expect(html).not.toContain("HP変化自動1");
     expect(html).not.toContain("HP変化自動2");
-    expect(html).toContain("現在HP依存の直接ダメージ・威力は選択技から自動計算します。");
-    expect(html).toContain("技使用者側の技固有反動・HP消費・使用者ひんしは、通常の耐久・火力ラインへ自動では含めません。");
+    expect(html).toContain("対象・発動順・頻度などの詳しい仕様は");
+    expect(html).toContain("Wikiの定数ダメージ・回復");
+    expect(html).not.toContain("現在HP依存の直接ダメージ・威力は選択技から自動計算します。");
+    expect(html).not.toContain("技使用者側の技固有反動・HP消費・使用者ひんしは、通常の耐久・火力ラインへ自動では含めません。");
   });
 
   it("starts with the same blank condition shown by the empty box slot", () => {
@@ -993,7 +1001,7 @@ describe("App", () => {
     expect(html).toContain("シナリオA / 耐久調整A</strong><span>A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
     expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
     expect(html).toContain("シナリオ2</strong><span>C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
-    expect(html).toContain("シナリオ2 / HP推移</strong><span>すなあらしダメージ / 仮想敵 / ターン終了時・ターンごと: 10ダメージ");
+    expect(html).toContain("シナリオ2 / 定数ダメージ・回復</strong><span>すなあらしダメージ / 仮想敵 / ターン終了時・ターンごと: 10ダメージ");
     expect(html).toContain("みがわりのHP消費 / 調整対象 / 技使用前・技ごと: 25消費");
     expect(html).toContain("ワイルドボルトの反動 / 調整対象 / 技使用後・技ごと: 12-15反動");
     expect(html).toContain("いのちがけの使用者ひんし / 調整対象 / ヒット後・1回: ひんし");
@@ -1151,7 +1159,7 @@ describe("App", () => {
     );
 
     expect(html).toContain("連続被弾 / 物理技A</strong><span>被ダメージ 40 (25.0-25.0%)");
-    expect(html).toContain("連続被弾 / 物理技A / HP推移</strong><span>すなあらしダメージ / 調整対象 / ターン終了時・ターンごと: 11ダメージ");
+    expect(html).toContain("連続被弾 / 物理技A / 定数ダメージ・回復</strong><span>すなあらしダメージ / 調整対象 / ターン終了時・ターンごと: 11ダメージ");
     expect(html).toContain("連続被弾 / 特殊技B</strong><span>被ダメージ 50 (31.3-31.3%)");
   });
 

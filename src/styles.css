@@ -2673,19 +2673,6 @@ textarea {
   list-style: none;
 }
 
-.hp-event-automatic-section {
-  display: grid;
-  min-width: 0;
-  gap: 6px;
-}
-
-.hp-event-automatic-title {
-  margin: 0;
-  color: #8fc9e5;
-  font-size: 9px;
-  font-weight: 800;
-}
-
 .hp-event-row {
   display: grid;
   min-width: 0;
@@ -2694,11 +2681,6 @@ textarea {
   border-radius: 6px;
   background: rgba(10, 16, 16, 0.72);
   padding: 7px;
-}
-
-.hp-event-row--automatic {
-  border-color: rgba(129, 185, 239, 0.42);
-  background: rgba(41, 128, 239, 0.08);
 }
 
 .hp-event-row.unsupported {
@@ -2716,24 +2698,6 @@ textarea {
 .hp-event-row-heading {
   gap: 8px;
   min-width: 0;
-}
-
-.hp-event-automatic-heading strong {
-  min-width: 0;
-  color: #dcebf2;
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-
-.hp-event-auto-badge {
-  flex: 0 0 auto;
-  border: 1px solid rgba(129, 185, 239, 0.38);
-  border-radius: 999px;
-  background: rgba(41, 128, 239, 0.14);
-  color: #a9d7ef;
-  padding: 1px 6px;
-  font-size: 9px;
-  font-weight: 850;
 }
 
 .hp-event-enable {
@@ -2815,6 +2779,7 @@ textarea {
 .hp-event-formula,
 .hp-event-warning,
 .hp-event-help,
+.hp-dependent-move-note,
 .hp-events-empty {
   min-width: 0;
   margin: 0;
@@ -2829,11 +2794,17 @@ textarea {
   color: var(--muted);
 }
 
+.hp-dependent-move-note {
+  color: #8fc9e5;
+}
+
 .hp-event-warning {
   color: #ffb0a8;
 }
 
 .hp-event-add-row {
+  flex-wrap: nowrap;
+  align-items: flex-end;
   gap: 7px;
 }
 
@@ -4723,16 +4694,6 @@ textarea {
 
   .mobile-scenarios-open .attack-number-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .mobile-scenarios-open .hp-event-add-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-  }
-
-  .mobile-scenarios-open .hp-event-add-row .ui-button {
-    width: 100%;
   }
 
   .mobile-scenarios-open .attack-setting-section--indented .attack-setting-section-body,

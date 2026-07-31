@@ -110,7 +110,6 @@ import {
 } from "./worker/defenceSearchWorkerClient";
 import {
   getAutomaticMoveHpNotices,
-  type AutomaticMoveHpNotice,
 } from "./calc/hpSequenceMoveUses";
 
 const statLabels: Record<StatKey, string> = {
@@ -353,15 +352,15 @@ const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | u
   return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
 };
 
-const getAutomaticMoveHpNoticesFromForm = (
+const hasHpDependentMoveCalculationFromForm = (
   attack: ScenarioAttackFormState,
   adjustmentType: ScenarioAdjustmentType,
   targetForm: TargetFormState,
   scenarioId: string,
-): AutomaticMoveHpNotice[] => {
+): boolean => {
   const move = toEntityRef(resolveEntity("move", attack.moveInput), "move");
   if (!move || adjustmentType === "speed") {
-    return [];
+    return false;
   }
 
   try {
@@ -390,10 +389,10 @@ const getAutomaticMoveHpNoticesFromForm = (
     };
     return getAutomaticMoveHpNotices(hit, {
       includeAttackerAutomaticHpEffects: false,
-    });
+    }).some((notice) => notice.id.startsWith("current-hp:"));
   } catch {
-    // 入力途中は既存 resolver の警告に任せ、解決できた時点で自動効果を表示する。
-    return [];
+    // 入力途中は既存 resolver の警告に任せ、解決できた時点で補足を表示する。
+    return false;
   }
 };
 
@@ -2848,8 +2847,6 @@ function BulkMaximizeResultPreview({
 function formatMobileAttackMeta(
   attack: ScenarioAttackFormState,
   adjustmentType: ScenarioAdjustmentType,
-  targetForm: TargetFormState,
-  scenarioId: string,
 ): string {
   if (adjustmentType === "speed") {
     return attack.speedTargetMode === "manual"
@@ -2858,18 +2855,8 @@ function formatMobileAttackMeta(
   }
 
   const hpEventCount = attack.hpEvents?.length ?? 0;
-  const automaticNoticeCount = getAutomaticMoveHpNoticesFromForm(
-    attack,
-    adjustmentType,
-    targetForm,
-    scenarioId,
-  ).length;
-  const hpEventParts = [
-    hpEventCount > 0 ? String(hpEventCount) : "",
-    automaticNoticeCount > 0 ? `自動${automaticNoticeCount}` : "",
-  ].filter(Boolean);
-  const hpEventMeta = hpEventParts.length > 0
-    ? ` · HP変化${hpEventParts.join("＋")}`
+  const hpEventMeta = hpEventCount > 0
+    ? ` · 効果${hpEventCount}`
     : "";
 
   if (adjustmentType === "offense") {
@@ -3293,8 +3280,6 @@ function MobileOverview({
                               <em>{formatMobileAttackMeta(
                                 attack,
                                 scenario.adjustmentType,
-                                targetForm,
-                                scenario.id,
                               )}</em>
                             </span>
                           </button>
@@ -4282,7 +4267,7 @@ const isHpEventPresetId = (value: string): value is HpEventPresetId =>
   hpEventPresetIds.has(value as HpEventPresetId);
 
 const getHpEventPresetLabel = (effectId: string): string =>
-  isHpEventPresetId(effectId) ? hpEventPresetLabels[effectId] : "未対応のHP変化";
+  isHpEventPresetId(effectId) ? hpEventPresetLabels[effectId] : "未対応の効果";
 
 const getHpEventFormulaLabel = (event: HpEventFormState): string => {
   const formula = getHpEventRuleDefinition(event.effectId)?.formulaLabel
@@ -4336,16 +4321,12 @@ function HpEventsEditor({
 }: HpEventsEditorProps) {
   const [presetId, setPresetId] = useState<HpEventPresetId>("life-orb-recoil");
   const hpEvents = attack.hpEvents ?? [];
-  const automaticNotices = getAutomaticMoveHpNoticesFromForm(
+  const hasHpDependentMoveCalculation = hasHpDependentMoveCalculationFromForm(
     attack,
     adjustmentType,
     targetForm,
     scenarioId,
   );
-  const summaryParts = [
-    hpEvents.length > 0 ? `${hpEvents.length}件` : "",
-    automaticNotices.length > 0 ? `自動${automaticNotices.length}件` : "",
-  ].filter(Boolean);
 
   const updateEvents = (nextEvents: HpEventFormState[]) => {
     onUpdateAttack(scenarioId, attack.id, "hpEvents", nextEvents);
@@ -4380,40 +4361,14 @@ function HpEventsEditor({
     <details className="attack-advanced-settings hp-events-settings">
       <summary>
         <ChevronRightIcon className="disclosure-chevron" />
-        <span>HP推移</span>
-        {summaryParts.length > 0 ? (
-          <span className="active-adjustment-count">{summaryParts.join("＋")}</span>
+        <span>定数ダメージ・回復</span>
+        {hpEvents.length > 0 ? (
+          <span className="active-adjustment-count">{hpEvents.length}件</span>
         ) : (
           <span className="active-adjustment-empty">なし</span>
         )}
       </summary>
       <div className="attack-advanced-content hp-events-content">
-        {automaticNotices.length > 0 ? (
-          <section className="hp-event-automatic-section" aria-label="技から自動適用されるHP変化">
-            <p className="hp-event-automatic-title">技から自動適用</p>
-            <ul className="hp-event-list hp-event-automatic-list">
-              {automaticNotices.map((notice) => (
-                <li className="hp-event-row hp-event-row--automatic" key={notice.id}>
-                  <div className="hp-event-row-heading hp-event-automatic-heading">
-                    <span className="hp-event-auto-badge">自動</span>
-                    <strong>{notice.label}</strong>
-                  </div>
-                  <div className="hp-event-rule-meta">
-                    <small>
-                      <strong>適用</strong>
-                      <span>選択技から自動</span>
-                    </small>
-                    <small>
-                      <strong>発動</strong>
-                      <span>{notice.timingLabel}</span>
-                    </small>
-                  </div>
-                  <small className="hp-event-formula">{notice.formulaLabel}</small>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
         {hpEvents.length > 0 ? (
           <ol className="hp-event-list">
             {hpEvents.map((hpEvent) => {
@@ -4434,21 +4389,21 @@ function HpEventsEditor({
               const defenderItem = resolveCanonicalEntityName("item", moveDefenderItemInput);
               const defenderAbility = resolveCanonicalEntityName("ability", moveDefenderAbilityInput);
               const mismatchMessage = !supported
-                ? `未対応のHP変化です: ${hpEvent.effectId}`
+                ? `未対応の効果です: ${hpEvent.effectId}`
                 : hpEvent.effectId === "life-orb-recoil" && !hasLifeOrb
                   ? "技使用者の持ち物が「いのちのたま」ではありません。発動前提で計算します"
                   : hpEvent.effectId === "sandstorm-damage" && attack.weather !== "sand"
                     ? "天候が「砂」ではありません。発動前提で計算します"
                     : hpEvent.effectId === "poison-damage" && moveDefenderStatus !== "psn"
-                      ? "HP変化対象が通常の「どく」状態ではありません。発動前提で計算します"
+                      ? "効果対象が通常の「どく」状態ではありません。発動前提で計算します"
                       : hpEvent.effectId === "toxic-damage" && moveDefenderStatus !== "tox"
-                        ? "HP変化対象が「もうどく」状態ではありません。発動前提で計算します"
+                        ? "効果対象が「もうどく」状態ではありません。発動前提で計算します"
                         : hpEvent.effectId === "burn-damage" && moveDefenderStatus !== "brn"
-                          ? "HP変化対象が「やけど」状態ではありません。発動前提で計算します"
+                          ? "効果対象が「やけど」状態ではありません。発動前提で計算します"
                           : hpEvent.effectId === "sitrus-berry-heal" && defenderItem !== "Sitrus Berry"
-                            ? "HP変化対象の持ち物が「オボンのみ」ではありません。発動前提で計算します"
+                            ? "効果対象の持ち物が「オボンのみ」ではありません。発動前提で計算します"
                             : hpEvent.effectId === "leftovers-heal" && defenderItem !== "Leftovers"
-                              ? "HP変化対象の持ち物が「たべのこし」ではありません。発動前提で計算します"
+                              ? "効果対象の持ち物が「たべのこし」ではありません。発動前提で計算します"
                               : hpEvent.effectId === "rocky-helmet-damage" && defenderItem !== "Rocky Helmet"
                                 ? "被弾側の持ち物が「ゴツゴツメット」ではありません。発動前提で計算します"
                                 : hpEvent.effectId === "rough-skin-damage"
@@ -4476,8 +4431,8 @@ function HpEventsEditor({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hp-event-remove-button"
-                      aria-label={`${supported ? getHpEventPresetLabel(hpEvent.effectId) : hpEvent.effectId || "未対応のHP変化"}を削除`}
+                      className="icon-button scenario-remove-button hp-event-remove-button"
+                      aria-label={`${supported ? getHpEventPresetLabel(hpEvent.effectId) : hpEvent.effectId || "未対応の効果"}を削除`}
                       onClick={() => updateEvents(hpEvents.filter((candidate) => candidate.id !== hpEvent.id))}
                     >
                       <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
@@ -4531,28 +4486,36 @@ function HpEventsEditor({
               );
             })}
           </ol>
-        ) : automaticNotices.length === 0 ? (
-          <p className="hp-events-empty">直接攻撃だけで判定します</p>
+        ) : (
+          <p className="hp-events-empty">追加した効果はありません</p>
+        )}
+        {hasHpDependentMoveCalculation ? (
+          <p className="hp-dependent-move-note">
+            HP依存技は、変化後のHPから自動計算されます。
+          </p>
         ) : null}
         <div className="hp-event-add-row">
           <SelectField
             compact
-            label="追加するHP変化"
+            label="追加する効果"
             value={presetId}
             options={hpEventPresetOptions}
             onChange={setPresetId}
           />
           <Button variant="ghost" size="small" onClick={addEvent}>
-            HP変化を追加
+            追加
           </Button>
         </div>
         <p className="hp-event-help">
-          対象・発動順・頻度は効果ごとに固定です。設置物は攻撃前、オボンは条件成立ヒット後、
-          いのちのたまは技後、天候・状態異常・しおづけ・たべのこしはターン終了時の順で評価します。
-          現在HP依存の直接ダメージ・威力は選択技から自動計算します。
-          技使用者側の技固有反動・HP消費・使用者ひんしは、通常の耐久・火力ラインへ自動では含めません。
-          ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。
-          発動しない条件では追加しないでください。
+          対象・発動順・頻度などの詳しい仕様は
+          <a
+            href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage#定数ダメージ回復"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Wikiの定数ダメージ・回復
+          </a>
+          を確認してください。
         </p>
       </div>
     </details>
@@ -5709,7 +5672,7 @@ export function ResultsPanel({
                                 <Fragment key={hit.hitId}>
                                   {beforeMoveEvents.map((evaluation) => (
                                     <li className="candidate-hp-event-detail" key={`${evaluation.eventId}-${evaluation.occurrence}`}>
-                                      <strong>{detailLabel} / HP推移</strong>
+                                      <strong>{detailLabel} / 定数ダメージ・回復</strong>
                                       <span>{formatHpEventEvaluation(evaluation, "defence")}</span>
                                     </li>
                                   ))}
@@ -5723,7 +5686,7 @@ export function ResultsPanel({
                                   </li>
                                   {laterEvents.map((evaluation) => (
                                     <li className="candidate-hp-event-detail" key={`${evaluation.eventId}-${evaluation.occurrence}`}>
-                                      <strong>{detailLabel} / HP推移</strong>
+                                      <strong>{detailLabel} / 定数ダメージ・回復</strong>
                                       <span>{formatHpEventEvaluation(evaluation, "defence")}</span>
                                     </li>
                                   ))}
@@ -5756,7 +5719,7 @@ export function ResultsPanel({
                           </li>
                           {entry.result.hpEventEvaluations.map((evaluation) => (
                             <li className="candidate-hp-event-detail" key={`${evaluation.eventId}-${evaluation.occurrence}`}>
-                              <strong>{scenarioLabel} / HP推移</strong>
+                              <strong>{scenarioLabel} / 定数ダメージ・回復</strong>
                               <span>{formatHpEventEvaluation(evaluation, "offense")}</span>
                             </li>
                           ))}
