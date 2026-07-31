@@ -1,5 +1,6 @@
 import type { EntityKind, SourceStatus } from "../data/localizationTypes";
 import type { ResolveResult, ResolveStatus } from "../localization/resolver";
+import type { HpEvent, HpEventEvaluation } from "./hpEvents";
 
 declare const canonicalNameBrand: unique symbol;
 declare const displayNameJaBrand: unique symbol;
@@ -78,6 +79,7 @@ export interface ScenarioHit {
   allyAbilities?: AbilityRef[];
   move: MoveRef;
   moveHits?: number;
+  hpEvents?: HpEvent[];
   field?: FieldState;
   constraint?: SurvivalConstraint;
   repeat: number;
@@ -125,6 +127,7 @@ export interface ScenarioEvaluation {
   requiredSurvivedHits: number;
   minSurvivalProbability: number;
   hitEvaluations: ScenarioHitEvaluation[];
+  hpEventEvaluations?: HpEventEvaluation[];
   bottleneckLabel: string;
 }
 

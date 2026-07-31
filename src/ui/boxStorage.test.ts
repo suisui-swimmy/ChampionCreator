@@ -20,6 +20,7 @@ import {
   createDefaultScenarioForms,
   createDefaultTargetForm,
 } from "./defenceSearchUi";
+import { SHARE_SCHEMA_VERSION } from "./shareState";
 
 describe("boxStorage", () => {
   it("creates minimal summaries for saved conditions", () => {
@@ -53,6 +54,46 @@ describe("boxStorage", () => {
     });
     expect(parsed[0]?.payload.target.pokemonInput).toBe("メガマフォクシー");
   });
+
+  it.each([3, 4] as const)(
+    "keeps schema v%s HP events while dropping their user-selected timing and subject",
+    (schemaVersion) => {
+      const scenarios = createDefaultScenarioForms().map((scenario) => ({
+        ...scenario,
+        attacks: scenario.attacks.map((attack) => ({
+          ...attack,
+          hpEvents: [{
+            id: "legacy-life-orb",
+            effectId: "life-orb-recoil",
+            enabled: true,
+            subject: "target",
+            timing: "endOfTurn",
+          }],
+        })),
+      }));
+      const [entry] = parseBoxStorageDocument(JSON.stringify({
+        schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+        entries: [{
+          id: "legacy-box",
+          name: "旧ボックス",
+          createdAt: "2026-07-31T00:00:00.000Z",
+          updatedAt: "2026-07-31T00:00:00.000Z",
+          payload: {
+            schemaVersion,
+            target: createDefaultTargetForm(),
+            scenarios,
+          },
+        }],
+      }));
+
+      expect(entry.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+      expect(entry.payload.scenarios[0].attacks[0].hpEvents).toEqual([{
+        id: "legacy-life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+      }]);
+    },
+  );
 
   it("creates the Mega Delphox adjustment as the default box example", () => {
     const entry = createDefaultBoxExampleEntry("2026-07-27T00:00:00.000Z");

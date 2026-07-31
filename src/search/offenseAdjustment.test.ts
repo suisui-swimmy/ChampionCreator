@@ -10,6 +10,7 @@ import type {
   StatTable,
 } from "../domain/model";
 import { toEntityRef } from "../domain/model";
+import type { HpEvent } from "../domain/hpEvents";
 import { resolveEntity } from "../localization/resolver";
 import {
   calculateKoProbability,
@@ -115,6 +116,104 @@ describe("calculateKoProbability", () => {
 });
 
 describe("calculateOffenseAdjustment", () => {
+  it("keeps the direct-only result compatible when no HP events are configured", () => {
+    const result = calculateOffenseAdjustment(makeInput("ふいうち"))[0];
+
+    expect(result.hpEventEvaluations).toEqual([]);
+    expect(result).toMatchObject({
+      stat: "atk",
+      label: "Aライン",
+      passed: true,
+      koProbability: 1,
+    });
+  });
+
+  it("includes explicit sandstorm damage in the final KO probability without changing the direct range or description", () => {
+    const attackerBuild = {
+      ...makeBuild("attacker", "ラッキー"),
+      level: 94,
+    };
+    const defenderBuild = {
+      ...makeBuild("defender", "ミュウ"),
+      level: 30,
+      ivs: { ...defaultIvs, hp: 0 },
+    };
+    const input = makeInput("ちきゅうなげ", {
+      attackerBuild,
+      defenderBuild,
+      field: { ...emptyField, weather: "sand" },
+    });
+    const sandstormEvent = {
+      id: "sandstorm-after-seismic-toss",
+      effectId: "sandstorm-damage",
+      enabled: true,
+      sequenceContext: "currentMove",
+    } satisfies HpEvent;
+
+    const directOnly = calculateOffenseAdjustment(input)[0];
+    const withSandstorm = calculateOffenseAdjustment({
+      ...input,
+      hpEvents: [sandstormEvent],
+    })[0];
+
+    expect(directOnly).toMatchObject({
+      status: "fixed",
+      passed: false,
+      koProbability: 0,
+      damageRange: { min: 94, max: 94 },
+      hpEventEvaluations: [],
+    });
+    expect(withSandstorm).toMatchObject({
+      status: "fixed",
+      passed: true,
+      koProbability: 1,
+      damageRange: { min: 94, max: 94 },
+    });
+    expect(withSandstorm.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        eventId: sandstormEvent.id,
+        effectId: "sandstorm-damage",
+        subject: "defender",
+        damage: 6,
+        applied: true,
+        activationProbability: 1,
+      }),
+    ]);
+    expect(withSandstorm.description).toBe(directOnly.description);
+  });
+
+  it("counts a defender KO even when Life Orb recoil then faints the attacker", () => {
+    const attackerBuild = {
+      ...makeBuild("attacker", "ヌケニン", "いじっぱり", { ...zeroStatPoints, atk: 32 }),
+      item: mustResolve("item", "いのちのたま"),
+    };
+    const lifeOrbEvent = {
+      id: "shedinja-life-orb",
+      effectId: "life-orb-recoil",
+      enabled: true,
+      sequenceContext: "currentMove",
+    } satisfies HpEvent;
+    const result = calculateOffenseAdjustment(makeInput("かげうち", {
+      attackerBuild,
+      defenderBuild: makeBuild("defender", "ピチュー"),
+      hpEvents: [lifeOrbEvent],
+    }))[0];
+
+    expect(result.passed).toBe(true);
+    expect(result.koProbability).toBe(1);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        eventId: lifeOrbEvent.id,
+        effectId: "life-orb-recoil",
+        subject: "attacker",
+        damage: 1,
+        applied: true,
+        activationProbability: 1,
+      }),
+    ]);
+    expect(result.description).toContain("Life Orb Shedinja Shadow Sneak");
+  });
+
   it("returns an A line for ordinary physical moves and a C line for ordinary special moves", () => {
     const physical = calculateOffenseAdjustment(makeInput("ふいうち"))[0];
     const special = calculateOffenseAdjustment(makeInput("10まんボルト", {

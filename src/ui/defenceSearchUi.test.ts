@@ -129,6 +129,7 @@ const makeOffenseResult = (
     koProbability: result.koProbability ?? 1,
     targetKoProbability: result.targetKoProbability ?? 1,
     damageRange: result.damageRange ?? null,
+    hpEventEvaluations: result.hpEventEvaluations ?? [],
     reason: result.reason ?? "火力条件を満たします",
     reference: result.reference,
   },
@@ -226,6 +227,7 @@ describe("buildDefenceSearchInput", () => {
     expect(input.scenarios).toHaveLength(1);
     expect(scenarios).toHaveLength(3);
     expect(scenarios[0].attacks[0].minSurvivalProbabilityPercent).toBe(90);
+    expect(scenarios[0].attacks[0].hpEvents).toEqual([]);
     expect(scenarios[1]).toMatchObject({
       id: "scenario-offense",
       label: "シナリオ2",
@@ -237,6 +239,7 @@ describe("buildDefenceSearchInput", () => {
       defenderNatureInput: "おくびょう",
       defenderStatPoints: { hp: 32, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
       moveInput: "サイコキネシス",
+      hpEvents: [],
       targetKoProbabilityPercent: 80,
     });
     expect(scenarios[2]).toMatchObject({
@@ -287,6 +290,44 @@ describe("buildDefenceSearchInput", () => {
     expect(physicalInput.searchStatKeys).toEqual(["hp", "def"]);
     expect(specialInput.searchStatKeys).toEqual(["hp", "spd"]);
     expect(mixedInput.searchStatKeys).toEqual(["hp", "def", "spd"]);
+  });
+
+  it("maps defence HP event effects to their automatic battle roles", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const input = buildDefenceSearchInput(createDefaultTargetForm(), [{
+      ...defaultScenario,
+      attacks: defaultScenario.attacks.map((attack) => ({
+        ...attack,
+        hpEvents: [
+          {
+            id: "sand",
+            effectId: "sandstorm-damage",
+            enabled: true,
+          },
+          {
+            id: "life-orb",
+            effectId: "life-orb-recoil",
+            enabled: true,
+          },
+        ],
+      })),
+    }]);
+
+    expect(input.searchStatKeys).toContain("hp");
+    expect(input.scenarios[0].hits[0].hpEvents).toEqual([
+      {
+        id: "sand",
+        effectId: "sandstorm-damage",
+        enabled: true,
+        sequenceContext: "currentMove",
+      },
+      {
+        id: "life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+        sequenceContext: "currentMove",
+      },
+    ]);
   });
 
   it("passes a Tera type only when the field is explicitly enabled", () => {
@@ -784,6 +825,11 @@ describe("buildOffenseAdjustmentInput", () => {
       attackerStatPoints: { ...scenario.attacks[0].attackerStatPoints, hp: 4, def: 2 },
       attackerBoosts: { ...scenario.attacks[0].attackerBoosts, def: 1 },
       moveInput: "インファイト",
+      hpEvents: [{
+        id: "sand",
+        effectId: "sandstorm-damage",
+        enabled: true,
+      }],
       targetKoProbabilityPercent: 75,
       reflect: true,
     };
@@ -796,6 +842,11 @@ describe("buildOffenseAdjustmentInput", () => {
       defenderStatPoints: { hp: 4, def: 2 },
       defenderBoosts: { def: 1 },
       moveInput: "インファイト",
+      hpEvents: [{
+        id: "sand",
+        effectId: "sandstorm-damage",
+        enabled: true,
+      }],
       targetKoProbabilityPercent: 75,
       reflect: true,
     });
@@ -815,6 +866,18 @@ describe("buildOffenseAdjustmentInput", () => {
       defenderStatus: "par" as const,
       defenderStatPoints: { hp: 4, atk: 0, def: 2, spa: 0, spd: 0, spe: 0 },
       moveInput: "インファイト",
+      hpEvents: [
+        {
+          id: "life-orb",
+          effectId: "life-orb-recoil",
+          enabled: true,
+        },
+        {
+          id: "sand",
+          effectId: "sandstorm-damage",
+          enabled: true,
+        },
+      ],
       targetKoProbabilityPercent: 75,
       reflect: true,
     };
@@ -828,6 +891,20 @@ describe("buildOffenseAdjustmentInput", () => {
     expect(input.defenderBuild.statPoints?.hp).toBe(4);
     expect(input.move.canonicalName).toBe("Close Combat");
     expect(input.targetKoProbability).toBe(0.75);
+    expect(input.hpEvents).toEqual([
+      {
+        id: "life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+        sequenceContext: "currentMove",
+      },
+      {
+        id: "sand",
+        effectId: "sandstorm-damage",
+        enabled: true,
+        sequenceContext: "currentMove",
+      },
+    ]);
     expect(input.attackerBoosts.atk).toBe(1);
     expect(input.defenderSide.reflect).toBe(true);
   });
@@ -1546,6 +1623,7 @@ describe("applyOffenseAdjustmentToTarget", () => {
       koProbability: 1,
       targetKoProbability: 1,
       damageRange: null,
+      hpEventEvaluations: [],
       reason: "Aライン 24 SPでKO条件を満たします",
     });
 
@@ -1568,6 +1646,7 @@ describe("applyOffenseAdjustmentToTarget", () => {
       koProbability: 1,
       targetKoProbability: 1,
       damageRange: null,
+      hpEventEvaluations: [],
       reason: "Bライン 24 SPでKO条件を満たします",
     });
 

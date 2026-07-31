@@ -207,6 +207,8 @@ describe("App", () => {
     expect(html).toContain('aria-label="素早さ調整A 素早さ調整。クリックで耐久調整に切り替え"');
     expect(html).toContain("assets/ui/arrow-up-circle.svg");
     expect(html).not.toContain("assets/ui/arrow-down-circle.svg");
+    expect(html.match(/>HP推移<\/span>/g)).toHaveLength(2);
+    expect(html.match(/>定数ダメージを追加<\/button>/g)).toHaveLength(2);
     expect(html).not.toContain('aria-label="Sライン結果"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');
@@ -233,6 +235,81 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+  });
+
+  it("keeps HP events collapsed in attack cards and summarizes them on mobile", () => {
+    const [defenceScenario, ...rest] = createDefaultScenarioForms();
+    const scenarios = [
+      {
+        ...defenceScenario,
+        attacks: defenceScenario.attacks.map((attack, index) => index === 0 ? {
+          ...attack,
+          hpEvents: [{
+            id: "sand-after-hit",
+            effectId: "sandstorm-damage",
+            enabled: true,
+          }, {
+            id: "life-orb-after-move",
+            effectId: "life-orb-recoil",
+            enabled: true,
+          }],
+        } : attack),
+      },
+      ...rest,
+    ];
+
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={scenarios}
+      />,
+    );
+
+    expect(html).toContain("<summary>");
+    expect(html).toContain(">HP推移</span>");
+    expect(html).toContain(">2件</span>");
+    expect(html).toContain("すなあらしダメージ");
+    expect(html).toContain("いのちのたま反動");
+    expect(html).toContain("最大HPの1/16（切り捨て・最低1）");
+    expect(html).toContain("ターン終了時・ターンごと");
+    expect(html).toContain("技使用後・技ごと");
+    expect(html).toContain("<strong>対象</strong><span>仮想敵（技使用者）</span>");
+    expect(html).toContain("<strong>対象</strong><span>調整対象（被弾側）</span>");
+    expect(html).not.toContain("直前の技使用後 → 今回の攻撃前に1回");
+    expect(html).not.toMatch(/select-field-label[^>]*>対象<\/span>/);
+    expect(html).not.toMatch(/select-field-label[^>]*>タイミング<\/span>/);
+    expect(html).toContain("HP変化2");
+  });
+
+  it("shows offense HP event targets from each effect without a subject selector", () => {
+    const [baseScenario] = createDefaultScenarioForms();
+    const offenseScenario = {
+      ...baseScenario,
+      adjustmentType: "offense" as const,
+      attacks: baseScenario.attacks.map((attack) => ({
+        ...attack,
+        hpEvents: [{
+          id: "offense-life-orb",
+          effectId: "life-orb-recoil",
+          enabled: true,
+        }, {
+          id: "offense-sand",
+          effectId: "sandstorm-damage",
+          enabled: true,
+        }],
+      })),
+    };
+
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[offenseScenario]}
+      />,
+    );
+
+    expect(html).toContain("<strong>対象</strong><span>調整対象（技使用者）</span>");
+    expect(html).toContain("<strong>対象</strong><span>仮想敵（被弾側）</span>");
+    expect(html).not.toMatch(/select-field-label[^>]*>対象<\/span>/);
   });
 
   it("starts with the same blank condition shown by the empty box slot", () => {
@@ -658,6 +735,22 @@ describe("App", () => {
         koProbability: 1,
         targetKoProbability: 1,
         damageRange: { min: 168, max: 198, percentMin: 100.6, percentMax: 118.6 },
+        hpEventEvaluations: [{
+          cardId: "offense-adjustment-card",
+          eventId: "sand-ko",
+          effectId: "sandstorm-damage",
+          label: "すなあらしダメージ",
+          subject: "defender" as const,
+          subjectBuildId: "offense-defender",
+          timing: "endOfTurn" as const,
+          frequency: "perTurn" as const,
+          sequenceContext: "currentMove" as const,
+          occurrence: 1,
+          damage: 10,
+          applied: true,
+          activationProbability: 1,
+          supported: true,
+        }],
         reason: "PASS",
       },
     }];
@@ -714,6 +807,7 @@ describe("App", () => {
     expect(html).toContain("シナリオA / 耐久調整A</strong><span>A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
     expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
     expect(html).toContain("シナリオ2</strong><span>C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
+    expect(html).toContain("シナリオ2 / HP推移</strong><span>すなあらしダメージ / 仮想敵 / ターン終了時・ターンごと: 10ダメージ");
     expect(html).not.toContain("火力ライン結果");
     expect(closedHtml).toContain('aria-expanded="false"');
     expect(closedHtml).toContain('data-state="closed"');
@@ -759,6 +853,7 @@ describe("App", () => {
         koProbability: 1,
         targetKoProbability: 1,
         damageRange: { min: 180, max: 216, percentMin: 102.8, percentMax: 123.4 },
+        hpEventEvaluations: [],
         reason: "Cライン 12 SPでKO条件を満たします",
       },
     }];
@@ -821,6 +916,22 @@ describe("App", () => {
             damageRange: { min: 50, max: 50, percentMin: 31.3, percentMax: 31.3 },
           },
         ],
+        hpEventEvaluations: [{
+          cardId: "scenario-multi-hit-1",
+          eventId: "sand-after-first-hit",
+          effectId: "sandstorm-damage",
+          label: "すなあらしダメージ",
+          subject: "defender",
+          subjectBuildId: "target",
+          timing: "endOfTurn",
+          frequency: "perTurn",
+          sequenceContext: "currentMove",
+          occurrence: 1,
+          damage: 11,
+          applied: true,
+          activationProbability: 1,
+          supported: true,
+        }],
       }],
     };
     const [baseScenario] = createDefaultScenarioForms();
@@ -851,6 +962,7 @@ describe("App", () => {
     );
 
     expect(html).toContain("連続被弾 / 物理技A</strong><span>被ダメージ 40 (25.0-25.0%)");
+    expect(html).toContain("連続被弾 / 物理技A / HP推移</strong><span>すなあらしダメージ / 調整対象 / ターン終了時・ターンごと: 11ダメージ");
     expect(html).toContain("連続被弾 / 特殊技B</strong><span>被ダメージ 50 (31.3-31.3%)");
   });
 

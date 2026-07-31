@@ -2657,6 +2657,135 @@ textarea {
   padding: 2px 0 4px;
 }
 
+.hp-events-settings {
+  margin-top: 2px;
+}
+
+.hp-events-content {
+  padding-bottom: 8px;
+}
+
+.hp-event-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hp-event-row {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #344240;
+  border-radius: 6px;
+  background: rgba(10, 16, 16, 0.72);
+  padding: 7px;
+}
+
+.hp-event-row.unsupported {
+  border-color: rgba(230, 40, 41, 0.45);
+  background: rgba(230, 40, 41, 0.08);
+}
+
+.hp-event-row-heading,
+.hp-event-enable,
+.hp-event-add-row {
+  display: flex;
+  align-items: center;
+}
+
+.hp-event-row-heading {
+  gap: 8px;
+  min-width: 0;
+}
+
+.hp-event-enable {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 7px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.hp-event-enable input {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  accent-color: var(--gold);
+}
+
+.hp-event-enable span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-event-remove-button {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  margin-left: auto;
+}
+
+.hp-event-rule-meta {
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid rgba(215, 184, 75, 0.55);
+  padding-left: 7px;
+}
+
+.hp-event-rule-meta small {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 5px;
+  margin: 0;
+  color: #c8d8d4;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.hp-event-rule-meta strong {
+  color: #d7b84b;
+  font-weight: 750;
+}
+
+.hp-event-formula,
+.hp-event-warning,
+.hp-event-help,
+.hp-events-empty {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.hp-event-formula,
+.hp-event-help,
+.hp-events-empty {
+  color: var(--muted);
+}
+
+.hp-event-warning {
+  color: #ffb0a8;
+}
+
+.hp-event-add-row {
+  gap: 7px;
+}
+
+.hp-event-add-row .select-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hp-event-add-row .ui-button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  white-space: nowrap;
+}
+
 .attack-support-note {
   display: grid;
   gap: 2px;
@@ -3333,6 +3462,14 @@ textarea {
 .candidate-scenario-detail li strong {
   flex: 0 0 auto;
   color: #d7b84b;
+}
+
+.candidate-scenario-detail li.candidate-hp-event-detail {
+  color: #c8d8d4;
+}
+
+.candidate-scenario-detail li.candidate-hp-event-detail strong {
+  color: var(--green);
 }
 
 .candidate-row.warning {
@@ -4524,6 +4661,16 @@ textarea {
 
   .mobile-scenarios-open .attack-number-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobile-scenarios-open .hp-event-add-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .mobile-scenarios-open .hp-event-add-row .ui-button {
+    width: 100%;
   }
 
   .mobile-scenarios-open .attack-setting-section--indented .attack-setting-section-body,

@@ -41,6 +41,11 @@ describe("shareState", () => {
         speedItemMultiplier: "1.5" as const,
         speedAbilityMultiplier: "2" as const,
         speedMoveModifier: "trick-room" as const,
+        hpEvents: [{
+          id: "event-life-orb",
+          effectId: "life-orb-recoil",
+          enabled: true,
+        }],
       })),
     }));
     const offenseAdjustment = {
@@ -51,9 +56,12 @@ describe("shareState", () => {
       defenderStatPoints: { ...createDefaultOffenseAdjustmentForm().defenderStatPoints, hp: 4, def: 2 },
     };
 
-    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios, offenseAdjustment));
+    const serialized = stringifyShareStateDocument(target, scenarios, offenseAdjustment);
+    const parsed = parseShareStateDocument(serialized);
 
     expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(serialized).not.toContain("\"timing\"");
+    expect(serialized).not.toContain("\"subject\"");
     expect(parsed.target).toMatchObject({
       pokemonInput: "オオニューラ",
       teraTypeInput: "かくとう",
@@ -77,6 +85,11 @@ describe("shareState", () => {
       speedItemMultiplier: "1.5",
       speedAbilityMultiplier: "2",
       speedMoveModifier: "trick-room",
+      hpEvents: [{
+        id: "event-life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+      }],
     });
     expect(parsed.offenseAdjustment).toMatchObject({
       defenderPokemonInput: "ピチュー",
@@ -112,6 +125,116 @@ describe("shareState", () => {
     });
     expect(parsed.offenseAdjustment).toEqual(createDefaultOffenseAdjustmentForm());
   });
+
+  it.each([1, 2] as const)("migrates schema version %s attacks without HP events", (schemaVersion) => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        hpEvents: [{
+          id: "legacy-event",
+          effectId: "life-orb-recoil",
+          enabled: true,
+          subject: "target",
+          timing: "afterMove",
+        }],
+      })),
+    }));
+    const offenseAdjustment = {
+      ...createDefaultOffenseAdjustmentForm(),
+      hpEvents: [{
+        id: "legacy-offense-event",
+        effectId: "sandstorm-damage",
+        enabled: true,
+        subject: "target",
+        timing: "endOfTurn",
+      }],
+    };
+
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion,
+      target: createDefaultTargetForm(),
+      scenarios,
+      offenseAdjustment,
+    }));
+
+    expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([]);
+    expect(parsed.offenseAdjustment.hpEvents).toEqual([]);
+  });
+
+  it.each([3, 4] as const)(
+    "migrates schema v%s events while ignoring legacy user-selected timing and subject",
+    (schemaVersion) => {
+      const [scenario] = createDefaultScenarioForms();
+      const parsed = parseShareStateDocument(JSON.stringify({
+        schemaVersion,
+        target: createDefaultTargetForm(),
+        scenarios: [{
+          ...scenario,
+          attacks: [{
+            ...scenario.attacks[0],
+            hpEvents: [
+              {
+                id: "future-event",
+                effectId: "future-champions-effect",
+                enabled: true,
+                subject: "holder",
+                timing: "onEntry",
+              },
+              {
+                id: "known-event",
+                effectId: "life-orb-recoil",
+                enabled: true,
+                subject: "opponent",
+                timing: "endOfTurn",
+              },
+              {
+                id: "known-invalid-subject",
+                effectId: "sandstorm-damage",
+                enabled: true,
+                subject: "holder",
+                timing: "beforeMove",
+              },
+            ],
+          }],
+        }],
+        offenseAdjustment: {
+          ...createDefaultOffenseAdjustmentForm(),
+          hpEvents: [{
+            id: "legacy-offense-life-orb",
+            effectId: "life-orb-recoil",
+            enabled: true,
+            subject: "target",
+            timing: "beforeMove",
+          }],
+        },
+      }));
+
+      expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([
+        {
+          id: "future-event",
+          effectId: "future-champions-effect",
+          enabled: false,
+        },
+        {
+          id: "known-event",
+          effectId: "life-orb-recoil",
+          enabled: true,
+        },
+        {
+          id: "known-invalid-subject",
+          effectId: "sandstorm-damage",
+          enabled: true,
+        },
+      ]);
+      expect(parsed.offenseAdjustment.hpEvents).toEqual([{
+        id: "legacy-offense-life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+      }]);
+    },
+  );
 
   it("moves the legacy target status into scenario attacks when importing older JSON", () => {
     const parsed = parseShareStateDocument(JSON.stringify({

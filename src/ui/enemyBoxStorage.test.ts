@@ -14,6 +14,7 @@ import {
   stringifyEnemyBoxStorageDocument,
 } from "./enemyBoxStorage";
 import { createDefaultScenarioForms } from "./defenceSearchUi";
+import { SHARE_SCHEMA_VERSION } from "./shareState";
 
 describe("enemyBoxStorage", () => {
   it("creates a compact summary from enabled virtual-enemy scenarios", () => {
@@ -49,6 +50,45 @@ describe("enemyBoxStorage", () => {
     });
     expect(parsed[0]?.payload).not.toHaveProperty("target");
   });
+
+  it.each([3, 4] as const)(
+    "keeps schema v%s HP events while dropping their user-selected timing and subject",
+    (schemaVersion) => {
+      const scenarios = createDefaultScenarioForms().map((scenario) => ({
+        ...scenario,
+        attacks: scenario.attacks.map((attack) => ({
+          ...attack,
+          hpEvents: [{
+            id: "legacy-sand",
+            effectId: "sandstorm-damage",
+            enabled: true,
+            subject: "opponent",
+            timing: "beforeMove",
+          }],
+        })),
+      }));
+      const [entry] = parseEnemyBoxStorageDocument(JSON.stringify({
+        schemaVersion: ENEMY_BOX_STORAGE_SCHEMA_VERSION,
+        entries: [{
+          id: "legacy-enemy-box",
+          name: "旧仮想敵",
+          createdAt: "2026-07-31T00:00:00.000Z",
+          updatedAt: "2026-07-31T00:00:00.000Z",
+          payload: {
+            schemaVersion,
+            scenarios,
+          },
+        }],
+      }));
+
+      expect(entry.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+      expect(entry.payload.scenarios[0].attacks[0].hpEvents).toEqual([{
+        id: "legacy-sand",
+        effectId: "sandstorm-damage",
+        enabled: true,
+      }]);
+    },
+  );
 
   it("ignores invalid localStorage documents instead of throwing", () => {
     expect(parseEnemyBoxStorageDocument("not-json")).toEqual([]);

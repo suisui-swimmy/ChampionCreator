@@ -350,3 +350,224 @@ describe("searchDefenceCandidates", () => {
     expect(results.every((result) => result.candidate.spd === 0 && result.appliedStatPoints.spd === 0)).toBe(true);
   });
 });
+
+describe("fixed HP damage integration", () => {
+  const makeHundredHpDefender = (evs: StatTable = zeroEvs): Build => ({
+    ...makeBuild("target", "ミュウ", evs, 30),
+    ivs: { ...defaultIvs, hp: 0 },
+  });
+
+  const withDefenderSand = (hit: ScenarioHit): ScenarioHit => ({
+    ...hit,
+    hpEvents: [{
+      id: `${hit.id}-sand`,
+      effectId: "sandstorm-damage",
+      enabled: true,
+      sequenceContext: "currentMove",
+    }],
+  });
+
+  const fixedDamageCalculator = (
+    damageByHitId: Readonly<Record<string, number>>,
+  ): CalculateHit => (_build, hit) => {
+    const damage = damageByHitId[hit.id] ?? 0;
+    return {
+      hitId: hit.id,
+      damageRolls: [damage],
+      damageRange: {
+        min: damage,
+        max: damage,
+        percentMin: damage,
+        percentMax: damage,
+      },
+    };
+  };
+
+  it("can flip a guaranteed direct-damage survival into failure after end-of-turn sand damage", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ピチュー");
+    const directHit = makeHit("direct-hit", attacker, "でんこうせっか");
+    const directScenario = makeScenario("direct-only", [directHit], 1, 1);
+    const sandScenario = makeScenario(
+      "with-sand",
+      [withDefenderSand({ ...directHit, id: "sand-hit" })],
+      1,
+      1,
+    );
+    const calculateHit = fixedDamageCalculator({
+      "direct-hit": 94,
+      "sand-hit": 94,
+    });
+
+    const directResult = evaluateScenario(defender, directScenario, { calculateHit });
+    const sandResult = evaluateScenario(defender, sandScenario, { calculateHit });
+
+    expect(directResult).toMatchObject({
+      passed: true,
+      survivalProbability: 1,
+    });
+    expect(sandResult).toMatchObject({
+      passed: false,
+      survivalProbability: 0,
+      hpEventEvaluations: [
+        expect.objectContaining({
+          effectId: "sandstorm-damage",
+          damage: 6,
+          applied: true,
+        }),
+      ],
+    });
+  });
+
+  it("drops an event-aware candidate that fails final revalidation", () => {
+    const defender = makeHundredHpDefender({
+      ...zeroEvs,
+      atk: 252,
+      spa: 252,
+      spe: 12,
+    });
+    const attacker = makeBuild("attacker", "ピチュー");
+    const scenario = makeScenario(
+      "revalidation-with-sand",
+      [withDefenderSand(makeHit("revalidation-hit", attacker, "でんこうせっか"))],
+      1,
+      1,
+    );
+    let callCount = 0;
+    const calculateHit: CalculateHit = (_build, hit) => {
+      callCount += 1;
+      const damage = callCount === 1 ? 93 : 94;
+      return {
+        hitId: hit.id,
+        damageRolls: [damage],
+        damageRange: {
+          min: damage,
+          max: damage,
+          percentMin: damage,
+          percentMax: damage,
+        },
+      };
+    };
+
+    const results = searchDefenceCandidates(defender, [scenario], {
+      maxResults: 1,
+      calculateHit,
+    });
+
+    expect(callCount).toBe(2);
+    expect(results).toEqual([]);
+  });
+
+  it("does not include cards after a hit-specific survival checkpoint", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ピチュー");
+    const checkpointHit: ScenarioHit = {
+      ...makeHit("checkpoint-hit", attacker, "でんこうせっか"),
+      constraint: {
+        enabled: true,
+        requiredSurvivedHits: 1,
+        minSurvivalProbability: 1,
+      },
+    };
+    const laterHit = withDefenderSand(makeHit("later-hit", attacker, "でんこうせっか"));
+    const checkpointScenario = makeScenario(
+      "checkpoint-prefix",
+      [checkpointHit, laterHit],
+      2,
+      1,
+    );
+    const fullSequenceScenario = makeScenario(
+      "full-sequence",
+      [
+        makeHit("checkpoint-hit", attacker, "でんこうせっか"),
+        laterHit,
+      ],
+      2,
+      1,
+    );
+    const calculateHit = fixedDamageCalculator({
+      "checkpoint-hit": 94,
+      "later-hit": 1,
+    });
+
+    const checkpointResult = evaluateScenario(defender, checkpointScenario, { calculateHit });
+    const fullSequenceResult = evaluateScenario(defender, fullSequenceScenario, { calculateHit });
+
+    expect(checkpointResult).toMatchObject({
+      passed: true,
+      survivalProbability: 1,
+      requiredSurvivedHits: 1,
+    });
+    expect(checkpointResult.hpEventEvaluations).toBeUndefined();
+    expect(fullSequenceResult).toMatchObject({
+      passed: false,
+      survivalProbability: 0,
+      requiredSurvivedHits: 2,
+    });
+  });
+
+  it("treats normal repeat uses separately even when the adapter returns nested rolls", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ミュウ");
+    const hit = {
+      ...makeHit("repeat-hit", attacker, "でんこうせっか", 2),
+      hpEvents: [{
+        id: "repeat-life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+        sequenceContext: "currentMove",
+      }] as ScenarioHit["hpEvents"],
+    };
+    const scenario = makeScenario("repeat-life-orb", [hit], 2, 1);
+
+    const result = evaluateScenario(defender, scenario, {
+      calculateHit: () => ({
+        hitId: hit.id,
+        damageRolls: [1],
+        damageRollsByHit: [[1]],
+        damageRange: { min: 1, max: 1, percentMin: 1, percentMax: 1 },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      passed: true,
+      hpEventEvaluations: [
+        expect.objectContaining({ occurrence: 1, applied: true }),
+        expect.objectContaining({ occurrence: 2, applied: true }),
+      ],
+    });
+  });
+
+  it("treats a multi-hit move as one move use for Life Orb recoil", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ミュウ");
+    const hit = {
+      ...makeHit("multi-hit", attacker, "タネマシンガン", 2),
+      moveHits: 2,
+      hpEvents: [{
+        id: "multi-life-orb",
+        effectId: "life-orb-recoil",
+        enabled: true,
+        sequenceContext: "currentMove",
+      }] as ScenarioHit["hpEvents"],
+    };
+    const scenario = makeScenario("multi-life-orb", [hit], 2, 1);
+
+    const result = evaluateScenario(defender, scenario, {
+      calculateHit: () => ({
+        hitId: hit.id,
+        damageRolls: [2],
+        damageRollsByHit: [[1], [1]],
+        damageRange: { min: 2, max: 2, percentMin: 2, percentMax: 2 },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      passed: true,
+      hpEventEvaluations: [
+        expect.objectContaining({ occurrence: 1, applied: true }),
+      ],
+    });
+    expect(result.hpEventEvaluations).toHaveLength(1);
+  });
+});

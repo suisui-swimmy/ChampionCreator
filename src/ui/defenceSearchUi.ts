@@ -31,6 +31,11 @@ import {
   type StatPointTable,
 } from "../domain/championsStats";
 import { isActiveAllyAbilityCanonicalName } from "../domain/allyAbilitySupport";
+import type { HpEvent } from "../domain/hpEvents";
+import {
+  compileHpEventForMove,
+  getHpEventRuleDefinition,
+} from "../calc/hpEventRules";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 import {
@@ -60,6 +65,12 @@ import natureOptionsData from "../data/generated/nature-options.gen.json";
 
 export type SpeedTargetMode = "opponent" | "manual";
 export type SpeedMoveModifier = "none" | "tailwind" | "trick-room";
+
+export interface HpEventFormState {
+  id: string;
+  effectId: string;
+  enabled: boolean;
+}
 
 export interface TargetFormState {
   pokemonInput: string;
@@ -91,6 +102,7 @@ export interface ScenarioAttackFormState {
   attackerBoosts: StatBoostTable;
   defenderBoosts: StatBoostTable;
   moveInput: string;
+  hpEvents: HpEventFormState[];
   repeat: number;
   requiredSurvivedHits: number;
   minSurvivalProbabilityPercent: number;
@@ -137,6 +149,7 @@ export interface OffenseAdjustmentFormState {
   defenderStatPoints: StatPointTable;
   defenderBoosts: StatBoostTable;
   moveInput: string;
+  hpEvents: HpEventFormState[];
   targetKoProbabilityPercent: number;
   gameType: GameType;
   weather: Weather;
@@ -357,6 +370,14 @@ const normalizeBoosts = (boosts: StatBoostTable = {}): StatBoostTable => ({
   spe: clampBoost(boosts.spe),
 });
 
+const toDomainHpEvents = (
+  hpEvents: readonly HpEventFormState[],
+): HpEvent[] => hpEvents.map((event) => compileHpEventForMove({
+  id: event.id,
+  effectId: event.effectId,
+  enabled: event.enabled,
+}));
+
 const mustResolve = <K extends EntityKind>(
   kind: K,
   input: string,
@@ -414,6 +435,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerBoosts: { ...zeroBoosts },
   defenderBoosts: { ...zeroBoosts },
   moveInput: "ふいうち",
+  hpEvents: [],
   repeat: 1,
   requiredSurvivedHits: 1,
   minSurvivalProbabilityPercent: 100,
@@ -543,6 +565,7 @@ export const createDefaultOffenseAdjustmentForm = (): OffenseAdjustmentFormState
   defenderStatPoints: { ...zeroStatPoints },
   defenderBoosts: { ...zeroBoosts },
   moveInput: "ふいうち",
+  hpEvents: [],
   targetKoProbabilityPercent: 100,
   gameType: "singles",
   weather: "none",
@@ -641,6 +664,7 @@ const toScenarioHit = (
       : undefined,
     move: mustResolve("move", attackForm.moveInput, "技"),
     moveHits: moveHitRange ? repeat : undefined,
+    hpEvents: toDomainHpEvents(attackForm.hpEvents ?? []),
     field: toFieldState(attackForm),
     constraint: {
       enabled: true,
@@ -705,6 +729,14 @@ const getDefenceSearchStatKeysFromScenarioForms = (
         key === "hp" || key === "def" || key === "spd"
       ))
   )),
+  scenarioForms.some((scenario) => (
+    scenario.attacks.some((attack) => attack.hpEvents?.some((event) => (
+      event.enabled
+      && getHpEventRuleDefinition(event.effectId)?.subject === "defender"
+    )))
+  ))
+    ? ["hp"]
+    : [],
 );
 
 const getDefenceSearchStatKeysFromMinimums = (
@@ -788,6 +820,7 @@ export const buildOffenseAdjustmentInput = (
   }, "offense-defender"),
   move: mustResolve("move", offenseForm.moveInput, "火力調整の技"),
   moveInput: offenseForm.moveInput,
+  hpEvents: toDomainHpEvents(offenseForm.hpEvents ?? []),
   targetKoProbability: clampProbabilityPercent(offenseForm.targetKoProbabilityPercent),
   field: toFieldState(offenseForm),
   critical: offenseForm.critical,
@@ -822,6 +855,7 @@ export const createOffenseAdjustmentFormFromScenarioAttack = (
   defenderStatPoints: attackForm.attackerStatPoints,
   defenderBoosts: attackForm.attackerBoosts,
   moveInput: attackForm.moveInput,
+  hpEvents: attackForm.hpEvents ?? [],
   targetKoProbabilityPercent: attackForm.targetKoProbabilityPercent,
   gameType: attackForm.gameType,
   weather: attackForm.weather,
@@ -851,6 +885,7 @@ const makeOffenseAdjustmentMessageResult = (
   koProbability: 0,
   targetKoProbability: 0,
   damageRange: null,
+  hpEventEvaluations: [],
   reason,
 });
 

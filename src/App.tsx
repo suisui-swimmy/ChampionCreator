@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { Fragment, type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import {
@@ -9,6 +9,7 @@ import {
   sumStatPoints,
 } from "./domain/championsStats";
 import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
+import { getHpEventRuleDefinition } from "./calc/hpEventRules";
 import type {
   CandidateResult,
   GameType,
@@ -19,6 +20,11 @@ import type {
   Terrain,
   Weather,
 } from "./domain/model";
+import type {
+  HpEventEvaluation,
+  HpEventFrequency,
+  HpEventTiming,
+} from "./domain/hpEvents";
 import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo } from "./appVersion";
 import {
@@ -51,6 +57,7 @@ import {
   startDefenceSearchFromUi,
   startMaximizeRemainingBulkFromUi,
   type BulkMaximizeUiState,
+  type HpEventFormState,
   type OffenseScenarioResult,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
@@ -295,6 +302,31 @@ const speedMoveModifierOptions = [
   { value: "trick-room", label: "トリックルーム" },
 ] as const;
 
+type HpEventPresetId = "life-orb-recoil" | "sandstorm-damage";
+
+const hpEventPresetOptions: Array<{ value: HpEventPresetId; label: string }> = [
+  { value: "life-orb-recoil", label: "いのちのたま反動" },
+  { value: "sandstorm-damage", label: "すなあらしダメージ" },
+];
+
+const hpEventTimingLabels: Partial<Record<HpEventTiming, string>> = {
+  beforeMove: "技使用前",
+  afterHit: "ヒット後",
+  afterMove: "技使用後",
+  endOfTurn: "ターン終了時",
+};
+
+const hpEventFrequencyLabels: Record<HpEventFrequency, string> = {
+  once: "1回",
+  perMove: "技ごと",
+  perHit: "ヒットごと",
+  perTurn: "ターンごと",
+};
+
+const hpEventPresetLabels: Record<HpEventPresetId, string> = Object.fromEntries(
+  hpEventPresetOptions.map((option) => [option.value, option.label]),
+) as Record<HpEventPresetId, string>;
+
 const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | undefined => {
   const result = resolveEntity(kind, input);
   return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
@@ -355,6 +387,35 @@ const formatPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
 
 const formatDamageRange = (min: number, max: number): string =>
   min === max ? String(min) : `${min}-${max}`;
+
+const getHpEventSubjectLabel = (
+  subject: HpEventEvaluation["subject"],
+  adjustmentType: ScenarioAdjustmentType,
+): string => {
+  if (adjustmentType === "offense") {
+    return subject === "attacker" ? "調整対象" : "仮想敵";
+  }
+  return subject === "defender" ? "調整対象" : "仮想敵";
+};
+
+const formatHpEventEvaluation = (
+  evaluation: HpEventEvaluation,
+  adjustmentType: ScenarioAdjustmentType,
+): string => {
+  const subjectLabel = getHpEventSubjectLabel(evaluation.subject, adjustmentType);
+  const timingLabel = hpEventTimingLabels[evaluation.timing] ?? evaluation.timing;
+  const orderLabel = evaluation.sequenceContext === "priorMove"
+    ? `直前の${timingLabel}（今回の攻撃前・1回）`
+    : `${timingLabel}・${hpEventFrequencyLabels[evaluation.frequency]}`;
+  if (!evaluation.applied) {
+    return `${evaluation.label} / ${subjectLabel} / ${orderLabel}: ${evaluation.reason ?? "発生なし"}`;
+  }
+
+  const probabilityLabel = evaluation.activationProbability < 1 - 1e-12
+    ? ` / 発動 ${formatPercent(evaluation.activationProbability)}`
+    : "";
+  return `${evaluation.label} / ${subjectLabel} / ${orderLabel}: ${evaluation.damage}ダメージ${probabilityLabel}`;
+};
 
 const formatBulkIndex = (value: number): string =>
   Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -2714,11 +2775,14 @@ function formatMobileAttackMeta(attack: ScenarioAttackFormState, adjustmentType:
       : `${attack.speedMoveModifier === "trick-room" ? "トリル" : "抜き"} +${attack.speedRequiredOffset}`;
   }
 
+  const hpEventCount = attack.hpEvents?.length ?? 0;
+  const hpEventMeta = hpEventCount > 0 ? ` · HP変化${hpEventCount}` : "";
+
   if (adjustmentType === "offense") {
-    return `KO ${attack.targetKoProbabilityPercent}%`;
+    return `KO ${attack.targetKoProbabilityPercent}%${hpEventMeta}`;
   }
 
-  return `${attack.requiredSurvivedHits}/${attack.repeat}耐え ${attack.minSurvivalProbabilityPercent}%`;
+  return `${attack.requiredSurvivedHits}/${attack.repeat}耐え ${attack.minSurvivalProbabilityPercent}%${hpEventMeta}`;
 }
 
 type MobileFlowEdgeGeometry = {
@@ -4115,6 +4179,168 @@ type AttackCardProps = {
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
 
+const isHpEventPresetId = (value: string): value is HpEventPresetId =>
+  value === "life-orb-recoil" || value === "sandstorm-damage";
+
+const getHpEventPresetLabel = (effectId: string): string =>
+  isHpEventPresetId(effectId) ? hpEventPresetLabels[effectId] : "未対応のHP変化";
+
+const getHpEventFormulaLabel = (effectId: string): string =>
+  getHpEventRuleDefinition(effectId)?.formulaLabel ?? "現在のアプリでは計算されません";
+
+const getHpEventRuleTimingLabel = (effectId: string): string => {
+  const definition = getHpEventRuleDefinition(effectId);
+  if (!definition) {
+    return "未対応";
+  }
+  const timingLabel = hpEventTimingLabels[definition.timing] ?? definition.timing;
+  return `${timingLabel}・${hpEventFrequencyLabels[definition.frequency]}`;
+};
+
+const getHpEventAutomaticSubjectLabel = (
+  effectId: string,
+  adjustmentType: ScenarioAdjustmentType,
+): string => {
+  const definition = getHpEventRuleDefinition(effectId);
+  if (!definition) {
+    return "未対応";
+  }
+
+  const subjectLabel = getHpEventSubjectLabel(definition.subject, adjustmentType);
+  const roleLabel = definition.subject === "attacker" ? "技使用者" : "被弾側";
+  return `${subjectLabel}（${roleLabel}）`;
+};
+
+type HpEventsEditorProps = {
+  attack: ScenarioAttackFormState;
+  adjustmentType: ScenarioAdjustmentType;
+  scenarioId: string;
+  targetForm: TargetFormState;
+  onUpdateAttack: AttackCardProps["onUpdateAttack"];
+};
+
+function HpEventsEditor({
+  attack,
+  adjustmentType,
+  scenarioId,
+  targetForm,
+  onUpdateAttack,
+}: HpEventsEditorProps) {
+  const [presetId, setPresetId] = useState<HpEventPresetId>("life-orb-recoil");
+  const hpEvents = attack.hpEvents ?? [];
+
+  const updateEvents = (nextEvents: HpEventFormState[]) => {
+    onUpdateAttack(scenarioId, attack.id, "hpEvents", nextEvents);
+  };
+
+  const addEvent = () => {
+    const nextEvent: HpEventFormState = {
+      id: `hp-event-${Date.now()}-${hpEvents.length}`,
+      effectId: presetId,
+      enabled: true,
+    };
+
+    updateEvents([...hpEvents, nextEvent]);
+    if (presetId === "sandstorm-damage" && attack.weather !== "sand") {
+      onUpdateAttack(scenarioId, attack.id, "weather", "sand");
+    }
+  };
+
+  return (
+    <details className="attack-advanced-settings hp-events-settings">
+      <summary>
+        <ChevronRightIcon className="disclosure-chevron" />
+        <span>HP推移</span>
+        {hpEvents.length > 0 ? (
+          <span className="active-adjustment-count">{hpEvents.length}件</span>
+        ) : (
+          <span className="active-adjustment-empty">なし</span>
+        )}
+      </summary>
+      <div className="attack-advanced-content hp-events-content">
+        {hpEvents.length > 0 ? (
+          <ol className="hp-event-list">
+            {hpEvents.map((hpEvent) => {
+              const supported = isHpEventPresetId(hpEvent.effectId);
+              const moveUserItemInput = adjustmentType === "offense"
+                ? targetForm.itemInput
+                : attack.attackerItemInput;
+              const hasLifeOrb = resolveCanonicalEntityName("item", moveUserItemInput) === "Life Orb";
+              const mismatchMessage = !supported
+                ? `未対応のHP変化です: ${hpEvent.effectId}`
+                : hpEvent.effectId === "life-orb-recoil" && !hasLifeOrb
+                  ? "技使用者の持ち物が「いのちのたま」ではありません。発動前提で計算します"
+                  : hpEvent.effectId === "sandstorm-damage" && attack.weather !== "sand"
+                    ? "天候が「砂」ではありません。発動前提で計算します"
+                    : null;
+
+              return (
+                <li className={`hp-event-row${supported ? "" : " unsupported"}`} key={hpEvent.id}>
+                  <div className="hp-event-row-heading">
+                    <label className="hp-event-enable">
+                      <input
+                        type="checkbox"
+                        checked={supported && hpEvent.enabled}
+                        disabled={!supported}
+                        onChange={(event) => updateEvents(hpEvents.map((candidate) => (
+                          candidate.id === hpEvent.id
+                            ? { ...candidate, enabled: event.target.checked }
+                            : candidate
+                        )))}
+                      />
+                      <span>{getHpEventPresetLabel(hpEvent.effectId)}</span>
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hp-event-remove-button"
+                      aria-label={`${supported ? getHpEventPresetLabel(hpEvent.effectId) : hpEvent.effectId || "未対応のHP変化"}を削除`}
+                      onClick={() => updateEvents(hpEvents.filter((candidate) => candidate.id !== hpEvent.id))}
+                    >
+                      <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+                    </Button>
+                  </div>
+                  <div className="hp-event-rule-meta">
+                    <small>
+                      <strong>対象</strong>
+                      <span>{getHpEventAutomaticSubjectLabel(hpEvent.effectId, adjustmentType)}</span>
+                    </small>
+                    <small>
+                      <strong>発動</strong>
+                      <span>{getHpEventRuleTimingLabel(hpEvent.effectId)}</span>
+                    </small>
+                  </div>
+                  <small className="hp-event-formula">{getHpEventFormulaLabel(hpEvent.effectId)}</small>
+                  {mismatchMessage ? <small className="hp-event-warning">{mismatchMessage}</small> : null}
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="hp-events-empty">直接攻撃だけで判定します</p>
+        )}
+        <div className="hp-event-add-row">
+          <SelectField
+            compact
+            label="追加する定数ダメージ"
+            value={presetId}
+            options={hpEventPresetOptions}
+            onChange={setPresetId}
+          />
+          <Button variant="ghost" size="small" onClick={addEvent}>
+            定数ダメージを追加
+          </Button>
+        </div>
+        <p className="hp-event-help">
+          対象・発動タイミング・頻度は効果ごとに固定です。「いのちのたま」は技使用者、
+          「すなあらし」は被弾側へ適用します。
+          技失敗や「ちからずく」などで発動しない場合は追加しないでください。
+        </p>
+      </div>
+    </details>
+  );
+}
+
 function AttackCard({
   attack,
   attackIndex,
@@ -4717,6 +4943,15 @@ function AttackCard({
           </section>
         </>
       )}
+      {!isAbilitySupport && !isSpeedAdjustment ? (
+        <HpEventsEditor
+          attack={attack}
+          adjustmentType={adjustmentType}
+          scenarioId={scenarioId}
+          targetForm={targetForm}
+          onUpdateAttack={onUpdateAttack}
+        />
+      ) : null}
     </section>
   );
 }
@@ -4993,6 +5228,11 @@ function StandaloneAdjustmentResults({
             {formatOffenseCandidateDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
             {" / "}
             {entry.result.reason}
+            {entry.result.hpEventEvaluations.length > 0
+              ? ` / ${entry.result.hpEventEvaluations
+                .map((evaluation) => formatHpEventEvaluation(evaluation, "offense"))
+                .join(" / ")}`
+              : ""}
           </small>
         </div>
       ))}
@@ -5236,20 +5476,40 @@ export function ResultsPanel({
                             {formatScenarioResultStatusLabel(result.passed)}
                           </em>
                         </div>
-                        {result.hitEvaluations.length > 0 ? (
+                        {result.hitEvaluations.length > 0 || (result.hpEventEvaluations?.length ?? 0) > 0 ? (
                           <ul>
                             {result.hitEvaluations.map((hit, hitIndex) => {
                               const attackLabel = attackLabelsByScenarioId.get(result.scenarioId)?.[hitIndex];
                               const detailLabel = attackLabel ? `${scenarioLabel} / ${attackLabel}` : scenarioLabel;
+                              const hpEvents = (result.hpEventEvaluations ?? [])
+                                .filter((evaluation) => evaluation.cardId === hit.hitId);
+                              const beforeMoveEvents = hpEvents
+                                .filter((evaluation) => evaluation.sequenceContext === "priorMove");
+                              const laterEvents = hpEvents
+                                .filter((evaluation) => evaluation.sequenceContext !== "priorMove");
                               return (
-                              <li key={hit.hitId}>
-                                <strong>{detailLabel}</strong>
-                                <span>
-                                  {hit.description
-                                    ? formatLocalizedDamageDescription(hit.description)
-                                    : `被ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}
-                                </span>
-                              </li>
+                                <Fragment key={hit.hitId}>
+                                  {beforeMoveEvents.map((evaluation) => (
+                                    <li className="candidate-hp-event-detail" key={`${evaluation.eventId}-${evaluation.occurrence}`}>
+                                      <strong>{detailLabel} / HP推移</strong>
+                                      <span>{formatHpEventEvaluation(evaluation, "defence")}</span>
+                                    </li>
+                                  ))}
+                                  <li>
+                                    <strong>{detailLabel}</strong>
+                                    <span>
+                                      {hit.description
+                                        ? formatLocalizedDamageDescription(hit.description)
+                                        : `被ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}
+                                    </span>
+                                  </li>
+                                  {laterEvents.map((evaluation) => (
+                                    <li className="candidate-hp-event-detail" key={`${evaluation.eventId}-${evaluation.occurrence}`}>
+                                      <strong>{detailLabel} / HP推移</strong>
+                                      <span>{formatHpEventEvaluation(evaluation, "defence")}</span>
+                                    </li>
+                                  ))}
+                                </Fragment>
                               );
                             })}
                           </ul>
@@ -5276,6 +5536,12 @@ export function ResultsPanel({
                               {formatOffenseCandidateDetail(entry, targetLabel, scenariosById.get(entry.scenarioId))}
                             </span>
                           </li>
+                          {entry.result.hpEventEvaluations.map((evaluation) => (
+                            <li className="candidate-hp-event-detail" key={`${evaluation.eventId}-${evaluation.occurrence}`}>
+                              <strong>{scenarioLabel} / HP推移</strong>
+                              <span>{formatHpEventEvaluation(evaluation, "offense")}</span>
+                            </li>
+                          ))}
                         </ul>
                       </section>
                     );

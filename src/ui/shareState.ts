@@ -3,6 +3,7 @@ import {
   createDefaultScenarioAttackForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
+  type HpEventFormState,
   type OffenseAdjustmentFormState,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
@@ -10,8 +11,9 @@ import {
   type TargetFormState,
 } from "./defenceSearchUi";
 import type { PokemonStatus } from "../domain/model";
+import { isSupportedHpEventEffectId } from "../domain/hpEvents";
 
-export const SHARE_SCHEMA_VERSION = 2;
+export const SHARE_SCHEMA_VERSION = 5;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -33,6 +35,30 @@ const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["o
 const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["outspeed", "tie"]);
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | typeof SHARE_SCHEMA_VERSION;
+
+const normalizeHpEvents = (
+  value: unknown,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
+): HpEventFormState[] => {
+  if (sourceSchemaVersion < 3 || !Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((event, index): HpEventFormState => {
+      const effectId = typeof event.effectId === "string" ? event.effectId : "";
+      const hasSupportedEffect = isSupportedHpEventEffectId(effectId);
+      return {
+        id: typeof event.id === "string" && event.id
+          ? event.id
+          : `hp-event-${index + 1}`,
+        effectId,
+        enabled: event.enabled === true && hasSupportedEffect,
+      };
+    });
+};
 
 const normalizePokemonStatus = (value: unknown, fallback: PokemonStatus): PokemonStatus =>
   typeof value === "string" && pokemonStatuses.has(value as PokemonStatus)
@@ -61,6 +87,7 @@ const normalizeAttack = (
   value: unknown,
   index: number,
   legacyTargetStatus: PokemonStatus,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
 ): ScenarioAttackFormState => {
   const defaults = createDefaultScenarioAttackForm(`attack-${index + 1}`, `攻撃${String.fromCharCode(65 + index)}`);
   const input = mergeObject(defaults, value) as ScenarioAttackFormState & Record<string, unknown>;
@@ -102,6 +129,7 @@ const normalizeAttack = (
     defenderStatus: hasDefenderStatus
       ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
       : legacyTargetStatus,
+    hpEvents: normalizeHpEvents(input.hpEvents, sourceSchemaVersion),
     attackerStatPoints: mergeObject(defaults.attackerStatPoints, input.attackerStatPoints),
     attackerBoosts: mergeObject(defaults.attackerBoosts, input.attackerBoosts),
     defenderBoosts: mergeObject(defaults.defenderBoosts, input.defenderBoosts),
@@ -112,11 +140,17 @@ const normalizeScenario = (
   value: unknown,
   index: number,
   legacyTargetStatus: PokemonStatus,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
 ): ScenarioFormState => {
   const defaults = createDefaultScenarioForms()[0];
   const input = mergeObject(defaults, value) as ScenarioFormState & Record<string, unknown>;
   const attacks = Array.isArray(input.attacks)
-    ? input.attacks.map((attack, attackIndex) => normalizeAttack(attack, attackIndex, legacyTargetStatus))
+    ? input.attacks.map((attack, attackIndex) => normalizeAttack(
+      attack,
+      attackIndex,
+      legacyTargetStatus,
+      sourceSchemaVersion,
+    ))
     : defaults.attacks;
 
   return {
@@ -129,7 +163,10 @@ const normalizeScenario = (
   } as ScenarioFormState;
 };
 
-const normalizeOffenseAdjustment = (value: unknown): OffenseAdjustmentFormState => {
+const normalizeOffenseAdjustment = (
+  value: unknown,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
+): OffenseAdjustmentFormState => {
   const defaults = createDefaultOffenseAdjustmentForm();
   const input = mergeObject(defaults, value) as OffenseAdjustmentFormState & Record<string, unknown>;
 
@@ -137,6 +174,7 @@ const normalizeOffenseAdjustment = (value: unknown): OffenseAdjustmentFormState 
     ...defaults,
     ...input,
     defenderStatus: normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus),
+    hpEvents: normalizeHpEvents(input.hpEvents, sourceSchemaVersion),
     defenderStatPoints: mergeObject(defaults.defenderStatPoints, input.defenderStatPoints),
     defenderBoosts: mergeObject(defaults.defenderBoosts, input.defenderBoosts),
   } as OffenseAdjustmentFormState;
@@ -163,9 +201,15 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
   const parsed = JSON.parse(json) as unknown;
   if (
     !isRecord(parsed)
-    || (parsed.schemaVersion !== SHARE_SCHEMA_VERSION && parsed.schemaVersion !== 1)
+    || (
+      parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 4
+      && parsed.schemaVersion !== 3
+      && parsed.schemaVersion !== 2
+      && parsed.schemaVersion !== 1
+    )
   ) {
-    throw new Error(`対応していない条件JSONです (schemaVersion 1 または ${SHARE_SCHEMA_VERSION} のみ対応)`);
+    throw new Error(`対応していない条件JSONです (schemaVersion 1〜${SHARE_SCHEMA_VERSION} のみ対応)`);
   }
   if (!Array.isArray(parsed.scenarios)) {
     throw new Error("条件JSONに scenarios がありません");
@@ -174,11 +218,17 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
   const legacyTargetStatus = isRecord(parsed.target)
     ? normalizePokemonStatus(parsed.target.status, "none")
     : "none";
+  const sourceSchemaVersion = parsed.schemaVersion as SupportedShareSchemaVersion;
 
   return {
     schemaVersion: SHARE_SCHEMA_VERSION,
     target: normalizeTarget(parsed.target),
-    scenarios: parsed.scenarios.map((scenario, index) => normalizeScenario(scenario, index, legacyTargetStatus)),
-    offenseAdjustment: normalizeOffenseAdjustment(parsed.offenseAdjustment),
+    scenarios: parsed.scenarios.map((scenario, index) => normalizeScenario(
+      scenario,
+      index,
+      legacyTargetStatus,
+      sourceSchemaVersion,
+    )),
+    offenseAdjustment: normalizeOffenseAdjustment(parsed.offenseAdjustment, sourceSchemaVersion),
   };
 };

@@ -1,5 +1,11 @@
 import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
 import {
+  getHpSequenceSurvivalProbability,
+  simulateHpSequence,
+  type HpSequenceCard,
+  type HpSequenceMoveUse,
+} from "../calc/simulateHpSequence";
+import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
   isLegalStatPointTable,
@@ -227,33 +233,132 @@ export const countDefenceEvCandidates = (
   return count;
 };
 
-const getMaxHp = (build: Build): number => toSmogonPokemon(build).maxHP();
+const getMoveUses = (
+  hit: ScenarioHit,
+  evaluation: ScenarioHitEvaluation,
+): HpSequenceMoveUse[] => {
+  const repeat = Math.max(0, Math.trunc(hit.repeat));
+  const damageRollsByMove = evaluation.damageRollsByHit ?? [evaluation.damageRolls];
 
-const expandDamageSequence = (
-  scenario: Scenario,
-  hitEvaluations: ScenarioHitEvaluation[],
-): number[][] => {
-  const evaluationsByHitId = new Map(hitEvaluations.map((evaluation) => [evaluation.hitId, evaluation]));
-  const sequence: number[][] = [];
-
-  for (const hit of scenario.hits) {
-    const repeat = Math.max(0, Math.trunc(hit.repeat));
-    const evaluation = evaluationsByHitId.get(hit.id);
-    if (!evaluation) {
-      continue;
-    }
-
-    if (evaluation.damageRollsByHit) {
-      sequence.push(...evaluation.damageRollsByHit.slice(0, repeat));
-      continue;
-    }
-
-    for (let index = 0; index < repeat; index += 1) {
-      sequence.push(evaluation.damageRolls);
-    }
+  if (hit.moveHits !== undefined) {
+    return [{
+      id: `${hit.id}-move-1`,
+      damageRollsByHit: damageRollsByMove.slice(0, repeat),
+    }];
   }
 
-  return sequence;
+  return Array.from({ length: repeat }, (_value, index) => ({
+    id: `${hit.id}-move-${index + 1}`,
+    damageRollsByHit: damageRollsByMove,
+  }));
+};
+
+const getDirectDamageRolls = (
+  hit: ScenarioHit,
+  evaluation: ScenarioHitEvaluation,
+): number[][] => getMoveUses(hit, evaluation)
+  .flatMap((moveUse) => moveUse.damageRollsByHit.map((rolls) => [...rolls]));
+
+const buildHpSequenceCards = (
+  defenderBuild: Build,
+  scenario: Scenario,
+  hitEvaluations: ScenarioHitEvaluation[],
+): HpSequenceCard[] => {
+  const evaluationsByHitId = new Map(hitEvaluations.map((evaluation) => [evaluation.hitId, evaluation]));
+  return scenario.hits.flatMap((hit) => {
+    const evaluation = evaluationsByHitId.get(hit.id);
+    if (!evaluation) {
+      return [];
+    }
+
+    return [{
+      id: hit.id,
+      attackerBuild: hit.attacker,
+      defenderBuild,
+      moveUses: getMoveUses(hit, evaluation),
+      hpEvents: hit.hpEvents,
+    }];
+  });
+};
+
+const getCardDirectHitCount = (card: HpSequenceCard): number =>
+  card.moveUses.reduce((total, moveUse) => total + moveUse.damageRollsByHit.length, 0);
+
+const getSequenceDirectHitCount = (cards: readonly HpSequenceCard[]): number =>
+  cards.reduce((total, card) => total + getCardDirectHitCount(card), 0);
+
+const sliceHpSequenceCards = (
+  cards: readonly HpSequenceCard[],
+  requiredDirectHits: number,
+): HpSequenceCard[] => {
+  let remainingHits = Math.max(0, Math.trunc(requiredDirectHits));
+  const prefix: HpSequenceCard[] = [];
+
+  for (const card of cards) {
+    if (remainingHits <= 0) {
+      break;
+    }
+
+    const cardHitCount = getCardDirectHitCount(card);
+    if (remainingHits >= cardHitCount) {
+      prefix.push(card);
+      remainingHits -= cardHitCount;
+      continue;
+    }
+
+    const moveUses: HpSequenceMoveUse[] = [];
+    for (const moveUse of card.moveUses) {
+      if (remainingHits <= 0) {
+        break;
+      }
+
+      const hitCount = moveUse.damageRollsByHit.length;
+      if (remainingHits >= hitCount) {
+        moveUses.push(moveUse);
+        remainingHits -= hitCount;
+        continue;
+      }
+
+      moveUses.push({
+        ...moveUse,
+        damageRollsByHit: moveUse.damageRollsByHit.slice(0, remainingHits),
+        completed: false,
+      });
+      remainingHits = 0;
+    }
+
+    prefix.push({
+      ...card,
+      moveUses,
+      completed: false,
+    });
+  }
+
+  return prefix;
+};
+
+const calculateScenarioSequence = (
+  defenderBuild: Build,
+  cards: readonly HpSequenceCard[],
+  requiredDirectHits: number,
+): {
+  survivalProbability: number;
+  hpEventEvaluations: NonNullable<ScenarioEvaluation["hpEventEvaluations"]>;
+} => {
+  if (requiredDirectHits <= 0) {
+    return {
+      survivalProbability: 1,
+      hpEventEvaluations: [],
+    };
+  }
+
+  const simulation = simulateHpSequence({
+    cards: sliceHpSequenceCards(cards, requiredDirectHits),
+  });
+  return {
+    survivalProbability: getHpSequenceSurvivalProbability(simulation, defenderBuild.id),
+    hpEventEvaluations: simulation.hpEventEvaluations,
+  };
 };
 
 const expandDamageCheckpoints = (
@@ -273,19 +378,12 @@ const expandDamageCheckpoints = (
   }> = [];
 
   for (const hit of scenario.hits) {
-    const repeat = Math.max(0, Math.trunc(hit.repeat));
     const evaluation = evaluationsByHitId.get(hit.id);
     if (!evaluation) {
       continue;
     }
 
-    if (evaluation.damageRollsByHit) {
-      sequence.push(...evaluation.damageRollsByHit.slice(0, repeat));
-    } else {
-      for (let index = 0; index < repeat; index += 1) {
-        sequence.push(evaluation.damageRolls);
-      }
-    }
+    sequence.push(...getDirectDamageRolls(hit, evaluation));
 
     if (hit.constraint?.enabled) {
       checkpoints.push({
@@ -297,6 +395,21 @@ const expandDamageCheckpoints = (
   }
 
   return checkpoints;
+};
+
+const expandDamageSequence = (
+  scenario: Scenario,
+  hitEvaluations: ScenarioHitEvaluation[],
+): number[][] => {
+  const evaluationsByHitId = new Map(hitEvaluations.map((evaluation) => [evaluation.hitId, evaluation]));
+  return scenario.hits.flatMap((hit) => {
+    const evaluation = evaluationsByHitId.get(hit.id);
+    if (!evaluation) {
+      return [];
+    }
+
+    return getDirectDamageRolls(hit, evaluation);
+  });
 };
 
 export const calculateSurvivalProbability = (
@@ -381,6 +494,14 @@ export const evaluateScenario = (
   const hitEvaluations = scenario.hits.map((hit) => calculateHit(defenderBuild, hit, hit.field ?? scenario.field));
   const checkpoints = expandDamageCheckpoints(scenario, hitEvaluations);
   const damageSequence = expandDamageSequence(scenario, hitEvaluations);
+  const hpSequenceCards = buildHpSequenceCards(defenderBuild, scenario, hitEvaluations);
+  const totalDirectHits = getSequenceDirectHitCount(hpSequenceCards);
+  const hasEnabledHpEvents = hpSequenceCards.some((card) => (
+    card.hpEvents?.some((event) => event.enabled) ?? false
+  ));
+  const defenderMaxHp = hasEnabledHpEvents
+    ? undefined
+    : toSmogonPokemon(defenderBuild).maxHP();
 
   if (checkpoints.length > 0) {
     const checkpointResults = checkpoints.map((checkpoint) => {
@@ -389,19 +510,31 @@ export const evaluateScenario = (
           ...checkpoint,
           passed: false,
           survivalProbability: 0,
+          hpEventEvaluations: [],
           margin: -checkpoint.minSurvivalProbability,
         };
       }
 
-      const survivalProbability = checkpoint.requiredSurvivedHits === 0
-        ? 1
-        : calculateSurvivalProbability(
-            getMaxHp(defenderBuild),
-            checkpoint.damageSequence.slice(0, checkpoint.requiredSurvivedHits),
-          );
+      const sequenceResult = hasEnabledHpEvents
+        ? calculateScenarioSequence(
+            defenderBuild,
+            hpSequenceCards,
+            checkpoint.requiredSurvivedHits,
+          )
+        : {
+            survivalProbability: checkpoint.requiredSurvivedHits === 0
+              ? 1
+              : calculateSurvivalProbability(
+                  defenderMaxHp ?? 0,
+                  checkpoint.damageSequence.slice(0, checkpoint.requiredSurvivedHits),
+                ),
+            hpEventEvaluations: [],
+          };
+      const { survivalProbability } = sequenceResult;
 
       return {
         ...checkpoint,
+        hpEventEvaluations: sequenceResult.hpEventEvaluations,
         survivalProbability,
         passed: survivalProbability + SURVIVAL_EPSILON >= checkpoint.minSurvivalProbability,
         margin: survivalProbability - checkpoint.minSurvivalProbability,
@@ -418,11 +551,14 @@ export const evaluateScenario = (
       requiredSurvivedHits: worstCheckpoint.requiredSurvivedHits,
       minSurvivalProbability: worstCheckpoint.minSurvivalProbability,
       hitEvaluations,
+      ...(worstCheckpoint.hpEventEvaluations.length > 0
+        ? { hpEventEvaluations: worstCheckpoint.hpEventEvaluations }
+        : {}),
       bottleneckLabel: formatMarginLabel(label, worstCheckpoint.margin),
     };
   }
 
-  if (requiredSurvivedHits > damageSequence.length) {
+  if (requiredSurvivedHits > totalDirectHits) {
     return {
       scenarioId: scenario.id,
       passed: false,
@@ -434,10 +570,22 @@ export const evaluateScenario = (
     };
   }
 
-  const survivalProbability =
-    requiredSurvivedHits === 0
-      ? 1
-      : calculateSurvivalProbability(getMaxHp(defenderBuild), damageSequence.slice(0, requiredSurvivedHits));
+  const sequenceResult = hasEnabledHpEvents
+    ? calculateScenarioSequence(
+        defenderBuild,
+        hpSequenceCards,
+        requiredSurvivedHits,
+      )
+    : {
+        survivalProbability: requiredSurvivedHits === 0
+          ? 1
+          : calculateSurvivalProbability(
+              defenderMaxHp ?? 0,
+              damageSequence.slice(0, requiredSurvivedHits),
+            ),
+        hpEventEvaluations: [],
+      };
+  const { survivalProbability } = sequenceResult;
   const margin = survivalProbability - minSurvivalProbability;
 
   return {
@@ -447,6 +595,9 @@ export const evaluateScenario = (
     requiredSurvivedHits,
     minSurvivalProbability,
     hitEvaluations,
+    ...(sequenceResult.hpEventEvaluations.length > 0
+      ? { hpEventEvaluations: sequenceResult.hpEventEvaluations }
+      : {}),
     bottleneckLabel: formatMarginLabel(label, margin),
   };
 };

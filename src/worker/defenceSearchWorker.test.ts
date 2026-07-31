@@ -419,6 +419,42 @@ describe("DefenceSearchWorkerClient", () => {
     client.dispose();
   });
 
+  it("keeps serializable HP events in Worker start requests", () => {
+    const worker = new FakeWorker();
+    const client = new DefenceSearchWorkerClient(worker);
+    const defender = makeBuild("target", "カイリュー");
+    const attacker = makeBuild("attacker", "ピカチュウ");
+    const hit = {
+      ...makeHit("thunderbolt", attacker, "10まんボルト"),
+      hpEvents: [{
+        id: "sand-after-move",
+        effectId: "sandstorm-damage",
+        enabled: true,
+        sequenceContext: "currentMove" as const,
+      }],
+    };
+    const scenario = makeScenario("sand-scenario", [hit], 1, 1);
+
+    client.start(defender, [scenario], { requestId: "request-with-hp-events" });
+
+    expect(worker.sentMessages[0]).toMatchObject({
+      type: "start",
+      requestId: "request-with-hp-events",
+      scenarios: [{
+        hits: [{
+          hpEvents: [{
+            id: "sand-after-move",
+            effectId: "sandstorm-damage",
+            enabled: true,
+            sequenceContext: "currentMove",
+          }],
+        }],
+      }],
+    });
+
+    client.dispose();
+  });
+
   it("posts bulk maximize requests and ignores stale bulk responses", () => {
     const worker = new FakeWorker();
     const progressMessages: DefenceSearchWorkerMessage[] = [];

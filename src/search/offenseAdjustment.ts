@@ -1,11 +1,16 @@
 import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
 import {
+  getHpSequenceKoProbability,
+  simulateHpSequence,
+} from "../calc/simulateHpSequence";
+import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
   clampStatPointValue,
   statPointTableToSmogonEvs,
   sumStatPoints,
 } from "../domain/championsStats";
+import type { HpEvent, HpEventEvaluation } from "../domain/hpEvents";
 import type {
   Build,
   FieldState,
@@ -38,6 +43,7 @@ export interface OffenseAdjustmentInput {
   defenderBoosts: StatBoostTable;
   attackerSide: SideState;
   defenderSide: SideState;
+  hpEvents?: HpEvent[];
   boostedNatures?: Partial<Record<"atk" | "spa", NatureRef>>;
 }
 
@@ -55,6 +61,7 @@ export interface OffenseAdjustmentResult {
   koProbability: number;
   targetKoProbability: number;
   damageRange: ScenarioHitEvaluation["damageRange"] | null;
+  hpEventEvaluations: HpEventEvaluation[];
   description?: string;
   reason: string;
   reference?: OffenseAdjustmentResult;
@@ -65,6 +72,7 @@ type OffenseCandidateEvaluation = {
   actualStat: number;
   koProbability: number;
   hitEvaluation: ScenarioHitEvaluation;
+  hpEventEvaluations: HpEventEvaluation[];
 };
 
 const emptySide: SideState = {
@@ -175,12 +183,25 @@ const evaluateCandidate = (
     buildOffenseHit(attackerBuild, input),
     input.field,
   );
+  const hpSequence = simulateHpSequence({
+    cards: [{
+      id: "offense-adjustment-card",
+      attackerBuild,
+      defenderBuild,
+      moveUses: [{
+        id: "offense-adjustment-move",
+        damageRollsByHit: hitEvaluation.damageRollsByHit ?? [hitEvaluation.damageRolls],
+      }],
+      hpEvents: input.hpEvents ?? [],
+    }],
+  });
 
   return {
     statPoints,
     actualStat: getActualStat(reference.owner === "attacker" ? attackerBuild : defenderBuild, reference.stat),
-    koProbability: calculateKoProbability(toSmogonPokemon(defenderBuild).maxHP(), hitEvaluation.damageRolls),
+    koProbability: getHpSequenceKoProbability(hpSequence, defenderBuild.id),
     hitEvaluation,
+    hpEventEvaluations: hpSequence.hpEventEvaluations,
   };
 };
 
@@ -226,6 +247,7 @@ const makeFixedResult = (
     koProbability: evaluation.koProbability,
     targetKoProbability: clampProbability(input.targetKoProbability),
     damageRange: evaluation.hitEvaluation.damageRange,
+    hpEventEvaluations: evaluation.hpEventEvaluations,
     description: evaluation.hitEvaluation.description,
     reason: passed
       ? "SPを変えても結果が変わらず、現在条件でKO条件を満たします"
@@ -268,6 +290,7 @@ const calculateReferenceLine = (
       koProbability: 0,
       targetKoProbability: clampProbability(input.targetKoProbability),
       damageRange: null,
+      hpEventEvaluations: [],
       reason: "SP予算が不足しているため、候補を評価できません",
     };
   }
@@ -299,6 +322,7 @@ const calculateReferenceLine = (
     koProbability: best.koProbability,
     targetKoProbability,
     damageRange: best.hitEvaluation.damageRange,
+    hpEventEvaluations: best.hpEventEvaluations,
     description: best.hitEvaluation.description,
     reason: passed
       ? `${formatLineLabel(reference)} ${best.statPoints} SPでKO条件を満たします`
