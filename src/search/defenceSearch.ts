@@ -274,9 +274,12 @@ const buildHpSequenceCards = (
     return [{
       id: hit.id,
       attackerBuild: hit.attacker,
-      defenderBuild,
+      defenderBuild: hit.defenderStatus
+        ? { ...defenderBuild, status: hit.defenderStatus }
+        : defenderBuild,
       moveUses: getMoveUses(hit, evaluation),
       hpEvents: hit.hpEvents,
+      field: hit.field ?? scenario.field,
     }];
   });
 };

@@ -419,6 +419,89 @@ describe("fixed HP damage integration", () => {
     });
   });
 
+  it("evaluates Stealth Rock before the move damage", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ピチュー");
+    const directHit = makeHit("direct-hit", attacker, "でんこうせっか");
+    const rocksHit: ScenarioHit = {
+      ...makeHit("rocks-hit", attacker, "でんこうせっか"),
+      hpEvents: [{
+        id: "rocks",
+        effectId: "stealth-rock-damage",
+        enabled: true,
+        sequenceContext: "currentMove",
+      }],
+    };
+    const calculateHit = fixedDamageCalculator({
+      "direct-hit": 88,
+      "rocks-hit": 88,
+    });
+
+    expect(evaluateScenario(
+      defender,
+      makeScenario("direct-only", [directHit], 1, 1),
+      { calculateHit },
+    ).passed).toBe(true);
+    expect(evaluateScenario(
+      defender,
+      makeScenario("with-rocks", [rocksHit], 1, 1),
+      { calculateHit },
+    )).toMatchObject({
+      passed: false,
+      hpEventEvaluations: [
+        expect.objectContaining({
+          effectId: "stealth-rock-damage",
+          damage: 12,
+          applied: true,
+        }),
+      ],
+    });
+  });
+
+  it("lets one Sitrus Berry activation change a two-hit survival line", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ピチュー");
+    const directHit = makeHit("repeat-direct", attacker, "でんこうせっか", 2);
+    const sitrusHit: ScenarioHit = {
+      ...makeHit("repeat-sitrus", attacker, "でんこうせっか", 2),
+      hpEvents: [{
+        id: "sitrus",
+        effectId: "sitrus-berry-heal",
+        enabled: true,
+        sequenceContext: "currentMove",
+      }],
+    };
+    const calculateHit = fixedDamageCalculator({
+      "repeat-direct": 55,
+      "repeat-sitrus": 55,
+    });
+
+    expect(evaluateScenario(
+      defender,
+      makeScenario("direct-only", [directHit], 2, 1),
+      { calculateHit },
+    ).passed).toBe(false);
+    expect(evaluateScenario(
+      defender,
+      makeScenario("with-sitrus", [sitrusHit], 2, 1),
+      { calculateHit },
+    )).toMatchObject({
+      passed: true,
+      survivalProbability: 1,
+      hpEventEvaluations: [
+        expect.objectContaining({
+          effectId: "sitrus-berry-heal",
+          healing: 25,
+          applied: true,
+        }),
+        expect.objectContaining({
+          effectId: "sitrus-berry-heal",
+          applied: false,
+        }),
+      ],
+    });
+  });
+
   it("drops an event-aware candidate that fails final revalidation", () => {
     const defender = makeHundredHpDefender({
       ...zeroEvs,

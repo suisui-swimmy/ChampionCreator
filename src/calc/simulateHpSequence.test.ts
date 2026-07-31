@@ -56,11 +56,13 @@ const makeBuild = (
 const makeEvent = (
   id: string,
   effectId: HpEvent["effectId"],
+  options: Pick<HpEvent, "toxicStage" | "spikesLayers"> = {},
 ): HpEvent => ({
   id,
   effectId,
   enabled: true,
   sequenceContext: "currentMove",
+  ...options,
 });
 
 const makeCard = (
@@ -300,6 +302,31 @@ describe("simulateHpSequence", () => {
     expect(getOnlyStateHp(result, defender.id)).toBe(93);
   });
 
+  it("continues defender end-of-turn events after Life Orb KOs the attacker", () => {
+    const attacker = makeBuild("attacker", "ヌケニン");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+
+    const result = simulateHpSequence({
+      cards: [makeCard(attacker, defender, [[1]], [
+        makeEvent("life-orb", "life-orb-recoil"),
+        makeEvent("sand", "sandstorm-damage"),
+      ])],
+    });
+
+    expect(getOnlyStateHp(result, attacker.id)).toBe(0);
+    expect(getOnlyStateHp(result, defender.id)).toBe(93);
+    expect(result.hpEventEvaluations.map((evaluation) => ({
+      effectId: evaluation.effectId,
+      applied: evaluation.applied,
+    }))).toEqual([
+      { effectId: "life-orb-recoil", applied: true },
+      { effectId: "sandstorm-damage", applied: true },
+    ]);
+  });
+
   it("includes per-turn sand after a completed repeat prefix even when its card is not complete", () => {
     const attacker = makeBuild("attacker");
     const defender = makeBuild("defender", "ミュウ", {
@@ -335,5 +362,134 @@ describe("simulateHpSequence", () => {
     expect(getOnlyStateHp(result, attacker.id)).toBe(191);
     expect(getOnlyStateHp(result, defender.id)).toBe(98);
     expect(result.hpEventEvaluations).toEqual([]);
+  });
+
+  it("applies entry hazards before the direct hit", () => {
+    const attacker = makeBuild("attacker");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+
+    const result = simulateHpSequence({
+      cards: [makeCard(attacker, defender, [[88]], [
+        makeEvent("rocks", "stealth-rock-damage"),
+      ])],
+    });
+
+    expect(result.maxHpByBuildId[defender.id]).toBe(100);
+    expect(getOnlyStateHp(result, defender.id)).toBe(0);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "stealth-rock-damage",
+        timing: "onEntry",
+        damage: 12,
+        applied: true,
+      }),
+    ]);
+  });
+
+  it("increments toxic stage once per completed move use", () => {
+    const attacker = makeBuild("attacker");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const card = makeCard(attacker, defender, [[0]], [
+      makeEvent("toxic", "toxic-damage", { toxicStage: 1 }),
+    ]);
+    card.moveUses = [
+      { id: "move-1", damageRollsByHit: [[0]] },
+      { id: "move-2", damageRollsByHit: [[0]] },
+    ];
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(82);
+    expect(result.hpEventEvaluations.map((evaluation) => ({
+      occurrence: evaluation.occurrence,
+      label: evaluation.label,
+      damage: evaluation.damage,
+    }))).toEqual([
+      { occurrence: 1, label: "もうどくダメージ（1段階）", damage: 6 },
+      { occurrence: 2, label: "もうどくダメージ（2段階）", damage: 12 },
+    ]);
+  });
+
+  it("orders weather, status, Salt Cure, and Leftovers at turn end", () => {
+    const attacker = makeBuild("attacker");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+
+    const result = simulateHpSequence({
+      cards: [makeCard(attacker, defender, [[1]], [
+        makeEvent("leftovers", "leftovers-heal"),
+        makeEvent("salt", "salt-cure-damage"),
+        makeEvent("burn", "burn-damage"),
+        makeEvent("sand", "sandstorm-damage"),
+      ])],
+    });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(87);
+    expect(result.hpEventEvaluations.map((evaluation) => evaluation.effectId)).toEqual([
+      "sandstorm-damage",
+      "burn-damage",
+      "salt-cure-damage",
+      "leftovers-heal",
+    ]);
+  });
+
+  it("triggers Sitrus Berry between multi-hit damage rolls and only once", () => {
+    const attacker = makeBuild("attacker");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+
+    const result = simulateHpSequence({
+      cards: [makeCard(attacker, defender, [[60], [30]], [
+        makeEvent("sitrus", "sitrus-berry-heal"),
+      ])],
+    });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(35);
+    expect(result.hpEventEvaluations.map((evaluation) => ({
+      occurrence: evaluation.occurrence,
+      healing: evaluation.healing,
+      applied: evaluation.applied,
+      activationProbability: evaluation.activationProbability,
+    }))).toEqual([
+      { occurrence: 1, healing: 25, applied: true, activationProbability: 1 },
+      { occurrence: 2, healing: 25, applied: false, activationProbability: 0 },
+    ]);
+  });
+
+  it("keeps Sitrus activation branch-specific at the half-HP boundary", () => {
+    const attacker = makeBuild("attacker");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+
+    const result = simulateHpSequence({
+      cards: [makeCard(attacker, defender, [[49, 50]], [
+        makeEvent("sitrus", "sitrus-berry-heal"),
+      ])],
+    });
+
+    expect(result.states).toEqual([
+      { hpByBuildId: { attacker: 175, defender: 51 }, probability: 0.5 },
+      { hpByBuildId: { attacker: 175, defender: 75 }, probability: 0.5 },
+    ]);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "sitrus-berry-heal",
+        healing: 25,
+        activationProbability: 0.5,
+        applied: true,
+      }),
+    ]);
   });
 });

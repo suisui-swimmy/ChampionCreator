@@ -309,6 +309,18 @@ describe("buildDefenceSearchInput", () => {
             effectId: "life-orb-recoil",
             enabled: true,
           },
+          {
+            id: "toxic",
+            effectId: "toxic-damage",
+            enabled: true,
+            toxicStage: 4,
+          },
+          {
+            id: "spikes",
+            effectId: "spikes-damage",
+            enabled: true,
+            spikesLayers: 3,
+          },
         ],
       })),
     }]);
@@ -325,6 +337,20 @@ describe("buildDefenceSearchInput", () => {
         id: "life-orb",
         effectId: "life-orb-recoil",
         enabled: true,
+        sequenceContext: "currentMove",
+      },
+      {
+        id: "toxic",
+        effectId: "toxic-damage",
+        enabled: true,
+        toxicStage: 4,
+        sequenceContext: "currentMove",
+      },
+      {
+        id: "spikes",
+        effectId: "spikes-damage",
+        enabled: true,
+        spikesLayers: 3,
         sequenceContext: "currentMove",
       },
     ]);
@@ -877,6 +903,12 @@ describe("buildOffenseAdjustmentInput", () => {
           effectId: "sandstorm-damage",
           enabled: true,
         },
+        {
+          id: "toxic",
+          effectId: "toxic-damage",
+          enabled: true,
+          toxicStage: 3,
+        },
       ],
       targetKoProbabilityPercent: 75,
       reflect: true,
@@ -902,6 +934,13 @@ describe("buildOffenseAdjustmentInput", () => {
         id: "sand",
         effectId: "sandstorm-damage",
         enabled: true,
+        sequenceContext: "currentMove",
+      },
+      {
+        id: "toxic",
+        effectId: "toxic-damage",
+        enabled: true,
+        toxicStage: 3,
         sequenceContext: "currentMove",
       },
     ]);

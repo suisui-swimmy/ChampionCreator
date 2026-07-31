@@ -1,8 +1,16 @@
-export const CHAMPIONS_HP_RULESET_ID = "pokemon-champions-hp-events-v3";
+export const CHAMPIONS_HP_RULESET_ID = "pokemon-champions-hp-events-v4";
 
 export const KNOWN_HP_EVENT_EFFECT_IDS = [
   "life-orb-recoil",
   "sandstorm-damage",
+  "poison-damage",
+  "toxic-damage",
+  "burn-damage",
+  "stealth-rock-damage",
+  "spikes-damage",
+  "salt-cure-damage",
+  "sitrus-berry-heal",
+  "leftovers-heal",
 ] as const;
 
 export type SupportedHpEventEffectId = typeof KNOWN_HP_EVENT_EFFECT_IDS[number];
@@ -23,6 +31,8 @@ export interface HpEvent {
   effectId: string;
   enabled: boolean;
   sequenceContext: HpEventSequenceContext;
+  toxicStage?: number;
+  spikesLayers?: number;
 }
 
 export interface HpEventEvaluation {
@@ -37,6 +47,7 @@ export interface HpEventEvaluation {
   sequenceContext: HpEventSequenceContext;
   occurrence: number;
   damage: number;
+  healing?: number;
   applied: boolean;
   activationProbability: number;
   supported: boolean;

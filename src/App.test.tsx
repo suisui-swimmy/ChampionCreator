@@ -208,7 +208,7 @@ describe("App", () => {
     expect(html).toContain("assets/ui/arrow-up-circle.svg");
     expect(html).not.toContain("assets/ui/arrow-down-circle.svg");
     expect(html.match(/>HP推移<\/span>/g)).toHaveLength(2);
-    expect(html.match(/>定数ダメージを追加<\/button>/g)).toHaveLength(2);
+    expect(html.match(/>HP変化を追加<\/button>/g)).toHaveLength(2);
     expect(html).not.toContain('aria-label="Sライン結果"');
     expect(html).toContain("シナリオを追加");
     expect(html).toContain('aria-label="探索操作"');

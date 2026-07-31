@@ -70,6 +70,8 @@ export interface HpEventFormState {
   id: string;
   effectId: string;
   enabled: boolean;
+  toxicStage?: number;
+  spikesLayers?: number;
 }
 
 export interface TargetFormState {
@@ -376,6 +378,12 @@ const toDomainHpEvents = (
   id: event.id,
   effectId: event.effectId,
   enabled: event.enabled,
+  ...(event.toxicStage !== undefined
+    ? { toxicStage: clampInt(event.toxicStage, 1, 15) }
+    : {}),
+  ...(event.spikesLayers !== undefined
+    ? { spikesLayers: clampInt(event.spikesLayers, 1, 3) }
+    : {}),
 }));
 
 const mustResolve = <K extends EntityKind>(

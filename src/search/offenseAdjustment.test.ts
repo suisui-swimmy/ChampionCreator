@@ -182,6 +182,67 @@ describe("calculateOffenseAdjustment", () => {
     expect(withSandstorm.description).toBe(directOnly.description);
   });
 
+  it("lets Sitrus Berry recovery prevent an otherwise guaranteed residual KO", () => {
+    const attackerBuild = {
+      ...makeBuild("attacker", "ラッキー"),
+      level: 94,
+    };
+    const defenderBuild = {
+      ...makeBuild("defender", "ミュウ"),
+      level: 30,
+      ivs: { ...defaultIvs, hp: 0 },
+    };
+    const input = makeInput("ちきゅうなげ", {
+      attackerBuild,
+      defenderBuild,
+      field: { ...emptyField, weather: "sand" },
+    });
+    const sandstormEvent = {
+      id: "sandstorm",
+      effectId: "sandstorm-damage",
+      enabled: true,
+      sequenceContext: "currentMove",
+    } satisfies HpEvent;
+    const sitrusEvent = {
+      id: "sitrus",
+      effectId: "sitrus-berry-heal",
+      enabled: true,
+      sequenceContext: "currentMove",
+    } satisfies HpEvent;
+
+    const withSandstorm = calculateOffenseAdjustment({
+      ...input,
+      hpEvents: [sandstormEvent],
+    })[0];
+    const withSitrus = calculateOffenseAdjustment({
+      ...input,
+      hpEvents: [sandstormEvent, sitrusEvent],
+    })[0];
+
+    expect(withSandstorm).toMatchObject({
+      status: "fixed",
+      passed: true,
+      koProbability: 1,
+    });
+    expect(withSitrus).toMatchObject({
+      status: "fixed",
+      passed: false,
+      koProbability: 0,
+      hpEventEvaluations: [
+        expect.objectContaining({
+          effectId: "sitrus-berry-heal",
+          healing: 25,
+          applied: true,
+        }),
+        expect.objectContaining({
+          effectId: "sandstorm-damage",
+          damage: 6,
+          applied: true,
+        }),
+      ],
+    });
+  });
+
   it("counts a defender KO even when Life Orb recoil then faints the attacker", () => {
     const attackerBuild = {
       ...makeBuild("attacker", "ヌケニン", "いじっぱり", { ...zeroStatPoints, atk: 32 }),

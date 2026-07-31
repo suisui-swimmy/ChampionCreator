@@ -1,5 +1,8 @@
 import { calculate, Field, Generations, Move, Pokemon, Side, type Result, type State } from "@smogon/calc";
-import { getFinalSpeed } from "@smogon/calc/dist/mechanics/util";
+import {
+  getFinalSpeed,
+  isGrounded as isSmogonGroundedInternal,
+} from "@smogon/calc/dist/mechanics/util";
 import type {
   Build,
   FieldState,
@@ -102,6 +105,43 @@ export const toSmogonPokemon = (
     boosts,
     abilityOn,
   });
+
+export const getSmogonTypeEffectiveness = (
+  attackType: string,
+  defenderBuild: Build,
+): number => {
+  const defender = toSmogonPokemon(defenderBuild);
+  const typeId = attackType.toLowerCase() as Parameters<typeof SMOGON_GENERATION.types.get>[0];
+  const attackingType = SMOGON_GENERATION.types.get(typeId);
+  if (!attackingType) {
+    return 1;
+  }
+
+  const effectiveness = attackingType.effectiveness as Readonly<Record<string, number | undefined>>;
+  const defendingTypes = defender.teraType && defender.teraType !== "Stellar"
+    ? [defender.teraType]
+    : defender.types;
+  return defendingTypes.reduce(
+    (multiplier, type) => multiplier * (effectiveness[type] ?? 1),
+    1,
+  );
+};
+
+export const isSmogonGrounded = (
+  build: Build,
+  fieldState: FieldState = {
+    gameType: "singles",
+    weather: "none",
+    terrain: "none",
+  },
+): boolean => isSmogonGroundedInternal(
+  toSmogonPokemon(build),
+  new Field({
+    gameType: gameTypeByFieldState[fieldState.gameType],
+    weather: weatherByFieldState[fieldState.weather],
+    terrain: terrainByFieldState[fieldState.terrain],
+  }),
+);
 
 export interface SmogonFinalSpeedOptions {
   boosts?: StatBoostTable;

@@ -13,7 +13,7 @@ import {
 import type { PokemonStatus } from "../domain/model";
 import { isSupportedHpEventEffectId } from "../domain/hpEvents";
 
-export const SHARE_SCHEMA_VERSION = 5;
+export const SHARE_SCHEMA_VERSION = 6;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -35,7 +35,19 @@ const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["o
 const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["outspeed", "tie"]);
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | typeof SHARE_SCHEMA_VERSION;
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | typeof SHARE_SCHEMA_VERSION;
+
+const normalizeHpEventNumber = (
+  value: unknown,
+  min: number,
+  max: number,
+): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, Math.trunc(parsed)));
+};
 
 const normalizeHpEvents = (
   value: unknown,
@@ -56,6 +68,12 @@ const normalizeHpEvents = (
           : `hp-event-${index + 1}`,
         effectId,
         enabled: event.enabled === true && hasSupportedEffect,
+        ...(effectId === "toxic-damage"
+          ? { toxicStage: normalizeHpEventNumber(event.toxicStage, 1, 15) }
+          : {}),
+        ...(effectId === "spikes-damage"
+          ? { spikesLayers: normalizeHpEventNumber(event.spikesLayers, 1, 3) }
+          : {}),
       };
     });
 };
@@ -203,6 +221,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 5
       && parsed.schemaVersion !== 4
       && parsed.schemaVersion !== 3
       && parsed.schemaVersion !== 2

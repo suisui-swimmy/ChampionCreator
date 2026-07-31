@@ -2752,6 +2752,23 @@ textarea {
   font-weight: 750;
 }
 
+.hp-event-parameter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #c8d8d4;
+  font-size: 9px;
+}
+
+.hp-event-parameter .number-stepper {
+  width: 112px;
+}
+
+.hp-event-parameter .number-stepper input {
+  min-width: 0;
+}
+
 .hp-event-formula,
 .hp-event-warning,
 .hp-event-help,

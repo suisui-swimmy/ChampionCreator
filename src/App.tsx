@@ -24,6 +24,7 @@ import type {
   HpEventEvaluation,
   HpEventFrequency,
   HpEventTiming,
+  SupportedHpEventEffectId,
 } from "./domain/hpEvents";
 import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo } from "./appVersion";
@@ -302,14 +303,23 @@ const speedMoveModifierOptions = [
   { value: "trick-room", label: "トリックルーム" },
 ] as const;
 
-type HpEventPresetId = "life-orb-recoil" | "sandstorm-damage";
+type HpEventPresetId = SupportedHpEventEffectId;
 
 const hpEventPresetOptions: Array<{ value: HpEventPresetId; label: string }> = [
   { value: "life-orb-recoil", label: "いのちのたま反動" },
   { value: "sandstorm-damage", label: "すなあらしダメージ" },
+  { value: "poison-damage", label: "どくダメージ" },
+  { value: "toxic-damage", label: "もうどくダメージ" },
+  { value: "burn-damage", label: "やけどダメージ" },
+  { value: "stealth-rock-damage", label: "ステルスロック" },
+  { value: "spikes-damage", label: "まきびし" },
+  { value: "salt-cure-damage", label: "しおづけダメージ" },
+  { value: "sitrus-berry-heal", label: "オボンのみ回復" },
+  { value: "leftovers-heal", label: "たべのこし回復" },
 ];
 
 const hpEventTimingLabels: Partial<Record<HpEventTiming, string>> = {
+  onEntry: "登場時・攻撃前",
   beforeMove: "技使用前",
   afterHit: "ヒット後",
   afterMove: "技使用後",
@@ -326,6 +336,9 @@ const hpEventFrequencyLabels: Record<HpEventFrequency, string> = {
 const hpEventPresetLabels: Record<HpEventPresetId, string> = Object.fromEntries(
   hpEventPresetOptions.map((option) => [option.value, option.label]),
 ) as Record<HpEventPresetId, string>;
+const hpEventPresetIds = new Set<HpEventPresetId>(
+  hpEventPresetOptions.map((option) => option.value),
+);
 
 const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | undefined => {
   const result = resolveEntity(kind, input);
@@ -414,7 +427,10 @@ const formatHpEventEvaluation = (
   const probabilityLabel = evaluation.activationProbability < 1 - 1e-12
     ? ` / 発動 ${formatPercent(evaluation.activationProbability)}`
     : "";
-  return `${evaluation.label} / ${subjectLabel} / ${orderLabel}: ${evaluation.damage}ダメージ${probabilityLabel}`;
+  const hpChangeLabel = (evaluation.healing ?? 0) > 0
+    ? `${evaluation.healing}回復`
+    : `${evaluation.damage}ダメージ`;
+  return `${evaluation.label} / ${subjectLabel} / ${orderLabel}: ${hpChangeLabel}${probabilityLabel}`;
 };
 
 const formatBulkIndex = (value: number): string =>
@@ -4180,13 +4196,22 @@ type AttackCardProps = {
 };
 
 const isHpEventPresetId = (value: string): value is HpEventPresetId =>
-  value === "life-orb-recoil" || value === "sandstorm-damage";
+  hpEventPresetIds.has(value as HpEventPresetId);
 
 const getHpEventPresetLabel = (effectId: string): string =>
   isHpEventPresetId(effectId) ? hpEventPresetLabels[effectId] : "未対応のHP変化";
 
-const getHpEventFormulaLabel = (effectId: string): string =>
-  getHpEventRuleDefinition(effectId)?.formulaLabel ?? "現在のアプリでは計算されません";
+const getHpEventFormulaLabel = (event: HpEventFormState): string => {
+  const formula = getHpEventRuleDefinition(event.effectId)?.formulaLabel
+    ?? "現在のアプリでは計算されません";
+  if (event.effectId === "toxic-damage") {
+    return `${formula}（開始${clampNumberInput(event.toxicStage ?? 1, 1, 15)}段階）`;
+  }
+  if (event.effectId === "spikes-damage") {
+    return `${formula}（${clampNumberInput(event.spikesLayers ?? 1, 1, 3)}層）`;
+  }
+  return formula;
+};
 
 const getHpEventRuleTimingLabel = (effectId: string): string => {
   const definition = getHpEventRuleDefinition(effectId);
@@ -4238,11 +4263,23 @@ function HpEventsEditor({
       id: `hp-event-${Date.now()}-${hpEvents.length}`,
       effectId: presetId,
       enabled: true,
+      ...(presetId === "toxic-damage" ? { toxicStage: 1 } : {}),
+      ...(presetId === "spikes-damage" ? { spikesLayers: 1 } : {}),
     };
 
     updateEvents([...hpEvents, nextEvent]);
     if (presetId === "sandstorm-damage" && attack.weather !== "sand") {
       onUpdateAttack(scenarioId, attack.id, "weather", "sand");
+    }
+    const statusByEffect: Partial<Record<HpEventPresetId, PokemonStatus>> = {
+      "poison-damage": "psn",
+      "toxic-damage": "tox",
+      "burn-damage": "brn",
+    };
+    const status = statusByEffect[presetId];
+    if (status) {
+      const statusKey = adjustmentType === "offense" ? "attackerStatus" : "defenderStatus";
+      onUpdateAttack(scenarioId, attack.id, statusKey, status);
     }
   };
 
@@ -4265,13 +4302,30 @@ function HpEventsEditor({
               const moveUserItemInput = adjustmentType === "offense"
                 ? targetForm.itemInput
                 : attack.attackerItemInput;
+              const moveDefenderItemInput = adjustmentType === "offense"
+                ? attack.attackerItemInput
+                : targetForm.itemInput;
+              const moveDefenderStatus = adjustmentType === "offense"
+                ? attack.attackerStatus
+                : attack.defenderStatus;
               const hasLifeOrb = resolveCanonicalEntityName("item", moveUserItemInput) === "Life Orb";
+              const defenderItem = resolveCanonicalEntityName("item", moveDefenderItemInput);
               const mismatchMessage = !supported
                 ? `未対応のHP変化です: ${hpEvent.effectId}`
                 : hpEvent.effectId === "life-orb-recoil" && !hasLifeOrb
                   ? "技使用者の持ち物が「いのちのたま」ではありません。発動前提で計算します"
                   : hpEvent.effectId === "sandstorm-damage" && attack.weather !== "sand"
                     ? "天候が「砂」ではありません。発動前提で計算します"
+                    : hpEvent.effectId === "poison-damage" && moveDefenderStatus !== "psn"
+                      ? "HP変化対象が通常の「どく」状態ではありません。発動前提で計算します"
+                      : hpEvent.effectId === "toxic-damage" && moveDefenderStatus !== "tox"
+                        ? "HP変化対象が「もうどく」状態ではありません。発動前提で計算します"
+                        : hpEvent.effectId === "burn-damage" && moveDefenderStatus !== "brn"
+                          ? "HP変化対象が「やけど」状態ではありません。発動前提で計算します"
+                          : hpEvent.effectId === "sitrus-berry-heal" && defenderItem !== "Sitrus Berry"
+                            ? "HP変化対象の持ち物が「オボンのみ」ではありません。発動前提で計算します"
+                            : hpEvent.effectId === "leftovers-heal" && defenderItem !== "Leftovers"
+                              ? "HP変化対象の持ち物が「たべのこし」ではありません。発動前提で計算します"
                     : null;
 
               return (
@@ -4310,7 +4364,39 @@ function HpEventsEditor({
                       <span>{getHpEventRuleTimingLabel(hpEvent.effectId)}</span>
                     </small>
                   </div>
-                  <small className="hp-event-formula">{getHpEventFormulaLabel(hpEvent.effectId)}</small>
+                  {hpEvent.effectId === "toxic-damage" ? (
+                    <label className="hp-event-parameter">
+                      <span>開始段階</span>
+                      <NumberStepper
+                        label="もうどく開始段階"
+                        value={hpEvent.toxicStage ?? 1}
+                        min={1}
+                        max={15}
+                        onChange={(value) => updateEvents(hpEvents.map((candidate) => (
+                          candidate.id === hpEvent.id
+                            ? { ...candidate, toxicStage: value }
+                            : candidate
+                        )))}
+                      />
+                    </label>
+                  ) : null}
+                  {hpEvent.effectId === "spikes-damage" ? (
+                    <label className="hp-event-parameter">
+                      <span>層数</span>
+                      <NumberStepper
+                        label="まきびしの層数"
+                        value={hpEvent.spikesLayers ?? 1}
+                        min={1}
+                        max={3}
+                        onChange={(value) => updateEvents(hpEvents.map((candidate) => (
+                          candidate.id === hpEvent.id
+                            ? { ...candidate, spikesLayers: value }
+                            : candidate
+                        )))}
+                      />
+                    </label>
+                  ) : null}
+                  <small className="hp-event-formula">{getHpEventFormulaLabel(hpEvent)}</small>
                   {mismatchMessage ? <small className="hp-event-warning">{mismatchMessage}</small> : null}
                 </li>
               );
@@ -4322,19 +4408,19 @@ function HpEventsEditor({
         <div className="hp-event-add-row">
           <SelectField
             compact
-            label="追加する定数ダメージ"
+            label="追加するHP変化"
             value={presetId}
             options={hpEventPresetOptions}
             onChange={setPresetId}
           />
           <Button variant="ghost" size="small" onClick={addEvent}>
-            定数ダメージを追加
+            HP変化を追加
           </Button>
         </div>
         <p className="hp-event-help">
-          対象・発動タイミング・頻度は効果ごとに固定です。「いのちのたま」は技使用者、
-          「すなあらし」は被弾側へ適用します。
-          技失敗や「ちからずく」などで発動しない場合は追加しないでください。
+          対象・発動順・頻度は効果ごとに固定です。設置物は攻撃前、オボンは条件成立ヒット後、
+          いのちのたまは技後、天候・状態異常・しおづけ・たべのこしはターン終了時の順で評価します。
+          発動しない条件では追加しないでください。
         </p>
       </div>
     </details>

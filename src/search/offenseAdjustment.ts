@@ -193,6 +193,7 @@ const evaluateCandidate = (
         damageRollsByHit: hitEvaluation.damageRollsByHit ?? [hitEvaluation.damageRolls],
       }],
       hpEvents: input.hpEvents ?? [],
+      field: input.field,
     }],
   });
 

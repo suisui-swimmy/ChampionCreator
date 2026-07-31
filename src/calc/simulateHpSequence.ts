@@ -1,4 +1,4 @@
-import type { Build } from "../domain/model";
+import type { Build, FieldState } from "../domain/model";
 import type {
   HpEvent,
   HpEventEvaluation,
@@ -24,6 +24,7 @@ export interface HpSequenceCard {
   defenderBuild: Build;
   moveUses: HpSequenceMoveUse[];
   hpEvents?: HpEvent[];
+  field?: FieldState;
   completed?: boolean;
 }
 
@@ -45,6 +46,7 @@ export interface HpSequenceSimulationResult {
 interface InternalHpSequenceState extends HpSequenceState {
   moveExecuted: boolean;
   moveDealtDamage: boolean;
+  consumedEventKeys: string[];
 }
 
 type HpDistribution = Map<string, InternalHpSequenceState>;
@@ -59,7 +61,7 @@ const serializeHpState = (hpByBuildId: Record<string, number>): string =>
     .join("|");
 
 const serializeInternalState = (state: InternalHpSequenceState): string =>
-  `${serializeHpState(state.hpByBuildId)}|executed:${state.moveExecuted ? 1 : 0}|damaged:${state.moveDealtDamage ? 1 : 0}`;
+  `${serializeHpState(state.hpByBuildId)}|executed:${state.moveExecuted ? 1 : 0}|damaged:${state.moveDealtDamage ? 1 : 0}|consumed:${[...state.consumedEventKeys].sort().join(",")}`;
 
 const addState = (
   distribution: HpDistribution,
@@ -67,6 +69,7 @@ const addState = (
   probability: number,
   moveExecuted: boolean,
   moveDealtDamage: boolean,
+  consumedEventKeys: readonly string[] = [],
 ): void => {
   if (probability <= 0) {
     return;
@@ -77,6 +80,7 @@ const addState = (
     probability,
     moveExecuted,
     moveDealtDamage,
+    consumedEventKeys: [...consumedEventKeys],
   };
   const key = serializeInternalState(state);
   const existing = distribution.get(key);
@@ -91,7 +95,14 @@ const addState = (
 const resetMoveResolution = (distribution: HpDistribution): HpDistribution => {
   const reset: HpDistribution = new Map();
   for (const state of distribution.values()) {
-    addState(reset, { ...state.hpByBuildId }, state.probability, false, false);
+    addState(
+      reset,
+      { ...state.hpByBuildId },
+      state.probability,
+      false,
+      false,
+      state.consumedEventKeys,
+    );
   }
   return reset;
 };
@@ -120,6 +131,7 @@ const applyDirectHit = (
         state.probability,
         state.moveExecuted,
         state.moveDealtDamage,
+        state.consumedEventKeys,
       );
       continue;
     }
@@ -135,6 +147,7 @@ const applyDirectHit = (
         state.probability * rollProbability,
         true,
         state.moveDealtDamage || appliedDamage > 0,
+        state.consumedEventKeys,
       );
     }
   }
@@ -146,16 +159,27 @@ const canApplyHpEvent = (
   state: InternalHpSequenceState,
   card: HpSequenceCard,
   event: HpEvent,
+  damage: number,
+  healing: number,
+  consumptionKey: string,
 ): boolean => {
   const attackerHp = state.hpByBuildId[card.attackerBuild.id] ?? 0;
-  const defenderHp = state.hpByBuildId[card.defenderBuild.id] ?? 0;
   const subject = getHpEventSubject(event);
-  const subjectBuildId = subject === "attacker"
-    ? card.attackerBuild.id
-    : card.defenderBuild.id;
-  const subjectHp = state.hpByBuildId[subjectBuildId] ?? 0;
+  const subjectBuild = subject === "attacker"
+    ? card.attackerBuild
+    : card.defenderBuild;
+  const subjectHp = state.hpByBuildId[subjectBuild.id] ?? 0;
+  const subjectMaxHp = toSmogonPokemon(subjectBuild).maxHP();
 
   if (subjectHp <= 0) {
+    return false;
+  }
+
+  const ruleDefinition = getHpEventRuleDefinition(event.effectId);
+  if (
+    ruleDefinition?.maxActivations
+    && state.consumedEventKeys.includes(consumptionKey)
+  ) {
     return false;
   }
 
@@ -166,7 +190,7 @@ const canApplyHpEvent = (
   // Life Orb recoil is part of move resolution and still happens after the
   // direct hit KOs the defender. Other later residual events stop on a faint.
   if (event.effectId === "life-orb-recoil") {
-    const timing = getHpEventRuleDefinition(event.effectId)?.timing;
+    const timing = ruleDefinition?.timing;
     return (
       timing === "afterMove"
       && subject === "attacker"
@@ -176,7 +200,22 @@ const canApplyHpEvent = (
     );
   }
 
-  return attackerHp > 0 && defenderHp > 0;
+  if (
+    event.effectId === "sitrus-berry-heal"
+    && (
+      !state.moveExecuted
+      || !state.moveDealtDamage
+      || subjectHp * 2 > subjectMaxHp
+    )
+  ) {
+    return false;
+  }
+
+  if (healing > 0 && subjectHp >= subjectMaxHp) {
+    return false;
+  }
+
+  return damage > 0 || healing > 0;
 };
 
 const applyHpEvent = (
@@ -192,42 +231,67 @@ const applyHpEvent = (
     event,
     attackerBuild: card.attackerBuild,
     defenderBuild: card.defenderBuild,
+    field: card.field,
+    occurrence,
   });
   const ruleDefinition = getHpEventRuleDefinition(event.effectId);
   const subject = ruleDefinition?.subject ?? "defender";
   const subjectBuild = subject === "attacker"
     ? card.attackerBuild
     : card.defenderBuild;
+  const healing = ruleResult.healing ?? 0;
+  const consumptionKey = `${subjectBuild.id}:${event.effectId}`;
   let activationProbability = 0;
   const nextDistribution: HpDistribution = new Map();
 
   for (const state of distribution.values()) {
-    const eligible = event.enabled && canApplyHpEvent(state, card, event);
-    if (eligible) {
-      activationProbability += state.probability;
-    }
-
-    if (!eligible || ruleResult.damage <= 0) {
+    const eligible = event.enabled && canApplyHpEvent(
+      state,
+      card,
+      event,
+      ruleResult.damage,
+      healing,
+      consumptionKey,
+    );
+    if (!eligible) {
       addState(
         nextDistribution,
         { ...state.hpByBuildId },
         state.probability,
         state.moveExecuted,
         state.moveDealtDamage,
+        state.consumedEventKeys,
       );
       continue;
     }
 
     const currentHp = state.hpByBuildId[subjectBuild.id] ?? 0;
+    const maxHp = toSmogonPokemon(subjectBuild).maxHP();
+    const nextHp = Math.min(
+      maxHp,
+      Math.max(0, currentHp - ruleResult.damage + healing),
+    );
+    const didApply = nextHp !== currentHp;
+    if (didApply) {
+      activationProbability += state.probability;
+    }
+    const consumedEventKeys = (
+      didApply
+      && ruleDefinition?.maxActivations
+      && !state.consumedEventKeys.includes(consumptionKey)
+    )
+      ? [...state.consumedEventKeys, consumptionKey]
+      : state.consumedEventKeys;
     addState(
       nextDistribution,
       {
         ...state.hpByBuildId,
-        [subjectBuild.id]: Math.max(0, currentHp - ruleResult.damage),
+        [subjectBuild.id]: nextHp,
       },
       state.probability,
       state.moveExecuted,
       state.moveDealtDamage,
+      consumedEventKeys,
     );
   }
 
@@ -245,15 +309,20 @@ const applyHpEvent = (
       sequenceContext: event.sequenceContext,
       occurrence,
       damage: ruleResult.damage,
+      ...(healing > 0 ? { healing } : {}),
       applied: (
         event.enabled
         && ruleResult.supported
-        && ruleResult.damage > 0
+        && (ruleResult.damage > 0 || healing > 0)
         && activationProbability > 0
       ),
       activationProbability,
       supported: ruleResult.supported,
-      reason: ruleResult.reason,
+      reason: ruleResult.reason ?? (
+        event.effectId === "sitrus-berry-heal" && activationProbability <= 0
+          ? "HP条件を満たしていないか、すでに発動済みです"
+          : undefined
+      ),
     },
   };
 };
@@ -278,12 +347,14 @@ const getInitialDistribution = (
         probability: 1,
         moveExecuted: false,
         moveDealtDamage: false,
+        consumedEventKeys: [],
       }),
       {
         hpByBuildId: initialHp,
         probability: 1,
         moveExecuted: false,
         moveDealtDamage: false,
+        consumedEventKeys: [],
       },
     ]]),
     maxHpByBuildId,
@@ -313,6 +384,12 @@ export const simulateHpSequence = ({
   const getEventFrequency = (event: HpEvent): HpEventRuleFrequency =>
     getHpEventRuleDefinition(event.effectId)?.frequency ?? "once";
 
+  const sortEvents = (events: readonly HpEvent[]): HpEvent[] =>
+    [...events].sort((left, right) => (
+      (getHpEventRuleDefinition(left.effectId)?.priority ?? 0)
+      - (getHpEventRuleDefinition(right.effectId)?.priority ?? 0)
+    ));
+
   const shouldRunOnce = (
     isFirstMove: boolean,
     isLastMove: boolean,
@@ -327,11 +404,17 @@ export const simulateHpSequence = ({
   for (const card of cards) {
     const hpEvents = card.hpEvents ?? [];
     const priorMoveEvents = hpEvents.filter((event) => event.sequenceContext === "priorMove");
-    const currentMoveEvents = hpEvents.filter((event) => event.sequenceContext === "currentMove");
+    const currentMoveEvents = sortEvents(
+      hpEvents.filter((event) => event.sequenceContext === "currentMove"),
+    );
     const moveUses = card.moveUses;
     const cardCompleted = card.completed !== false;
 
     for (const event of priorMoveEvents) {
+      runEvent(card, event);
+    }
+
+    for (const event of currentMoveEvents.filter((candidate) => getEventTiming(candidate) === "onEntry")) {
       runEvent(card, event);
     }
 
@@ -359,6 +442,13 @@ export const simulateHpSequence = ({
           card.defenderBuild.id,
           damageRolls,
         );
+
+        for (const event of currentMoveEvents.filter((candidate) => getEventTiming(candidate) === "afterHit")) {
+          const frequency = getEventFrequency(event);
+          if (frequency === "perHit" || frequency === "once") {
+            runEvent(card, event);
+          }
+        }
       }
 
       if (moveUse.completed !== false) {

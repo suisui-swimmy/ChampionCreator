@@ -163,7 +163,7 @@ describe("shareState", () => {
     expect(parsed.offenseAdjustment.hpEvents).toEqual([]);
   });
 
-  it.each([3, 4] as const)(
+  it.each([3, 4, 5] as const)(
     "migrates schema v%s events while ignoring legacy user-selected timing and subject",
     (schemaVersion) => {
       const [scenario] = createDefaultScenarioForms();
@@ -235,6 +235,64 @@ describe("shareState", () => {
       }]);
     },
   );
+
+  it("round-trips and clamps v6 toxic stages and Spikes layers", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          hpEvents: [
+            {
+              id: "toxic",
+              effectId: "toxic-damage",
+              enabled: true,
+              toxicStage: 99,
+            },
+            {
+              id: "spikes",
+              effectId: "spikes-damage",
+              enabled: true,
+              spikesLayers: 0,
+            },
+          ],
+        }],
+      }],
+      offenseAdjustment: {
+        ...createDefaultOffenseAdjustmentForm(),
+        hpEvents: [{
+          id: "offense-toxic",
+          effectId: "toxic-damage",
+          enabled: true,
+          toxicStage: 4,
+        }],
+      },
+    }));
+
+    expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([
+      {
+        id: "toxic",
+        effectId: "toxic-damage",
+        enabled: true,
+        toxicStage: 15,
+      },
+      {
+        id: "spikes",
+        effectId: "spikes-damage",
+        enabled: true,
+        spikesLayers: 1,
+      },
+    ]);
+    expect(parsed.offenseAdjustment.hpEvents).toEqual([{
+      id: "offense-toxic",
+      effectId: "toxic-damage",
+      enabled: true,
+      toxicStage: 4,
+    }]);
+  });
 
   it("moves the legacy target status into scenario attacks when importing older JSON", () => {
     const parsed = parseShareStateDocument(JSON.stringify({

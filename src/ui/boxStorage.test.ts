@@ -55,7 +55,7 @@ describe("boxStorage", () => {
     expect(parsed[0]?.payload.target.pokemonInput).toBe("メガマフォクシー");
   });
 
-  it.each([3, 4] as const)(
+  it.each([3, 4, 5] as const)(
     "keeps schema v%s HP events while dropping their user-selected timing and subject",
     (schemaVersion) => {
       const scenarios = createDefaultScenarioForms().map((scenario) => ({

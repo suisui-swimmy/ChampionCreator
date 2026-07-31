@@ -9,6 +9,7 @@ import {
   evaluateHpEventRule,
   hpEventRuleDefinitions,
 } from "./hpEventRules";
+import { toSmogonPokemon } from "./smogonAdapter";
 
 const mustResolve = <K extends EntityKind>(kind: K, input: string): EntityRef<K> => {
   const ref = toEntityRef(resolveEntity(kind, input), kind);
@@ -45,6 +46,7 @@ const makeBuild = (
     hpEv?: number;
     abilityInput?: string;
     itemInput?: string;
+    teraTypeInput?: string;
   } = {},
 ): Build => ({
   id,
@@ -58,13 +60,20 @@ const makeBuild = (
   item: options.itemInput
     ? mustResolve("item", options.itemInput)
     : undefined,
+  teraType: options.teraTypeInput
+    ? mustResolve("type", options.teraTypeInput)
+    : undefined,
 });
 
-const makeEvent = (effectId: string): HpEvent => ({
+const makeEvent = (
+  effectId: string,
+  options: Pick<HpEvent, "toxicStage" | "spikesLayers"> = {},
+): HpEvent => ({
   id: effectId,
   effectId,
   enabled: true,
   sequenceContext: "currentMove",
+  ...options,
 });
 
 const attacker = makeBuild("attacker");
@@ -80,6 +89,34 @@ describe("evaluateHpEventRule", () => {
       timing: "endOfTurn",
       frequency: "perTurn",
       subject: "defender",
+    });
+    expect(hpEventRuleDefinitions["stealth-rock-damage"]).toMatchObject({
+      timing: "onEntry",
+      frequency: "once",
+      subject: "defender",
+    });
+    expect(hpEventRuleDefinitions["spikes-damage"]).toMatchObject({
+      timing: "onEntry",
+      frequency: "once",
+      subject: "defender",
+    });
+    expect(hpEventRuleDefinitions["sitrus-berry-heal"]).toMatchObject({
+      timing: "afterHit",
+      frequency: "once",
+      subject: "defender",
+      maxActivations: 1,
+    });
+    expect(hpEventRuleDefinitions["poison-damage"]).toMatchObject({
+      timing: "endOfTurn",
+      priority: 20,
+    });
+    expect(hpEventRuleDefinitions["salt-cure-damage"]).toMatchObject({
+      timing: "endOfTurn",
+      priority: 30,
+    });
+    expect(hpEventRuleDefinitions["leftovers-heal"]).toMatchObject({
+      timing: "endOfTurn",
+      priority: 40,
     });
   });
 
@@ -126,6 +163,147 @@ describe("evaluateHpEventRule", () => {
       supported: true,
       damage: 11,
     });
+  });
+
+  it("uses the documented H=191 status, Salt Cure, and recovery floors", () => {
+    const defender = makeBuild("defender", "ミュウ", { hpEv: 128 });
+    const waterDefender = makeBuild("water-defender", "ミュウ", {
+      hpEv: 128,
+      teraTypeInput: "みず",
+    });
+
+    expect(toSmogonPokemon(defender).maxHP()).toBe(191);
+    expect(evaluateHpEventRule({
+      event: makeEvent("poison-damage"),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+    }).damage).toBe(23);
+    expect(evaluateHpEventRule({
+      event: makeEvent("toxic-damage", { toxicStage: 1 }),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+      occurrence: 1,
+    }).damage).toBe(11);
+    expect(evaluateHpEventRule({
+      event: makeEvent("toxic-damage", { toxicStage: 1 }),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+      occurrence: 2,
+    }).damage).toBe(22);
+    expect(evaluateHpEventRule({
+      event: makeEvent("burn-damage"),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+    }).damage).toBe(11);
+    expect(evaluateHpEventRule({
+      event: makeEvent("salt-cure-damage"),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+    }).damage).toBe(11);
+    expect(evaluateHpEventRule({
+      event: makeEvent("salt-cure-damage"),
+      attackerBuild: attacker,
+      defenderBuild: waterDefender,
+    }).damage).toBe(23);
+    expect(evaluateHpEventRule({
+      event: makeEvent("sitrus-berry-heal"),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+    }).healing).toBe(47);
+    expect(evaluateHpEventRule({
+      event: makeEvent("leftovers-heal"),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+    }).healing).toBe(11);
+  });
+
+  it("applies Spikes layers and Stealth Rock type effectiveness before flooring", () => {
+    const neutralDefender = makeBuild("neutral", "ミュウ", { hpEv: 128 });
+    const fireTeraDefender = makeBuild("fire-tera", "ミュウ", {
+      hpEv: 128,
+      teraTypeInput: "ほのお",
+    });
+    const fourTimesWeakDefender = makeBuild("four-times", "バタフリー");
+    const fourTimesWeakMaxHp = toSmogonPokemon(fourTimesWeakDefender).maxHP();
+
+    expect(evaluateHpEventRule({
+      event: makeEvent("spikes-damage", { spikesLayers: 1 }),
+      attackerBuild: attacker,
+      defenderBuild: neutralDefender,
+    }).damage).toBe(23);
+    expect(evaluateHpEventRule({
+      event: makeEvent("spikes-damage", { spikesLayers: 2 }),
+      attackerBuild: attacker,
+      defenderBuild: neutralDefender,
+    }).damage).toBe(31);
+    expect(evaluateHpEventRule({
+      event: makeEvent("spikes-damage", { spikesLayers: 3 }),
+      attackerBuild: attacker,
+      defenderBuild: neutralDefender,
+    }).damage).toBe(47);
+    expect(evaluateHpEventRule({
+      event: makeEvent("stealth-rock-damage"),
+      attackerBuild: attacker,
+      defenderBuild: neutralDefender,
+    }).damage).toBe(23);
+    expect(evaluateHpEventRule({
+      event: makeEvent("stealth-rock-damage"),
+      attackerBuild: attacker,
+      defenderBuild: fireTeraDefender,
+    }).damage).toBe(47);
+    expect(evaluateHpEventRule({
+      event: makeEvent("stealth-rock-damage"),
+      attackerBuild: attacker,
+      defenderBuild: fourTimesWeakDefender,
+    }).damage).toBe(Math.floor(fourTimesWeakMaxHp / 2));
+  });
+
+  it("uses ability and item exceptions for residual damage and entry hazards", () => {
+    const heatproofDefender = makeBuild("heatproof", "ミュウ", {
+      hpEv: 128,
+      abilityInput: "たいねつ",
+    });
+    const poisonHealDefender = makeBuild("poison-heal", "ミュウ", {
+      hpEv: 128,
+      abilityInput: "ポイズンヒール",
+    });
+    const bootsDefender = makeBuild("boots", "ミュウ", {
+      hpEv: 128,
+      itemInput: "あつぞこブーツ",
+    });
+    const levitateDefender = makeBuild("levitate", "ミュウ", {
+      hpEv: 128,
+      abilityInput: "ふゆう",
+    });
+
+    expect(evaluateHpEventRule({
+      event: makeEvent("burn-damage"),
+      attackerBuild: attacker,
+      defenderBuild: heatproofDefender,
+    }).damage).toBe(5);
+    expect(evaluateHpEventRule({
+      event: makeEvent("toxic-damage"),
+      attackerBuild: attacker,
+      defenderBuild: poisonHealDefender,
+    })).toMatchObject({
+      damage: 0,
+      healing: 23,
+    });
+    expect(evaluateHpEventRule({
+      event: makeEvent("stealth-rock-damage"),
+      attackerBuild: attacker,
+      defenderBuild: bootsDefender,
+    }).damage).toBe(0);
+    expect(evaluateHpEventRule({
+      event: makeEvent("spikes-damage"),
+      attackerBuild: attacker,
+      defenderBuild: bootsDefender,
+    }).damage).toBe(0);
+    expect(evaluateHpEventRule({
+      event: makeEvent("spikes-damage"),
+      attackerBuild: attacker,
+      defenderBuild: levitateDefender,
+    }).damage).toBe(0);
   });
 
   it("applies the minimum one damage after a supported effect is active", () => {
