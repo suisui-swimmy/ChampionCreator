@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { toSmogonPokemon } from "../calc/smogonAdapter";
 import type { EntityKind } from "../data/localizationTypes";
 import type {
   Build,
@@ -275,6 +276,29 @@ describe("calculateOffenseAdjustment", () => {
     expect(result.description).toContain("Life Orb Shedinja Shadow Sneak");
   });
 
+  it("reports damage-based recoil from the actual capped damage in result details", () => {
+    const defenderBuild = makeBuild("defender", "ピチュー");
+    const defenderMaxHp = toSmogonPokemon(defenderBuild).maxHP();
+    const result = calculateOffenseAdjustment(makeInput("すてみタックル", {
+      attackerBuild: makeBuild("attacker", "ドドゲザン", "いじっぱり"),
+      defenderBuild,
+    }))[0];
+
+    expect(result).toMatchObject({
+      passed: true,
+      koProbability: 1,
+    });
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "move-damage-recoil",
+        changeKind: "recoil",
+        damage: Math.round(defenderMaxHp * 33 / 100),
+        applied: true,
+        activationProbability: 1,
+      }),
+    ]);
+  });
+
   it("returns an A line for ordinary physical moves and a C line for ordinary special moves", () => {
     const physical = calculateOffenseAdjustment(makeInput("ふいうち"))[0];
     const special = calculateOffenseAdjustment(makeInput("10まんボルト", {
@@ -294,6 +318,14 @@ describe("calculateOffenseAdjustment", () => {
 
     expect(bodyPress).toMatchObject({ stat: "def", label: "Bライン", canApply: false });
     expect(finalGambit).toMatchObject({ stat: "hp", label: "Hライン", canApply: false });
+    expect(finalGambit.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "move-forced-faint:final-gambit",
+        changeKind: "forcedFaint",
+        applied: true,
+        activationProbability: 1,
+      }),
+    ]);
   });
 
   it("returns both A and C lines for adaptive offense moves", () => {

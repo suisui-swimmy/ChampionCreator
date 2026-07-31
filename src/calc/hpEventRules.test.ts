@@ -104,6 +104,7 @@ describe("evaluateHpEventRule", () => {
       timing: "afterHit",
       frequency: "once",
       subject: "defender",
+      priority: 30,
       maxActivations: 1,
     });
     expect(hpEventRuleDefinitions["poison-damage"]).toMatchObject({
@@ -117,6 +118,18 @@ describe("evaluateHpEventRule", () => {
     expect(hpEventRuleDefinitions["leftovers-heal"]).toMatchObject({
       timing: "endOfTurn",
       priority: 40,
+    });
+    expect(hpEventRuleDefinitions["rocky-helmet-damage"]).toMatchObject({
+      timing: "afterHit",
+      frequency: "perHit",
+      subject: "attacker",
+      priority: 10,
+    });
+    expect(hpEventRuleDefinitions["rough-skin-damage"]).toMatchObject({
+      timing: "afterHit",
+      frequency: "perHit",
+      subject: "attacker",
+      priority: 20,
     });
   });
 
@@ -347,6 +360,56 @@ describe("evaluateHpEventRule", () => {
       supported: true,
       damage: 0,
       reason: "タイプ・特性・持ち物で無効",
+    });
+  });
+
+  it("applies contact recoil to the attacker with the exact floor values", () => {
+    const hp191Attacker = makeBuild("attacker", "ミュウ", { hpEv: 128 });
+    const defender = makeBuild("defender");
+
+    expect(evaluateHpEventRule({
+      event: makeEvent("rocky-helmet-damage"),
+      attackerBuild: hp191Attacker,
+      defenderBuild: defender,
+      moveMakesContact: true,
+    })).toMatchObject({
+      supported: true,
+      damage: 31,
+    });
+    expect(evaluateHpEventRule({
+      event: makeEvent("rough-skin-damage"),
+      attackerBuild: hp191Attacker,
+      defenderBuild: defender,
+      moveMakesContact: true,
+    })).toMatchObject({
+      supported: true,
+      damage: 23,
+    });
+  });
+
+  it("suppresses contact recoil for non-contact resolution and Magic Guard", () => {
+    const defender = makeBuild("defender");
+    const magicGuardAttacker = makeBuild("attacker", "ミュウ", {
+      abilityInput: "マジックガード",
+    });
+
+    expect(evaluateHpEventRule({
+      event: makeEvent("rocky-helmet-damage"),
+      attackerBuild: attacker,
+      defenderBuild: defender,
+      moveMakesContact: false,
+    })).toMatchObject({
+      damage: 0,
+      reason: "非接触技、えんかく、ぼうごパット等により接触していません",
+    });
+    expect(evaluateHpEventRule({
+      event: makeEvent("rough-skin-damage"),
+      attackerBuild: magicGuardAttacker,
+      defenderBuild: defender,
+      moveMakesContact: true,
+    })).toMatchObject({
+      damage: 0,
+      reason: "マジックガードで無効",
     });
   });
 

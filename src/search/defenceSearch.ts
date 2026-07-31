@@ -1,5 +1,10 @@
 import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
 import {
+  buildHpSequenceMoveUses,
+  moveUseRequiresHpSequence,
+  type HpSequenceHitCalculator,
+} from "../calc/hpSequenceMoveUses";
+import {
   getHpSequenceSurvivalProbability,
   simulateHpSequence,
   type HpSequenceCard,
@@ -36,11 +41,7 @@ const DEFENCE_SEARCH_KEYS = ["hp", "def", "spd"] as const satisfies readonly Def
 const FIXED_EV_KEYS = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
 const ALL_STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 
-export type CalculateHit = (
-  defenderBuild: Build,
-  hit: ScenarioHit,
-  fieldState: FieldState,
-) => ScenarioHitEvaluation;
+export type CalculateHit = HpSequenceHitCalculator;
 
 export interface DefenceSearchOptions {
   maxResults?: number | null;
@@ -234,35 +235,40 @@ export const countDefenceEvCandidates = (
 };
 
 const getMoveUses = (
+  defenderBuild: Build,
   hit: ScenarioHit,
   evaluation: ScenarioHitEvaluation,
-): HpSequenceMoveUse[] => {
-  const repeat = Math.max(0, Math.trunc(hit.repeat));
-  const damageRollsByMove = evaluation.damageRollsByHit ?? [evaluation.damageRolls];
-
-  if (hit.moveHits !== undefined) {
-    return [{
-      id: `${hit.id}-move-1`,
-      damageRollsByHit: damageRollsByMove.slice(0, repeat),
-    }];
-  }
-
-  return Array.from({ length: repeat }, (_value, index) => ({
-    id: `${hit.id}-move-${index + 1}`,
-    damageRollsByHit: damageRollsByMove,
-  }));
-};
+  field: FieldState,
+  calculateHit: CalculateHit,
+): HpSequenceMoveUse[] => buildHpSequenceMoveUses({
+  defenderBuild,
+  hit,
+  field,
+  evaluation,
+  calculateHit,
+});
 
 const getDirectDamageRolls = (
   hit: ScenarioHit,
   evaluation: ScenarioHitEvaluation,
-): number[][] => getMoveUses(hit, evaluation)
-  .flatMap((moveUse) => moveUse.damageRollsByHit.map((rolls) => [...rolls]));
+): number[][] => {
+  const repeat = Math.max(0, Math.trunc(hit.repeat));
+  const damageRollsByMove = evaluation.damageRollsByHit ?? [evaluation.damageRolls];
+
+  if (hit.moveHits !== undefined) {
+    return damageRollsByMove.slice(0, repeat).map((rolls) => [...rolls]);
+  }
+
+  return Array.from({ length: repeat }, () => (
+    damageRollsByMove.map((rolls) => [...rolls])
+  )).flat();
+};
 
 const buildHpSequenceCards = (
   defenderBuild: Build,
   scenario: Scenario,
   hitEvaluations: ScenarioHitEvaluation[],
+  calculateHit: CalculateHit,
 ): HpSequenceCard[] => {
   const evaluationsByHitId = new Map(hitEvaluations.map((evaluation) => [evaluation.hitId, evaluation]));
   return scenario.hits.flatMap((hit) => {
@@ -277,7 +283,13 @@ const buildHpSequenceCards = (
       defenderBuild: hit.defenderStatus
         ? { ...defenderBuild, status: hit.defenderStatus }
         : defenderBuild,
-      moveUses: getMoveUses(hit, evaluation),
+      moveUses: getMoveUses(
+        defenderBuild,
+        hit,
+        evaluation,
+        hit.field ?? scenario.field,
+        calculateHit,
+      ),
       hpEvents: hit.hpEvents,
       field: hit.field ?? scenario.field,
     }];
@@ -497,12 +509,18 @@ export const evaluateScenario = (
   const hitEvaluations = scenario.hits.map((hit) => calculateHit(defenderBuild, hit, hit.field ?? scenario.field));
   const checkpoints = expandDamageCheckpoints(scenario, hitEvaluations);
   const damageSequence = expandDamageSequence(scenario, hitEvaluations);
-  const hpSequenceCards = buildHpSequenceCards(defenderBuild, scenario, hitEvaluations);
+  const hpSequenceCards = buildHpSequenceCards(
+    defenderBuild,
+    scenario,
+    hitEvaluations,
+    calculateHit,
+  );
   const totalDirectHits = getSequenceDirectHitCount(hpSequenceCards);
-  const hasEnabledHpEvents = hpSequenceCards.some((card) => (
-    card.hpEvents?.some((event) => event.enabled) ?? false
+  const requiresHpSequence = hpSequenceCards.some((card) => (
+    (card.hpEvents?.some((event) => event.enabled) ?? false)
+    || card.moveUses.some(moveUseRequiresHpSequence)
   ));
-  const defenderMaxHp = hasEnabledHpEvents
+  const defenderMaxHp = requiresHpSequence
     ? undefined
     : toSmogonPokemon(defenderBuild).maxHP();
 
@@ -518,7 +536,7 @@ export const evaluateScenario = (
         };
       }
 
-      const sequenceResult = hasEnabledHpEvents
+      const sequenceResult = requiresHpSequence
         ? calculateScenarioSequence(
             defenderBuild,
             hpSequenceCards,
@@ -573,7 +591,7 @@ export const evaluateScenario = (
     };
   }
 
-  const sequenceResult = hasEnabledHpEvents
+  const sequenceResult = requiresHpSequence
     ? calculateScenarioSequence(
         defenderBuild,
         hpSequenceCards,

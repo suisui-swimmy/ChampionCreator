@@ -1,4 +1,5 @@
 import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
+import { buildHpSequenceMoveUses } from "../calc/hpSequenceMoveUses";
 import {
   getHpSequenceKoProbability,
   simulateHpSequence,
@@ -178,9 +179,10 @@ const evaluateCandidate = (
   const defenderBuild = reference.owner === "target"
     ? withStatPoint(baseDefender, reference.stat, statPoints)
     : baseDefender;
+  const hit = buildOffenseHit(attackerBuild, input);
   const hitEvaluation = calculateSmogonHit(
     defenderBuild,
-    buildOffenseHit(attackerBuild, input),
+    hit,
     input.field,
   );
   const hpSequence = simulateHpSequence({
@@ -188,10 +190,12 @@ const evaluateCandidate = (
       id: "offense-adjustment-card",
       attackerBuild,
       defenderBuild,
-      moveUses: [{
-        id: "offense-adjustment-move",
-        damageRollsByHit: hitEvaluation.damageRollsByHit ?? [hitEvaluation.damageRolls],
-      }],
+      moveUses: buildHpSequenceMoveUses({
+        defenderBuild,
+        hit,
+        field: input.field,
+        evaluation: hitEvaluation,
+      }),
       hpEvents: input.hpEvents ?? [],
       field: input.field,
     }],

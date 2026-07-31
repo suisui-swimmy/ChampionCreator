@@ -41,6 +41,7 @@ export interface HpEventRuleContext {
   defenderBuild: Build;
   field?: FieldState;
   occurrence?: number;
+  moveMakesContact?: boolean;
 }
 
 export interface HpEventRuleResult {
@@ -139,7 +140,7 @@ export const hpEventRuleDefinitions: Record<SupportedHpEventEffectId, HpEventRul
     frequency: "once",
     timing: "afterHit",
     subject: "defender",
-    priority: 10,
+    priority: 30,
     maxActivations: 1,
     sourceRef: "Pokemon Showdown Sitrus Berry onUpdate and onEat rules",
   },
@@ -152,6 +153,26 @@ export const hpEventRuleDefinitions: Record<SupportedHpEventEffectId, HpEventRul
     subject: "defender",
     priority: 40,
     sourceRef: "Pokemon Showdown Leftovers residual rule: max HP / 16",
+  },
+  "rocky-helmet-damage": {
+    effectId: "rocky-helmet-damage",
+    label: "ゴツゴツメット",
+    formulaLabel: "接触ヒットごとに技使用者の最大HPの1/6（切り捨て・最低1）",
+    frequency: "perHit",
+    timing: "afterHit",
+    subject: "attacker",
+    priority: 10,
+    sourceRef: "Pokemon Showdown Rocky Helmet onDamagingHit rule",
+  },
+  "rough-skin-damage": {
+    effectId: "rough-skin-damage",
+    label: "さめはだ／てつのトゲ",
+    formulaLabel: "接触ヒットごとに技使用者の最大HPの1/8（切り捨て・最低1）",
+    frequency: "perHit",
+    timing: "afterHit",
+    subject: "attacker",
+    priority: 20,
+    sourceRef: "Pokemon Showdown Rough Skin and Iron Barbs onDamagingHit rules",
   },
 };
 
@@ -205,6 +226,7 @@ export const evaluateHpEventRule = ({
   defenderBuild,
   field,
   occurrence = 1,
+  moveMakesContact,
 }: HpEventRuleContext): HpEventRuleResult => {
   const definition = getHpEventRuleDefinition(event.effectId);
   if (!definition) {
@@ -426,6 +448,36 @@ export const evaluateHpEventRule = ({
       label: definition.label,
       damage: 0,
       healing: floorMin1(subject.maxHP() / 16),
+    };
+  }
+
+  if (
+    event.effectId === "rocky-helmet-damage"
+    || event.effectId === "rough-skin-damage"
+  ) {
+    if (!moveMakesContact) {
+      return {
+        supported: true,
+        label: definition.label,
+        damage: 0,
+        reason: "非接触技、えんかく、ぼうごパット等により接触していません",
+      };
+    }
+    if (magicGuardReason) {
+      return {
+        supported: true,
+        label: definition.label,
+        damage: 0,
+        reason: magicGuardReason,
+      };
+    }
+
+    return {
+      supported: true,
+      label: definition.label,
+      damage: floorMin1(subject.maxHP() / (
+        event.effectId === "rocky-helmet-damage" ? 6 : 8
+      )),
     };
   }
 

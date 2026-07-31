@@ -10,15 +10,17 @@ import {
 } from "./domain/championsStats";
 import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
 import { getHpEventRuleDefinition } from "./calc/hpEventRules";
-import type {
-  CandidateResult,
-  GameType,
-  PokemonStatus,
-  StatBoostTable,
-  StatKey,
-  StatTable,
-  Terrain,
-  Weather,
+import {
+  toEntityRef,
+  type CandidateResult,
+  type GameType,
+  type PokemonStatus,
+  type ScenarioHit,
+  type StatBoostTable,
+  type StatKey,
+  type StatTable,
+  type Terrain,
+  type Weather,
 } from "./domain/model";
 import type {
   HpEventEvaluation,
@@ -106,6 +108,10 @@ import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
 } from "./worker/defenceSearchWorkerClient";
+import {
+  getAutomaticMoveHpNotices,
+  type AutomaticMoveHpNotice,
+} from "./calc/hpSequenceMoveUses";
 
 const statLabels: Record<StatKey, string> = {
   hp: "H",
@@ -316,6 +322,8 @@ const hpEventPresetOptions: Array<{ value: HpEventPresetId; label: string }> = [
   { value: "salt-cure-damage", label: "しおづけダメージ" },
   { value: "sitrus-berry-heal", label: "オボンのみ回復" },
   { value: "leftovers-heal", label: "たべのこし回復" },
+  { value: "rocky-helmet-damage", label: "ゴツゴツメット" },
+  { value: "rough-skin-damage", label: "さめはだ／てつのトゲ" },
 ];
 
 const hpEventTimingLabels: Partial<Record<HpEventTiming, string>> = {
@@ -343,6 +351,48 @@ const hpEventPresetIds = new Set<HpEventPresetId>(
 const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | undefined => {
   const result = resolveEntity(kind, input);
   return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
+};
+
+const getAutomaticMoveHpNoticesFromForm = (
+  attack: ScenarioAttackFormState,
+  adjustmentType: ScenarioAdjustmentType,
+  targetForm: TargetFormState,
+  scenarioId: string,
+): AutomaticMoveHpNotice[] => {
+  const move = toEntityRef(resolveEntity("move", attack.moveInput), "move");
+  if (!move || adjustmentType === "speed") {
+    return [];
+  }
+
+  try {
+    const attacker = adjustmentType === "offense"
+      ? buildTargetBuildFromUi(targetForm, `${scenarioId}-${attack.id}-automatic-attacker`)
+      : buildScenarioAttackBuildFromUi(
+        attack,
+        `${scenarioId}-${attack.id}-automatic-attacker`,
+      );
+    const emptySide = {
+      reflect: false,
+      lightScreen: false,
+      auroraVeil: false,
+      helpingHand: false,
+    };
+    const hit: ScenarioHit = {
+      id: `${scenarioId}-${attack.id}-automatic-notice`,
+      attacker,
+      move,
+      repeat: 1,
+      critical: attack.critical,
+      attackerBoosts: attack.attackerBoosts,
+      defenderBoosts: attack.defenderBoosts,
+      attackerSide: { ...emptySide },
+      defenderSide: { ...emptySide },
+    };
+    return getAutomaticMoveHpNotices(hit);
+  } catch {
+    // 入力途中は既存 resolver の警告に任せ、解決できた時点で自動効果を表示する。
+    return [];
+  }
 };
 
 export const isAbilitySupportCard = (
@@ -427,9 +477,18 @@ const formatHpEventEvaluation = (
   const probabilityLabel = evaluation.activationProbability < 1 - 1e-12
     ? ` / 発動 ${formatPercent(evaluation.activationProbability)}`
     : "";
-  const hpChangeLabel = (evaluation.healing ?? 0) > 0
-    ? `${evaluation.healing}回復`
-    : `${evaluation.damage}ダメージ`;
+  const damageAmountLabel = evaluation.damageRange
+    ? formatDamageRange(evaluation.damageRange.min, evaluation.damageRange.max)
+    : String(evaluation.damage);
+  const hpChangeLabel = evaluation.changeKind === "forcedFaint"
+    ? "ひんし"
+    : evaluation.changeKind === "hpCost"
+      ? `${damageAmountLabel}消費`
+      : evaluation.changeKind === "recoil"
+        ? `${damageAmountLabel}反動`
+        : (evaluation.healing ?? 0) > 0
+          ? `${evaluation.healing}回復`
+          : `${damageAmountLabel}ダメージ`;
   return `${evaluation.label} / ${subjectLabel} / ${orderLabel}: ${hpChangeLabel}${probabilityLabel}`;
 };
 
@@ -2784,7 +2843,12 @@ function BulkMaximizeResultPreview({
   );
 }
 
-function formatMobileAttackMeta(attack: ScenarioAttackFormState, adjustmentType: ScenarioAdjustmentType): string {
+function formatMobileAttackMeta(
+  attack: ScenarioAttackFormState,
+  adjustmentType: ScenarioAdjustmentType,
+  targetForm: TargetFormState,
+  scenarioId: string,
+): string {
   if (adjustmentType === "speed") {
     return attack.speedTargetMode === "manual"
       ? `任意S ${attack.speedTargetValue}`
@@ -2792,7 +2856,19 @@ function formatMobileAttackMeta(attack: ScenarioAttackFormState, adjustmentType:
   }
 
   const hpEventCount = attack.hpEvents?.length ?? 0;
-  const hpEventMeta = hpEventCount > 0 ? ` · HP変化${hpEventCount}` : "";
+  const automaticNoticeCount = getAutomaticMoveHpNoticesFromForm(
+    attack,
+    adjustmentType,
+    targetForm,
+    scenarioId,
+  ).length;
+  const hpEventParts = [
+    hpEventCount > 0 ? String(hpEventCount) : "",
+    automaticNoticeCount > 0 ? `自動${automaticNoticeCount}` : "",
+  ].filter(Boolean);
+  const hpEventMeta = hpEventParts.length > 0
+    ? ` · HP変化${hpEventParts.join("＋")}`
+    : "";
 
   if (adjustmentType === "offense") {
     return `KO ${attack.targetKoProbabilityPercent}%${hpEventMeta}`;
@@ -3212,7 +3288,12 @@ function MobileOverview({
                             <span>
                               <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
                               <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
-                              <em>{formatMobileAttackMeta(attack, scenario.adjustmentType)}</em>
+                              <em>{formatMobileAttackMeta(
+                                attack,
+                                scenario.adjustmentType,
+                                targetForm,
+                                scenario.id,
+                              )}</em>
                             </span>
                           </button>
                         );
@@ -4253,6 +4334,16 @@ function HpEventsEditor({
 }: HpEventsEditorProps) {
   const [presetId, setPresetId] = useState<HpEventPresetId>("life-orb-recoil");
   const hpEvents = attack.hpEvents ?? [];
+  const automaticNotices = getAutomaticMoveHpNoticesFromForm(
+    attack,
+    adjustmentType,
+    targetForm,
+    scenarioId,
+  );
+  const summaryParts = [
+    hpEvents.length > 0 ? `${hpEvents.length}件` : "",
+    automaticNotices.length > 0 ? `自動${automaticNotices.length}件` : "",
+  ].filter(Boolean);
 
   const updateEvents = (nextEvents: HpEventFormState[]) => {
     onUpdateAttack(scenarioId, attack.id, "hpEvents", nextEvents);
@@ -4288,13 +4379,39 @@ function HpEventsEditor({
       <summary>
         <ChevronRightIcon className="disclosure-chevron" />
         <span>HP推移</span>
-        {hpEvents.length > 0 ? (
-          <span className="active-adjustment-count">{hpEvents.length}件</span>
+        {summaryParts.length > 0 ? (
+          <span className="active-adjustment-count">{summaryParts.join("＋")}</span>
         ) : (
           <span className="active-adjustment-empty">なし</span>
         )}
       </summary>
       <div className="attack-advanced-content hp-events-content">
+        {automaticNotices.length > 0 ? (
+          <section className="hp-event-automatic-section" aria-label="技から自動適用されるHP変化">
+            <p className="hp-event-automatic-title">技から自動適用</p>
+            <ul className="hp-event-list hp-event-automatic-list">
+              {automaticNotices.map((notice) => (
+                <li className="hp-event-row hp-event-row--automatic" key={notice.id}>
+                  <div className="hp-event-row-heading hp-event-automatic-heading">
+                    <span className="hp-event-auto-badge">自動</span>
+                    <strong>{notice.label}</strong>
+                  </div>
+                  <div className="hp-event-rule-meta">
+                    <small>
+                      <strong>適用</strong>
+                      <span>選択技から自動</span>
+                    </small>
+                    <small>
+                      <strong>発動</strong>
+                      <span>{notice.timingLabel}</span>
+                    </small>
+                  </div>
+                  <small className="hp-event-formula">{notice.formulaLabel}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {hpEvents.length > 0 ? (
           <ol className="hp-event-list">
             {hpEvents.map((hpEvent) => {
@@ -4305,11 +4422,15 @@ function HpEventsEditor({
               const moveDefenderItemInput = adjustmentType === "offense"
                 ? attack.attackerItemInput
                 : targetForm.itemInput;
+              const moveDefenderAbilityInput = adjustmentType === "offense"
+                ? attack.attackerAbilityInput
+                : targetForm.abilityInput;
               const moveDefenderStatus = adjustmentType === "offense"
                 ? attack.attackerStatus
                 : attack.defenderStatus;
               const hasLifeOrb = resolveCanonicalEntityName("item", moveUserItemInput) === "Life Orb";
               const defenderItem = resolveCanonicalEntityName("item", moveDefenderItemInput);
+              const defenderAbility = resolveCanonicalEntityName("ability", moveDefenderAbilityInput);
               const mismatchMessage = !supported
                 ? `未対応のHP変化です: ${hpEvent.effectId}`
                 : hpEvent.effectId === "life-orb-recoil" && !hasLifeOrb
@@ -4326,7 +4447,13 @@ function HpEventsEditor({
                             ? "HP変化対象の持ち物が「オボンのみ」ではありません。発動前提で計算します"
                             : hpEvent.effectId === "leftovers-heal" && defenderItem !== "Leftovers"
                               ? "HP変化対象の持ち物が「たべのこし」ではありません。発動前提で計算します"
-                    : null;
+                              : hpEvent.effectId === "rocky-helmet-damage" && defenderItem !== "Rocky Helmet"
+                                ? "被弾側の持ち物が「ゴツゴツメット」ではありません。発動前提で計算します"
+                                : hpEvent.effectId === "rough-skin-damage"
+                                  && defenderAbility !== "Rough Skin"
+                                  && defenderAbility !== "Iron Barbs"
+                                  ? "被弾側の特性が「さめはだ／てつのトゲ」ではありません。発動前提で計算します"
+                                  : null;
 
               return (
                 <li className={`hp-event-row${supported ? "" : " unsupported"}`} key={hpEvent.id}>
@@ -4402,9 +4529,9 @@ function HpEventsEditor({
               );
             })}
           </ol>
-        ) : (
+        ) : automaticNotices.length === 0 ? (
           <p className="hp-events-empty">直接攻撃だけで判定します</p>
-        )}
+        ) : null}
         <div className="hp-event-add-row">
           <SelectField
             compact
@@ -4420,6 +4547,8 @@ function HpEventsEditor({
         <p className="hp-event-help">
           対象・発動順・頻度は効果ごとに固定です。設置物は攻撃前、オボンは条件成立ヒット後、
           いのちのたまは技後、天候・状態異常・しおづけ・たべのこしはターン終了時の順で評価します。
+          技固有のHP消費・現在HP計算・反動・使用者ひんしは選択技から自動適用します。
+          ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。
           発動しない条件では追加しないでください。
         </p>
       </div>

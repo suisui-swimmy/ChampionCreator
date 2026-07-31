@@ -2673,13 +2673,32 @@ textarea {
   list-style: none;
 }
 
+.hp-event-automatic-section {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.hp-event-automatic-title {
+  margin: 0;
+  color: #8fc9e5;
+  font-size: 9px;
+  font-weight: 800;
+}
+
 .hp-event-row {
   display: grid;
+  min-width: 0;
   gap: 6px;
   border: 1px solid #344240;
   border-radius: 6px;
   background: rgba(10, 16, 16, 0.72);
   padding: 7px;
+}
+
+.hp-event-row--automatic {
+  border-color: rgba(129, 185, 239, 0.42);
+  background: rgba(41, 128, 239, 0.08);
 }
 
 .hp-event-row.unsupported {
@@ -2697,6 +2716,24 @@ textarea {
 .hp-event-row-heading {
   gap: 8px;
   min-width: 0;
+}
+
+.hp-event-automatic-heading strong {
+  min-width: 0;
+  color: #dcebf2;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.hp-event-auto-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(129, 185, 239, 0.38);
+  border-radius: 999px;
+  background: rgba(41, 128, 239, 0.14);
+  color: #a9d7ef;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 850;
 }
 
 .hp-event-enable {
@@ -2740,11 +2777,17 @@ textarea {
 .hp-event-rule-meta small {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
+  min-width: 0;
   gap: 5px;
   margin: 0;
   color: #c8d8d4;
   font-size: 9px;
   line-height: 1.45;
+}
+
+.hp-event-rule-meta span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .hp-event-rule-meta strong {
@@ -2773,9 +2816,11 @@ textarea {
 .hp-event-warning,
 .hp-event-help,
 .hp-events-empty {
+  min-width: 0;
   margin: 0;
   font-size: 9px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .hp-event-formula,

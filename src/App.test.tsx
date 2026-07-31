@@ -66,6 +66,9 @@ describe("App", () => {
     expect(css).toContain('.mobile-scenarios-open input:not([type="checkbox"]):not([type="radio"])');
     expect(css).toContain('.box-overlay input:not([type="checkbox"]):not([type="radio"])');
     expect(css).toMatch(/\.mobile-scenarios-open \.scenario-panel:not\(\.mobile-scenario-detail-panel\)\s*\{[^}]*padding-top:\s*0;/s);
+    expect(css).toMatch(/\.hp-event-rule-meta span\s*\{[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(css).toMatch(/\.hp-event-formula,[\s\S]*?\.hp-events-empty\s*\{[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(css).toMatch(/\.hp-event-row\s*\{[^}]*min-width:\s*0;/s);
     expect(css).toMatch(/font-size: 16px;/);
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
@@ -310,6 +313,134 @@ describe("App", () => {
     expect(html).toContain("<strong>対象</strong><span>調整対象（技使用者）</span>");
     expect(html).toContain("<strong>対象</strong><span>仮想敵（被弾側）</span>");
     expect(html).not.toMatch(/select-field-label[^>]*>対象<\/span>/);
+  });
+
+  it("shows contact damage presets with fixed subjects and timing", () => {
+    const [baseScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      abilityInput: "さめはだ",
+      itemInput: "ゴツゴツメット",
+    };
+    const scenario = {
+      ...baseScenario,
+      attacks: baseScenario.attacks.map((attack) => ({
+        ...attack,
+        moveInput: "すいりゅうれんだ",
+        hpEvents: [{
+          id: "rocky-helmet",
+          effectId: "rocky-helmet-damage",
+          enabled: true,
+        }, {
+          id: "rough-skin",
+          effectId: "rough-skin-damage",
+          enabled: true,
+        }],
+      })),
+    };
+
+    const html = renderToStaticMarkup(
+      <App initialTargetForm={target} initialScenarioForms={[scenario]} />,
+    );
+    const mismatchHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={{
+          ...createDefaultTargetForm(),
+          abilityInput: "",
+          itemInput: "",
+        }}
+        initialScenarioForms={[scenario]}
+      />,
+    );
+    const offenseHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[{
+          ...scenario,
+          adjustmentType: "offense",
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            attackerAbilityInput: "さめはだ",
+            attackerItemInput: "ゴツゴツメット",
+          })),
+        }]}
+      />,
+    );
+
+    expect(html).toContain("ゴツゴツメット");
+    expect(html).toContain("さめはだ／てつのトゲ");
+    expect(html).toContain("接触ヒットごとに技使用者の最大HPの1/6（切り捨て・最低1）");
+    expect(html).toContain("接触ヒットごとに技使用者の最大HPの1/8（切り捨て・最低1）");
+    expect(html.match(/<strong>対象<\/strong><span>仮想敵（技使用者）<\/span>/g)).toHaveLength(2);
+    expect(offenseHtml.match(/<strong>対象<\/strong><span>調整対象（技使用者）<\/span>/g)).toHaveLength(2);
+    expect(html.match(/<strong>発動<\/strong><span>ヒット後・ヒットごと<\/span>/g)).toHaveLength(2);
+    expect(html).not.toContain("被弾側の持ち物が「ゴツゴツメット」ではありません");
+    expect(html).not.toContain("被弾側の特性が「さめはだ／てつのトゲ」ではありません");
+    expect(mismatchHtml).toContain("被弾側の持ち物が「ゴツゴツメット」ではありません。発動前提で計算します");
+    expect(mismatchHtml).toContain("被弾側の特性が「さめはだ／てつのトゲ」ではありません。発動前提で計算します");
+    expect(html).toContain("ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。");
+  });
+
+  it("shows move-owned HP interactions as non-removable automatic notices", () => {
+    const [baseScenario] = createDefaultScenarioForms();
+    const baseAttack = baseScenario.attacks[0];
+    const scenario = {
+      ...baseScenario,
+      attacks: [
+        {
+          ...baseAttack,
+          id: "automatic-cost",
+          attackerPokemonInput: "ミュウ",
+          moveInput: "みがわり",
+        },
+        {
+          ...baseAttack,
+          id: "automatic-current-hp",
+          attackerPokemonInput: "イーユイ",
+          moveInput: "カタストロフィ",
+        },
+        {
+          ...baseAttack,
+          id: "automatic-recoil",
+          attackerPokemonInput: "ピカチュウ",
+          moveInput: "ワイルドボルト",
+        },
+        {
+          ...baseAttack,
+          id: "automatic-faint",
+          attackerPokemonInput: "ムクホーク",
+          moveInput: "いのちがけ",
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[scenario]}
+      />,
+    );
+
+    expect(html.match(/>自動1件<\/span>/g)).toHaveLength(3);
+    expect(html.match(/>自動2件<\/span>/g)).toHaveLength(1);
+    expect(html.match(/>技から自動適用<\/p>/g)).toHaveLength(4);
+    expect(html).toContain("みがわりのHP消費");
+    expect(html).toContain("最大HPの1/4（切り捨て・最低1）");
+    expect(html).toContain("カタストロフィの現在HP計算");
+    expect(html).toContain("相手の現在HPの1/2（切り捨て・最低1）");
+    expect(html).toContain("ワイルドボルトの反動");
+    expect(html).toContain("実際に与えたダメージの1/4（四捨五入・最低1）");
+    expect(html).toContain("いのちがけの現在HP計算");
+    expect(html).toContain("使用者の現在HP");
+    expect(html).toContain("いのちがけの使用者ひんし");
+    expect(html).toContain("ダメージを与えた使用者がひんし");
+    expect(html.match(/<span class="hp-event-auto-badge">自動<\/span>/g)).toHaveLength(5);
+    expect(html.match(/<strong>適用<\/strong><span>選択技から自動<\/span>/g)).toHaveLength(5);
+    expect(html).not.toContain('aria-label="みがわりのHP消費を削除"');
+    expect(html).not.toContain('aria-label="ワイルドボルトの反動を削除"');
+    expect(html).toContain("HP変化自動1");
+    expect(html).toContain("HP変化自動2");
+    expect(html).toContain("技固有のHP消費・現在HP計算・反動・使用者ひんしは選択技から自動適用します。");
   });
 
   it("starts with the same blank condition shown by the empty box slot", () => {
@@ -735,22 +866,76 @@ describe("App", () => {
         koProbability: 1,
         targetKoProbability: 1,
         damageRange: { min: 168, max: 198, percentMin: 100.6, percentMax: 118.6 },
-        hpEventEvaluations: [{
-          cardId: "offense-adjustment-card",
-          eventId: "sand-ko",
-          effectId: "sandstorm-damage",
-          label: "すなあらしダメージ",
-          subject: "defender" as const,
-          subjectBuildId: "offense-defender",
-          timing: "endOfTurn" as const,
-          frequency: "perTurn" as const,
-          sequenceContext: "currentMove" as const,
-          occurrence: 1,
-          damage: 10,
-          applied: true,
-          activationProbability: 1,
-          supported: true,
-        }],
+        hpEventEvaluations: [
+          {
+            cardId: "offense-adjustment-card",
+            eventId: "sand-ko",
+            effectId: "sandstorm-damage",
+            label: "すなあらしダメージ",
+            subject: "defender" as const,
+            subjectBuildId: "offense-defender",
+            timing: "endOfTurn" as const,
+            frequency: "perTurn" as const,
+            sequenceContext: "currentMove" as const,
+            occurrence: 1,
+            damage: 10,
+            applied: true,
+            activationProbability: 1,
+            supported: true,
+          },
+          {
+            cardId: "offense-adjustment-card",
+            eventId: "substitute-cost",
+            effectId: "move-hp-cost:substitute",
+            label: "みがわりのHP消費",
+            subject: "attacker" as const,
+            subjectBuildId: "offense-attacker",
+            timing: "beforeMove" as const,
+            frequency: "perMove" as const,
+            sequenceContext: "currentMove" as const,
+            occurrence: 1,
+            damage: 25,
+            changeKind: "hpCost" as const,
+            applied: true,
+            activationProbability: 1,
+            supported: true,
+          },
+          {
+            cardId: "offense-adjustment-card",
+            eventId: "wild-charge-recoil",
+            effectId: "move-damage-recoil",
+            label: "ワイルドボルトの反動",
+            subject: "attacker" as const,
+            subjectBuildId: "offense-attacker",
+            timing: "afterMove" as const,
+            frequency: "perMove" as const,
+            sequenceContext: "currentMove" as const,
+            occurrence: 1,
+            damage: 12,
+            damageRange: { min: 12, max: 15 },
+            changeKind: "recoil" as const,
+            applied: true,
+            activationProbability: 1,
+            supported: true,
+          },
+          {
+            cardId: "offense-adjustment-card",
+            eventId: "final-gambit-faint",
+            effectId: "move-forced-faint:final-gambit",
+            label: "いのちがけの使用者ひんし",
+            subject: "attacker" as const,
+            subjectBuildId: "offense-attacker",
+            timing: "afterHit" as const,
+            frequency: "once" as const,
+            sequenceContext: "currentMove" as const,
+            occurrence: 1,
+            damage: 173,
+            changeKind: "forcedFaint" as const,
+            applied: true,
+            activationProbability: 1,
+            supported: true,
+          },
+        ],
         reason: "PASS",
       },
     }];
@@ -808,6 +993,9 @@ describe("App", () => {
     expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
     expect(html).toContain("シナリオ2</strong><span>C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
     expect(html).toContain("シナリオ2 / HP推移</strong><span>すなあらしダメージ / 仮想敵 / ターン終了時・ターンごと: 10ダメージ");
+    expect(html).toContain("みがわりのHP消費 / 調整対象 / 技使用前・技ごと: 25消費");
+    expect(html).toContain("ワイルドボルトの反動 / 調整対象 / 技使用後・技ごと: 12-15反動");
+    expect(html).toContain("いのちがけの使用者ひんし / 調整対象 / ヒット後・1回: ひんし");
     expect(html).not.toContain("火力ライン結果");
     expect(closedHtml).toContain('aria-expanded="false"');
     expect(closedHtml).toContain('data-state="closed"');

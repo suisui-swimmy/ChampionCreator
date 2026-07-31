@@ -1,4 +1,4 @@
-export const CHAMPIONS_HP_RULESET_ID = "pokemon-champions-hp-events-v4";
+export const CHAMPIONS_HP_RULESET_ID = "pokemon-champions-hp-events-v5";
 
 export const KNOWN_HP_EVENT_EFFECT_IDS = [
   "life-orb-recoil",
@@ -11,6 +11,8 @@ export const KNOWN_HP_EVENT_EFFECT_IDS = [
   "salt-cure-damage",
   "sitrus-berry-heal",
   "leftovers-heal",
+  "rocky-helmet-damage",
+  "rough-skin-damage",
 ] as const;
 
 export type SupportedHpEventEffectId = typeof KNOWN_HP_EVENT_EFFECT_IDS[number];
@@ -25,6 +27,12 @@ export type HpEventTiming =
   | "onFaint";
 export type HpEventFrequency = "once" | "perMove" | "perHit" | "perTurn";
 export type HpEventSequenceContext = "currentMove" | "priorMove";
+export type HpEventChangeKind =
+  | "damage"
+  | "healing"
+  | "hpCost"
+  | "recoil"
+  | "forcedFaint";
 
 export interface HpEvent {
   id: string;
@@ -47,7 +55,12 @@ export interface HpEventEvaluation {
   sequenceContext: HpEventSequenceContext;
   occurrence: number;
   damage: number;
+  damageRange?: {
+    min: number;
+    max: number;
+  };
   healing?: number;
+  changeKind?: HpEventChangeKind;
   applied: boolean;
   activationProbability: number;
   supported: boolean;

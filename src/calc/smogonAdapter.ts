@@ -19,6 +19,15 @@ type SmogonWeather = NonNullable<State.Field["weather"]>;
 type SmogonTerrain = NonNullable<State.Field["terrain"]>;
 type SmogonGameType = State.Field["gameType"];
 
+export interface SmogonPokemonOptions {
+  currentHp?: number;
+}
+
+export interface SmogonHitCalculationOptions {
+  attackerCurrentHp?: number;
+  defenderCurrentHp?: number;
+}
+
 const weatherByFieldState = {
   none: undefined,
   sun: "Sun",
@@ -91,6 +100,7 @@ export const toSmogonPokemon = (
   build: Build,
   boosts: StatBoostTable = {},
   abilityOn = false,
+  options: SmogonPokemonOptions = {},
 ): Pokemon =>
   new Pokemon(SMOGON_GENERATION, build.pokemon.canonicalName, {
     level: build.level,
@@ -104,6 +114,7 @@ export const toSmogonPokemon = (
     status: build.status,
     boosts,
     abilityOn,
+    curHP: options.currentHp,
   });
 
 export const getSmogonTypeEffectiveness = (
@@ -202,6 +213,50 @@ export const toSmogonMove = (hit: ScenarioHit): Move =>
     hits: hit.moveHits,
   });
 
+const CURRENT_HP_FRACTION_MOVES = new Set([
+  "Super Fang",
+  "Nature's Madness",
+  "Ruination",
+  "Guardian of Alola",
+]);
+
+const CURRENT_HP_HALF_COMPATIBILITY_MOVES = new Set([
+  "Super Fang",
+  "Ruination",
+]);
+
+const toSmogonCalculationMove = (
+  hit: ScenarioHit,
+): {
+  move: Move;
+  displayNameOverride?: string;
+} => {
+  const originalMove = toSmogonMove(hit);
+  if (!CURRENT_HP_HALF_COMPATIBILITY_MOVES.has(originalMove.name)) {
+    return { move: originalMove };
+  }
+
+  // This vendor revision only wires the shared half-current-HP formula to
+  // Nature's Madness. Keep the original type and flags so immunity and move
+  // metadata remain authoritative while routing the equivalent formula through
+  // @smogon/calc instead of reimplementing direct damage in the app.
+  const compatibilityMove = new Move(SMOGON_GENERATION, "Nature's Madness", {
+    isCrit: hit.critical,
+    overrides: {
+      type: originalMove.type,
+      category: originalMove.category,
+      flags: originalMove.flags,
+      target: originalMove.target,
+      priority: originalMove.priority,
+    },
+  });
+
+  return {
+    move: compatibilityMove,
+    displayNameOverride: originalMove.name,
+  };
+};
+
 export const flattenDamageRolls = (damage: SmogonDamage): number[] => {
   if (!Array.isArray(damage)) {
     return [damage];
@@ -222,26 +277,50 @@ export const splitDamageRollsByHit = (damage: SmogonDamage): number[][] | undefi
   )) as number[][];
 };
 
+const getSmogonResultDescription = (result: Result): string => {
+  try {
+    return result.desc();
+  } catch {
+    // @smogon/calc's KO helper rejects a zero-only damage array for some
+    // immunity paths. Its non-throwing display mode still preserves the
+    // authoritative calculation and produces the useful move description.
+    return result.fullDesc("%", false);
+  }
+};
+
 export const calculateSmogonHit = (
   defenderBuild: Build,
   hit: ScenarioHit,
   fieldState: FieldState,
+  options: SmogonHitCalculationOptions = {},
 ): ScenarioHitEvaluation => {
   const allyAbilityNames = getAllyAbilityNames(hit);
   const attacker = toSmogonPokemon(
     hit.attacker,
     hit.attackerBoosts,
     hasPlusMinusSynergy(hit, allyAbilityNames),
+    { currentHp: options.attackerCurrentHp },
   );
+  const originalMoveName = hit.move.canonicalName;
+  const defenderCurrentHp =
+    options.defenderCurrentHp === 1 &&
+    CURRENT_HP_FRACTION_MOVES.has(originalMoveName)
+      ? 2
+      : options.defenderCurrentHp;
   const defender = toSmogonPokemon(
     hit.defenderStatus === undefined
       ? defenderBuild
       : { ...defenderBuild, status: hit.defenderStatus },
     hit.defenderBoosts,
+    false,
+    { currentHp: defenderCurrentHp },
   );
-  const move = toSmogonMove(hit);
+  const { move, displayNameOverride } = toSmogonCalculationMove(hit);
   const field = toSmogonField(fieldState, hit);
   const result = calculate(SMOGON_GENERATION, attacker, defender, move, field);
+  if (displayNameOverride) {
+    result.rawDesc.moveName = displayNameOverride;
+  }
   const [min, max] = result.range();
   const defenderMaxHp = defender.maxHP();
 
@@ -255,6 +334,6 @@ export const calculateSmogonHit = (
       percentMin: (min / defenderMaxHp) * 100,
       percentMax: (max / defenderMaxHp) * 100,
     },
-    description: result.desc(),
+    description: getSmogonResultDescription(result),
   };
 };

@@ -294,6 +294,47 @@ describe("shareState", () => {
     }]);
   });
 
+  it("round-trips the contact recoil presets without changing schema shape", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          hpEvents: [
+            {
+              id: "helmet",
+              effectId: "rocky-helmet-damage",
+              enabled: true,
+            },
+            {
+              id: "skin",
+              effectId: "rough-skin-damage",
+              enabled: true,
+            },
+          ],
+        }],
+      }],
+      offenseAdjustment: createDefaultOffenseAdjustmentForm(),
+    }));
+
+    expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([
+      {
+        id: "helmet",
+        effectId: "rocky-helmet-damage",
+        enabled: true,
+      },
+      {
+        id: "skin",
+        effectId: "rough-skin-damage",
+        enabled: true,
+      },
+    ]);
+  });
+
   it("moves the legacy target status into scenario attacks when importing older JSON", () => {
     const parsed = parseShareStateDocument(JSON.stringify({
       schemaVersion: 1,

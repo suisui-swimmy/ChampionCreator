@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSmogonHit } from "../calc/smogonAdapter";
+import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
 import type { EntityKind } from "../data/localizationTypes";
 import type { Build, EntityRef, FieldState, Scenario, ScenarioHit, SideState, StatTable } from "../domain/model";
 import { toEntityRef } from "../domain/model";
@@ -652,5 +652,47 @@ describe("fixed HP damage integration", () => {
       ],
     });
     expect(result.hpEventEvaluations).toHaveLength(1);
+  });
+});
+
+describe("current HP move integration", () => {
+  it("recalculates repeated half-current-HP damage as 50 then 25 from 101 HP", () => {
+    const defender: Build = {
+      ...makeBuild("target", "ミュウ", zeroEvs, 30),
+      ivs: { ...defaultIvs, hp: 4 },
+    };
+    const attacker = makeBuild("attacker", "ミュウ");
+    const hit = makeHit("repeat-super-fang", attacker, "いかりのまえば", 2);
+    const scenario = makeScenario("repeat-super-fang", [hit], 2, 1);
+    const currentHpCalls: Array<number | undefined> = [];
+    const damageCalls: number[] = [];
+    const calculateHit: CalculateHit = (build, currentHit, _field, options) => {
+      const currentHp = options?.defenderCurrentHp ?? toSmogonPokemon(build).maxHP();
+      const damage = Math.max(1, Math.floor(currentHp / 2));
+      currentHpCalls.push(options?.defenderCurrentHp);
+      damageCalls.push(damage);
+      return {
+        hitId: currentHit.id,
+        damageRolls: [damage],
+        damageRange: {
+          min: damage,
+          max: damage,
+          percentMin: (damage / toSmogonPokemon(build).maxHP()) * 100,
+          percentMax: (damage / toSmogonPokemon(build).maxHP()) * 100,
+        },
+      };
+    };
+
+    expect(toSmogonPokemon(defender).maxHP()).toBe(101);
+
+    const result = evaluateScenario(defender, scenario, { calculateHit });
+
+    expect(result).toMatchObject({
+      passed: true,
+      survivalProbability: 1,
+      requiredSurvivedHits: 2,
+    });
+    expect(currentHpCalls).toEqual([undefined, 101, 51]);
+    expect(damageCalls).toEqual([50, 50, 25]);
   });
 });

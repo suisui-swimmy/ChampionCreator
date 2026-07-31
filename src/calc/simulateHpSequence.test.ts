@@ -492,4 +492,431 @@ describe("simulateHpSequence", () => {
       }),
     ]);
   });
+
+  it("stops a five-hit contact move when Rocky Helmet faints the attacker mid-move", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const setupCard = makeCard(attacker, defender, [[0]]);
+    setupCard.id = "setup-card";
+    setupCard.moveUses[0].automaticHpEffects = {
+      makesContact: false,
+      hpCost: {
+        effectId: "setup-cost",
+        label: "事前HP消費",
+        formulaLabel: "テスト用",
+        amount: 50,
+      },
+    };
+    const contactCard = makeCard(
+      attacker,
+      defender,
+      [[1], [1], [1], [1], [1]],
+      [makeEvent("helmet", "rocky-helmet-damage")],
+    );
+    contactCard.id = "contact-card";
+    contactCard.moveUses[0].automaticHpEffects = {
+      makesContact: true,
+    };
+
+    const result = simulateHpSequence({
+      cards: [setupCard, contactCard],
+    });
+
+    expect(result.maxHpByBuildId[attacker.id]).toBe(100);
+    expect(getOnlyStateHp(result, attacker.id)).toBe(0);
+    expect(getOnlyStateHp(result, defender.id)).toBe(96);
+    expect(result.hpEventEvaluations
+      .filter((evaluation) => evaluation.effectId === "rocky-helmet-damage")
+      .map((evaluation) => evaluation.applied)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("does not trigger a phantom Sitrus Berry on hits skipped after contact retaliation", () => {
+    const attacker = makeBuild("attacker", "ヌケニン");
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const card = makeCard(
+      attacker,
+      defender,
+      [[60], [30], [30], [30], [30]],
+      [
+        makeEvent("helmet", "rocky-helmet-damage"),
+        makeEvent("sitrus", "sitrus-berry-heal"),
+      ],
+    );
+    card.moveUses[0].automaticHpEffects = {
+      makesContact: true,
+    };
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(getOnlyStateHp(result, attacker.id)).toBe(0);
+    expect(getOnlyStateHp(result, defender.id)).toBe(65);
+    expect(result.hpEventEvaluations
+      .filter((evaluation) => evaluation.effectId === "sitrus-berry-heal")
+      .map((evaluation) => ({
+        applied: evaluation.applied,
+        activationProbability: evaluation.activationProbability,
+      }))).toEqual([
+      { applied: true, activationProbability: 1 },
+      { applied: false, activationProbability: 0 },
+      { applied: false, activationProbability: 0 },
+      { applied: false, activationProbability: 0 },
+      { applied: false, activationProbability: 0 },
+    ]);
+  });
+
+  it("orders Rocky Helmet before Rough Skin and stops later hits after retaliation faints the attacker", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const setupCard = makeCard(attacker, defender, [[0]]);
+    setupCard.id = "setup-card";
+    setupCard.moveUses[0].automaticHpEffects = {
+      makesContact: false,
+      hpCost: {
+        effectId: "setup-cost",
+        label: "事前HP消費",
+        formulaLabel: "テスト用",
+        amount: 50,
+      },
+    };
+    const contactCard = makeCard(
+      attacker,
+      defender,
+      [[1], [1], [1], [1], [1]],
+      [
+        makeEvent("rough-skin", "rough-skin-damage"),
+        makeEvent("helmet", "rocky-helmet-damage"),
+      ],
+    );
+    contactCard.id = "contact-card";
+    contactCard.moveUses[0].automaticHpEffects = {
+      makesContact: true,
+    };
+
+    const result = simulateHpSequence({
+      cards: [setupCard, contactCard],
+    });
+    const contactEvaluations = result.hpEventEvaluations.filter(
+      (evaluation) => (
+        evaluation.effectId === "rocky-helmet-damage"
+        || evaluation.effectId === "rough-skin-damage"
+      ),
+    );
+
+    expect(getOnlyStateHp(result, attacker.id)).toBe(0);
+    expect(getOnlyStateHp(result, defender.id)).toBe(98);
+    expect(contactEvaluations.map((evaluation) => evaluation.effectId)).toEqual([
+      "rocky-helmet-damage",
+      "rough-skin-damage",
+      "rocky-helmet-damage",
+      "rough-skin-damage",
+      "rocky-helmet-damage",
+      "rough-skin-damage",
+      "rocky-helmet-damage",
+      "rough-skin-damage",
+      "rocky-helmet-damage",
+      "rough-skin-damage",
+    ]);
+    expect(contactEvaluations.map((evaluation) => evaluation.applied)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("still applies contact retaliation when the direct hit KOs the defender", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const card = makeCard(attacker, defender, [[999]], [
+      makeEvent("helmet", "rocky-helmet-damage"),
+    ]);
+    card.moveUses[0].automaticHpEffects = {
+      makesContact: true,
+    };
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(0);
+    expect(getOnlyStateHp(result, attacker.id)).toBe(84);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "rocky-helmet-damage",
+        damage: 16,
+        applied: true,
+        activationProbability: 1,
+      }),
+    ]);
+  });
+
+  it("bases damage recoil on capped actual damage rather than the overkill roll", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const card = makeCard(attacker, defender, [[999]]);
+    card.moveUses[0].automaticHpEffects = {
+      makesContact: false,
+      damageBasedRecoil: {
+        effectId: "one-third-recoil",
+        label: "与えたダメージの1/3反動",
+        numerator: 1,
+        denominator: 3,
+      },
+    };
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(0);
+    expect(getOnlyStateHp(result, attacker.id)).toBe(67);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "one-third-recoil",
+        damage: 33,
+        changeKind: "recoil",
+        applied: true,
+      }),
+    ]);
+  });
+
+  it("sums actual multi-hit damage and applies damage recoil only once per move", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const card = makeCard(attacker, defender, [[10], [10], [10]]);
+    card.moveUses[0].automaticHpEffects = {
+      makesContact: false,
+      damageBasedRecoil: {
+        effectId: "one-third-recoil",
+        label: "与えたダメージの1/3反動",
+        numerator: 1,
+        denominator: 3,
+      },
+    };
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(70);
+    expect(getOnlyStateHp(result, attacker.id)).toBe(90);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "one-third-recoil",
+        damage: 10,
+        occurrence: 1,
+        applied: true,
+      }),
+    ]);
+  });
+
+  it("requires current HP to be strictly greater than an HP cost", () => {
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const exactBoundaryAttacker = makeBuild("exact-attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const exactBoundaryCard = makeCard(
+      exactBoundaryAttacker,
+      defender,
+      [[0]],
+    );
+    exactBoundaryCard.moveUses = [
+      {
+        id: "cost-1",
+        damageRollsByHit: [[0]],
+        automaticHpEffects: {
+          makesContact: false,
+          hpCost: {
+            effectId: "half-cost",
+            label: "HP50消費",
+            formulaLabel: "テスト用",
+            amount: 50,
+          },
+        },
+      },
+      {
+        id: "cost-2",
+        damageRollsByHit: [[99]],
+        automaticHpEffects: {
+          makesContact: false,
+          hpCost: {
+            effectId: "half-cost",
+            label: "HP50消費",
+            formulaLabel: "テスト用",
+            amount: 50,
+          },
+        },
+      },
+    ];
+
+    const exactBoundaryResult = simulateHpSequence({
+      cards: [exactBoundaryCard],
+    });
+
+    expect(getOnlyStateHp(exactBoundaryResult, exactBoundaryAttacker.id)).toBe(50);
+    expect(getOnlyStateHp(exactBoundaryResult, defender.id)).toBe(100);
+    expect(exactBoundaryResult.hpEventEvaluations.map((evaluation) => ({
+      applied: evaluation.applied,
+      activationProbability: evaluation.activationProbability,
+    }))).toEqual([
+      { applied: true, activationProbability: 1 },
+      { applied: false, activationProbability: 0 },
+    ]);
+
+    const aboveBoundaryAttacker = makeBuild("above-attacker", "ミュウ", {
+      level: 30,
+      hpIv: 4,
+    });
+    const aboveBoundaryCard = makeCard(
+      aboveBoundaryAttacker,
+      defender,
+      [[0]],
+    );
+    aboveBoundaryCard.moveUses = exactBoundaryCard.moveUses;
+
+    const aboveBoundaryResult = simulateHpSequence({
+      cards: [aboveBoundaryCard],
+    });
+
+    expect(aboveBoundaryResult.maxHpByBuildId[aboveBoundaryAttacker.id]).toBe(101);
+    expect(getOnlyStateHp(aboveBoundaryResult, aboveBoundaryAttacker.id)).toBe(1);
+    expect(aboveBoundaryResult.hpEventEvaluations.map(
+      (evaluation) => evaluation.applied,
+    )).toEqual([true, true]);
+  });
+
+  it("re-resolves current-HP-dependent damage at 101, then 50, then 25 HP", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 4,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const seenAttackerHp: number[] = [];
+    const resolveAtCurrentHp = (attackerCurrentHp: number): number[][] => {
+      seenAttackerHp.push(attackerCurrentHp);
+      return [[1]];
+    };
+    const card = makeCard(attacker, defender, [[1]]);
+    card.moveUses = [
+      {
+        id: "move-1",
+        damageRollsByHit: [[1]],
+        resolveDamageRollsByHit: resolveAtCurrentHp,
+        automaticHpEffects: {
+          makesContact: false,
+          specialRecoil: {
+            effectId: "fixed-recoil-51",
+            label: "固定51反動",
+            amount: 51,
+          },
+        },
+      },
+      {
+        id: "move-2",
+        damageRollsByHit: [[1]],
+        resolveDamageRollsByHit: resolveAtCurrentHp,
+        automaticHpEffects: {
+          makesContact: false,
+          specialRecoil: {
+            effectId: "fixed-recoil-25",
+            label: "固定25反動",
+            amount: 25,
+          },
+        },
+      },
+      {
+        id: "move-3",
+        damageRollsByHit: [[1]],
+        resolveDamageRollsByHit: resolveAtCurrentHp,
+        automaticHpEffects: {
+          makesContact: false,
+        },
+      },
+    ];
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(seenAttackerHp).toEqual([101, 50, 25]);
+    expect(getOnlyStateHp(result, attacker.id)).toBe(25);
+    expect(getOnlyStateHp(result, defender.id)).toBe(97);
+  });
+
+  it("applies special self-recoil after an executed zero-damage hit", () => {
+    const attacker = makeBuild("attacker", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const defender = makeBuild("defender", "ミュウ", {
+      level: 30,
+      hpIv: 0,
+    });
+    const card = makeCard(attacker, defender, [[0]]);
+    card.moveUses[0].automaticHpEffects = {
+      makesContact: false,
+      specialRecoil: {
+        effectId: "mind-blown-style-recoil",
+        label: "最大HP半分の自傷",
+        amount: 50,
+      },
+    };
+
+    const result = simulateHpSequence({ cards: [card] });
+
+    expect(getOnlyStateHp(result, defender.id)).toBe(100);
+    expect(getOnlyStateHp(result, attacker.id)).toBe(50);
+    expect(result.hpEventEvaluations).toEqual([
+      expect.objectContaining({
+        effectId: "mind-blown-style-recoil",
+        damage: 50,
+        changeKind: "recoil",
+        applied: true,
+      }),
+    ]);
+  });
 });
