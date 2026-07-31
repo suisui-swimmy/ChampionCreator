@@ -195,6 +195,7 @@ const evaluateCandidate = (
         hit,
         field: input.field,
         evaluation: hitEvaluation,
+        includeAttackerAutomaticHpEffects: false,
       }),
       hpEvents: input.hpEvents ?? [],
       field: input.field,

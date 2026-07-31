@@ -26,6 +26,11 @@ export interface AutomaticMoveHpNotice {
   formulaLabel: string;
 }
 
+export interface AutomaticMoveHpEffectOptions {
+  /** 通常ラインではfalse。双方のHPを追う明示的なシーケンスだけがopt-inする。 */
+  includeAttackerAutomaticHpEffects?: boolean;
+}
+
 const getDamageRollsByHit = (
   evaluation: ScenarioHitEvaluation,
 ): readonly (readonly number[])[] =>
@@ -42,12 +47,14 @@ const getSpecialRecoilAmount = (
 
 export const getAutomaticMoveHpNotices = (
   hit: ScenarioHit,
+  options: AutomaticMoveHpEffectOptions = {},
 ): AutomaticMoveHpNotice[] => {
   const profile = getMoveHpMechanicsProfile(hit);
   const moveLabel = hit.move.displayNameJa;
   const notices: AutomaticMoveHpNotice[] = [];
+  const includeAttackerAutomaticHpEffects = options.includeAttackerAutomaticHpEffects ?? false;
 
-  if (profile.hpCost) {
+  if (includeAttackerAutomaticHpEffects && profile.hpCost) {
     notices.push({
       id: `hp-cost:${profile.hpCost.kind}`,
       label: `${moveLabel}のHP消費`,
@@ -65,7 +72,7 @@ export const getAutomaticMoveHpNotices = (
     });
   }
 
-  if (profile.damageBasedRecoil) {
+  if (includeAttackerAutomaticHpEffects && profile.damageBasedRecoil) {
     notices.push({
       id: `damage-recoil:${profile.canonicalName}`,
       label: `${moveLabel}の反動`,
@@ -76,7 +83,7 @@ export const getAutomaticMoveHpNotices = (
     });
   }
 
-  if (profile.specialRecoil) {
+  if (includeAttackerAutomaticHpEffects && profile.specialRecoil) {
     notices.push({
       id: `special-recoil:${profile.specialRecoil.kind}`,
       label: `${moveLabel}の反動`,
@@ -87,7 +94,7 @@ export const getAutomaticMoveHpNotices = (
     });
   }
 
-  if (profile.forcesAttackerFaint) {
+  if (includeAttackerAutomaticHpEffects && profile.forcesAttackerFaint) {
     notices.push({
       id: "forced-faint:final-gambit",
       label: `${moveLabel}の使用者ひんし`,
@@ -105,12 +112,14 @@ export const buildHpSequenceMoveUses = ({
   field,
   evaluation,
   calculateHit = calculateSmogonHit,
+  includeAttackerAutomaticHpEffects = false,
 }: {
   defenderBuild: Build;
   hit: ScenarioHit;
   field: FieldState;
   evaluation: ScenarioHitEvaluation;
   calculateHit?: HpSequenceHitCalculator;
+  includeAttackerAutomaticHpEffects?: boolean;
 }): HpSequenceMoveUse[] => {
   const repeat = Math.max(0, Math.trunc(hit.repeat));
   const initialDamageRollsByHit = getDamageRollsByHit(evaluation);
@@ -118,7 +127,7 @@ export const buildHpSequenceMoveUses = ({
   const attackerMaxHp = toSmogonPokemon(hit.attacker).maxHP();
   const automaticHpEffects: NonNullable<HpSequenceMoveUse["automaticHpEffects"]> = {
     makesContact: profile.makesContact,
-    ...(profile.hpCost
+    ...(includeAttackerAutomaticHpEffects && profile.hpCost
       ? {
           hpCost: {
             effectId: `move-hp-cost:${profile.hpCost.kind}`,
@@ -128,7 +137,7 @@ export const buildHpSequenceMoveUses = ({
           },
         }
       : {}),
-    ...(profile.damageBasedRecoil
+    ...(includeAttackerAutomaticHpEffects && profile.damageBasedRecoil
       ? {
           damageBasedRecoil: {
             effectId: "move-damage-recoil",
@@ -138,7 +147,7 @@ export const buildHpSequenceMoveUses = ({
           },
         }
       : {}),
-    ...(profile.specialRecoil
+    ...(includeAttackerAutomaticHpEffects && profile.specialRecoil
       ? {
           specialRecoil: {
             effectId: `move-special-recoil:${profile.specialRecoil.kind}`,
@@ -147,7 +156,7 @@ export const buildHpSequenceMoveUses = ({
           },
         }
       : {}),
-    ...(profile.forcesAttackerFaint
+    ...(includeAttackerAutomaticHpEffects && profile.forcesAttackerFaint
       ? {
           forcesAttackerFaint: {
             effectId: "move-forced-faint:final-gambit",

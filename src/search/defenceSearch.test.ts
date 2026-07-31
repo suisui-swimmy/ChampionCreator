@@ -653,6 +653,28 @@ describe("fixed HP damage integration", () => {
     });
     expect(result.hpEventEvaluations).toHaveLength(1);
   });
+
+  it("evaluates every requested hit without stopping for automatic move recoil", () => {
+    const defender = makeHundredHpDefender();
+    const attacker = makeBuild("attacker", "ヌケニン");
+    const hit = makeHit("flare-blitz-repeat", attacker, "フレアドライブ", 2);
+    const scenario = makeScenario("flare-blitz-repeat", [hit], 2, 1);
+
+    const result = evaluateScenario(defender, scenario, {
+      calculateHit: () => ({
+        hitId: hit.id,
+        damageRolls: [60],
+        damageRange: { min: 60, max: 60, percentMin: 60, percentMax: 60 },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      passed: false,
+      survivalProbability: 0,
+      requiredSurvivedHits: 2,
+    });
+    expect(result.hpEventEvaluations).toBeUndefined();
+  });
 });
 
 describe("current HP move integration", () => {

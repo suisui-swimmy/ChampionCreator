@@ -388,7 +388,9 @@ const getAutomaticMoveHpNoticesFromForm = (
       attackerSide: { ...emptySide },
       defenderSide: { ...emptySide },
     };
-    return getAutomaticMoveHpNotices(hit);
+    return getAutomaticMoveHpNotices(hit, {
+      includeAttackerAutomaticHpEffects: false,
+    });
   } catch {
     // 入力途中は既存 resolver の警告に任せ、解決できた時点で自動効果を表示する。
     return [];
@@ -4547,7 +4549,8 @@ function HpEventsEditor({
         <p className="hp-event-help">
           対象・発動順・頻度は効果ごとに固定です。設置物は攻撃前、オボンは条件成立ヒット後、
           いのちのたまは技後、天候・状態異常・しおづけ・たべのこしはターン終了時の順で評価します。
-          技固有のHP消費・現在HP計算・反動・使用者ひんしは選択技から自動適用します。
+          現在HP依存の直接ダメージ・威力は選択技から自動計算します。
+          技使用者側の技固有反動・HP消費・使用者ひんしは、通常の耐久・火力ラインへ自動では含めません。
           ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。
           発動しない条件では追加しないでください。
         </p>

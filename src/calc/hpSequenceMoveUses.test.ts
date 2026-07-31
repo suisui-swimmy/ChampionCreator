@@ -106,22 +106,36 @@ const makeEvaluation = (
 const buildMoveUses = (
   hit: ScenarioHit,
   evaluation = makeEvaluation(hit.id),
+  includeAttackerAutomaticHpEffects = false,
 ) => buildHpSequenceMoveUses({
   defenderBuild: makeBuild("defender"),
   hit,
   field,
   evaluation,
+  includeAttackerAutomaticHpEffects,
 });
 
 describe("buildHpSequenceMoveUses", () => {
-  it("maps contact, HP cost, standard recoil, special recoil, and forced faint profiles", () => {
+  it("keeps attacker-owned automatic HP effects out of standard line calculations", () => {
+    const hpCost = buildMoveUses(makeHit("Belly Drum"))[0];
+    const damageRecoil = buildMoveUses(makeHit("Double-Edge"))[0];
+    const specialRecoil = buildMoveUses(makeHit("Mind Blown"))[0];
+    const forcedFaint = buildMoveUses(makeHit("Final Gambit"))[0];
+
+    expect(hpCost.automaticHpEffects?.hpCost).toBeUndefined();
+    expect(damageRecoil.automaticHpEffects?.damageBasedRecoil).toBeUndefined();
+    expect(specialRecoil.automaticHpEffects?.specialRecoil).toBeUndefined();
+    expect(forcedFaint.automaticHpEffects?.forcesAttackerFaint).toBeUndefined();
+  });
+
+  it("can still map attacker-owned HP effects for a future explicit sequence mode", () => {
     const contact = buildMoveUses(makeHit("Drain Punch"))[0];
     const hpCostHit = makeHit("Belly Drum");
-    const hpCost = buildMoveUses(hpCostHit, makeEvaluation(hpCostHit.id, [0]))[0];
-    const damageRecoil = buildMoveUses(makeHit("Double-Edge"))[0];
-    const struggle = buildMoveUses(makeHit("Struggle"))[0];
-    const mindBlown = buildMoveUses(makeHit("Mind Blown"))[0];
-    const finalGambit = buildMoveUses(makeHit("Final Gambit"))[0];
+    const hpCost = buildMoveUses(hpCostHit, makeEvaluation(hpCostHit.id, [0]), true)[0];
+    const damageRecoil = buildMoveUses(makeHit("Double-Edge"), undefined, true)[0];
+    const struggle = buildMoveUses(makeHit("Struggle"), undefined, true)[0];
+    const mindBlown = buildMoveUses(makeHit("Mind Blown"), undefined, true)[0];
+    const finalGambit = buildMoveUses(makeHit("Final Gambit"), undefined, true)[0];
     const attackerMaxHp = toSmogonPokemon(hpCostHit.attacker).maxHP();
 
     expect(contact.automaticHpEffects).toMatchObject({
@@ -153,22 +167,34 @@ describe("buildHpSequenceMoveUses", () => {
   it("only requires sequence simulation for HP-changing move mechanics", () => {
     const contactOnly = buildMoveUses(makeHit("Drain Punch"))[0];
     const recoil = buildMoveUses(makeHit("Double-Edge"))[0];
+    const recoilWithAutomaticHpEffects = buildMoveUses(makeHit("Double-Edge"), undefined, true)[0];
     const currentHp = buildMoveUses(makeHit("Super Fang"))[0];
 
     expect(moveUseRequiresHpSequence(contactOnly)).toBe(false);
-    expect(moveUseRequiresHpSequence(recoil)).toBe(true);
+    expect(moveUseRequiresHpSequence(recoil)).toBe(false);
+    expect(moveUseRequiresHpSequence(recoilWithAutomaticHpEffects)).toBe(true);
     expect(moveUseRequiresHpSequence(currentHp)).toBe(true);
   });
 
-  it("shows automatic notices without requiring extra user events", () => {
-    expect(getAutomaticMoveHpNotices(makeHit("Double-Edge"))).toEqual([
+  it("only shows direct-damage notices in standard line calculation UI", () => {
+    expect(getAutomaticMoveHpNotices(makeHit("Belly Drum"))).toEqual([]);
+    expect(getAutomaticMoveHpNotices(makeHit("Double-Edge"))).toEqual([]);
+    expect(getAutomaticMoveHpNotices(makeHit("Final Gambit"))).toEqual([
+      expect.objectContaining({ id: "current-hp:Final Gambit" }),
+    ]);
+
+    expect(getAutomaticMoveHpNotices(makeHit("Double-Edge"), {
+      includeAttackerAutomaticHpEffects: true,
+    })).toEqual([
       expect.objectContaining({
         id: "damage-recoil:Double-Edge",
         timingLabel: "技の後",
         formulaLabel: expect.stringContaining("33/100"),
       }),
     ]);
-    expect(getAutomaticMoveHpNotices(makeHit("Final Gambit"))).toEqual([
+    expect(getAutomaticMoveHpNotices(makeHit("Final Gambit"), {
+      includeAttackerAutomaticHpEffects: true,
+    })).toEqual([
       expect.objectContaining({ id: "current-hp:Final Gambit" }),
       expect.objectContaining({ id: "forced-faint:final-gambit" }),
     ]);

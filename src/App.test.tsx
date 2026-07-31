@@ -381,7 +381,7 @@ describe("App", () => {
     expect(html).toContain("ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。");
   });
 
-  it("shows move-owned HP interactions as non-removable automatic notices", () => {
+  it("only shows direct-damage mechanics as automatic notices in ordinary line UI", () => {
     const [baseScenario] = createDefaultScenarioForms();
     const baseAttack = baseScenario.attacks[0];
     const scenario = {
@@ -421,26 +421,27 @@ describe("App", () => {
       />,
     );
 
-    expect(html.match(/>自動1件<\/span>/g)).toHaveLength(3);
-    expect(html.match(/>自動2件<\/span>/g)).toHaveLength(1);
-    expect(html.match(/>技から自動適用<\/p>/g)).toHaveLength(4);
-    expect(html).toContain("みがわりのHP消費");
-    expect(html).toContain("最大HPの1/4（切り捨て・最低1）");
+    expect(html.match(/>自動1件<\/span>/g)).toHaveLength(2);
+    expect(html).not.toContain(">自動2件</span>");
+    expect(html.match(/>技から自動適用<\/p>/g)).toHaveLength(2);
+    expect(html).not.toContain("みがわりのHP消費");
+    expect(html).not.toContain("最大HPの1/4（切り捨て・最低1）");
     expect(html).toContain("カタストロフィの現在HP計算");
     expect(html).toContain("相手の現在HPの1/2（切り捨て・最低1）");
-    expect(html).toContain("ワイルドボルトの反動");
-    expect(html).toContain("実際に与えたダメージの1/4（四捨五入・最低1）");
+    expect(html).not.toContain("ワイルドボルトの反動");
+    expect(html).not.toContain("実際に与えたダメージの1/4（四捨五入・最低1）");
     expect(html).toContain("いのちがけの現在HP計算");
     expect(html).toContain("使用者の現在HP");
-    expect(html).toContain("いのちがけの使用者ひんし");
-    expect(html).toContain("ダメージを与えた使用者がひんし");
-    expect(html.match(/<span class="hp-event-auto-badge">自動<\/span>/g)).toHaveLength(5);
-    expect(html.match(/<strong>適用<\/strong><span>選択技から自動<\/span>/g)).toHaveLength(5);
+    expect(html).not.toContain("いのちがけの使用者ひんし");
+    expect(html).not.toContain("ダメージを与えた使用者がひんし");
+    expect(html.match(/<span class="hp-event-auto-badge">自動<\/span>/g)).toHaveLength(2);
+    expect(html.match(/<strong>適用<\/strong><span>選択技から自動<\/span>/g)).toHaveLength(2);
     expect(html).not.toContain('aria-label="みがわりのHP消費を削除"');
     expect(html).not.toContain('aria-label="ワイルドボルトの反動を削除"');
     expect(html).toContain("HP変化自動1");
-    expect(html).toContain("HP変化自動2");
-    expect(html).toContain("技固有のHP消費・現在HP計算・反動・使用者ひんしは選択技から自動適用します。");
+    expect(html).not.toContain("HP変化自動2");
+    expect(html).toContain("現在HP依存の直接ダメージ・威力は選択技から自動計算します。");
+    expect(html).toContain("技使用者側の技固有反動・HP消費・使用者ひんしは、通常の耐久・火力ラインへ自動では含めません。");
   });
 
   it("starts with the same blank condition shown by the empty box slot", () => {

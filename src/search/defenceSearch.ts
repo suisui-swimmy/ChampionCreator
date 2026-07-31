@@ -246,6 +246,7 @@ const getMoveUses = (
   field,
   evaluation,
   calculateHit,
+  includeAttackerAutomaticHpEffects: false,
 });
 
 const getDirectDamageRolls = (
