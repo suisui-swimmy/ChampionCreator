@@ -5,7 +5,7 @@
 ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計算に準拠しながら、複数の仮想敵条件を同時に満たす能力ポイント配分を探索する静的 Web アプリです。
 耐久調整、火力ライン、素早さラインを同じ作業画面で扱い、条件を満たす候補の SP 配分、使用SP、残りSP、最厳条件、ダメージ詳細を比較できます。
 
-公開URL: <https://suisui-swimmy.github.io/ChampionCreator/>
+公開URL: <https://championcreator.suisui-swimmy.com/>
 
 Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 

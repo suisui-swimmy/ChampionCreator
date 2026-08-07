@@ -86,12 +86,23 @@ describe("App", () => {
     expect(html).toContain('name="description"');
     expect(html).toContain("能力ポイント（SP・努力値相当）の候補配分を自動計算");
     expect(html).toContain('name="robots" content="index, follow, max-image-preview:large"');
-    expect(html).toContain('rel="canonical" href="https://suisui-swimmy.github.io/ChampionCreator/"');
-    expect(html).toContain('property="og:url" content="https://suisui-swimmy.github.io/ChampionCreator/"');
+    expect(html).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/"');
+    expect(html).toContain('property="og:url" content="https://championcreator.suisui-swimmy.com/"');
+    expect(html).toContain('property="og:image"');
+    expect(html).toContain('name="twitter:image"');
+    expect(html.match(/content="https:\/\/championcreator\.suisui-swimmy\.com\/assets\/icons\/icon-512\.png"/g)).toHaveLength(2);
+    const websiteStructuredDataMatch = html.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
+    expect(websiteStructuredDataMatch).not.toBeNull();
+    expect(JSON.parse(websiteStructuredDataMatch?.[1] ?? "{}")).toEqual({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "ChampionCreator",
+      url: "https://championcreator.suisui-swimmy.com/",
+    });
     expect(html).toContain('name="twitter:card" content="summary"');
-    expect(sitemap).toContain("<loc>https://suisui-swimmy.github.io/ChampionCreator/</loc>");
+    expect(sitemap).toContain("<loc>https://championcreator.suisui-swimmy.com/</loc>");
     expect(sitemap).not.toContain("localhost");
-    expect(textSitemap.trim()).toBe("https://suisui-swimmy.github.io/ChampionCreator/");
+    expect(textSitemap.trim()).toBe("https://championcreator.suisui-swimmy.com/");
     expect(textSitemap.trim().split(/\r?\n/)).toHaveLength(1);
   });
 
