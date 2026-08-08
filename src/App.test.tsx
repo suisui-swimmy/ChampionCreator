@@ -101,15 +101,34 @@ describe("App", () => {
     expect(html).toContain('property="og:url" content="https://championcreator.suisui-swimmy.com/"');
     expect(html).toContain('property="og:image"');
     expect(html).toContain('name="twitter:image"');
-    expect(html.match(/content="https:\/\/championcreator\.suisui-swimmy\.com\/assets\/icons\/icon-512\.png"/g)).toHaveLength(2);
-    const websiteStructuredDataMatch = html.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
-    expect(websiteStructuredDataMatch).not.toBeNull();
-    expect(JSON.parse(websiteStructuredDataMatch?.[1] ?? "{}")).toEqual({
+    const searchThumbnailUrl = "https://championcreator.suisui-swimmy.com/assets/seo/championcreator-search-thumbnail.png";
+    expect(html.match(new RegExp(`content="${searchThumbnailUrl.replaceAll(".", "\\.")}"`, "g"))).toHaveLength(2);
+    expect(html).toContain('property="og:image:width" content="1024"');
+    expect(html).toContain('property="og:image:height" content="1024"');
+    const structuredData = Array.from(html.matchAll(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g))
+      .map((match) => JSON.parse(match[1] ?? "{}"));
+    expect(structuredData).toContainEqual({
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "ChampionCreator",
       url: "https://championcreator.suisui-swimmy.com/",
     });
+    expect(structuredData).toContainEqual({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: "ChampionCreator | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール",
+      url: "https://championcreator.suisui-swimmy.com/",
+      primaryImageOfPage: {
+        "@type": "ImageObject",
+        url: searchThumbnailUrl,
+        width: 1024,
+        height: 1024,
+      },
+    });
+    const searchThumbnail = readFileSync(new URL("../public/assets/seo/championcreator-search-thumbnail.png", import.meta.url));
+    expect(searchThumbnail.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(searchThumbnail.readUInt32BE(16)).toBe(1024);
+    expect(searchThumbnail.readUInt32BE(20)).toBe(1024);
     expect(html).toContain('name="twitter:card" content="summary"');
     expect(sitemap).toContain("<loc>https://championcreator.suisui-swimmy.com/</loc>");
     expect(sitemap).toContain("<loc>https://championcreator.suisui-swimmy.com/guide/</loc>");
@@ -298,6 +317,8 @@ describe("App", () => {
     expect(html).toContain('value="メガゲンガー"');
     expect(html).toContain("assets/ui/arrow-left-circle.svg");
     expect(html).toContain("assets/ui/arrow-right-circle.svg");
+    expect(html).not.toMatch(/<img[^>]+assets\/ui\/arrow-(?:left|right|up|down)-circle\.svg/);
+    expect(html).toContain('class="attack-direction-icon"');
     expect(html).toContain('aria-label="耐久調整A 耐久調整。クリックで火力調整に切り替え"');
     expect(html).toContain('aria-label="火力調整A 火力調整。クリックで素早さ調整に切り替え"');
     expect(html).toContain('aria-label="素早さ調整A 素早さ調整。クリックで耐久調整に切り替え"');

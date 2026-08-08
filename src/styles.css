@@ -2313,26 +2313,28 @@ textarea {
   transform: translateY(1px);
 }
 
-.attack-direction-button img {
+.attack-direction-icon {
   display: block;
   width: 20px;
   height: 20px;
-  object-fit: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
-.attack-direction-button.left img {
+.attack-direction-button.left .attack-direction-icon {
   filter: drop-shadow(0 0 4px rgba(0, 255, 114, 0.24));
 }
 
-.attack-direction-button.right img {
+.attack-direction-button.right .attack-direction-icon {
   filter: drop-shadow(0 0 4px rgba(245, 197, 66, 0.22));
 }
 
-.attack-direction-button.speed img {
+.attack-direction-button.speed .attack-direction-icon {
   filter: drop-shadow(0 0 4px rgba(0, 216, 240, 0.28));
 }
 
-.scenario-row.speed.trick-room .attack-direction-button.speed img {
+.scenario-row.speed.trick-room .attack-direction-button.speed .attack-direction-icon {
   filter: drop-shadow(0 0 5px rgba(181, 108, 255, 0.34));
 }
 
@@ -4155,15 +4157,20 @@ textarea {
   }
 
   .mobile-scenario-direction-icon {
+    display: block;
+    flex: 0 0 18px;
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: rgba(8, 16, 13, 0.78);
+    background-color: rgba(8, 16, 13, 0.78);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
     filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.4));
     pointer-events: none;
   }
 
-  .mobile-scenario-adjustment-row span {
+  .mobile-scenario-adjustment-label {
     overflow: hidden;
     color: var(--muted);
     font-size: 10px;

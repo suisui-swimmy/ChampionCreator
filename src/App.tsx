@@ -3255,13 +3255,12 @@ function MobileOverview({
                       aria-label={`${scenario.label}: ${currentAdjustmentLabel}。タップで次の調整種別に切り替え`}
                       onClick={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
                     >
-                      <img
+                      <span
                         className="mobile-scenario-direction-icon"
-                        src={getAssetSrc(directionIconPath)}
-                        alt=""
                         aria-hidden="true"
+                        style={{ backgroundImage: `url("${getAssetSrc(directionIconPath)}")` }}
                       />
-                      <span>{currentAdjustmentLabel}</span>
+                      <span className="mobile-scenario-adjustment-label">{currentAdjustmentLabel}</span>
                     </button>
 
                     <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
@@ -4551,6 +4550,13 @@ function AttackCard({
   const speedPrimaryConditionLabel = isTrickRoomSpeed ? "確定トリル先制" : "確定抜き";
   const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
   const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
+  const directionIconPath = isSpeedAdjustment
+    ? isTrickRoomSpeed
+      ? "assets/ui/arrow-down-circle.svg"
+      : "assets/ui/arrow-up-circle.svg"
+    : isOffenseAdjustment
+      ? "assets/ui/arrow-right-circle.svg"
+      : "assets/ui/arrow-left-circle.svg";
   const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(adjustmentType));
   const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(adjustmentType);
   const isAbilitySupport = isAbilitySupportCard(
@@ -4630,16 +4636,10 @@ function AttackCard({
           aria-label={`${attackLabel} ${currentAdjustmentLabel}。クリックで${nextAdjustmentLabel}に切り替え`}
           onClick={onToggleAdjustmentType}
         >
-          <img
-            src={getAssetSrc(isSpeedAdjustment
-              ? isTrickRoomSpeed
-                ? "assets/ui/arrow-down-circle.svg"
-                : "assets/ui/arrow-up-circle.svg"
-              : isOffenseAdjustment
-                ? "assets/ui/arrow-right-circle.svg"
-                : "assets/ui/arrow-left-circle.svg")}
-            alt=""
+          <span
+            className="attack-direction-icon"
             aria-hidden="true"
+            style={{ backgroundImage: `url("${getAssetSrc(directionIconPath)}")` }}
           />
         </button>
         <PokemonArtworkFrame
