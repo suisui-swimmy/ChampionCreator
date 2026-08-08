@@ -65,6 +65,7 @@ import {
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
   type ScenarioFormState,
+  type SearchStatus,
   type SpeedScenarioResult,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
@@ -787,11 +788,17 @@ const BLANK_ENEMY_BOX_SLOT_ID = "blank-enemy-box-slot";
 type AppProps = {
   initialTargetForm?: TargetFormState;
   initialScenarioForms?: ScenarioFormState[];
+  variant?: "default" | "tutorial";
+  onSearchStatusChange?: (status: SearchStatus) => void;
+  onCandidateApplied?: () => void;
 };
 
 export function App({
   initialTargetForm,
   initialScenarioForms,
+  variant = "default",
+  onSearchStatusChange,
+  onCandidateApplied,
 }: AppProps = {}) {
   const [targetForm, setTargetForm] = useState<TargetFormState>(
     () => initialTargetForm ?? createBlankTargetForm(),
@@ -816,11 +823,13 @@ export function App({
   const [mobileSheet, setMobileSheet] = useState<MobileSheet | null>(null);
   const [mobileScenarioDetailId, setMobileScenarioDetailId] = useState<string | null>(null);
   const [mobileFocusedAttackId, setMobileFocusedAttackId] = useState<string | null>(null);
-  const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(loadBoxEntriesFromBrowser);
+  const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(
+    () => variant === "tutorial" ? [] : loadBoxEntriesFromBrowser(),
+  );
   const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
   const [boxMessage, setBoxMessage] = useState<string | null>(null);
   const [enemyBoxEntries, setEnemyBoxEntries] = useState<EnemyBoxEntry[]>(
-    loadEnemyBoxEntriesFromBrowser,
+    () => variant === "tutorial" ? [] : loadEnemyBoxEntriesFromBrowser(),
   );
   const [selectedEnemyBoxEntryId, setSelectedEnemyBoxEntryId] = useState<string | null>(null);
   const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
@@ -897,6 +906,10 @@ export function App({
       }
     };
   }, []);
+
+  useEffect(() => {
+    onSearchStatusChange?.(searchState.status);
+  }, [onSearchStatusChange, searchState.status]);
 
   useEffect(() => {
     if (mobileSheet !== "scenarios") {
@@ -1634,6 +1647,7 @@ export function App({
     setTargetForm((current) => applyCandidateToTarget(current, candidate));
     setAppliedCandidateId(candidate.id);
     setAppliedAdjustmentId(null);
+    onCandidateApplied?.();
     clearAppliedMarkerAfterDelay();
   };
 
@@ -1674,11 +1688,12 @@ export function App({
     <div
       className={[
         "app-shell",
+        variant === "tutorial" ? "app-shell--tutorial" : "",
         searchState.status === "running" ? "is-running" : "",
         mobileSheet ? `mobile-sheet-open mobile-${mobileSheet}-open` : "",
       ].filter(Boolean).join(" ")}
     >
-      <header className="topbar">
+      {variant === "default" ? <header className="topbar">
         <div className="brand-title">
           <div className="brand-line">
             <h1>
@@ -1695,10 +1710,8 @@ export function App({
         <div className="topbar-meta">
           <a
             className="readme-link"
-            href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Usageを開く"
+            href="/guide/"
+            aria-label="使い方ガイドを開く"
           >
             <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
           </a>
@@ -1710,9 +1723,9 @@ export function App({
             data {appVersionInfo.localizationEntries}
           </p>
         </div>
-      </header>
+      </header> : null}
 
-      {boxOpen ? (
+      {variant === "default" && boxOpen ? (
         <BoxPanel
           title="調整対象ボックス"
           dialogId="target-box-title"
@@ -1737,7 +1750,7 @@ export function App({
           onRequestImport={handleRequestImportBoxBackup}
         />
       ) : null}
-      {enemyBoxOpen ? (
+      {variant === "default" && enemyBoxOpen ? (
         <BoxPanel
           title="仮想敵ボックス"
           dialogId="enemy-box-title"
@@ -1934,7 +1947,7 @@ export function App({
           onCloseMobileSheet={closeMobileSheet}
         />
       </main>
-      <footer className="app-footer" aria-label="権利表記">
+      {variant === "default" ? <footer className="app-footer" aria-label="権利表記">
         <div className="app-footer-copy">
           <span>© 2026 suisui-swimmy</span>
           <span>
@@ -1962,7 +1975,7 @@ export function App({
             <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
           </a>
         </div>
-      </footer>
+      </footer> : null}
     </div>
   );
 }
@@ -4509,11 +4522,9 @@ function HpEventsEditor({
         <p className="hp-event-help">
           対象・発動順・頻度などの詳しい仕様は
           <a
-            href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage#定数ダメージ回復"
-            target="_blank"
-            rel="noreferrer"
+            href="/guide/#constant-damage"
           >
-            Wikiの定数ダメージ・回復
+            ガイドの定数ダメージ・回復
           </a>
           を確認してください。
         </p>

@@ -30,6 +30,7 @@ import {
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
+import { GuideTutorial } from "./guide/GuideTutorial";
 
 const renderExampleApp = (): string => renderToStaticMarkup(
   <App
@@ -101,9 +102,51 @@ describe("App", () => {
     });
     expect(html).toContain('name="twitter:card" content="summary"');
     expect(sitemap).toContain("<loc>https://championcreator.suisui-swimmy.com/</loc>");
+    expect(sitemap).toContain("<loc>https://championcreator.suisui-swimmy.com/guide/</loc>");
     expect(sitemap).not.toContain("localhost");
-    expect(textSitemap.trim()).toBe("https://championcreator.suisui-swimmy.com/");
-    expect(textSitemap.trim().split(/\r?\n/)).toHaveLength(1);
+    expect(textSitemap.trim().split(/\r?\n/)).toEqual([
+      "https://championcreator.suisui-swimmy.com/",
+      "https://championcreator.suisui-swimmy.com/guide/",
+    ]);
+  });
+
+  it("publishes a static, indexable guide with a responsive real-calculation tutorial", () => {
+    const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+    const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
+    const robots = readFileSync(new URL("../public/robots.txt", import.meta.url), "utf8");
+    const tutorialHtml = renderToStaticMarkup(<GuideTutorial />);
+
+    expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>");
+    expect(guideHtml).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/"');
+    expect(guideHtml).toContain('name="robots" content="index, follow, max-image-preview:large"');
+    expect(guideHtml).toContain('id="guide-tutorial-root"');
+    expect(guideHtml).toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
+    expect(guideHtml).toContain('id="constant-damage"');
+    expect(guideHtml).toContain('src="/src/guide/main.tsx"');
+    const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
+    expect(guideStructuredDataMatch).not.toBeNull();
+    const guideStructuredData = JSON.parse(guideStructuredDataMatch?.[1] ?? "{}");
+    expect(guideStructuredData["@graph"]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ "@type": "TechArticle" }),
+      expect.objectContaining({ "@type": "BreadcrumbList" }),
+    ]));
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-page \.app-shell--tutorial \.workbench\s*\{[^}]*display:\s*block;/s);
+    expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
+    expect(guideHtml).not.toContain('class="guide-context"');
+    expect(guideHtml).not.toContain('id="guide-version"');
+    expect(guideHtml).toContain('class="app-footer"');
+    expect(guideHtml).toContain("不具合報告");
+    expect(guideHtml).toContain('aria-label="お問い合わせ: X @peixe0307"');
+    expect(tutorialHtml).toContain("規定入力で計算してみよう");
+    expect(tutorialHtml).toContain('class="app-shell app-shell--tutorial"');
+    expect(tutorialHtml).toContain('value="メガマフォクシー"');
+    expect(tutorialHtml).toContain('value="ドドゲザン"');
+    expect(tutorialHtml).toContain('value="ふいうち"');
+    expect(tutorialHtml).toContain('value="メガゲンガー"');
+    expect(tutorialHtml).toContain('value="サイコキネシス"');
+    expect(tutorialHtml).not.toContain('class="topbar"');
+    expect(tutorialHtml).not.toContain('class="app-footer"');
+    expect(robots).toContain("Sitemap: https://championcreator.suisui-swimmy.com/sitemap.xml");
   });
 
   it("keeps type and item dropdown candidates separated", () => {
@@ -391,8 +434,8 @@ describe("App", () => {
     expect(html).not.toContain("被弾側の特性が「さめはだ／てつのトゲ」ではありません");
     expect(mismatchHtml).toContain("被弾側の持ち物が「ゴツゴツメット」ではありません。発動前提で計算します");
     expect(mismatchHtml).toContain("被弾側の特性が「さめはだ／てつのトゲ」ではありません。発動前提で計算します");
-    expect(html).toContain("Wikiの定数ダメージ・回復");
-    expect(html).toContain('href="https://github.com/suisui-swimmy/ChampionCreator/wiki/Usage#定数ダメージ回復"');
+    expect(html).toContain("ガイドの定数ダメージ・回復");
+    expect(html).toContain('href="/guide/#constant-damage"');
     expect(html).not.toContain("ゴツゴツメット・さめはだ／てつのトゲの接触判定は、選択技・えんかく・ぼうごパット・パンチグローブから自動判定します。");
   });
 
@@ -458,7 +501,7 @@ describe("App", () => {
     expect(html).not.toContain("HP変化自動1");
     expect(html).not.toContain("HP変化自動2");
     expect(html).toContain("対象・発動順・頻度などの詳しい仕様は");
-    expect(html).toContain("Wikiの定数ダメージ・回復");
+    expect(html).toContain("ガイドの定数ダメージ・回復");
     expect(html).not.toContain("現在HP依存の直接ダメージ・威力は選択技から自動計算します。");
     expect(html).not.toContain("技使用者側の技固有反動・HP消費・使用者ひんしは、通常の耐久・火力ラインへ自動では含めません。");
   });

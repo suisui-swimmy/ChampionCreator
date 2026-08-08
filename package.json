@@ -1,10 +1,10 @@
 {
   "name": "championcreator",
-  "version": "0.6.7",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "vite --configLoader runner --host 127.0.0.1",
     "generate:battle-options": "node scripts/generate-battle-options.mjs",
     "generate:localization-seed": "node scripts/generate-localization-seed.mjs",
     "generate:move-hit-counts": "node scripts/add-move-hit-counts.mjs",
@@ -14,9 +14,9 @@
     "validate:pokemon-abilities": "node scripts/validate-pokemon-abilities.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run validate:localization && npm run validate:pokemon-abilities && npm run validate:artwork-assets && npm test && npm run build",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run"
+    "build": "tsc --noEmit && vite build --configLoader runner",
+    "preview": "vite preview --configLoader runner --host 127.0.0.1",
+    "test": "vitest run --configLoader runner"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.13",

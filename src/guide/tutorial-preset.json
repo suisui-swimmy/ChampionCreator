@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-08-08T06:00:54.465Z",
+  "entries": [
+    {
+      "id": "default-example-mega-delphox",
+      "name": "調整例：メガマフォクシー",
+      "createdAt": "2026-08-07T08:47:13.258Z",
+      "updatedAt": "2026-08-07T08:47:13.258Z",
+      "summary": {
+        "pokemonName": "メガマフォクシー",
+        "conditionSummary": "耐久 1 / 火力 1 / 素早さ 1",
+        "statPointSummary": "H0 / A0 / B0 / C0 / D0 / S0"
+      },
+      "payload": {
+        "schemaVersion": 7,
+        "target": {
+          "pokemonInput": "メガマフォクシー",
+          "natureInput": "おくびょう",
+          "abilityInput": "",
+          "itemInput": "",
+          "teraTypeInput": "",
+          "teraEnabled": false,
+          "dmaxEnabled": false,
+          "level": 50,
+          "statPoints": {
+            "hp": 0,
+            "atk": 0,
+            "def": 0,
+            "spa": 0,
+            "spd": 0,
+            "spe": 0
+          },
+          "boosts": {
+            "atk": 0,
+            "def": 0,
+            "spa": 0,
+            "spd": 0,
+            "spe": 0
+          }
+        },
+        "scenarios": [
+          {
+            "id": "scenario-defence",
+            "label": "シナリオ1",
+            "enabled": true,
+            "adjustmentType": "defence",
+            "attacks": [
+              {
+                "id": "attack-a",
+                "label": "攻撃A",
+                "attackerPokemonInput": "ドドゲザン",
+                "attackerNatureInput": "いじっぱり",
+                "attackerAbilityInput": "",
+                "attackerItemInput": "",
+                "attackerTeraTypeInput": "",
+                "attackerTeraEnabled": false,
+                "attackerDmaxEnabled": false,
+                "attackerStatus": "none",
+                "defenderStatus": "none",
+                "attackerLevel": 50,
+                "attackerStatPoints": {
+                  "hp": 0,
+                  "atk": 32,
+                  "def": 0,
+                  "spa": 32,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "attackerBoosts": {
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "defenderBoosts": {
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "moveInput": "ふいうち",
+                "hpEvents": [],
+                "repeat": 1,
+                "requiredSurvivedHits": 1,
+                "minSurvivalProbabilityPercent": 90,
+                "targetKoProbabilityPercent": 100,
+                "gameType": "singles",
+                "weather": "none",
+                "terrain": "none",
+                "critical": false,
+                "reflect": false,
+                "lightScreen": false,
+                "auroraVeil": false,
+                "helpingHand": false,
+                "friendGuard": false,
+                "speedTargetMode": "opponent",
+                "speedComparison": "outspeed",
+                "speedRequiredOffset": 1,
+                "speedTargetValue": 0,
+                "speedItemMultiplier": "auto",
+                "speedAbilityMultiplier": "auto",
+                "speedMoveModifier": "none",
+                "tailwind": false
+              }
+            ]
+          },
+          {
+            "id": "scenario-offense",
+            "label": "シナリオ2",
+            "enabled": true,
+            "adjustmentType": "offense",
+            "attacks": [
+              {
+                "id": "attack-a",
+                "label": "攻撃A",
+                "attackerPokemonInput": "メガゲンガー",
+                "attackerNatureInput": "おくびょう",
+                "attackerAbilityInput": "",
+                "attackerItemInput": "",
+                "attackerTeraTypeInput": "",
+                "attackerTeraEnabled": false,
+                "attackerDmaxEnabled": false,
+                "attackerStatus": "none",
+                "defenderStatus": "none",
+                "attackerLevel": 50,
+                "attackerStatPoints": {
+                  "hp": 32,
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "attackerBoosts": {
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "defenderBoosts": {
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "moveInput": "サイコキネシス",
+                "hpEvents": [],
+                "repeat": 1,
+                "requiredSurvivedHits": 1,
+                "minSurvivalProbabilityPercent": 100,
+                "targetKoProbabilityPercent": 80,
+                "gameType": "singles",
+                "weather": "none",
+                "terrain": "none",
+                "critical": false,
+                "reflect": false,
+                "lightScreen": false,
+                "auroraVeil": false,
+                "helpingHand": false,
+                "friendGuard": false,
+                "speedTargetMode": "opponent",
+                "speedComparison": "outspeed",
+                "speedRequiredOffset": 1,
+                "speedTargetValue": 0,
+                "speedItemMultiplier": "auto",
+                "speedAbilityMultiplier": "auto",
+                "speedMoveModifier": "none",
+                "tailwind": false
+              }
+            ]
+          },
+          {
+            "id": "scenario-speed",
+            "label": "シナリオ3",
+            "enabled": true,
+            "adjustmentType": "speed",
+            "attacks": [
+              {
+                "id": "attack-a",
+                "label": "攻撃A",
+                "attackerPokemonInput": "メガゲンガー",
+                "attackerNatureInput": "おくびょう",
+                "attackerAbilityInput": "",
+                "attackerItemInput": "",
+                "attackerTeraTypeInput": "",
+                "attackerTeraEnabled": false,
+                "attackerDmaxEnabled": false,
+                "attackerStatus": "none",
+                "defenderStatus": "none",
+                "attackerLevel": 50,
+                "attackerStatPoints": {
+                  "hp": 0,
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 32
+                },
+                "attackerBoosts": {
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "defenderBoosts": {
+                  "atk": 0,
+                  "def": 0,
+                  "spa": 0,
+                  "spd": 0,
+                  "spe": 0
+                },
+                "moveInput": "",
+                "hpEvents": [],
+                "repeat": 1,
+                "requiredSurvivedHits": 1,
+                "minSurvivalProbabilityPercent": 100,
+                "targetKoProbabilityPercent": 100,
+                "gameType": "singles",
+                "weather": "none",
+                "terrain": "none",
+                "critical": false,
+                "reflect": false,
+                "lightScreen": false,
+                "auroraVeil": false,
+                "helpingHand": false,
+                "friendGuard": false,
+                "speedTargetMode": "opponent",
+                "speedComparison": "outspeed",
+                "speedRequiredOffset": 1,
+                "speedTargetValue": 0,
+                "speedItemMultiplier": "auto",
+                "speedAbilityMultiplier": "auto",
+                "speedMoveModifier": "none",
+                "tailwind": false
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

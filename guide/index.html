@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>
+    <meta
+      name="description"
+      content="ChampionCreatorの使い方を、実際に計算できるチュートリアル付きで解説。ポケモンチャンピオンズのSP、耐久調整、火力調整、素早さ調整、候補の見方を確認できます。"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#090d0e" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:site_name" content="ChampionCreator" />
+    <meta property="og:title" content="ChampionCreator 使い方ガイド" />
+    <meta
+      property="og:description"
+      content="実際の計算UIを操作しながら、耐久・火力・素早さの複合調整を試せる公式ガイドです。"
+    />
+    <meta property="og:url" content="https://championcreator.suisui-swimmy.com/guide/" />
+    <meta property="og:image" content="https://championcreator.suisui-swimmy.com/assets/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="ChampionCreator 使い方ガイド" />
+    <meta
+      name="twitter:description"
+      content="実際の計算UIを操作しながら、耐久・火力・素早さの複合調整を試せる公式ガイドです。"
+    />
+    <meta name="twitter:image" content="https://championcreator.suisui-swimmy.com/assets/icons/icon-512.png" />
+    <link rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/" />
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@100;400;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "TechArticle",
+            "headline": "ChampionCreator 使い方ガイド",
+            "description": "ChampionCreatorで耐久・火力・素早さ条件を設定し、SP配分を計算する方法を解説します。",
+            "inLanguage": "ja",
+            "mainEntityOfPage": "https://championcreator.suisui-swimmy.com/guide/"
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "ChampionCreator",
+                "item": "https://championcreator.suisui-swimmy.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "使い方ガイド",
+                "item": "https://championcreator.suisui-swimmy.com/guide/"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VCGTV67QC2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-VCGTV67QC2');
+    </script>
+  </head>
+  <body class="guide-page">
+    <header class="guide-header">
+      <a class="guide-brand" href="/" aria-label="ChampionCreatorを開く">
+        <img src="/assets/brand/championcreator-title.svg" alt="ChampionCreator" />
+        <span>ガイド</span>
+      </a>
+      <nav class="guide-global-nav" aria-label="サイト内メニュー">
+        <a href="/">ツール</a>
+        <a class="active" href="/guide/" aria-current="page">ガイド</a>
+        <a href="https://github.com/suisui-swimmy/ChampionCreator" target="_blank" rel="noreferrer">GitHub</a>
+      </nav>
+      <a class="guide-header-action" href="/">アプリを開く <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <div class="guide-layout">
+      <aside class="guide-toc" aria-label="ガイド目次">
+        <p class="guide-toc-label">ガイド内メニュー</p>
+        <nav>
+          <a class="active" href="#getting-started">まずは使ってみよう</a>
+          <a href="#screen">画面の見方</a>
+          <a href="#basic-flow">基本の流れ</a>
+          <a href="#target">調整対象</a>
+          <a href="#sp">SPの考え方</a>
+          <a href="#scenarios">仮想敵シナリオ</a>
+          <a class="defence" href="#defence">耐久調整</a>
+          <a class="offense" href="#offense">火力調整</a>
+          <a id="constant-damage-nav" href="#constant-damage">定数ダメージ・回復</a>
+          <a class="speed" href="#speed">素早さ調整</a>
+          <a href="#candidates">候補一覧</a>
+          <a href="#box">ボックス</a>
+          <a href="#troubleshooting">よくある困りごと</a>
+        </nav>
+        <div class="guide-toc-help">
+          <strong>使い方で困ったら</strong>
+          <p>候補が出ないときの確認項目をまとめています。</p>
+          <a href="#troubleshooting">困りごとを見る</a>
+        </div>
+      </aside>
+
+      <main class="guide-content">
+        <section class="guide-intro" id="getting-started">
+          <p class="guide-breadcrumb"><a href="/">ChampionCreator</a><span>/</span>使い方ガイド</p>
+          <p class="guide-eyebrow">はじめての方へ</p>
+          <h1>まずは使ってみよう</h1>
+          <p class="guide-lead">
+            ChampionCreatorは、複数の耐久・火力・素早さ条件を同時に満たすSP配分を自動で計算する能力ポイント自動調整ツールです。
+            下の作業台は画像ではなく、実際のアプリと同じ計算UIです。
+          </p>
+
+          <div class="guide-quick-steps" aria-label="クイックスタート">
+            <article><span>1</span><div><strong>条件を確認</strong><p>メガマフォクシーと3つの規定条件を確認します。</p></div></article>
+            <article><span>2</span><div><strong>計算開始</strong><p>耐久・火力・素早さを同時に評価します。</p></div></article>
+            <article><span>3</span><div><strong>候補を比較</strong><p>PASS条件とSP配分を見て候補を適用します。</p></div></article>
+          </div>
+
+          <noscript>
+            <p class="guide-noscript">実計算チュートリアルを使うにはJavaScriptを有効にしてください。ガイド本文はそのまま読めます。</p>
+          </noscript>
+          <div id="guide-tutorial-root"></div>
+        </section>
+
+        <section class="guide-section" id="screen">
+          <p class="guide-section-kicker">OVERVIEW</p>
+          <h2>画面の見方</h2>
+          <p>ChampionCreatorの作業画面は、大きく次の4領域に分かれています。</p>
+          <div class="guide-feature-grid">
+            <article><span class="feature-mark target">01</span><h3>調整対象</h3><p>調整したいポケモン、性格、特性、持ち物、現在SPなどを入力します。</p></article>
+            <article><span class="feature-mark scenario">02</span><h3>仮想敵シナリオ</h3><p>相手、技、条件、耐久・火力・素早さの調整種別を入力します。</p></article>
+            <article><span class="feature-mark result">03</span><h3>候補一覧</h3><p>全条件を満たした配分、残りSP、最厳条件、ダメージ詳細を比較します。</p></article>
+            <article><span class="feature-mark box">04</span><h3>ボックス</h3><p>入力中の条件をブラウザ内へ保存し、読み込みやバックアップを行います。</p></article>
+          </div>
+          <div class="guide-tip">
+            <strong>スマホでは</strong>
+            <p>調整対象、シナリオ、候補をタップすると、それぞれの編集・詳細シートが開きます。上の実計算チュートリアルも画面幅に応じて同じモバイルUIへ切り替わります。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="basic-flow">
+          <p class="guide-section-kicker">WORKFLOW</p>
+          <h2>基本の流れ</h2>
+          <ol class="guide-flow-list">
+            <li><span>1</span><p><strong>調整対象を入力</strong>ポケモン、性格、特性、持ち物、レベル、現在SPを設定します。</p></li>
+            <li><span>2</span><p><strong>仮想敵シナリオを作成</strong>相手ポケモン、技、攻撃側の条件を入力します。</p></li>
+            <li><span>3</span><p><strong>調整種別を選択</strong>耐久調整・火力調整・素早さ調整から目的を選びます。</p></li>
+            <li><span>4</span><p><strong>計算して候補を比較</strong>必要なら複数条件を追加し、候補のPASS内容を確認します。</p></li>
+            <li><span>5</span><p><strong>候補を適用・保存</strong>使いたい候補を調整対象へ反映し、ボックスへ保存します。</p></li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="target">
+          <p class="guide-section-kicker">TARGET</p>
+          <h2>調整対象</h2>
+          <p>探索のベースになるポケモンを設定します。主な入力項目は、ポケモン名、性格、特性、持ち物、レベル、現在のH/A/B/C/D/S SP、テラスタイプ、ランク、状態異常です。</p>
+          <p>H/B/Dは耐久候補として同時探索されます。A/C/Sは、入力済みSPや火力調整・素早さ調整で必要になった固定条件として、耐久探索の予算にも反映されます。</p>
+        </section>
+
+        <section class="guide-section" id="sp">
+          <p class="guide-section-kicker">STAT POINTS</p>
+          <h2>SPの考え方</h2>
+          <div class="guide-stat-rules">
+            <div><strong>0–32</strong><span>各能力に使えるSP</span></div>
+            <div><strong>66</strong><span>6能力の合計上限</span></div>
+            <div><strong>H/B/D</strong><span>1候補として同時探索</span></div>
+            <div><strong>A/C/S</strong><span>火力・素早さの固定条件</span></div>
+          </div>
+          <p>候補一覧の「使用SP」は調整対象に使った合計SP、「残りSP」は66SPから使用済みSPを引いた値です。計算時は、実数値が一致するShowdown EV相当へ変換して<code>@smogon/calc</code>へ渡します。</p>
+        </section>
+
+        <section class="guide-section" id="scenarios">
+          <p class="guide-section-kicker">SCENARIOS</p>
+          <h2>仮想敵シナリオ</h2>
+          <p>シナリオは、調整で満たしたい条件のまとまりです。相手ポケモン、技、性格、特性、持ち物、SP、ランク、天候、フィールド、壁、急所、複数攻撃などを設定できます。</p>
+          <p>有効なシナリオだけが計算対象になります。一時的に条件から外したい場合は、削除ではなく無効化しておくと戻しやすいです。</p>
+          <div class="guide-tip">
+            <strong>ダブルバトルの味方特性</strong>
+            <p>「わざわいのつるぎ」「フェアリーオーラ」「フレンドガード」などは、ダブルバトルを選択し、同じシナリオ内にその特性を持つポケモンを追加すると反映できます。</p>
+          </div>
+        </section>
+
+        <div class="guide-mode-grid">
+          <section class="guide-mode-section defence" id="defence">
+            <span>DEFENCE</span><h2>耐久調整</h2>
+            <p>調整対象が相手の攻撃をどれだけ耐えるかを設定します。攻撃側条件、必要耐久回数、必要生存率を入力し、複数条件をすべて満たす配分だけを候補にします。</p>
+          </section>
+          <section class="guide-mode-section offense" id="offense">
+            <span>OFFENSE</span><h2>火力調整</h2>
+            <p>指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。</p>
+          </section>
+          <section class="guide-mode-section speed" id="speed">
+            <span>SPEED</span><h2>素早さ調整</h2>
+            <p>相手ポケモンや任意の実数値を基準に、確定抜き・同速などのSラインを計算します。トリックルームでは通常と逆の比較になります。</p>
+          </section>
+        </div>
+
+        <section class="guide-section" id="constant-damage">
+          <p class="guide-section-kicker">HP EVENTS</p>
+          <h2>定数ダメージ・回復</h2>
+          <p>攻撃カードの「定数ダメージ・回復」では、直接攻撃の前後に発生する効果を追加できます。対象、発動タイミング、頻度は効果ごとに決まっています。</p>
+          <div class="guide-table-wrap">
+            <table>
+              <thead><tr><th>効果</th><th>対象</th><th>発動</th><th>計算の要点</th></tr></thead>
+              <tbody>
+                <tr><td>いのちのたま反動</td><td>技使用者</td><td>技の後</td><td>最大HPの1/10</td></tr>
+                <tr><td>すなあらし</td><td>被弾側</td><td>ターン終了時</td><td>最大HPの1/16</td></tr>
+                <tr><td>どく・もうどく・やけど</td><td>被弾側</td><td>ターン終了時</td><td>状態と段階に応じて個別計算</td></tr>
+                <tr><td>ステルスロック・まきびし</td><td>被弾側</td><td>登場時</td><td>タイプ相性・接地・層数を反映</td></tr>
+                <tr><td>オボンのみ</td><td>被弾側</td><td>条件成立ヒット後</td><td>同じシナリオ内では1回</td></tr>
+                <tr><td>たべのこし</td><td>被弾側</td><td>ターン終了時</td><td>最大HPの1/16回復</td></tr>
+                <tr><td>接触反動</td><td>技使用者</td><td>接触ヒット後</td><td>持ち物・特性ごとに各ヒットで計算</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>評価する順番</h3>
+          <ol>
+            <li>ステルスロック・まきびし</li>
+            <li>直接攻撃</li>
+            <li>ヒットごとの接触反動・オボンのみ</li>
+            <li>いのちのたま反動</li>
+            <li>天候、状態異常、しおづけ、たべのこし</li>
+          </ol>
+          <p>追加した効果は発動する前提で計算します。入力条件と一致しない場合は警告を表示しますが、自動削除はしません。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。</p>
+        </section>
+
+        <section class="guide-section" id="candidates">
+          <p class="guide-section-kicker">RESULTS</p>
+          <h2>候補一覧</h2>
+          <p>順位、H/A/B/C/D/S、使用SP、残りSP、最厳条件、詳細を比較できます。「最厳条件」は、その候補にとって一番余裕が少ない条件です。</p>
+          <p>候補の「適用」を押すと、そのSPが調整対象へ反映されます。適用後に条件を変更した場合は、もう一度「計算開始」を押してください。</p>
+        </section>
+
+        <section class="guide-section" id="box">
+          <p class="guide-section-kicker">BOX & BACKUP</p>
+          <h2>ボックス</h2>
+          <p>現在の調整対象、SP、仮想敵シナリオ、有効・無効状態などをブラウザ内へ保存できます。保存名の変更、上書き、複製、削除、空スロットの読み込みにも対応しています。</p>
+          <p>保存は同じブラウザ内に置かれます。別端末や別ブラウザへ移す場合は「バックアップを書き出す」「バックアップを読み込む」を利用してください。</p>
+        </section>
+
+        <section class="guide-section" id="home-screen">
+          <p class="guide-section-kicker">INSTALL</p>
+          <h2>ホーム画面へ追加</h2>
+          <p>対応ブラウザでは、ホーム画面やアプリ一覧へ追加してアプリ風に起動できます。Androidはブラウザメニュー、iOS Safariは共有メニュー、PC版Chrome・Edgeはアドレスバー付近のインストール導線を利用します。</p>
+        </section>
+
+        <section class="guide-section guide-troubleshooting" id="troubleshooting">
+          <p class="guide-section-kicker">TROUBLESHOOTING</p>
+          <h2>よくある困りごと</h2>
+          <details open><summary>候補が出ない</summary><p>シナリオが有効か、必要生存率・KO確率が厳しすぎないか、A/C/Sの固定SPが重すぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</p></details>
+          <details><summary>ポケモン名や技名がうまく入らない</summary><p>候補に表示される名前を選び直すか、表記を変えて入力してください。日本語名・別名・Showdown名を解決できない場合はエラーとして表示します。</p></details>
+          <details><summary>計算が遅い</summary><p>条件が多いほど探索に時間がかかります。一時的に不要なシナリオを無効化し、条件を少しずつ追加して確認してください。</p></details>
+          <details><summary>実際のゲーム内結果と違う</summary><p>Pokemon ChampionsとShowdownの仕様差、未対応データ、特殊処理の差で結果がずれる可能性があります。重要な調整は実機でも確認してください。</p></details>
+        </section>
+
+        <section class="guide-section guide-notes" id="notes">
+          <h2>注意点</h2>
+          <ul>
+            <li>ChampionCreatorは非公式のファンツールです。</li>
+            <li>画像やアイコンは表示用で、計算結果には影響しません。</li>
+            <li>未対応の技、特性、持ち物、フォームがある場合があります。</li>
+            <li>計算結果は条件とバージョンを確認し、重要な場面では実機でも確認してください。</li>
+          </ul>
+        </section>
+      </main>
+
+    </div>
+
+    <footer class="app-footer" aria-label="権利表記">
+      <div class="app-footer-copy">
+        <span>© 2026 suisui-swimmy</span>
+        <span>
+          本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します
+        </span>
+      </div>
+      <div class="app-footer-links" aria-label="不具合報告とお問い合わせ">
+        <a
+          class="app-footer-contact"
+          href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
+          target="_blank"
+          rel="noreferrer"
+        >不具合報告</a>
+        <span aria-hidden="true"> | </span>
+        <a
+          class="app-footer-contact"
+          href="https://x.com/peixe0307"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="お問い合わせ: X @peixe0307"
+        >
+          <span>お問い合わせ</span>
+          <img src="/assets/social/x-logo.svg" alt="X" />
+        </a>
+      </div>
+    </footer>
+    <script type="module" src="/src/guide/main.tsx"></script>
+  </body>
+</html>
