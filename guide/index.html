@@ -80,15 +80,10 @@
     <header class="guide-header">
       <a class="guide-brand" href="/" aria-label="ChampionCreatorを開く">
         <img src="/assets/brand/championcreator-title.svg" alt="ChampionCreator" />
-        <span>ガイド</span>
+        <span>使い方ガイド</span>
       </a>
-      <nav class="guide-global-nav" aria-label="サイト内メニュー">
-        <a href="/">ツール</a>
-        <a class="active" href="/guide/" aria-current="page">ガイド</a>
-        <a href="https://github.com/suisui-swimmy/ChampionCreator" target="_blank" rel="noreferrer">GitHub</a>
-      </nav>
       <div class="guide-header-actions">
-        <a class="guide-header-action" href="/">アプリを開く <span aria-hidden="true">↗</span></a>
+        <a class="guide-header-action" href="/">アプリを開く</a>
         <button
           class="guide-menu-toggle"
           type="button"
@@ -113,17 +108,12 @@
           <a href="#scenarios">仮想敵シナリオ</a>
           <a class="defence" href="#defence">耐久調整</a>
           <a class="offense" href="#offense">火力調整</a>
-          <a id="constant-damage-nav" href="#constant-damage">定数ダメージ・回復</a>
           <a class="speed" href="#speed">素早さ調整</a>
+          <a id="constant-damage-nav" href="#constant-damage">定数ダメージ・回復</a>
           <a href="#candidates">候補一覧</a>
           <a href="#box">ボックス</a>
           <a href="#troubleshooting">よくある困りごと</a>
         </nav>
-        <div class="guide-toc-help">
-          <strong>使い方で困ったら</strong>
-          <p>候補が出ないときの確認項目をまとめています。</p>
-          <a href="#troubleshooting">困りごとを見る</a>
-        </div>
       </aside>
 
       <main class="guide-content">
@@ -273,10 +263,12 @@
         <section class="guide-section guide-troubleshooting" id="troubleshooting">
           <p class="guide-section-kicker">TROUBLESHOOTING</p>
           <h2>よくある困りごと</h2>
-          <details open><summary>候補が出ない</summary><p>シナリオが有効か、必要生存率・KO確率が厳しすぎないか、A/C/Sの固定SPが重すぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</p></details>
-          <details><summary>ポケモン名や技名がうまく入らない</summary><p>候補に表示される名前を選び直すか、表記を変えて入力してください。日本語名・別名・Showdown名を解決できない場合はエラーとして表示します。</p></details>
-          <details><summary>計算が遅い</summary><p>条件が多いほど探索に時間がかかります。一時的に不要なシナリオを無効化し、条件を少しずつ追加して確認してください。</p></details>
-          <details><summary>実際のゲーム内結果と違う</summary><p>Pokemon ChampionsとShowdownの仕様差、未対応データ、特殊処理の差で結果がずれる可能性があります。重要な調整は実機でも確認してください。</p></details>
+          <ul class="guide-troubleshooting-list">
+            <li><strong>候補が出ない：</strong>シナリオが有効か、必要生存率・KO確率が厳しすぎないか、A/C/Sの固定SPが重すぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</li>
+            <li><strong>ポケモン名や技名がうまく入らない：</strong>候補に表示される名前を選び直すか、表記を変えて入力してください。日本語名・別名・Showdown名を解決できない場合はエラーとして表示します。</li>
+            <li><strong>計算が遅い：</strong>条件が多いほど探索に時間がかかります。一時的に不要なシナリオを無効化し、条件を少しずつ追加して確認してください。</li>
+            <li><strong>実際のゲーム内結果と違う：</strong>Pokemon ChampionsとShowdownの仕様差、未対応データ、特殊処理の差で結果がずれる可能性があります。重要な調整は実機でも確認してください。</li>
+          </ul>
         </section>
 
         <section class="guide-section guide-notes" id="notes">

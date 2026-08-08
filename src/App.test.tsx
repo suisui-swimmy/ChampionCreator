@@ -136,6 +136,11 @@ describe("App", () => {
     expect(guideHtml).toContain('aria-controls="guide-toc-panel"');
     expect(guideHtml).toContain('src="/assets/ui/menu.svg"');
     expect(guideHtml).toContain('id="guide-toc-panel"');
+    expect(guideHtml).toContain('<span>使い方ガイド</span>');
+    expect(guideHtml).not.toContain('class="guide-global-nav"');
+    expect(guideHtml).toContain('<a class="guide-header-action" href="/">アプリを開く</a>');
+    expect(guideHtml.indexOf('href="#speed"')).toBeLessThan(guideHtml.indexOf('href="#constant-damage"'));
+    expect(guideHtml).not.toContain('class="guide-toc-help"');
     expect(guideHtml).toContain('id="guide-tutorial-root"');
     expect(guideHtml).toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
     expect(guideHtml).toContain('id="constant-damage"');
@@ -151,7 +156,11 @@ describe("App", () => {
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-menu-toggle\s*\{[^}]*display:\s*inline-grid;/s);
     expect(guideCss).toMatch(/\.guide-menu-open \.guide-toc\s*\{[^}]*visibility:\s*visible;/s);
     expect(guideCss).toMatch(/\.guide-page \.app-shell--tutorial \.results-panel\s*\{[^}]*top:\s*60px;[^}]*height:\s*calc\(100dvh - 60px\);/s);
+    expect(guideCss).toMatch(/\.guide-intro h1\s*\{[^}]*font-size:\s*clamp\(23px, 2\.4vw, 32px\);/s);
+    expect(guideCss).toMatch(/\.guide-lead\s*\{[^}]*max-width:\s*none;/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
+    expect(guideHtml).toContain('class="guide-troubleshooting-list"');
+    expect(guideHtml).not.toContain("<details");
     expect(guideHtml).not.toContain('class="guide-context"');
     expect(guideHtml).not.toContain('id="guide-version"');
     expect(guideHtml).toContain('class="app-footer"');

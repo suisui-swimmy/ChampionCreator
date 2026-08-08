@@ -10,6 +10,7 @@
 ## Full-view comparison evidence
 
 - The source showed the calculator compressed by a left menu, main content, and right contextual rail. The implementation removes the right rail and renders `200px 934px` tracks at 1200px, leaving the document at `1190px` with no horizontal page overflow.
+- The guide header now keeps only the brand, `使い方ガイド`, and `アプリを開く`; the duplicate desktop site navigation and external-link arrow are absent.
 - The calculator keeps the existing target/scenario proportions and semantic state colors. At 1200px the target panel is about 326px and the scenario panel about 579px, with no overlap between the guide and calculator regions.
 - At 390px the guide becomes one `360px` content track, the existing mobile calculator overview is active, and document width equals body width.
 
@@ -34,6 +35,8 @@
 
 - Tutorial calculation completed at `654 / 654` and exposed an applicable candidate.
 - Guide table-of-contents links keep the browser on `/guide/` and update only the section fragment.
+- The table of contents orders `素早さ調整` before `定数ダメージ・回復`, and the former help card beneath the table of contents is absent.
+- The opening heading matches the other guide section headings, the lead uses the full main-column width, and troubleshooting is a four-item static list.
 - At mobile widths the table of contents is closed by default, toggles from the supplied menu icon to the supplied X icon, closes after link selection or Escape, and does not cover calculator-sheet navigation while closed.
 - Desktop 1200px and mobile 390px responsive states rendered without horizontal page overflow.
 - Browser console errors and warnings: 0.
