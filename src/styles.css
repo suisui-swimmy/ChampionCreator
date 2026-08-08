@@ -3756,6 +3756,13 @@ textarea {
     padding: 8px;
   }
 
+  .app-shell:not(.app-shell--tutorial) {
+    min-height: 100vh;
+    min-height: 100dvh;
+    grid-template-rows: auto 1fr auto auto;
+    align-content: stretch;
+  }
+
   .topbar {
     width: 100%;
     margin-bottom: 8px;
@@ -3791,7 +3798,8 @@ textarea {
   }
 
   .mobile-overview {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     gap: 8px;
   }
@@ -3802,7 +3810,7 @@ textarea {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
     gap: 34px;
     align-items: start;
-    min-height: 610px;
+    min-height: 0;
     border-bottom: 1px solid rgba(238, 241, 237, 0.22);
     padding-bottom: 10px;
   }
@@ -4276,6 +4284,7 @@ textarea {
     z-index: 20;
     display: grid;
     gap: 7px;
+    margin-top: auto;
     padding: 8px;
   }
 

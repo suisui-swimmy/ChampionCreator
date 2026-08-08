@@ -74,6 +74,16 @@ describe("App", () => {
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
 
+  it("lets the mobile board follow its content while keeping the footer at the viewport bottom", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(css).toMatch(/\.app-shell:not\(\.app-shell--tutorial\)\s*\{[^}]*min-height:\s*100dvh;[^}]*grid-template-rows:\s*auto 1fr auto auto;[^}]*align-content:\s*stretch;/s);
+    expect(css).toMatch(/\.mobile-overview\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
+    expect(css).toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*0;/s);
+    expect(css).not.toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*610px;/s);
+    expect(css).toMatch(/\.mobile-candidate-dock\s*\{[^}]*position:\s*static;[^}]*margin-top:\s*auto;/s);
+  });
+
   it("publishes indexable metadata and canonical XML and text sitemaps", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
