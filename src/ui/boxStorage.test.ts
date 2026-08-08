@@ -114,6 +114,7 @@ describe("boxStorage", () => {
       },
     });
     expect(entry.payload.scenarios).toHaveLength(3);
+    expect(entry.payload).not.toHaveProperty("offenseAdjustment");
   });
 
   it("ignores invalid localStorage payloads instead of throwing", () => {
@@ -202,17 +203,48 @@ describe("boxStorage", () => {
       now: "2026-06-11T00:00:00.000Z",
     });
 
-    const result = parseBoxBackupDocument(stringifyBoxBackupDocument(
+    const backupJson = stringifyBoxBackupDocument(
       [entry],
       "2026-06-12T00:00:00.000Z",
-    ));
+    );
+    const result = parseBoxBackupDocument(backupJson);
 
+    expect(backupJson).not.toContain("\"offenseAdjustment\"");
+    expect(backupJson).not.toContain("ピチュー");
     expect(result).toMatchObject({
       status: "success",
       entries: [entry],
       skippedCount: 0,
       warnings: [],
     });
+  });
+
+  it("imports schema v6 backups and removes the legacy offense adjustment on re-export", () => {
+    const legacyEntry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "legacy-box-backup",
+      now: "2026-06-11T00:00:00.000Z",
+    });
+    const legacyPayload = {
+      ...legacyEntry.payload,
+      schemaVersion: 6,
+      offenseAdjustment: {
+        defenderPokemonInput: "ピチュー",
+        moveInput: "ふいうち",
+      },
+    };
+    const result = parseBoxBackupDocument(JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [{ ...legacyEntry, payload: legacyPayload }],
+    }));
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") {
+      return;
+    }
+
+    expect(result.entries[0]?.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(result.entries[0]?.payload).not.toHaveProperty("offenseAdjustment");
+    expect(stringifyBoxBackupDocument(result.entries)).not.toContain("ピチュー");
   });
 
   it("reports unsupported or malformed backup documents", () => {

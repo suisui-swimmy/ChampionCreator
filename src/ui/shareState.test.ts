@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  createDefaultOffenseAdjustmentForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
 } from "./defenceSearchUi";
@@ -48,18 +47,12 @@ describe("shareState", () => {
         }],
       })),
     }));
-    const offenseAdjustment = {
-      ...createDefaultOffenseAdjustmentForm(),
-      defenderPokemonInput: "ピチュー",
-      moveInput: "インファイト",
-      targetKoProbabilityPercent: 75,
-      defenderStatPoints: { ...createDefaultOffenseAdjustmentForm().defenderStatPoints, hp: 4, def: 2 },
-    };
-
-    const serialized = stringifyShareStateDocument(target, scenarios, offenseAdjustment);
+    const serialized = stringifyShareStateDocument(target, scenarios);
     const parsed = parseShareStateDocument(serialized);
 
     expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(serialized).not.toContain("\"offenseAdjustment\"");
+    expect(serialized).not.toContain("ピチュー");
     expect(serialized).not.toContain("\"timing\"");
     expect(serialized).not.toContain("\"subject\"");
     expect(parsed.target).toMatchObject({
@@ -91,12 +84,6 @@ describe("shareState", () => {
         enabled: true,
       }],
     });
-    expect(parsed.offenseAdjustment).toMatchObject({
-      defenderPokemonInput: "ピチュー",
-      moveInput: "インファイト",
-      targetKoProbabilityPercent: 75,
-      defenderStatPoints: { hp: 4, def: 2 },
-    });
   });
 
   it("rejects unsupported schema versions", () => {
@@ -123,7 +110,23 @@ describe("shareState", () => {
       spd: 0,
       spe: 0,
     });
-    expect(parsed.offenseAdjustment).toEqual(createDefaultOffenseAdjustmentForm());
+    expect(parsed).not.toHaveProperty("offenseAdjustment");
+  });
+
+  it("imports schema v6 JSON while dropping the unused offense adjustment", () => {
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 6,
+      target: createDefaultTargetForm(),
+      scenarios: createDefaultScenarioForms(),
+      offenseAdjustment: {
+        defenderPokemonInput: "ピチュー",
+        moveInput: "ふいうち",
+      },
+    }));
+
+    expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(parsed).not.toHaveProperty("offenseAdjustment");
+    expect(stringifyShareStateDocument(parsed.target, parsed.scenarios)).not.toContain("ピチュー");
   });
 
   it.each([1, 2] as const)("migrates schema version %s attacks without HP events", (schemaVersion) => {
@@ -140,30 +143,17 @@ describe("shareState", () => {
         }],
       })),
     }));
-    const offenseAdjustment = {
-      ...createDefaultOffenseAdjustmentForm(),
-      hpEvents: [{
-        id: "legacy-offense-event",
-        effectId: "sandstorm-damage",
-        enabled: true,
-        subject: "target",
-        timing: "endOfTurn",
-      }],
-    };
-
     const parsed = parseShareStateDocument(JSON.stringify({
       schemaVersion,
       target: createDefaultTargetForm(),
       scenarios,
-      offenseAdjustment,
     }));
 
     expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
     expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([]);
-    expect(parsed.offenseAdjustment.hpEvents).toEqual([]);
   });
 
-  it.each([3, 4, 5] as const)(
+  it.each([3, 4, 5, 6] as const)(
     "migrates schema v%s events while ignoring legacy user-selected timing and subject",
     (schemaVersion) => {
       const [scenario] = createDefaultScenarioForms();
@@ -199,16 +189,6 @@ describe("shareState", () => {
             ],
           }],
         }],
-        offenseAdjustment: {
-          ...createDefaultOffenseAdjustmentForm(),
-          hpEvents: [{
-            id: "legacy-offense-life-orb",
-            effectId: "life-orb-recoil",
-            enabled: true,
-            subject: "target",
-            timing: "beforeMove",
-          }],
-        },
       }));
 
       expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([
@@ -228,15 +208,10 @@ describe("shareState", () => {
           enabled: true,
         },
       ]);
-      expect(parsed.offenseAdjustment.hpEvents).toEqual([{
-        id: "legacy-offense-life-orb",
-        effectId: "life-orb-recoil",
-        enabled: true,
-      }]);
     },
   );
 
-  it("round-trips and clamps v6 toxic stages and Spikes layers", () => {
+  it("round-trips and clamps toxic stages and Spikes layers", () => {
     const [scenario] = createDefaultScenarioForms();
     const parsed = parseShareStateDocument(JSON.stringify({
       schemaVersion: SHARE_SCHEMA_VERSION,
@@ -261,15 +236,6 @@ describe("shareState", () => {
           ],
         }],
       }],
-      offenseAdjustment: {
-        ...createDefaultOffenseAdjustmentForm(),
-        hpEvents: [{
-          id: "offense-toxic",
-          effectId: "toxic-damage",
-          enabled: true,
-          toxicStage: 4,
-        }],
-      },
     }));
 
     expect(parsed.scenarios[0].attacks[0].hpEvents).toEqual([
@@ -286,12 +252,6 @@ describe("shareState", () => {
         spikesLayers: 1,
       },
     ]);
-    expect(parsed.offenseAdjustment.hpEvents).toEqual([{
-      id: "offense-toxic",
-      effectId: "toxic-damage",
-      enabled: true,
-      toxicStage: 4,
-    }]);
   });
 
   it("round-trips the contact recoil presets without changing schema shape", () => {
@@ -317,7 +277,6 @@ describe("shareState", () => {
           ],
         }],
       }],
-      offenseAdjustment: createDefaultOffenseAdjustmentForm(),
     }));
 
     expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);

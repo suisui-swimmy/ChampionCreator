@@ -1,10 +1,8 @@
 import {
-  createDefaultOffenseAdjustmentForm,
   createDefaultScenarioAttackForm,
   createDefaultScenarioForms,
   createDefaultTargetForm,
   type HpEventFormState,
-  type OffenseAdjustmentFormState,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
   type ScenarioFormState,
@@ -13,13 +11,12 @@ import {
 import type { PokemonStatus } from "../domain/model";
 import { isSupportedHpEventEffectId } from "../domain/hpEvents";
 
-export const SHARE_SCHEMA_VERSION = 6;
+export const SHARE_SCHEMA_VERSION = 7;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
   target: TargetFormState;
   scenarios: ScenarioFormState[];
-  offenseAdjustment: OffenseAdjustmentFormState;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -35,7 +32,7 @@ const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["o
 const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["outspeed", "tie"]);
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | typeof SHARE_SCHEMA_VERSION;
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeHpEventNumber = (
   value: unknown,
@@ -181,39 +178,19 @@ const normalizeScenario = (
   } as ScenarioFormState;
 };
 
-const normalizeOffenseAdjustment = (
-  value: unknown,
-  sourceSchemaVersion: SupportedShareSchemaVersion,
-): OffenseAdjustmentFormState => {
-  const defaults = createDefaultOffenseAdjustmentForm();
-  const input = mergeObject(defaults, value) as OffenseAdjustmentFormState & Record<string, unknown>;
-
-  return {
-    ...defaults,
-    ...input,
-    defenderStatus: normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus),
-    hpEvents: normalizeHpEvents(input.hpEvents, sourceSchemaVersion),
-    defenderStatPoints: mergeObject(defaults.defenderStatPoints, input.defenderStatPoints),
-    defenderBoosts: mergeObject(defaults.defenderBoosts, input.defenderBoosts),
-  } as OffenseAdjustmentFormState;
-};
-
 export const createShareStateDocument = (
   target: TargetFormState,
   scenarios: ScenarioFormState[],
-  offenseAdjustment: OffenseAdjustmentFormState = createDefaultOffenseAdjustmentForm(),
 ): ShareStateDocument => ({
   schemaVersion: SHARE_SCHEMA_VERSION,
   target,
   scenarios,
-  offenseAdjustment,
 });
 
 export const stringifyShareStateDocument = (
   target: TargetFormState,
   scenarios: ScenarioFormState[],
-  offenseAdjustment: OffenseAdjustmentFormState = createDefaultOffenseAdjustmentForm(),
-): string => `${JSON.stringify(createShareStateDocument(target, scenarios, offenseAdjustment), null, 2)}\n`;
+): string => `${JSON.stringify(createShareStateDocument(target, scenarios), null, 2)}\n`;
 
 export const parseShareStateDocument = (json: string): ShareStateDocument => {
   const parsed = JSON.parse(json) as unknown;
@@ -221,6 +198,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 6
       && parsed.schemaVersion !== 5
       && parsed.schemaVersion !== 4
       && parsed.schemaVersion !== 3
@@ -248,6 +226,5 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
       legacyTargetStatus,
       sourceSchemaVersion,
     )),
-    offenseAdjustment: normalizeOffenseAdjustment(parsed.offenseAdjustment, sourceSchemaVersion),
   };
 };
