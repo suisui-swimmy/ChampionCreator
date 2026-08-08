@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { GuideTutorial } from "./GuideTutorial";
+import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 import "../styles.css";
 import "./guide.css";
 
@@ -18,7 +19,7 @@ const setGuideMenuOpen = (open: boolean) => {
   document.body.classList.toggle("guide-menu-open", nextOpen);
   menuButton.setAttribute("aria-expanded", String(nextOpen));
   menuButton.setAttribute("aria-label", nextOpen ? "ガイドメニューを閉じる" : "ガイドメニューを開く");
-  menuImage.src = nextOpen ? "/assets/ui/x.svg" : "/assets/ui/menu.svg";
+  menuImage.src = getPublicAssetUrl(nextOpen ? "assets/ui/x.svg" : "assets/ui/menu.svg");
   tocPanel.setAttribute("aria-hidden", String(mobileMenuQuery.matches && !nextOpen));
 };
 

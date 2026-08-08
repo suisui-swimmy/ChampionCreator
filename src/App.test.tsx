@@ -129,6 +129,7 @@ describe("App", () => {
     expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>");
     expect(guideHtml).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/"');
     expect(guideHtml).toContain('name="robots" content="index, follow, max-image-preview:large"');
+    expect(guideHtml).toContain('name="championcreator-app-base" content="../"');
     expect(guideHtml).not.toContain("<base ");
     expect(guideHtml).toContain('href="#screen"');
     expect(guideHtml).toContain('href="#constant-damage"');
@@ -142,7 +143,8 @@ describe("App", () => {
     expect(guideHtml.indexOf('href="#speed"')).toBeLessThan(guideHtml.indexOf('href="#constant-damage"'));
     expect(guideHtml).not.toContain('class="guide-toc-help"');
     expect(guideHtml).toContain('id="guide-tutorial-root"');
-    expect(guideHtml).toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
+    expect(guideHtml).not.toContain('class="guide-quick-steps"');
+    expect(guideHtml).not.toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
     expect(guideHtml).toContain('id="constant-damage"');
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
@@ -158,6 +160,10 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-page \.app-shell--tutorial \.results-panel\s*\{[^}]*top:\s*60px;[^}]*height:\s*calc\(100dvh - 60px\);/s);
     expect(guideCss).toMatch(/\.guide-intro h1\s*\{[^}]*font-size:\s*clamp\(23px, 2\.4vw, 32px\);/s);
     expect(guideCss).toMatch(/\.guide-lead\s*\{[^}]*max-width:\s*none;/s);
+    expect(guideCss).toMatch(/\.guide-feature-grid p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-stat-rules div\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;/s);
+    expect(guideCss).toMatch(/\.guide-stat-rules span\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*800;/s);
+    expect(guideCss).toMatch(/\.guide-troubleshooting-list\s*\{[^}]*font-size:\s*13px;/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
     expect(guideHtml).toContain('class="guide-troubleshooting-list"');
     expect(guideHtml).not.toContain("<details");
@@ -166,7 +172,11 @@ describe("App", () => {
     expect(guideHtml).toContain('class="app-footer"');
     expect(guideHtml).toContain("不具合報告");
     expect(guideHtml).toContain('aria-label="お問い合わせ: X @peixe0307"');
-    expect(tutorialHtml).toContain("規定入力で計算してみよう");
+    expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
+    expect(tutorialHtml).not.toContain("添付バックアップの3条件を、本体と同じ計算経路で同時評価します。");
+    expect(tutorialHtml).not.toContain('class="guide-open-app-button"');
+    expect(tutorialHtml).toContain('aria-label="サンプルに戻す"');
+    expect(tutorialHtml).toContain('assets/ui/refresh-ccw.svg');
     expect(tutorialHtml).toContain('class="app-shell app-shell--tutorial"');
     expect(tutorialHtml).toContain('value="メガマフォクシー"');
     expect(tutorialHtml).toContain('value="ドドゲザン"');

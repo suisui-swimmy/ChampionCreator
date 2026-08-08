@@ -1,6 +1,7 @@
 import pokemonOptionsPayload from "../data/generated/pokemon-options.gen.json";
 import { applyDisplayNameRules } from "../localization/displayNameRules";
 import { normalizeSearchText } from "../localization/normalize";
+import { getPublicAssetUrl } from "./publicAssetUrl";
 
 type PokemonOptionEntry = {
   id: string;
@@ -27,12 +28,7 @@ type LookupInput = {
 const pokemonOptions = (pokemonOptionsPayload.entries as PokemonOptionEntry[])
   .filter((entry) => entry.artwork);
 
-const toArtworkUrl = (artwork: string): string => {
-  const base = import.meta.env.BASE_URL.endsWith("/")
-    ? import.meta.env.BASE_URL
-    : `${import.meta.env.BASE_URL}/`;
-  return `${base}${artwork.replace(/^\/+/, "")}`;
-};
+const toArtworkUrl = (artwork: string): string => getPublicAssetUrl(artwork);
 
 const toMatch = (entry: PokemonOptionEntry): PokemonArtworkMatch | null => {
   if (!entry.artwork) {

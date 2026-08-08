@@ -73,6 +73,7 @@ import type { MaximizeRemainingBulkResult } from "./search/maximizeRemainingBulk
 import type { SpeedAdjustmentResult, SpeedManualMultiplier } from "./search/speedAdjustment";
 import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
+import { getPublicAssetUrl } from "./ui/publicAssetUrl";
 import {
   getPokemonBaseFormValue,
   getPokemonFormVariantOptions,
@@ -619,18 +620,10 @@ export const clampTargetStatPointChange = (statPoints: StatTable, key: StatKey, 
 };
 
 const getStatIconSrc = (key: StatKey): string => {
-  const base = import.meta.env.BASE_URL.endsWith("/")
-    ? import.meta.env.BASE_URL
-    : `${import.meta.env.BASE_URL}/`;
-  return `${base}assets/stat-icons/${statIconFiles[key]}`;
+  return getPublicAssetUrl(`assets/stat-icons/${statIconFiles[key]}`);
 };
 
-const getAssetSrc = (path: string): string => {
-  const base = import.meta.env.BASE_URL.endsWith("/")
-    ? import.meta.env.BASE_URL
-    : `${import.meta.env.BASE_URL}/`;
-  return `${base}${path}`;
-};
+const getAssetSrc = (path: string): string => getPublicAssetUrl(path);
 
 const getBattleIconSrc = (name: string): string => getAssetSrc(`assets/battle-icons/${name}.svg`);
 const getNatureModifierIconSrc = (name: "up" | "down"): string =>

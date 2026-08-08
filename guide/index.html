@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="championcreator-app-base" content="../" />
     <title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>
     <meta
       name="description"
@@ -123,14 +124,7 @@
           <h1>まずは使ってみよう</h1>
           <p class="guide-lead">
             ChampionCreatorは、複数の耐久・火力・素早さ条件を同時に満たすSP配分を自動で計算する能力ポイント自動調整ツールです。
-            下の作業台は画像ではなく、実際のアプリと同じ計算UIです。
           </p>
-
-          <div class="guide-quick-steps" aria-label="クイックスタート">
-            <article><span>1</span><div><strong>条件を確認</strong><p>メガマフォクシーと3つの規定条件を確認します。</p></div></article>
-            <article><span>2</span><div><strong>計算開始</strong><p>耐久・火力・素早さを同時に評価します。</p></div></article>
-            <article><span>3</span><div><strong>候補を比較</strong><p>PASS条件とSP配分を見て候補を適用します。</p></div></article>
-          </div>
 
           <noscript>
             <p class="guide-noscript">実計算チュートリアルを使うにはJavaScriptを有効にしてください。ガイド本文はそのまま読めます。</p>
@@ -177,10 +171,10 @@
           <p class="guide-section-kicker">STAT POINTS</p>
           <h2>SPの考え方</h2>
           <div class="guide-stat-rules">
-            <div><strong>0–32</strong><span>各能力に使えるSP</span></div>
-            <div><strong>66</strong><span>6能力の合計上限</span></div>
-            <div><strong>H/B/D</strong><span>1候補として同時探索</span></div>
-            <div><strong>A/C/S</strong><span>火力・素早さの固定条件</span></div>
+            <div><span>各能力に使えるSP</span><strong>0–32</strong></div>
+            <div><span>6能力の合計上限</span><strong>66</strong></div>
+            <div><span>1候補として同時探索</span><strong>H/B/D</strong></div>
+            <div><span>火力・素早さの固定条件</span><strong>A/C/S</strong></div>
           </div>
           <p>候補一覧の「使用SP」は調整対象に使った合計SP、「残りSP」は66SPから使用済みSPを引いた値です。計算時は、実数値が一致するShowdown EV相当へ変換して<code>@smogon/calc</code>へ渡します。</p>
         </section>
@@ -264,10 +258,10 @@
           <p class="guide-section-kicker">TROUBLESHOOTING</p>
           <h2>よくある困りごと</h2>
           <ul class="guide-troubleshooting-list">
-            <li><strong>候補が出ない：</strong>シナリオが有効か、必要生存率・KO確率が厳しすぎないか、A/C/Sの固定SPが重すぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</li>
-            <li><strong>ポケモン名や技名がうまく入らない：</strong>候補に表示される名前を選び直すか、表記を変えて入力してください。日本語名・別名・Showdown名を解決できない場合はエラーとして表示します。</li>
-            <li><strong>計算が遅い：</strong>条件が多いほど探索に時間がかかります。一時的に不要なシナリオを無効化し、条件を少しずつ追加して確認してください。</li>
-            <li><strong>実際のゲーム内結果と違う：</strong>Pokemon ChampionsとShowdownの仕様差、未対応データ、特殊処理の差で結果がずれる可能性があります。重要な調整は実機でも確認してください。</li>
+            <li><strong>候補が出ない</strong><span>シナリオが有効か、必要生存率・KO確率が厳しすぎないか、A/C/Sの固定SPが重すぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</span></li>
+            <li><strong>ポケモン名や技名がうまく入らない</strong><span>候補に表示される名前を選び直すか、表記を変えて入力してください。日本語名・別名・Showdown名を解決できない場合はエラーとして表示します。</span></li>
+            <li><strong>計算が遅い</strong><span>条件が多いほど探索に時間がかかります。一時的に不要なシナリオを無効化し、条件を少しずつ追加して確認してください。</span></li>
+            <li><strong>実際のゲーム内結果と違う</strong><span>Pokemon ChampionsとShowdownの仕様差、未対応データ、特殊処理の差で結果がずれる可能性があります。重要な調整は実機でも確認してください。</span></li>
           </ul>
         </section>
 

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { App } from "../App";
 import { parseBoxBackupDocument } from "../ui/boxStorage";
 import type { SearchStatus } from "../ui/defenceSearchUi";
+import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 import tutorialPresetJson from "./tutorial-preset.json";
 
 const tutorialSteps = [
@@ -58,7 +59,7 @@ const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): st
   if (status === "canceled") {
     return "計算を中断しました。条件を変えて、いつでも再実行できます。";
   }
-  return "規定入力を確認したら、作業台の「計算開始」を押してみよう。入力内容は自由に変更できます。";
+  return "サンプル入力を確認したら、作業台の「計算開始」を押してみよう。入力内容は自由に変更できます。";
 };
 
 export function GuideTutorial() {
@@ -86,12 +87,12 @@ export function GuideTutorial() {
       <header className="guide-tutorial-header">
         <div>
           <span className="guide-live-badge"><i aria-hidden="true" />実際に操作できます</span>
-          <h2 id="interactive-tutorial-title">規定入力で計算してみよう</h2>
-          <p>添付バックアップの3条件を、本体と同じ計算経路で同時評価します。</p>
+          <h2 id="interactive-tutorial-title">サンプル入力で計算してみよう</h2>
         </div>
         <div className="guide-tutorial-actions">
-          <button type="button" className="guide-reset-button" onClick={handleReset}>サンプルに戻す</button>
-          <a className="guide-open-app-button" href="/">アプリを開く</a>
+          <button type="button" className="guide-reset-button" onClick={handleReset} aria-label="サンプルに戻す" title="サンプルに戻す">
+            <img src={getPublicAssetUrl("assets/ui/refresh-ccw.svg")} alt="" aria-hidden="true" />
+          </button>
         </div>
       </header>
 

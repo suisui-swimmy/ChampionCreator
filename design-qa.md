@@ -50,3 +50,15 @@
 - None required for this change.
 
 final result: passed
+
+## Guide content polish and deployment asset paths — 2026-08-08
+
+- Desktop 1186x698: removed the quick-start strip and tutorial description/action clutter; the sample title and 40px reset icon align within the tutorial header without horizontal overflow.
+- Mobile 390x844: the shortened introduction, tutorial header, calculation overview, and closed-by-default guide menu fit the viewport with no document-level horizontal overflow.
+- The menu button switches from the supplied menu icon to the supplied X icon, and selecting a guide link closes the menu.
+- The SP rule cards prioritize the descriptive 13px labels, with the compact numeric/range values retained as secondary information.
+- Troubleshooting uses 13px text and separate block lines for each heading and explanation.
+- All tutorial images loaded with non-zero natural dimensions in Browser; broken image count was 0 for artwork, stat icons, battle-state icons, and UI icons.
+- The production build keeps `../assets/...` for static guide assets, while runtime tutorial assets resolve from the explicit app root. Pure URL tests cover both a custom-domain root and a GitHub Pages project prefix.
+
+final result: passed

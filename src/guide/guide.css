@@ -78,8 +78,7 @@ body.guide-page {
   font-weight: 800;
 }
 
-.guide-header-action,
-.guide-open-app-button {
+.guide-header-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -110,8 +109,7 @@ body.guide-page {
   justify-self: end;
 }
 
-.guide-header-action:hover,
-.guide-open-app-button:hover {
+.guide-header-action:hover {
   background: rgba(247, 212, 71, 0.1);
 }
 
@@ -242,50 +240,6 @@ body.guide-page {
   line-height: 1.9;
 }
 
-.guide-quick-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  margin: 28px 0 18px;
-  overflow: hidden;
-  border: 1px solid var(--guide-border);
-  border-radius: 9px;
-  background: var(--guide-border);
-}
-
-.guide-quick-steps article {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 10px;
-  min-width: 0;
-  background: var(--guide-surface);
-  padding: 15px;
-}
-
-.guide-quick-steps article > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(247, 212, 71, 0.12);
-  color: var(--guide-yellow);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.guide-quick-steps strong {
-  display: block;
-  font-size: 12px;
-}
-
-.guide-quick-steps p {
-  margin: 3px 0 0;
-  color: var(--guide-muted);
-  font-size: 10px;
-  line-height: 1.55;
-}
-
 .guide-noscript {
   border: 1px solid rgba(247, 212, 71, 0.4);
   border-radius: 7px;
@@ -335,28 +289,41 @@ body.guide-page {
   line-height: 1.4;
 }
 
-.guide-tutorial-header p {
-  margin: 3px 0 0;
-  color: var(--guide-muted);
-  font-size: 11px;
-}
-
 .guide-tutorial-actions {
   display: flex;
   flex: 0 0 auto;
-  gap: 8px;
+  margin-left: auto;
 }
 
 .guide-reset-button {
+  display: grid;
+  width: 40px;
+  height: 40px;
   min-height: 40px;
+  place-items: center;
   border: 1px solid var(--guide-border);
   border-radius: 7px;
   background: #13191a;
-  padding: 0 14px;
+  padding: 0;
   color: var(--guide-text);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
+  cursor: pointer;
+}
+
+.guide-reset-button:hover,
+.guide-reset-button:focus-visible {
+  border-color: rgba(247, 212, 71, 0.78);
+  background: rgba(247, 212, 71, 0.08);
+}
+
+.guide-reset-button:focus-visible {
+  outline: 2px solid var(--guide-yellow);
+  outline-offset: 2px;
+}
+
+.guide-reset-button img {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 .guide-tutorial-steps {
@@ -544,7 +511,7 @@ body.guide-page {
 .guide-feature-grid p {
   margin: 0;
   color: var(--guide-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.7;
 }
 
@@ -636,7 +603,9 @@ body.guide-page {
 
 .guide-stat-rules div {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
   border: 1px solid var(--guide-border);
   border-radius: 7px;
   background: var(--guide-surface);
@@ -644,13 +613,19 @@ body.guide-page {
 }
 
 .guide-stat-rules strong {
+  grid-column: 2;
+  grid-row: 1;
   color: var(--guide-yellow);
-  font-size: 19px;
+  font-size: 17px;
+  white-space: nowrap;
 }
 
 .guide-stat-rules span {
-  color: var(--guide-muted);
-  font-size: 9px;
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--guide-text);
+  font-size: 13px;
+  font-weight: 800;
   line-height: 1.45;
 }
 
@@ -728,8 +703,8 @@ body.guide-page {
   margin: 0;
   padding-left: 20px;
   color: var(--guide-muted);
-  font-size: 11px;
-  line-height: 1.8;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .guide-troubleshooting-list li + li {
@@ -737,7 +712,13 @@ body.guide-page {
 }
 
 .guide-troubleshooting-list strong {
+  display: block;
+  margin-bottom: 2px;
   color: var(--guide-text);
+}
+
+.guide-troubleshooting-list span {
+  display: block;
 }
 
 .guide-page > .app-footer {
@@ -956,20 +937,6 @@ body.guide-page {
     font-size: 13px;
   }
 
-  .guide-quick-steps {
-    grid-template-columns: 1fr;
-  }
-
-  .guide-tutorial-header {
-    display: grid;
-    align-items: start;
-  }
-
-  .guide-tutorial-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
   .guide-tutorial-steps {
     overflow-x: auto;
     grid-template-columns: repeat(4, minmax(112px, 1fr));
@@ -1023,10 +990,6 @@ body.guide-page {
 
   .guide-header-actions {
     gap: 6px;
-  }
-
-  .guide-tutorial-actions {
-    grid-template-columns: 1fr;
   }
 
   .guide-stat-rules {
