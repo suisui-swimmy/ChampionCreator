@@ -119,6 +119,13 @@ describe("App", () => {
     expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>");
     expect(guideHtml).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/"');
     expect(guideHtml).toContain('name="robots" content="index, follow, max-image-preview:large"');
+    expect(guideHtml).not.toContain("<base ");
+    expect(guideHtml).toContain('href="#screen"');
+    expect(guideHtml).toContain('href="#constant-damage"');
+    expect(guideHtml).toContain('class="guide-menu-toggle"');
+    expect(guideHtml).toContain('aria-controls="guide-toc-panel"');
+    expect(guideHtml).toContain('src="/assets/ui/menu.svg"');
+    expect(guideHtml).toContain('id="guide-toc-panel"');
     expect(guideHtml).toContain('id="guide-tutorial-root"');
     expect(guideHtml).toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
     expect(guideHtml).toContain('id="constant-damage"');
@@ -131,6 +138,9 @@ describe("App", () => {
       expect.objectContaining({ "@type": "BreadcrumbList" }),
     ]));
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-page \.app-shell--tutorial \.workbench\s*\{[^}]*display:\s*block;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-menu-toggle\s*\{[^}]*display:\s*inline-grid;/s);
+    expect(guideCss).toMatch(/\.guide-menu-open \.guide-toc\s*\{[^}]*visibility:\s*visible;/s);
+    expect(guideCss).toMatch(/\.guide-page \.app-shell--tutorial \.results-panel\s*\{[^}]*top:\s*60px;[^}]*height:\s*calc\(100dvh - 60px\);/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
     expect(guideHtml).not.toContain('class="guide-context"');
     expect(guideHtml).not.toContain('id="guide-version"');

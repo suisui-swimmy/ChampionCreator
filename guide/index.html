@@ -2,7 +2,6 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>
     <meta
@@ -88,11 +87,22 @@
         <a class="active" href="/guide/" aria-current="page">ガイド</a>
         <a href="https://github.com/suisui-swimmy/ChampionCreator" target="_blank" rel="noreferrer">GitHub</a>
       </nav>
-      <a class="guide-header-action" href="/">アプリを開く <span aria-hidden="true">↗</span></a>
+      <div class="guide-header-actions">
+        <a class="guide-header-action" href="/">アプリを開く <span aria-hidden="true">↗</span></a>
+        <button
+          class="guide-menu-toggle"
+          type="button"
+          aria-controls="guide-toc-panel"
+          aria-expanded="false"
+          aria-label="ガイドメニューを開く"
+        >
+          <img src="/assets/ui/menu.svg" alt="" aria-hidden="true" />
+        </button>
+      </div>
     </header>
 
     <div class="guide-layout">
-      <aside class="guide-toc" aria-label="ガイド目次">
+      <aside class="guide-toc" id="guide-toc-panel" aria-label="ガイド目次">
         <p class="guide-toc-label">ガイド内メニュー</p>
         <nav>
           <a class="active" href="#getting-started">まずは使ってみよう</a>

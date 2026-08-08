@@ -33,6 +33,8 @@
 ## Primary interactions and runtime checks
 
 - Tutorial calculation completed at `654 / 654` and exposed an applicable candidate.
+- Guide table-of-contents links keep the browser on `/guide/` and update only the section fragment.
+- At mobile widths the table of contents is closed by default, toggles from the supplied menu icon to the supplied X icon, closes after link selection or Escape, and does not cover calculator-sheet navigation while closed.
 - Desktop 1200px and mobile 390px responsive states rendered without horizontal page overflow.
 - Browser console errors and warnings: 0.
 

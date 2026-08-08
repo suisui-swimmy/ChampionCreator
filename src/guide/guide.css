@@ -127,6 +127,17 @@ body.guide-page {
   text-decoration: none;
 }
 
+.guide-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+
+.guide-menu-toggle {
+  display: none;
+}
+
 .guide-header-action {
   justify-self: end;
 }
@@ -939,6 +950,37 @@ body.guide-page {
     font-size: 10px;
   }
 
+  .guide-menu-toggle {
+    display: inline-grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border: 1px solid var(--guide-border);
+    border-radius: 7px;
+    background: rgba(16, 22, 23, 0.94);
+    color: var(--guide-text);
+    cursor: pointer;
+  }
+
+  .guide-menu-toggle:hover,
+  .guide-menu-toggle:focus-visible,
+  .guide-menu-open .guide-menu-toggle {
+    border-color: rgba(247, 212, 71, 0.78);
+    background: rgba(247, 212, 71, 0.08);
+  }
+
+  .guide-menu-toggle:focus-visible {
+    outline: 2px solid var(--guide-yellow);
+    outline-offset: 2px;
+  }
+
+  .guide-menu-toggle img {
+    display: block;
+    width: 24px;
+    height: 24px;
+  }
+
   .guide-layout {
     width: min(100% - 20px, 640px);
     gap: 14px;
@@ -946,8 +988,45 @@ body.guide-page {
   }
 
   .guide-toc {
-    top: 60px;
-    margin: 0 -2px;
+    position: fixed;
+    top: 68px;
+    right: 10px;
+    left: 10px;
+    z-index: 190;
+    max-height: calc(100dvh - 78px);
+    margin: 0;
+    overflow: auto;
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 150ms ease, transform 150ms ease, visibility 150ms ease;
+  }
+
+  .guide-menu-open .guide-toc {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .guide-toc nav {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid var(--guide-border);
+    border-radius: 7px;
+    background: rgba(9, 13, 14, 0.98);
+  }
+
+  .guide-toc nav a {
+    border-right: 0;
+    border-bottom: 1px solid var(--guide-border-soft);
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .guide-toc nav a:last-child {
+    border-bottom: 0;
   }
 
   .guide-intro h1 {
@@ -1002,6 +1081,11 @@ body.guide-page {
   .guide-page .app-shell--tutorial .scenario-panel,
   .guide-page .app-shell--tutorial .results-panel {
     position: fixed;
+    top: 60px;
+    height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
+    max-height: calc(100vh - 60px);
+    max-height: calc(100dvh - 60px);
   }
 
   .guide-feature-grid {
@@ -1020,6 +1104,10 @@ body.guide-page {
 
   .guide-header-action span {
     display: none;
+  }
+
+  .guide-header-actions {
+    gap: 6px;
   }
 
   .guide-tutorial-actions {
