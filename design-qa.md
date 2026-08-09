@@ -51,6 +51,25 @@
 
 final result: passed
 
+## Guide overview image and numbered annotations — 2026-08-09
+
+- Source visual truth: supplied `overview.png`, copied unchanged to `public/assets/guide/overview.png`; SHA-256 matches and the real PNG dimensions are `1763 x 1645`.
+- Desktop 1186x698: the overview image fills the guide content width without horizontal overflow, and the four former cards are replaced by a vertical annotation list below the image.
+- Mobile 390x844: the image renders at `360px` wide with preserved aspect ratio; the numbered annotations remain a single readable column with no document-level horizontal overflow.
+- Number colors preserve the former annotation mapping: `①` yellow `rgb(247, 212, 71)`, `②` green `rgb(0, 255, 114)`, `③` cyan `rgb(0, 216, 240)`, and `④` orange `rgb(251, 168, 47)`.
+- Browser console errors and warnings: 0.
+
+final result: passed
+
+## Guide scroll-following table of contents — 2026-08-09
+
+- Desktop 1186x698: the active table-of-contents item follows the section crossing the upper reading line; `仮想敵シナリオ` changed to `耐久調整` after scrolling, with exactly one `aria-current="location"` link and no horizontal overflow.
+- The desktop mode cards share one row, so normal scrolling selects `耐久調整`; clicking `火力調整` or `素早さ調整` keeps that selected item while the shared row remains current.
+- Mobile 390x844: the vertically stacked mode cards changed the active item from `耐久調整` to `火力調整` as each section crossed the reading line. Opening the guide menu kept the active item visible without page-level horizontal overflow.
+- Browser console errors and warnings: 0.
+
+final result: passed
+
 ## Guide content polish and deployment asset paths — 2026-08-08
 
 - Desktop 1186x698: removed the quick-start strip and tutorial description/action clutter; the sample title and 40px reset icon align within the tutorial header without horizontal overflow.

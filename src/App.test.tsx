@@ -156,6 +156,7 @@ describe("App", () => {
     expect(guideHtml).toContain('aria-controls="guide-toc-panel"');
     expect(guideHtml).toContain('src="/assets/ui/menu.svg"');
     expect(guideHtml).toContain('id="guide-toc-panel"');
+    expect(guideHtml).toContain('href="#getting-started" aria-current="location"');
     expect(guideHtml).toContain('<span>使い方ガイド</span>');
     expect(guideHtml).not.toContain('class="guide-global-nav"');
     expect(guideHtml).toContain('<a class="guide-header-action" href="/">アプリを開く</a>');
@@ -165,7 +166,18 @@ describe("App", () => {
     expect(guideHtml).not.toContain('class="guide-quick-steps"');
     expect(guideHtml).not.toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
     expect(guideHtml).toContain('id="constant-damage"');
+    expect(guideHtml).toContain('src="/assets/guide/overview.png"');
+    expect(guideHtml.indexOf('class="guide-overview-image"')).toBeLessThan(guideHtml.indexOf('class="guide-feature-list"'));
+    expect(guideHtml).toContain('class="feature-mark target">①</span>');
+    expect(guideHtml).toContain('class="feature-mark scenario">②</span>');
+    expect(guideHtml).toContain('class="feature-mark result">③</span>');
+    expect(guideHtml).toContain('class="feature-mark box">④</span>');
+    expect(guideHtml).not.toContain('class="guide-feature-grid"');
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
+    const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
+    expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(guideOverviewImage.readUInt32BE(16)).toBe(1763);
+    expect(guideOverviewImage.readUInt32BE(20)).toBe(1645);
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(guideStructuredDataMatch).not.toBeNull();
     const guideStructuredData = JSON.parse(guideStructuredDataMatch?.[1] ?? "{}");
@@ -179,7 +191,10 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-page \.app-shell--tutorial \.results-panel\s*\{[^}]*top:\s*60px;[^}]*height:\s*calc\(100dvh - 60px\);/s);
     expect(guideCss).toMatch(/\.guide-intro h1\s*\{[^}]*font-size:\s*clamp\(23px, 2\.4vw, 32px\);/s);
     expect(guideCss).toMatch(/\.guide-lead\s*\{[^}]*max-width:\s*none;/s);
-    expect(guideCss).toMatch(/\.guide-feature-grid p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-overview-image\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;/s);
+    expect(guideCss).toMatch(/\.guide-feature-list\s*\{[^}]*list-style:\s*none;/s);
+    expect(guideCss).toMatch(/\.guide-feature-list p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toContain(".feature-mark.target { color: var(--guide-yellow); }");
     expect(guideCss).toMatch(/\.guide-stat-rules div\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;/s);
     expect(guideCss).toMatch(/\.guide-stat-rules span\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*800;/s);
     expect(guideCss).toMatch(/\.guide-troubleshooting-list\s*\{[^}]*font-size:\s*13px;/s);

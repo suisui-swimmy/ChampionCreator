@@ -17,7 +17,7 @@
     <meta property="og:title" content="ChampionCreator 使い方ガイド" />
     <meta
       property="og:description"
-      content="実際の計算UIを操作しながら、耐久・火力・素早さの複合調整を試せる公式ガイドです。"
+      content="実際の計算UIを操作しながら、耐久・火力・素早さの複合調整を試せる使い方ガイドです。"
     />
     <meta property="og:url" content="https://championcreator.suisui-swimmy.com/guide/" />
     <meta property="og:image" content="https://championcreator.suisui-swimmy.com/assets/icons/icon-512.png" />
@@ -25,7 +25,7 @@
     <meta name="twitter:title" content="ChampionCreator 使い方ガイド" />
     <meta
       name="twitter:description"
-      content="実際の計算UIを操作しながら、耐久・火力・素早さの複合調整を試せる公式ガイドです。"
+      content="実際の計算UIを操作しながら、耐久・火力・素早さの複合調整を試せる使い方ガイドです。"
     />
     <meta name="twitter:image" content="https://championcreator.suisui-swimmy.com/assets/icons/icon-512.png" />
     <link rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/" />
@@ -101,7 +101,7 @@
       <aside class="guide-toc" id="guide-toc-panel" aria-label="ガイド目次">
         <p class="guide-toc-label">ガイド内メニュー</p>
         <nav>
-          <a class="active" href="#getting-started">まずは使ってみよう</a>
+          <a class="active" href="#getting-started" aria-current="location">まずは使ってみよう</a>
           <a href="#screen">画面の見方</a>
           <a href="#basic-flow">基本の流れ</a>
           <a href="#target">調整対象</a>
@@ -136,12 +136,23 @@
           <p class="guide-section-kicker">OVERVIEW</p>
           <h2>画面の見方</h2>
           <p>ChampionCreatorの作業画面は、大きく次の4領域に分かれています。</p>
-          <div class="guide-feature-grid">
-            <article><span class="feature-mark target">01</span><h3>調整対象</h3><p>調整したいポケモン、性格、特性、持ち物、現在SPなどを入力します。</p></article>
-            <article><span class="feature-mark scenario">02</span><h3>仮想敵シナリオ</h3><p>相手、技、条件、耐久・火力・素早さの調整種別を入力します。</p></article>
-            <article><span class="feature-mark result">03</span><h3>候補一覧</h3><p>全条件を満たした配分、残りSP、最厳条件、ダメージ詳細を比較します。</p></article>
-            <article><span class="feature-mark box">04</span><h3>ボックス</h3><p>入力中の条件をブラウザ内へ保存し、読み込みやバックアップを行います。</p></article>
-          </div>
+          <figure class="guide-overview-figure">
+            <img
+              class="guide-overview-image"
+              src="/assets/guide/overview.png"
+              width="1763"
+              height="1645"
+              loading="lazy"
+              decoding="async"
+              alt="ChampionCreatorの画面構成。調整対象、仮想敵シナリオ、候補一覧、ボックスの位置を色枠で示した図"
+            />
+          </figure>
+          <ol class="guide-feature-list">
+            <li><span class="feature-mark target">①</span><div><h3>調整対象</h3><p>調整したいポケモン、性格、特性、持ち物、現在SPなどを入力します。</p></div></li>
+            <li><span class="feature-mark scenario">②</span><div><h3>仮想敵シナリオ</h3><p>相手、技、条件、耐久・火力・素早さの調整種別を入力します。</p></div></li>
+            <li><span class="feature-mark result">③</span><div><h3>候補一覧</h3><p>全条件を満たした配分、残りSP、最厳条件、ダメージ詳細を比較します。</p></div></li>
+            <li><span class="feature-mark box">④</span><div><h3>ボックス</h3><p>入力中の条件をブラウザ内へ保存し、読み込みやバックアップを行います。</p></div></li>
+          </ol>
           <div class="guide-tip">
             <strong>スマホでは</strong>
             <p>調整対象、シナリオ、候補をタップすると、それぞれの編集・詳細シートが開きます。上の実計算チュートリアルも画面幅に応じて同じモバイルUIへ切り替わります。</p>

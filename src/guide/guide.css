@@ -487,28 +487,47 @@ body.guide-page {
   font-family: "Cascadia Code", monospace;
 }
 
-.guide-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 20px;
+.guide-overview-figure {
+  margin: 18px 0 20px;
 }
 
-.guide-feature-grid article {
-  position: relative;
-  min-height: 126px;
+.guide-overview-image {
+  display: block;
+  width: 100%;
+  height: auto;
   border: 1px solid var(--guide-border);
   border-radius: 8px;
   background: var(--guide-surface);
-  padding: 16px 16px 16px 52px;
 }
 
-.guide-feature-grid h3 {
+.guide-feature-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-feature-list li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border-bottom: 1px solid var(--guide-border-soft);
+  padding: 0 0 12px;
+}
+
+.guide-feature-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.guide-feature-list h3 {
   margin: 0 0 6px;
   font-size: 14px;
 }
 
-.guide-feature-grid p {
+.guide-feature-list p {
   margin: 0;
   color: var(--guide-muted);
   font-size: 13px;
@@ -516,14 +535,13 @@ body.guide-page {
 }
 
 .feature-mark {
-  position: absolute;
-  top: 17px;
-  left: 15px;
   color: var(--guide-yellow);
-  font-size: 11px;
+  font-size: 19px;
   font-weight: 800;
+  line-height: 1.4;
 }
 
+.feature-mark.target { color: var(--guide-yellow); }
 .feature-mark.scenario { color: var(--guide-green); }
 .feature-mark.result { color: var(--guide-cyan); }
 .feature-mark.box { color: var(--guide-orange); }
@@ -972,10 +990,6 @@ body.guide-page {
     height: calc(100dvh - 60px);
     max-height: calc(100vh - 60px);
     max-height: calc(100dvh - 60px);
-  }
-
-  .guide-feature-grid {
-    grid-template-columns: 1fr;
   }
 
   .guide-page > .app-footer {
