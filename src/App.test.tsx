@@ -223,6 +223,20 @@ describe("App", () => {
     expect(guideHtml.indexOf(scenarioEvaluationText)).toBeLessThan(guideHtml.indexOf('id="guide-ally-ability-tip-root"'));
     expect(guideHtml).toContain('class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別"');
     expect(guideHtml).toMatch(/<section class="guide-section" id="scenarios">[\s\S]*?<div class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別">[\s\S]*?<section class="guide-mode-section defence" id="defence">[\s\S]*?<section class="guide-mode-section offense" id="offense">[\s\S]*?<section class="guide-mode-section speed" id="speed">[\s\S]*?<\/div>\s*<\/section>\s*<section class="guide-section" id="constant-damage">/s);
+    expect(guideHtml).toContain("調整対象が相手の攻撃をどれだけ耐えるかを設定します。攻撃側条件、必要耐久回数、必要生存率を入力し、複数条件をすべて満たす配分だけを候補にします。");
+    expect(guideHtml).toContain("指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。");
+    expect(guideHtml).toContain("相手ポケモンや任意の実数値を基準に、確定抜き・+〇などのSラインを計算します。トリックルームでは通常と逆の比較になります。");
+    expect(guideHtml).not.toContain("確定抜き・同速などのSライン");
+    expect(guideHtml).toContain("追加した効果は発動する前提で計算し、入力条件と一致しない場合は警告が表示されます。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。");
+    expect(guideHtml).not.toContain("警告を表示しますが、自動削除はしません");
+    expect(guideHtml).toContain("保存名の変更、上書き、複製、削除、空スロットの読み込みに対応しています。");
+    expect(guideHtml).not.toContain("空スロットの読み込みにも対応しています");
+    expect(guideHtml).toContain("PC版Chrome・Edgeはアドレスバーのインストールアイコンから利用できます。");
+    expect(guideHtml).not.toContain("アドレスバー付近のインストール導線");
+    expect(guideHtml).toContain("必要生存率・KO確率、A/C/Sの固定SPが厳しすぎないかを確認してください。");
+    expect(guideHtml).not.toContain("A/C/Sの固定SPが重すぎないか");
+    expect(guideHtml).toContain('class="guide-notes-list"');
+    expect(guideHtml).toContain("保存データはブラウザ内保存なので、バックアップ用途としては完全ではありません。");
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
@@ -296,6 +310,7 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-scenario-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-row-image\s*\{[^}]*width:\s*min\(100%, 520px\);/s);
     expect(guideCss).toMatch(/\.guide-mode-grid\s*\{[^}]*margin-top:\s*28px;/s);
+    expect(guideCss).toMatch(/\.guide-mode-section p\s*\{[^}]*font-size:\s*13px;/s);
     expect(guideHtml).toContain('class="guide-stat-rules" aria-label="SPの基本ルール"');
     expect(guideHtml).toContain("<h3>SPの制約</h3>");
     expect(guideHtml).toContain("<h3>計算での扱い</h3>");
@@ -309,7 +324,7 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-stat-rule-row\s*\{[^}]*grid-template-columns:\s*190px minmax\(0, 1fr\);[^}]*min-height:\s*72px;/s);
     expect(guideCss).toMatch(/\.guide-stat-rule-items\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     expect(guideCss).toMatch(/\.guide-stat-rule-items dd\s*\{[^}]*font-size:\s*24px;[^}]*font-weight:\s*800;/s);
-    expect(guideCss).toMatch(/\.guide-troubleshooting-list\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-troubleshooting-list,\s*\.guide-notes-list\s*\{[^}]*padding-left:\s*20px;[^}]*font-size:\s*13px;/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
     expect(guideHtml).toContain('class="guide-troubleshooting-list"');
     expect(guideHtml).not.toContain("<details");

@@ -254,7 +254,7 @@
             </section>
             <section class="guide-mode-section speed" id="speed">
               <span>SPEED</span><h2>素早さ調整</h2>
-              <p>相手ポケモンや任意の実数値を基準に、確定抜き・同速などのSラインを計算します。トリックルームでは通常と逆の比較になります。</p>
+              <p>相手ポケモンや任意の実数値を基準に、確定抜き・+〇などのSラインを計算します。トリックルームでは通常と逆の比較になります。</p>
             </section>
           </div>
         </section>
@@ -285,7 +285,7 @@
             <li>いのちのたま反動</li>
             <li>天候、状態異常、しおづけ、たべのこし</li>
           </ol>
-          <p>追加した効果は発動する前提で計算します。入力条件と一致しない場合は警告を表示しますが、自動削除はしません。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。</p>
+          <p>追加した効果は発動する前提で計算し、入力条件と一致しない場合は警告が表示されます。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。</p>
         </section>
 
         <section class="guide-section" id="candidates">
@@ -298,21 +298,21 @@
         <section class="guide-section" id="box">
           <p class="guide-section-kicker">BOX & BACKUP</p>
           <h2>ボックス</h2>
-          <p>現在の調整対象、SP、仮想敵シナリオ、有効・無効状態などをブラウザ内へ保存できます。保存名の変更、上書き、複製、削除、空スロットの読み込みにも対応しています。</p>
+          <p>現在の調整対象、SP、仮想敵シナリオ、有効・無効状態などをブラウザ内へ保存できます。保存名の変更、上書き、複製、削除、空スロットの読み込みに対応しています。</p>
           <p>保存は同じブラウザ内に置かれます。別端末や別ブラウザへ移す場合は「バックアップを書き出す」「バックアップを読み込む」を利用してください。</p>
         </section>
 
         <section class="guide-section" id="home-screen">
           <p class="guide-section-kicker">INSTALL</p>
           <h2>ホーム画面へ追加</h2>
-          <p>対応ブラウザでは、ホーム画面やアプリ一覧へ追加してアプリ風に起動できます。Androidはブラウザメニュー、iOS Safariは共有メニュー、PC版Chrome・Edgeはアドレスバー付近のインストール導線を利用します。</p>
+          <p>対応ブラウザでは、ホーム画面やアプリ一覧へ追加してアプリ風に起動できます。Androidはブラウザメニュー、iOS Safariは共有メニュー、PC版Chrome・Edgeはアドレスバーのインストールアイコンから利用できます。</p>
         </section>
 
         <section class="guide-section guide-troubleshooting" id="troubleshooting">
           <p class="guide-section-kicker">TROUBLESHOOTING</p>
           <h2>よくある困りごと</h2>
           <ul class="guide-troubleshooting-list">
-            <li><strong>候補が出ない</strong><span>シナリオが有効か、必要生存率・KO確率が厳しすぎないか、A/C/Sの固定SPが重すぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</span></li>
+            <li><strong>候補が出ない</strong><span>シナリオが有効か、必要生存率・KO確率、A/C/Sの固定SPが厳しすぎないかを確認してください。シナリオを1つずつ有効にすると原因を切り分けやすくなります。</span></li>
             <li><strong>ポケモン名や技名がうまく入らない</strong><span>候補に表示される名前を選び直すか、表記を変えて入力してください。日本語名・別名・Showdown名を解決できない場合はエラーとして表示します。</span></li>
             <li><strong>計算が遅い</strong><span>条件が多いほど探索に時間がかかります。一時的に不要なシナリオを無効化し、条件を少しずつ追加して確認してください。</span></li>
             <li><strong>実際のゲーム内結果と違う</strong><span>Pokemon ChampionsとShowdownの仕様差、未対応データ、特殊処理の差で結果がずれる可能性があります。重要な調整は実機でも確認してください。</span></li>
@@ -321,11 +321,12 @@
 
         <section class="guide-section guide-notes" id="notes">
           <h2>注意点</h2>
-          <ul>
+          <ul class="guide-notes-list">
             <li>ChampionCreatorは非公式のファンツールです。</li>
             <li>画像やアイコンは表示用で、計算結果には影響しません。</li>
             <li>未対応の技、特性、持ち物、フォームがある場合があります。</li>
             <li>計算結果は条件とバージョンを確認し、重要な場面では実機でも確認してください。</li>
+            <li>保存データはブラウザ内保存なので、バックアップ用途としては完全ではありません。</li>
           </ul>
         </section>
       </main>

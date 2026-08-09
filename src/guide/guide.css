@@ -812,7 +812,7 @@ body.guide-page {
 }
 
 .guide-mode-section p {
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.75;
 }
 
@@ -855,7 +855,8 @@ body.guide-page {
   color: #abb7b2;
 }
 
-.guide-troubleshooting-list {
+.guide-troubleshooting-list,
+.guide-notes-list {
   margin: 0;
   padding-left: 20px;
   color: var(--guide-muted);
@@ -863,7 +864,8 @@ body.guide-page {
   line-height: 1.7;
 }
 
-.guide-troubleshooting-list li + li {
+.guide-troubleshooting-list li + li,
+.guide-notes-list li + li {
   margin-top: 6px;
 }
 
