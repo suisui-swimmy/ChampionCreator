@@ -140,6 +140,29 @@ describe("App", () => {
     ]);
   });
 
+  it("publishes matching GitHub footer links on the app and guide", () => {
+    const appFooter = renderExampleApp().match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
+    const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+    const guideFooter = guideHtml.match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
+    const githubIcon = readFileSync(
+      new URL("../public/assets/social/github-invertocat-white.svg", import.meta.url),
+      "utf8",
+    );
+
+    for (const footer of [appFooter, guideFooter]) {
+      expect(footer).toContain('aria-label="フッターリンク"');
+      expect(footer).toContain('href="https://github.com/suisui-swimmy/ChampionCreator"');
+      expect(footer).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
+      expect(footer).toContain("assets/social/github-invertocat-white.svg");
+      expect(footer.indexOf("不具合報告")).toBeLessThan(footer.indexOf("お問い合わせ"));
+      expect(footer.indexOf("お問い合わせ")).toBeLessThan(footer.indexOf("https://github.com/suisui-swimmy/ChampionCreator"));
+      expect(footer.match(/ \| /g)).toHaveLength(2);
+    }
+
+    expect(githubIcon).toContain('<svg width="98" height="96"');
+    expect(githubIcon).toContain('fill="white"');
+  });
+
   it("publishes a static, indexable guide with a responsive real-calculation tutorial", () => {
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
@@ -216,7 +239,7 @@ describe("App", () => {
     const guideScenarioRowImage = readFileSync(new URL("../public/assets/guide/scenario-row-addition.png", import.meta.url));
     expect(guideScenarioRowImage.subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(guideScenarioRowImage.readUInt32BE(16)).toBe(820);
-    expect(guideScenarioRowImage.readUInt32BE(20)).toBe(1189);
+    expect(guideScenarioRowImage.readUInt32BE(20)).toBe(1139);
     const guideTipIcon = readFileSync(new URL("../public/assets/guide/lightbulb.svg", import.meta.url), "utf8");
     expect(guideTipIcon).toContain("<svg");
     expect(guideTipIcon).toContain('stroke="#00FF72"');
@@ -295,6 +318,9 @@ describe("App", () => {
     expect(guideHtml).toContain('class="app-footer"');
     expect(guideHtml).toContain("不具合報告");
     expect(guideHtml).toContain('aria-label="お問い合わせ: X @peixe0307"');
+    expect(guideHtml).toContain('href="https://github.com/suisui-swimmy/ChampionCreator"');
+    expect(guideHtml).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
+    expect(guideHtml).toContain('src="/assets/social/github-invertocat-white.svg"');
     expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
     expect(getTutorialMessage("idle", false)).toBe("サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。");
     expect(getTutorialMessage("running", false)).toBe("アプリと同じ計算方法で全条件を評価しています。");
@@ -454,11 +480,14 @@ describe("App", () => {
     expect(html).not.toContain("ゲームフリーク に帰属します。");
     expect(html).toContain('href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"');
     expect(html).toContain('href="https://x.com/peixe0307"');
+    expect(html).toContain('href="https://github.com/suisui-swimmy/ChampionCreator"');
     expect(html).toContain("不具合報告");
     expect(html).toContain(" | ");
     expect(html).toContain("お問い合わせ");
     expect(html).not.toContain("不具合報告 / お問い合わせ");
     expect(html).toContain("assets/social/x-logo.svg");
+    expect(html).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
+    expect(html).toContain("assets/social/github-invertocat-white.svg");
     expect(html).not.toContain("火力ライン結果");
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");

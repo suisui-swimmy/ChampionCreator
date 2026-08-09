@@ -1947,7 +1947,7 @@ export function App({
             本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します
           </span>
         </div>
-        <div className="app-footer-links" aria-label="不具合報告とお問い合わせ">
+        <div className="app-footer-links" aria-label="フッターリンク">
           <a
             className="app-footer-contact"
             href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
@@ -1966,6 +1966,16 @@ export function App({
           >
             <span>お問い合わせ</span>
             <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
+          </a>
+          <span aria-hidden="true"> | </span>
+          <a
+            className="app-footer-contact"
+            href="https://github.com/suisui-swimmy/ChampionCreator"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="ChampionCreator GitHub リポジトリ"
+          >
+            <img src={getAssetSrc("assets/social/github-invertocat-white.svg")} alt="" />
           </a>
         </div>
       </footer> : null}
