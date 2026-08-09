@@ -1,5 +1,15 @@
 # Design QA — guide two-pane layout
 
+## Guide scenario adjustment menu grouping — 2026-08-09
+
+- Navigation: `耐久調整`, `火力調整`, and `素早さ調整` are absent from the guide menu; the menu now has 10 items and moves directly from `仮想敵シナリオ` to `定数ダメージ・回復`.
+- Structure: the three existing adjustment cards remain individually addressable as `#defence`, `#offense`, and `#speed`, but all are DOM descendants of `section#scenarios` inside a group labeled `仮想敵シナリオの調整種別`.
+- Desktop 904x698: scrolling each of the three cards keeps the sole `aria-current="location"` menu item on `仮想敵シナリオ`; the cards remain a three-column row with no document-level horizontal overflow.
+- Mobile 390x844: the cards become one `360px` column, all three scroll positions keep `仮想敵シナリオ` active, and the page has no horizontal overflow.
+- Runtime: the main app displays `app v0.7.15`; guide, mobile preview, and main-app clean loads produced 0 Browser console errors or warnings.
+
+final result: passed
+
 ## Guide scenario rows and columns explanation — 2026-08-09
 
 - Source visual truth: supplied `image 3.png` and `Group 6 1.png`, stored unchanged as `scenario-adjustment-column-addition.png` and `scenario-row-addition.png`; source, public, and production-build SHA-256 hashes match.

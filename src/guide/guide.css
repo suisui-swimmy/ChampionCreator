@@ -189,10 +189,6 @@ body.guide-page {
   box-shadow: 0 0 10px rgba(247, 212, 71, 0.4);
 }
 
-.guide-toc nav a.defence::before { background: var(--guide-green); }
-.guide-toc nav a.offense::before { background: #ff5964; }
-.guide-toc nav a.speed::before { background: var(--guide-cyan); }
-
 .guide-content {
   min-width: 0;
 }
@@ -793,7 +789,7 @@ body.guide-page {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 58px;
+  margin-top: 28px;
 }
 
 .guide-mode-section {

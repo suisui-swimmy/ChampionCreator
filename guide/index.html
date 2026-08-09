@@ -107,9 +107,6 @@
           <a href="#target">調整対象</a>
           <a href="#sp">SPの考え方</a>
           <a href="#scenarios">仮想敵シナリオ</a>
-          <a class="defence" href="#defence">耐久調整</a>
-          <a class="offense" href="#offense">火力調整</a>
-          <a class="speed" href="#speed">素早さ調整</a>
           <a id="constant-damage-nav" href="#constant-damage">定数ダメージ・回復</a>
           <a href="#candidates">候補一覧</a>
           <a href="#box">ボックス</a>
@@ -246,22 +243,21 @@
           />
           <p>計算時は、最終的に有効になっているすべてのシナリオ行を条件として評価します。一時的に条件から外したい場合は、トグルスイッチで無効化することができます。</p>
           <div id="guide-ally-ability-tip-root"></div>
+          <div class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別">
+            <section class="guide-mode-section defence" id="defence">
+              <span>DEFENCE</span><h2>耐久調整</h2>
+              <p>調整対象が相手の攻撃をどれだけ耐えるかを設定します。攻撃側条件、必要耐久回数、必要生存率を入力し、複数条件をすべて満たす配分だけを候補にします。</p>
+            </section>
+            <section class="guide-mode-section offense" id="offense">
+              <span>OFFENSE</span><h2>火力調整</h2>
+              <p>指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。</p>
+            </section>
+            <section class="guide-mode-section speed" id="speed">
+              <span>SPEED</span><h2>素早さ調整</h2>
+              <p>相手ポケモンや任意の実数値を基準に、確定抜き・同速などのSラインを計算します。トリックルームでは通常と逆の比較になります。</p>
+            </section>
+          </div>
         </section>
-
-        <div class="guide-mode-grid">
-          <section class="guide-mode-section defence" id="defence">
-            <span>DEFENCE</span><h2>耐久調整</h2>
-            <p>調整対象が相手の攻撃をどれだけ耐えるかを設定します。攻撃側条件、必要耐久回数、必要生存率を入力し、複数条件をすべて満たす配分だけを候補にします。</p>
-          </section>
-          <section class="guide-mode-section offense" id="offense">
-            <span>OFFENSE</span><h2>火力調整</h2>
-            <p>指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。</p>
-          </section>
-          <section class="guide-mode-section speed" id="speed">
-            <span>SPEED</span><h2>素早さ調整</h2>
-            <p>相手ポケモンや任意の実数値を基準に、確定抜き・同速などのSラインを計算します。トリックルームでは通常と逆の比較になります。</p>
-          </section>
-        </div>
 
         <section class="guide-section" id="constant-damage">
           <p class="guide-section-kicker">HP EVENTS</p>

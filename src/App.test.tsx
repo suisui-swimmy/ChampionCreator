@@ -162,7 +162,10 @@ describe("App", () => {
     expect(guideHtml).toContain('<span>使い方ガイド</span>');
     expect(guideHtml).not.toContain('class="guide-global-nav"');
     expect(guideHtml).toContain('<a class="guide-header-action" href="/">アプリを開く</a>');
-    expect(guideHtml.indexOf('href="#speed"')).toBeLessThan(guideHtml.indexOf('href="#constant-damage"'));
+    expect(guideHtml).not.toContain('href="#defence"');
+    expect(guideHtml).not.toContain('href="#offense"');
+    expect(guideHtml).not.toContain('href="#speed"');
+    expect(guideHtml.indexOf('href="#scenarios"')).toBeLessThan(guideHtml.indexOf('href="#constant-damage"'));
     expect(guideHtml).not.toContain('class="guide-toc-help"');
     expect(guideHtml).toContain('id="guide-tutorial-root"');
     expect(guideHtml).toContain('id="guide-ally-ability-tip-root"');
@@ -195,6 +198,8 @@ describe("App", () => {
     expect(guideHtml.indexOf(scenarioRowText)).toBeLessThan(guideHtml.indexOf('src="/assets/guide/scenario-row-addition.png"'));
     expect(guideHtml.indexOf('src="/assets/guide/scenario-row-addition.png"')).toBeLessThan(guideHtml.indexOf(scenarioEvaluationText));
     expect(guideHtml.indexOf(scenarioEvaluationText)).toBeLessThan(guideHtml.indexOf('id="guide-ally-ability-tip-root"'));
+    expect(guideHtml).toContain('class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別"');
+    expect(guideHtml).toMatch(/<section class="guide-section" id="scenarios">[\s\S]*?<div class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別">[\s\S]*?<section class="guide-mode-section defence" id="defence">[\s\S]*?<section class="guide-mode-section offense" id="offense">[\s\S]*?<section class="guide-mode-section speed" id="speed">[\s\S]*?<\/div>\s*<\/section>\s*<section class="guide-section" id="constant-damage">/s);
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
@@ -267,6 +272,7 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-ally-ability-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-row-image\s*\{[^}]*width:\s*min\(100%, 520px\);/s);
+    expect(guideCss).toMatch(/\.guide-mode-grid\s*\{[^}]*margin-top:\s*28px;/s);
     expect(guideHtml).toContain('class="guide-stat-rules" aria-label="SPの基本ルール"');
     expect(guideHtml).toContain("<h3>SPの制約</h3>");
     expect(guideHtml).toContain("<h3>計算での扱い</h3>");
