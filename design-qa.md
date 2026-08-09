@@ -1,5 +1,16 @@
 # Design QA — guide two-pane layout
 
+## Guide SP rules two-row layout — 2026-08-09
+
+- Source visual truth: approved Figma frame `WRc81iCQ48jMkvSz5EXYQ1` / node `2:9`, refined by the in-app Browser feedback to reduce the overall scale by one step.
+- Structure: one shared surface contains `SPの制約` and `計算での扱い` as two rows with one horizontal divider; each row keeps two directly comparable label/value pairs.
+- In-app Browser 894x698: the surface renders at `852 x 145.6px`, both rows are `72px` high, headings are `15px`, and yellow values are `24px`. The final scale is smaller than the initial `177.6px`-high implementation without changing the information hierarchy.
+- Mobile 390x844: the surface renders at `360 x 161.5px`; row headings stack above two equal item columns, yellow values are `18px`, and document-level horizontal overflow is absent.
+- Copy and semantics: the exact pairs are `各能力 / 0–32`, `合計上限 / 66`, `同時探索 / H/B/D`, and `固定条件 / A/C/S`; the container exposes `aria-label="SPの基本ルール"`.
+- Runtime: the main app displays `app v0.7.12`; clean guide and main-app page loads produced 0 Browser console errors or warnings.
+
+final result: passed
+
 - Source visual truth: attached `codex-clipboard-8dd8c7cb-3948-49f6-a780-69f7cdbe09ec.png` and `codex-clipboard-bb280c5a-10ac-4c61-844e-313f787a87aa.png`
 - Implementation screenshots: Codex visualization artifacts `guide-two-pane-1200x900.png` and `guide-footer-1200x900.png`
 - Viewport: desktop CSS viewport `1200 x 900`, device scale factor `1`; mobile CSS viewport `390 x 844`

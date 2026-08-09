@@ -201,11 +201,21 @@
         <section class="guide-section" id="sp">
           <p class="guide-section-kicker">STAT POINTS</p>
           <h2>SPの考え方</h2>
-          <div class="guide-stat-rules">
-            <div><span>各能力に使えるSP</span><strong>0–32</strong></div>
-            <div><span>6能力の合計上限</span><strong>66</strong></div>
-            <div><span>1候補として同時探索</span><strong>H/B/D</strong></div>
-            <div><span>火力・素早さの固定条件</span><strong>A/C/S</strong></div>
+          <div class="guide-stat-rules" aria-label="SPの基本ルール">
+            <div class="guide-stat-rule-row">
+              <h3>SPの制約</h3>
+              <dl class="guide-stat-rule-items">
+                <div><dt>各能力</dt><dd>0–32</dd></div>
+                <div><dt>合計上限</dt><dd>66</dd></div>
+              </dl>
+            </div>
+            <div class="guide-stat-rule-row">
+              <h3>計算での扱い</h3>
+              <dl class="guide-stat-rule-items">
+                <div><dt>同時探索</dt><dd>H/B/D</dd></div>
+                <div><dt>固定条件</dt><dd>A/C/S</dd></div>
+              </dl>
+            </div>
           </div>
           <p>候補一覧の「使用SP」は調整対象に使った合計SP、「残りSP」は66SPから使用済みSPを引いた値です。計算時は、実数値が一致するShowdown EV相当へ変換して<code>@smogon/calc</code>へ渡します。</p>
         </section>

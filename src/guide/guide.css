@@ -641,37 +641,61 @@ body.guide-page {
 
 .guide-stat-rules {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  overflow: hidden;
   margin: 18px 0;
+  border: 1px solid var(--guide-border);
+  border-radius: 8px;
+  background: var(--guide-surface);
 }
 
-.guide-stat-rules div {
+.guide-stat-rule-row {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  min-height: 72px;
+  padding: 0 24px;
+}
+
+.guide-stat-rule-row + .guide-stat-rule-row {
+  border-top: 1px solid var(--guide-border);
+}
+
+.guide-stat-rule-row h3 {
+  margin: 0;
+  color: var(--guide-text);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.guide-stat-rule-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin: 0;
+}
+
+.guide-stat-rule-items div {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  border: 1px solid var(--guide-border);
-  border-radius: 7px;
-  background: var(--guide-surface);
-  padding: 13px;
+  gap: 14px;
 }
 
-.guide-stat-rules strong {
-  grid-column: 2;
-  grid-row: 1;
-  color: var(--guide-yellow);
-  font-size: 17px;
-  white-space: nowrap;
-}
-
-.guide-stat-rules span {
-  grid-column: 1;
-  grid-row: 1;
-  color: var(--guide-text);
+.guide-stat-rule-items dt {
+  color: var(--guide-muted);
   font-size: 13px;
+  line-height: 1.6;
+}
+
+.guide-stat-rule-items dd {
+  margin: 0;
+  color: var(--guide-yellow);
+  font-size: 24px;
   font-weight: 800;
-  line-height: 1.45;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .guide-mode-grid {
@@ -860,8 +884,14 @@ body.guide-page {
     position: static;
   }
 
-  .guide-stat-rules {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .guide-stat-rule-row {
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 20px;
+    padding: 0 20px;
+  }
+
+  .guide-stat-rule-items {
+    gap: 20px;
   }
 
   .guide-mode-grid {
@@ -982,6 +1012,33 @@ body.guide-page {
     font-size: 13px;
   }
 
+  .guide-stat-rule-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .guide-stat-rule-row h3 {
+    font-size: 13px;
+  }
+
+  .guide-stat-rule-items {
+    gap: 16px;
+  }
+
+  .guide-stat-rule-items div {
+    gap: 8px;
+  }
+
+  .guide-stat-rule-items dt {
+    font-size: 12px;
+  }
+
+  .guide-stat-rule-items dd {
+    font-size: 20px;
+  }
+
   .guide-tutorial-steps {
     overflow-x: auto;
     grid-template-columns: repeat(4, minmax(112px, 1fr));
@@ -1033,7 +1090,11 @@ body.guide-page {
     gap: 6px;
   }
 
-  .guide-stat-rules {
-    grid-template-columns: 1fr;
+  .guide-stat-rule-items {
+    gap: 12px;
+  }
+
+  .guide-stat-rule-items dd {
+    font-size: 18px;
   }
 }
