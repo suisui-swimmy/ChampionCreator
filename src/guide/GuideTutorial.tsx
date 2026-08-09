@@ -43,7 +43,7 @@ const getActiveStep = (status: SearchStatus, candidateApplied: boolean): number 
   return 1;
 };
 
-const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): string => {
+export const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): string => {
   if (candidateApplied) {
     return "候補のSP配分を調整対象へ適用できました。入力値が変わったことを確認してみよう。";
   }
@@ -51,7 +51,7 @@ const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): st
     return "計算完了！候補を開くと、各条件のPASS結果とダメージ内訳を確認できます。";
   }
   if (status === "running") {
-    return "本体と同じWorkerで全条件を評価しています。途中結果が候補一覧へ順次表示されます。";
+    return "アプリと同じ計算方法で全条件を評価しています。";
   }
   if (status === "error") {
     return "入力内容を確認して、もう一度計算してください。サンプルに戻すこともできます。";
@@ -59,7 +59,7 @@ const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): st
   if (status === "canceled") {
     return "計算を中断しました。条件を変えて、いつでも再実行できます。";
   }
-  return "サンプル入力を確認したら、作業台の「計算開始」を押してみよう。入力内容は自由に変更できます。";
+  return "サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。";
 };
 
 export function GuideTutorial() {

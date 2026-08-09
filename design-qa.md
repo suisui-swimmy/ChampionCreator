@@ -51,6 +51,25 @@
 
 final result: passed
 
+## Guide mobile annotation and reference image — 2026-08-09
+
+- Source visual truth: supplied `lightbulb.svg` and `overview_mobile.png`, copied unchanged to `public/assets/guide/`; source, public, and production-build hashes match.
+- The `スマホでは？` annotation uses the supplied green lightbulb SVG, followed by the two requested paragraphs and then the mobile overview image in that order.
+- In-app Browser 894x698: the image loads at its natural `690 x 1024` dimensions and renders at the requested reduced maximum width of `320px` with preserved aspect ratio.
+- Responsive sizing uses `min(100%, 320px)` and `height: auto`; the verified guide viewport has no document-level horizontal overflow.
+- Browser console errors and warnings: 0.
+
+final result: passed
+
+## Guide tutorial spacing and step copy — 2026-08-09
+
+- Desktop 1186x698 and mobile 390x844: the introduction lead now keeps a measured `16px` gap before the interactive tutorial, with no document-level horizontal overflow.
+- STEP 1 displays `サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。`.
+- The real tutorial flow changed to STEP 2 while calculating, STEP 3 when calculation completed, and STEP 4 after applying the candidate; all four messages matched the requested copy exactly.
+- Browser console errors and warnings: 0.
+
+final result: passed
+
 ## Guide overview image and numbered annotations — 2026-08-09
 
 - Source visual truth: supplied `overview.png`, copied unchanged to `public/assets/guide/overview.png`; SHA-256 matches and the real PNG dimensions are `1763 x 1645`.

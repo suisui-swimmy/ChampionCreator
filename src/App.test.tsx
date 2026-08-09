@@ -30,7 +30,7 @@ import {
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
-import { GuideTutorial } from "./guide/GuideTutorial";
+import { GuideTutorial, getTutorialMessage } from "./guide/GuideTutorial";
 
 const renderExampleApp = (): string => renderToStaticMarkup(
   <App
@@ -173,11 +173,25 @@ describe("App", () => {
     expect(guideHtml).toContain('class="feature-mark result">③</span>');
     expect(guideHtml).toContain('class="feature-mark box">④</span>');
     expect(guideHtml).not.toContain('class="guide-feature-grid"');
+    expect(guideHtml).toContain('src="/assets/guide/lightbulb.svg"');
+    expect(guideHtml).toContain("スマホでは？");
+    expect(guideHtml).toContain("スマホ表示では、各領域をタッチすることで拡大シートを表示、情報を入力します。");
+    expect(guideHtml).toContain("画面中央のノードは、小さい丸エッジ側が「攻撃を与える側」「素早さを抜く側」、細長いピル型エッジ側が「攻撃を受ける側」「素早さを抜かれる側」を表しています。");
+    expect(guideHtml).toContain('src="/assets/guide/overview_mobile.png"');
+    expect(guideHtml.indexOf("素早さを抜かれる側")).toBeLessThan(guideHtml.indexOf('class="guide-mobile-overview-image"'));
+    expect(guideHtml).not.toContain("調整対象、シナリオ、候補をタップすると");
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(guideOverviewImage.readUInt32BE(16)).toBe(1763);
     expect(guideOverviewImage.readUInt32BE(20)).toBe(1645);
+    const guideMobileOverviewImage = readFileSync(new URL("../public/assets/guide/overview_mobile.png", import.meta.url));
+    expect(guideMobileOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(guideMobileOverviewImage.readUInt32BE(16)).toBe(690);
+    expect(guideMobileOverviewImage.readUInt32BE(20)).toBe(1024);
+    const guideTipIcon = readFileSync(new URL("../public/assets/guide/lightbulb.svg", import.meta.url), "utf8");
+    expect(guideTipIcon).toContain("<svg");
+    expect(guideTipIcon).toContain('stroke="#00FF72"');
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(guideStructuredDataMatch).not.toBeNull();
     const guideStructuredData = JSON.parse(guideStructuredDataMatch?.[1] ?? "{}");
@@ -190,11 +204,13 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-menu-open \.guide-toc\s*\{[^}]*visibility:\s*visible;/s);
     expect(guideCss).toMatch(/\.guide-page \.app-shell--tutorial \.results-panel\s*\{[^}]*top:\s*60px;[^}]*height:\s*calc\(100dvh - 60px\);/s);
     expect(guideCss).toMatch(/\.guide-intro h1\s*\{[^}]*font-size:\s*clamp\(23px, 2\.4vw, 32px\);/s);
-    expect(guideCss).toMatch(/\.guide-lead\s*\{[^}]*max-width:\s*none;/s);
+    expect(guideCss).toMatch(/\.guide-lead\s*\{[^}]*max-width:\s*none;[^}]*margin:\s*14px 0 16px;/s);
     expect(guideCss).toMatch(/\.guide-overview-image\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-feature-list\s*\{[^}]*list-style:\s*none;/s);
     expect(guideCss).toMatch(/\.guide-feature-list p\s*\{[^}]*font-size:\s*13px;/s);
     expect(guideCss).toContain(".feature-mark.target { color: var(--guide-yellow); }");
+    expect(guideCss).toMatch(/\.guide-tip-heading\s*\{[^}]*display:\s*flex;/s);
+    expect(guideCss).toMatch(/\.guide-mobile-overview-image\s*\{[^}]*width:\s*min\(100%, 320px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-stat-rules div\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;/s);
     expect(guideCss).toMatch(/\.guide-stat-rules span\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*800;/s);
     expect(guideCss).toMatch(/\.guide-troubleshooting-list\s*\{[^}]*font-size:\s*13px;/s);
@@ -207,6 +223,12 @@ describe("App", () => {
     expect(guideHtml).toContain("不具合報告");
     expect(guideHtml).toContain('aria-label="お問い合わせ: X @peixe0307"');
     expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
+    expect(getTutorialMessage("idle", false)).toBe("サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。");
+    expect(getTutorialMessage("running", false)).toBe("アプリと同じ計算方法で全条件を評価しています。");
+    expect(getTutorialMessage("complete", false)).toBe("計算完了！候補を開くと、各条件のPASS結果とダメージ内訳を確認できます。");
+    expect(getTutorialMessage("complete", true)).toBe("候補のSP配分を調整対象へ適用できました。入力値が変わったことを確認してみよう。");
+    expect(tutorialHtml).toContain("サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。");
+    expect(tutorialHtml).not.toContain("作業台の「計算開始」");
     expect(tutorialHtml).not.toContain("添付バックアップの3条件を、本体と同じ計算経路で同時評価します。");
     expect(tutorialHtml).not.toContain('class="guide-open-app-button"');
     expect(tutorialHtml).toContain('aria-label="サンプルに戻す"');

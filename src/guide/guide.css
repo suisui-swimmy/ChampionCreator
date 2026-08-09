@@ -234,7 +234,7 @@ body.guide-page {
 
 .guide-lead {
   max-width: none;
-  margin: 14px 0 0;
+  margin: 14px 0 16px;
   color: #b8c4bf;
   font-size: 15px;
   line-height: 1.9;
@@ -559,11 +559,38 @@ body.guide-page {
   font-size: 11px;
 }
 
+.guide-tip-heading {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.guide-tip-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
 .guide-tip p {
   margin: 4px 0 0;
   color: #abb7b2;
   font-size: 11px;
   line-height: 1.75;
+}
+
+.guide-tip p + p {
+  margin-top: 8px;
+}
+
+.guide-mobile-overview-image {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  margin: 14px auto 0;
+  border: 1px solid var(--guide-border);
+  border-radius: 7px;
+  background: var(--guide-surface);
 }
 
 .guide-flow-list {
