@@ -1,5 +1,15 @@
 # Design QA — guide two-pane layout
 
+## Guide double-battle ally ability annotation — 2026-08-09
+
+- Source visual truth: supplied `Group 5.png`, stored unchanged as `public/assets/guide/double-battle-ally-abilities.png`; source, public, and production-build SHA-256 hashes match and the PNG dimensions are `871 x 548`.
+- Structure: the existing green `guide-tip-icon` precedes `ダブルバトルの味方特性`, followed by the requested paragraph, a Radix UI Collapsible trigger labeled `対象の特性`, the 14 abilities in the requested order, and the supplied image.
+- Desktop: the image renders at a maximum width of `720px`; the disclosure changes from `aria-expanded="false"` to `true`, exposes all 14 items, and the page has no horizontal overflow.
+- Mobile 390x844: the annotation fits the `360px` guide track, the image renders at about `327.6px`, the two-column expanded list remains readable, and document-level horizontal overflow is absent.
+- Runtime: the main app displays `app v0.7.13`; guide, mobile preview, and main-app clean loads produced 0 Browser console errors or warnings.
+
+final result: passed
+
 ## Guide SP rules two-row layout — 2026-08-09
 
 - Source visual truth: approved Figma frame `WRc81iCQ48jMkvSz5EXYQ1` / node `2:9`, refined by the in-app Browser feedback to reduce the overall scale by one step.

@@ -30,6 +30,7 @@ import {
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
+import { GuideAllyAbilityTip, allyAbilityLabels } from "./guide/GuideAllyAbilityTip";
 import { GuideTutorial, getTutorialMessage } from "./guide/GuideTutorial";
 
 const renderExampleApp = (): string => renderToStaticMarkup(
@@ -143,6 +144,7 @@ describe("App", () => {
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
     const robots = readFileSync(new URL("../public/robots.txt", import.meta.url), "utf8");
+    const allyAbilityTipHtml = renderToStaticMarkup(<GuideAllyAbilityTip />);
     const tutorialHtml = renderToStaticMarkup(<GuideTutorial />);
 
     expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>");
@@ -163,6 +165,7 @@ describe("App", () => {
     expect(guideHtml.indexOf('href="#speed"')).toBeLessThan(guideHtml.indexOf('href="#constant-damage"'));
     expect(guideHtml).not.toContain('class="guide-toc-help"');
     expect(guideHtml).toContain('id="guide-tutorial-root"');
+    expect(guideHtml).toContain('id="guide-ally-ability-tip-root"');
     expect(guideHtml).not.toContain('class="guide-quick-steps"');
     expect(guideHtml).not.toContain("下の作業台は画像ではなく、実際のアプリと同じ計算UIです。");
     expect(guideHtml).toContain('id="constant-damage"');
@@ -192,6 +195,34 @@ describe("App", () => {
     const guideTipIcon = readFileSync(new URL("../public/assets/guide/lightbulb.svg", import.meta.url), "utf8");
     expect(guideTipIcon).toContain("<svg");
     expect(guideTipIcon).toContain('stroke="#00FF72"');
+    const guideAllyAbilityImage = readFileSync(new URL("../public/assets/guide/double-battle-ally-abilities.png", import.meta.url));
+    expect(guideAllyAbilityImage.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(guideAllyAbilityImage.readUInt32BE(16)).toBe(871);
+    expect(guideAllyAbilityImage.readUInt32BE(20)).toBe(548);
+    expect(allyAbilityTipHtml).toContain('class="guide-tip-icon"');
+    expect(allyAbilityTipHtml).toContain("ダブルバトルの味方特性");
+    expect(allyAbilityTipHtml).toContain("「わざわいのつるぎ」「フェアリーオーラ」「フレンドガード」などは、ダブルバトルを選択し、同じシナリオ内にその特性を持つポケモンを追加すると反映できます。");
+    expect(allyAbilityTipHtml).toContain('class="guide-ability-disclosure-trigger"');
+    expect(allyAbilityTipHtml).toContain('data-state="closed"');
+    expect(allyAbilityTipHtml).toContain("対象の特性");
+    expect(allyAbilityLabels).toEqual([
+      "わざわいのつるぎ",
+      "わざわいのたま",
+      "わざわいのおふだ",
+      "わざわいのうつわ",
+      "フラワーギフト",
+      "バッテリー",
+      "パワースポット",
+      "はがねのせいしん",
+      "フェアリーオーラ",
+      "ダークオーラ",
+      "オーラブレイク",
+      "プラス",
+      "マイナス",
+      "フレンドガード",
+    ]);
+    expect(allyAbilityTipHtml).toContain('src="/assets/guide/double-battle-ally-abilities.png"');
+    expect(allyAbilityTipHtml.indexOf("対象の特性")).toBeLessThan(allyAbilityTipHtml.indexOf('class="guide-ally-ability-image"'));
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(guideStructuredDataMatch).not.toBeNull();
     const guideStructuredData = JSON.parse(guideStructuredDataMatch?.[1] ?? "{}");
@@ -211,6 +242,9 @@ describe("App", () => {
     expect(guideCss).toContain(".feature-mark.target { color: var(--guide-yellow); }");
     expect(guideCss).toMatch(/\.guide-tip-heading\s*\{[^}]*display:\s*flex;/s);
     expect(guideCss).toMatch(/\.guide-mobile-overview-image\s*\{[^}]*width:\s*min\(100%, 320px\);[^}]*height:\s*auto;/s);
+    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*cursor:\s*pointer;/s);
+    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\[data-state="open"\] \.guide-disclosure-chevron\s*\{[^}]*transform:\s*rotate\(90deg\);/s);
+    expect(guideCss).toMatch(/\.guide-ally-ability-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideHtml).toContain('class="guide-stat-rules" aria-label="SPの基本ルール"');
     expect(guideHtml).toContain("<h3>SPの制約</h3>");
     expect(guideHtml).toContain("<h3>計算での扱い</h3>");

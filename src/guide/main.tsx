@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { GuideAllyAbilityTip } from "./GuideAllyAbilityTip";
 import { GuideTutorial } from "./GuideTutorial";
 import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 import { getActiveGuideSectionIndex } from "./scrollSpy";
@@ -139,5 +140,16 @@ if (!tutorialRoot) {
 createRoot(tutorialRoot).render(
   <StrictMode>
     <GuideTutorial />
+  </StrictMode>,
+);
+
+const allyAbilityTipRoot = document.getElementById("guide-ally-ability-tip-root");
+if (!allyAbilityTipRoot) {
+  throw new Error("Guide ally ability tip root was not found.");
+}
+
+createRoot(allyAbilityTipRoot).render(
+  <StrictMode>
+    <GuideAllyAbilityTip />
   </StrictMode>,
 );
