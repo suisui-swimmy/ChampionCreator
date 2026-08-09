@@ -1,5 +1,15 @@
 # Design QA — guide two-pane layout
 
+## Guide scenario rows and columns explanation — 2026-08-09
+
+- Source visual truth: supplied `image 3.png` and `Group 6 1.png`, stored unchanged as `scenario-adjustment-column-addition.png` and `scenario-row-addition.png`; source, public, and production-build SHA-256 hashes match.
+- Content order: the scenario introduction is followed by the adjustment-column explanation, its image, the independent-scenario-row explanation, its image, the final enabled-row evaluation explanation, and then the existing ally-ability annotation.
+- Desktop 904x698: the horizontal column example renders at `720px`, the vertical row example at `520px`, both retain their natural dimensions (`1045 x 390` and `820 x 1189`), and document-level horizontal overflow is absent.
+- Mobile 390x844: both images fit the `360px` guide track; the vertical image renders at `360 x 521.3px`, all four paragraphs remain readable, and document-level horizontal overflow is absent.
+- Runtime: the main app displays `app v0.7.14`; guide, mobile preview, and main-app clean loads produced 0 Browser console errors or warnings.
+
+final result: passed
+
 ## Guide double-battle ally ability annotation — 2026-08-09
 
 - Source visual truth: supplied `Group 5.png`, stored unchanged as `public/assets/guide/double-battle-ally-abilities.png`; source, public, and production-build SHA-256 hashes match and the PNG dimensions are `871 x 548`.

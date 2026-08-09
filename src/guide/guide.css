@@ -670,6 +670,20 @@ body.guide-page {
   background: var(--guide-surface);
 }
 
+.guide-scenario-image {
+  display: block;
+  width: min(100%, 720px);
+  height: auto;
+  margin: 16px auto 20px;
+  border: 1px solid var(--guide-border);
+  border-radius: 7px;
+  background: var(--guide-surface);
+}
+
+.guide-scenario-row-image {
+  width: min(100%, 520px);
+}
+
 .guide-flow-list {
   display: grid;
   gap: 1px;
