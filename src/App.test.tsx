@@ -311,6 +311,16 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-scenario-row-image\s*\{[^}]*width:\s*min\(100%, 520px\);/s);
     expect(guideCss).toMatch(/\.guide-mode-grid\s*\{[^}]*margin-top:\s*28px;/s);
     expect(guideCss).toMatch(/\.guide-mode-section p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-steps\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;[^}]*padding:\s*10px;/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-steps li\s*\{[^}]*min-height:\s*56px;[^}]*border:\s*1px solid var\(--guide-border\);[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-steps span\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*font-size:\s*12px;/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-steps li\.active\s*\{[^}]*border-color:\s*rgba\(247, 212, 71, 0\.72\);[^}]*background:\s*rgba\(247, 212, 71, 0\.09\);/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-steps li\.complete\s*\{[^}]*border-color:\s*rgba\(0, 255, 114, 0\.38\);[^}]*background:\s*rgba\(0, 255, 114, 0\.04\);/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-message span\s*\{[^}]*font-size:\s*12px;/s);
+    expect(guideCss).toMatch(/\.guide-tutorial-message p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-tutorial-steps\s*\{[^}]*overflow-x:\s*visible;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-tutorial-steps li:not\(:last-child\)::after\s*\{[^}]*display:\s*none;/s);
+    expect(guideCss).not.toMatch(/\.guide-tutorial-steps\s*\{[^}]*overflow-x:\s*auto;/s);
     expect(guideHtml).toContain('class="guide-stat-rules" aria-label="SPの基本ルール"');
     expect(guideHtml).toContain("<h3>SPの制約</h3>");
     expect(guideHtml).toContain("<h3>計算での扱い</h3>");
