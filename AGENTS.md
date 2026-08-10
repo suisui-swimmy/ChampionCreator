@@ -1,571 +1,397 @@
 # ChampionCreator AGENTS
 
-## プロジェクトの目的
+## この文書の役割
 
-ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計算に準拠しながら、複数の仮想敵シナリオを同時に満たす `H / B / D` 努力値配分を探索する、ブラウザで動く自動耐久調整ツール。
+ChampionCreator は M0〜M9 の初期開発マイルストーンを完了し、現在は完成済みアプリへの機能追加、不具合修正、データ更新、UI 改善、公開運用が中心。
 
-このツールの本質は「耐久指数をそれっぽく最大化すること」ではなく、ユーザーが指定した複数の被ダメージ条件に対して、
+この文書は、過去の実装手順を再現するロードマップではなく、今後の変更でも守る設計境界と作業ルールを定義する。
 
-- 指定回数を耐える
-- 指定確率以上で耐える
-- 合法努力値配分だけを返す
-- なぜその候補が通るか説明する
+- 現在の実装状況は、対象コード、対象テスト、`README.md`、`package.json` を確認して判断する
+- 作業履歴と直近の引き継ぎは `PROGRESS.md` を参照する
+- 完了済みマイルストーンを未着手タスクとして再開しない
+- 将来候補は、ユーザーが依頼した範囲または明示された課題だけを扱う
+- この文書と現行実装が矛盾する場合は、勝手に片方へ寄せず、実装経路と影響を確認してから修正する
 
-こと。
+## 現在のプロジェクト目的
 
-## 最重要ルール
+ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠しながら、複数の仮想敵条件を同時に扱うブラウザ完結型の調整ツール。
 
-### ダメージ計算エンジンは独自実装しない
+現在の主な機能:
 
-`@smogon/calc` を唯一のダメージ計算の正とする。
+- 複数シナリオを同時に満たす `H / B / D` 耐久配分の探索
+- 指定 KO 確率を満たす `A / C` 火力ラインの算出
+- 仮想敵や実数値を基準にした `S` ラインの算出
+- 直接攻撃と、明示した定数ダメージ・回復を順番どおりに扱う HP シーケンス評価
+- `A / C / S` の固定 SP を含めた合法な能力ポイント配分の評価
+- 全合格候補のページネーション、並び替え、候補適用
+- 調整対象ボックス、仮想敵ボックス、バックアップ入出力
+- デスクトップとモバイルに対応した作業画面
+- 公開ガイドと静的ホスティング
+
+このツールの本質は、耐久指数や火力指数を独自式で近似することではない。指定条件を正しい計算境界で評価し、合法な配分と、その候補が通る理由を説明できる状態を保つこと。
+
+## 作業開始時の確認
+
+毎回リポジトリ全体を読む必要はない。次の順で、依頼に関係する範囲だけ確認する。
+
+1. `AGENTS.md`
+2. `PROGRESS.md` の直近項目と、依頼に関係する過去項目
+3. 対象の実装ファイルと対応テスト
+4. コマンド、依存、バージョンに関係する場合は `package.json`
+5. ユーザー向け仕様に関係する場合は `README.md` と `guide/`
+6. 必要な場合だけ `docs/`、`scripts/`、`.github/workflows/`
+
+`others/` は参考資料置き場であり、通常の修正で毎回読む対象ではない。次の場合だけ必要な資料を選んで参照する。
+
+- localization / resolver の設計境界を変更する
+- `@smogon/calc` adapter の設計を変更する
+- 初期仕様の意図を確認しないと現行コードだけでは判断できない
+
+本体は `others/` なしで動く状態を維持し、runtime import しない。
+
+## 最重要の設計境界
+
+### 1. 直接ダメージ計算の正は `@smogon/calc`
+
+`@smogon/calc` を、直接攻撃のダメージロール、タイプ相性、ランク補正、乱数分布などの唯一の計算元とする。
 
 禁止:
 
-- 独自のダメージ計算式を実装すること
-- 独自のタイプ相性・乱数分布・ランク補正を主計算として実装すること
-- `@smogon/calc` の結果と異なる独自補正で最終合否を決めること
-- upstream の `@smogon/calc` を直接改変すること
+- 独自のダメージ計算式を主計算として実装する
+- 独自のタイプ相性、乱数分布、ランク補正で最終結果を決める
+- `@smogon/calc` と異なる独自補正で候補の合否を上書きする
+- upstream や vendor package を直接改変する
+- UI 表示用の日本語名や画像を計算条件として使う
 
 許可:
 
-- 入力モデルを `@smogon/calc` 用に変換する薄い adapter
-- 探索高速化のための候補事前フィルタ、キャッシュ、粗探索
-- 複数被弾シーケンスをアプリ側で順に評価する管理層
+- domain model を `@smogon/calc` の `Pokemon` / `Move` / `Field` / `Side` へ変換する薄い adapter
+- 複数攻撃と HP イベントを順番に処理する管理層
+- 探索の事前フィルタ、候補列挙の絞り込み、キャッシュ、バッチ化
+- `@smogon/calc` の結果を日本語 UI 向けに整形する表示層
 
-ただし、最終候補の合否判定は必ず `@smogon/calc` ベースで再評価する。
+最終候補は必ず `@smogon/calc` ベースで再評価し、不合格候補を返さない。
 
-### 日本語と Showdown canonical name を混ぜない
+現在の主な境界:
 
-日本語入力・表示・検索は localization layer の責務。計算 adapter には、resolver 済みの Showdown canonical name だけを渡す。
+- `src/calc/smogonAdapter.ts`: canonical name から直接ダメージを計算する adapter
+- `src/calc/hpEventRules.ts`: 選択式 HP イベントのルール
+- `src/calc/simulateHpSequence.ts`: 直接ダメージと HP イベントの順序付き評価
+- `src/calc/moveHpMechanics.ts`: 現在 HP に依存する技などの判定
 
-方向性:
+`@smogon/calc` の更新調査では、npm の公開バージョンだけで判断しない。repo 内の `.agents/skills/audit-smogon-calc-upstream/SKILL.md` に従い、現在の pin と upstream 最新コミットの差分、runtime 影響、採用方法を確認する。
 
-- `others/damage-calc-ja-layer` は日本語対応の参考実装・素材置き場として扱う。
-- `others/` は git 追跡しない物置なので、本体コードから `others/` へ runtime import しない。
-- 必要なデータ・型・設計は、明示的に本体へコピーするか、正式な package / dependency として扱う。
-- 生成済み JSON を手で直さない。必要なら `scripts/`、`overrides/`、validation で扱う。
-- resolver は `exact` / `alias` / `ambiguous` / `not-found` などの状態を UI に返し、曖昧さや欠損を握りつぶさない。
+### 2. 日本語表示と Showdown canonical name を混ぜない
 
-### 探索は H/B/D 同時探索にする
+日本語入力、別名、検索、表示は localization layer の責務。calc / search layer には resolver 済みの Showdown canonical name だけを渡す。
 
-`HB` と `HD` を別々に解いて後で合成する方式は採用しない。1つの候補 `H / B / D` を、全シナリオに対して直接評価する。
+- resolver は `exact` / `alias` / `ambiguous` / `not-found` を区別する
+- `exact` / `alias` だけを canonical name として計算層へ渡す
+- `ambiguous` / `not-found` を自動補完で握りつぶさず、UI へ返す
+- Pokemon / Move / Item / Ability / Nature / Type の種別を混ぜない
+- canonical name を通常の日本語 UI に露出させない
 
-理由:
+現在の主な境界:
 
-- 物理と特殊が混在する複合シナリオに強い
-- 説明しやすい
-- 最終再検証と相性がいい
-- 将来の条件追加に耐えやすい
+- `src/localization/`: normalize、resolver、表示名ルール
+- `src/data/generated/`: scripts から生成される catalog
+- `src/data/overrides/`: 手動補正の正規配置
+- `scripts/`: 生成と validation
 
-## 参照すべき資料
+生成済み JSON を直接編集しない。必要な変更は生成 script、source data、override、validation のいずれかで行い、再生成後の差分を確認する。
 
-作業開始時は、存在する範囲で次を読む。
+### 3. domain model と UI state を混ぜない
 
-- `AGENTS.md`
-- `README.md`
-- `package.json`
-- `src/`
-- `docs/`
-- `PROGRESS.md`
-- `others/auto-defence-adjustment.md`
-- `others/auto-defence-adjustment-ai-prompt.md`
-- `others/damage-calc-ja-layer/README.md`
-- `others/damage-calc-ja-layer/src/localization/resolver.ts`
-- `others/damage-calc-ja-layer/src/calc/smogonAdapter.ts`
+UI 入力をそのまま calc / search へ渡さず、`src/domain/` と UI 変換層で正規化する。
 
-`others/` は参考資料。必要なものだけ読む・コピーする。本体が `others/` なしでも動く状態を目指す。
+維持する主な概念:
 
-## 推奨アーキテクチャ
+- `Build`: ポケモン、レベル、性格、個体値、SP、特性、持ち物、テラスタイプなど
+- `Scenario`: 仮想敵と戦闘条件
+- `ScenarioHit`: 順番を持つ攻撃条件
+- `SurvivalConstraint`: 必要耐久回数と必要生存率
+- `ScenarioEvaluation`: damage rolls、致死率、生存率、HP イベント内訳
+- `CandidateResult`: SP 候補、各シナリオ結果、残り SP、ボトルネック
 
-### 1. localization / resolver layer
+新しい条件を追加するときは、UI だけに値を足さず、domain、serialization、search / calc、Worker、表示、テストのどこまで影響するかを先に追う。
 
-責務:
+### 4. `H / B / D` は1候補として同時探索する
 
-- 日本語名・別名・検索文字列から Showdown canonical name へ解決する
-- 曖昧・未発見・fallback を明示する
-- UI 表示用の日本語名や候補メタデータを返す
-
-計算 adapter に日本語文字列を直接渡さない。
-
-### 2. domain model layer
-
-UI 入力をそのまま計算ロジックへ渡さず、純粋な TypeScript の domain model へ正規化する。
-
-最低限分ける概念:
-
-- `Build`: ポケモン、レベル、性格、個体値、努力値、特性、持ち物、テラスタイプ
-- `Scenario`: 仮想敵、技、天候、フィールド、壁、ランク、急所、連続被弾など
-- `SurvivalConstraint`: 必要耐久回数、必要生存確率、有効/無効
-- `ScenarioEvaluation`: `@smogon/calc` 由来のダメージロール・致死率・生存率
-- `CandidateResult`: 努力値候補、各シナリオ結果、残り努力値、ボトルネック説明
-
-### 3. smogon adapter layer
-
-責務:
-
-- `Build` から `@smogon/calc` の `Pokemon` を作る
-- `Scenario` から `Move` / `Field` / `Side` を作る
-- `calculate` を呼び、damage rolls / range / description を薄く整形する
-- adapter の入出力をテストしやすく保つ
-
-受け取る名前は resolver 済み canonical name のみ。UI state や日本語入力を直接受け取らない。
-
-### 4. scenario evaluation layer
-
-責務:
-
-- 1候補と1シナリオを評価する
-- 複数 hit / 複数行動 / ステルスロックなどのシーケンスを扱う
-- 生存条件を判定する
-
-個々のダメージロール生成は `@smogon/calc` に任せる。アプリ側はシーケンス管理と確率集計に留める。
-
-### 5. search layer
-
-責務:
-
-- 合法な `H / B / D` 候補だけを列挙する
-- 全シナリオを同時に満たす候補を探す
-- 粗探索、精密再探索、最終再検証を行う
-- スコア順に候補を返す
+`HB` と `HD` を別々に解いて後から合成しない。1つの `H / B / D` 候補を、有効な全シナリオへ直接評価する。
 
 SP 制約:
 
-- Pokemon Champions の Stat Points / SP を探索単位にする
-- 各ステータスは `0..32`
-- 総 SP は `<= 66`
-- `A / C / S` など固定済み SP を予算に含める
-- `@smogon/calc` に渡す直前に、実数値が一致する Showdown EV 相当へ変換する
-- 変換は `0SP => 0EV`、`1SP => 4EV`、以降 `+8EV`、`32SP => 252EV` を基本にする
-
-推奨ソート:
-
-1. `H + B + D` の SP が小さい
-2. 残り SP が多い
-3. 最も厳しいシナリオへの余裕が大きい
-4. 同点なら `H` が高い候補を優先してよい
-
-### 6. worker layer
-
-探索は Web Worker で実行する。
-
-必須メッセージ:
-
-- start
-- progress
-- partialResult
-- complete
-- error
-- cancel
-
-ユーザーが条件を変えたら前回探索を中断できるようにする。`requestId` などで古い結果を捨てられる設計にする。
+- 各能力は `0..32 SP`
+- 6能力合計は `66 SP` まで
+- `A / C / S` など固定済み SP も予算に含める
+- `0 SP => 0 EV`
+- `1 SP => 4 EV`
+- 以降は `+8 EV`
+- `32 SP => 252 EV`
+- `@smogon/calc` へ渡す直前に、実数値が一致する Showdown EV 相当へ変換する
 
-### 7. UI layer
+探索高速化で候補を絞る場合も、最終合否と最終並び順の意味を変えない。物理・特殊・可変参照技など、条件に関係する耐久軸の判定は既存 helper と回帰テストを使う。
 
-UI は計算層に依存しすぎない。まずは見た目より、入力から探索完了までの動線と説明可能性を優先する。
+現在の主な境界:
 
-UI の方向性は、添付参考画像のような「シンプルで密度のある調整ツール」に寄せる。派手なランディングページ、過剰なカード装飾、大きいヒーロー、説明文だらけの画面は避ける。
+- `src/search/defenceSearch.ts`: H/B/D 候補列挙と全シナリオ評価
+- `src/search/offenseAdjustment.ts`: A/C 火力ライン
+- `src/search/speedAdjustment.ts`: S ライン
+- `src/search/maximizeRemainingBulk.ts`: 残り SP の耐久配分
+- `src/ui/defenceSearchUi.ts`: UI 入力と探索結果の統合
 
-画面設計の優先:
+### 5. HP イベントは直接ダメージと分離する
 
-- 1画面で「調整対象」「仮想敵シナリオ」「候補一覧」「選択候補の詳細」を見渡せる作業台にする
-- 左側に調整対象、中央〜上部にシナリオ、下部に候補一覧、右下または詳細ペインに選択候補の内訳を置く構成を第一候補にする
-- フォームは compact にし、入力欄・セレクト・トグル・小さいボタンを中心にする
-- 色はタイプ、PASS/FAIL、選択状態、警告など意味がある場所に限定する
-- 候補一覧はカードより table / list を優先し、順位・努力値配分・使用SP/残りSP・PASS条件・ボトルネック・余裕を横並びで比較できるようにする
-- 詳細表示は常時全部を広げず、選択候補だけ詳しく見せる
-- シナリオは追加・削除・折りたたみ・有効/無効がすぐ分かる薄い枠で表現する
-- 装飾よりも、視線移動の少なさ、比較しやすさ、入力ミスの見つけやすさを優先する
+定数ダメージ、回復、反動などを `@smogon/calc` の直接ダメージへ混ぜない。アプリ側は、明示された効果を順番付き HP イベントとして評価する。
 
-色の定義:
+- 個々の直接攻撃ロールは `@smogon/calc` から取得する
+- タイプ相性や地面判定が必要な HP イベントでは、利用可能な世代データと既存 helper を使う
+- 発動順、対象、頻度、消費済み状態を domain と評価結果に明示する
+- 新しい HP イベントは、単発、複数回、連続技、無効化特性、境界 HP のテストを追加する
+- 完全な対戦シミュレータへ暗黙に拡張しない
 
-| 用途 | Hex |
-| --- | --- |
-| HP | `#00ff72` |
-| こうげき(A) | `#ff0000` |
-| ぼうぎょ(B) | `#fba82f` |
-| とくこう(C) | `#ff00d7` |
-| とくぼう(D) | `#ebfe3d` |
-| すばやさ(S) | `#00d8f0` |
-| あく | `#624D4E` |
-| いわ | `#AFA981` |
-| エスパー | `#EF4179` |
-| かくとう | `#FF8000` |
-| くさ | `#3FA129` |
-| ゴースト | `#704170` |
-| こおり | `#3DCEF3` |
-| じめん | `#915121` |
-| でんき | `#FAC000` |
-| どく | `#9141CB` |
-| ドラゴン | `#5060E1` |
-| ノーマル | `#9FA19F` |
-| はがね | `#60A1B8` |
-| ひこう | `#81B9EF` |
-| フェアリー | `#EF70EF` |
-| ほのお | `#E62829` |
-| みず | `#2980EF` |
-| むし | `#91A119` |
+未対応範囲や簡略化は `README.md` の制限へ明記し、実装済みのように見せない。
 
-MVP UI の最低ライン:
+### 6. 探索は Worker 境界を維持する
 
-- 調整対象の入力
-- 仮想敵シナリオの追加・削除・有効無効
-- 必要耐久回数・必要生存確率
-- 計算開始・キャンセル・進捗
-- 候補一覧
-- 1位候補の適用
-- 各候補のボトルネック表示
+重い探索は Web Worker で実行し、UI thread を固めない。
 
-## MVP マイルストーン
+維持する契約:
 
-### M0: プロジェクト土台
+- `start`
+- `progress`
+- `partialResult`
+- `complete`
+- `error`
+- `cancel`
+- `requestId` による古い結果の破棄
 
-目的: 静的 Web アプリとして長く保守できる土台を作る。
+入力変更、ボックス読み込み、再計算、画面破棄の後に、古い request の結果を新しい state へ混ぜない。全件探索では、途中プレビュー件数と最終合格候補数を区別する。
 
-完了条件:
+現在の主な境界:
 
-- TypeScript ベースのフロントエンドを作成する
-- `npm run build` と `npm test` の導線を用意する
-- `@smogon/calc` を依存に追加する
-- `others/` に runtime 依存しない構成にする
-- README に開発コマンドと目的を書く
+- `src/worker/defenceSearchWorker.ts`
+- `src/worker/defenceSearchWorkerClient.ts`
+- `src/worker/defenceSearchWorker.test.ts`
 
-### M1: 日本語 resolver / catalog 方針
+### 7. 保存データは互換性と失敗経路を持つ
 
-目的: 日本語 UX と Showdown canonical name の境界を作る。
+ChampionCreator は静的 Web アプリとして完結し、通常の保存は browser storage、外部保存は明示的なバックアップ入出力で扱う。
 
-完了条件:
+- 保存形式には `schemaVersion` を持たせる
+- schema 変更では migration または明確な非対応エラーを用意する
+- 必須項目欠落、unknown schema、破損 JSON、resolver 未解決、SP 超過を区別する
+- 読み込めない値を黙って正常値へ置き換えない
+- 保存対象は入力条件を正とし、古い計算結果を唯一の正にしない
+- 調整対象ボックスと仮想敵ボックスの責務を混ぜない
+- 白紙初期状態と、削除できるサンプルの one-time seed を壊さない
+- ユーザーが削除したサンプルを起動時に復活させない
+- 読み込み時は進行中 Worker と表示中結果を安全に破棄する
 
-- `others/damage-calc-ja-layer` の方針を確認する
-- 本体側に必要な resolver / catalog / override 方針を置く
-- 日本語入力から canonical name へ解決できる
-- `ambiguous` / `not-found` / fallback を UI が扱える形で返す
-- 生成データや手動 override の validation を用意する
+現在の主な境界:
 
-### M2: domain model と scenario 設計
+- `src/ui/shareState.ts`
+- `src/ui/boxStorage.ts`
+- `src/ui/enemyBoxStorage.ts`
 
-目的: UI から独立した計算モデルを固める。
+似た serialization 形式を増やす前に、既存 share / box schema を再利用できるか確認する。
 
-完了条件:
+## UI とガイドの方針
 
-- `Build`
-- `Scenario`
-- `ScenarioHit` または同等の被弾シーケンス
-- `SurvivalConstraint`
-- `ScenarioEvaluation`
-- `CandidateResult`
+### 作業画面
 
-を定義する。
+既存の「黒金を基調にした、シンプルで密度のある調整ツール」を維持する。
 
-この時点では UI が荒くてもよい。型と責務分離を優先する。
+- 派手なランディングページ、大きいヒーロー、過剰なカード装飾へ寄せない
+- デスクトップでは調整対象、シナリオ、候補、詳細を比較しやすい作業台を保つ
+- モバイルでは overview と下シートを使い、入力、候補、詳細、ボックスへ段階的に移動できる状態を保つ
+- 主要操作を hover 専用にしない
+- タップ、フォーカス、キーボードでも操作できるようにする
+- テキスト、入力値、ボタン、popover、dialog を画面外へはみ出させない
+- 候補一覧は全件を同時に DOM 描画せず、既存の20件ページネーションを維持する
+- 状態色、SP色、タイプ色は意味のある用途だけに使う
 
-### M3: `@smogon/calc` adapter
+色や余白の正は `src/styles.css` の CSS variables と既存 semantic class。新しい箇所へ同じ Hex を重複して増やさない。特に能力色は `--hp` / `--atk` / `--def` / `--spa` / `--spd` / `--spe` を使う。
 
-目的: Showdown 計算エンジンだけを使う境界を作る。
+既存 UI 部品は `src/ui/primitives.tsx` と既存 Radix UI 構成を優先し、似た独自部品を増やしすぎない。
 
-完了条件:
+### 表示文言
 
-- canonical name だけを受け取る adapter を実装する
-- `Pokemon` / `Move` / `Field` / `Side` の変換を adapter に閉じ込める
-- damage rolls / range を返す
-- direct `@smogon/calc` 呼び出しとの parity test を書く
-- 独自ダメージ式が存在しないことを確認する
+- ユーザーが指定した日本語文字列、記号、表記、順序をそのまま確認する
+- 近い言い換えでテストや確認を済ませない
+- named bug は同じ意味カテゴリ全体を確認し、名前付き1件だけの例外処理で済ませない
+- エラーは、入力不足、resolver 未解決、計算未対応、保存形式不正、Worker error を区別する
+- UI で表示する計算説明は、calc 由来の値とアプリ側 HP イベントを区別する
 
-### M4: H/B/D 同時探索
+### 公開ガイド
 
-目的: 複数シナリオを同時充足する候補探索を作る。
+`guide/` はアプリ本体とは別の利用導線だが、表示仕様とバージョンは本体と整合させる。
 
-完了条件:
+- 実装されていない機能をガイドへ先行記載しない
+- exact text、画像寸法、公開 asset path、アンカー、PC / モバイル表示を確認する
+- 画像や generated asset を差し替える場合は、元ファイル、公開ファイル、build 出力の関係を確認する
+- SEO、canonical、sitemap、公開 URL は、repository layout だけでなく実際の HTTP 応答で確認する
 
-- 合法努力値だけを列挙する
-- `H / B / D` を1候補として同時評価する
-- 粗探索を実装する
-- 上位候補の近傍精密探索を実装する
-- 最終候補を全シナリオで再検証する
-- 不合格候補を返さないテストを書く
+## 変更種別ごとの進め方
 
-### M5: Web Worker 化
+### 計算・探索の機能追加
 
-目的: ブラウザ UI を固めずに探索できるようにする。
+1. domain model と現在の owner を特定する
+2. canonical name までの resolver 経路を確認する
+3. direct damage と HP event のどちらの責務か分ける
+4. search と Worker message への影響を確認する
+5. direct `@smogon/calc` parity または代表回帰テストを追加する
+6. 最終候補の再評価と不合格除外を確認する
+7. UI の説明と `README.md` の対応・制限を同期する
 
-完了条件:
+### 不具合修正
 
-- 探索を Worker で実行する
-- 進捗と途中結果を返す
-- キャンセルできる
-- 古い request の結果を UI に反映しない
-- エラー時に原因を表示できる
+1. ユーザーの exact な入力、文言、画面幅、手順、ログを再現条件として固定する
+2. UI、resolver、domain、calc、search、Worker、storage のどの段階で壊れたか分ける
+3. owning layer を最小差分で直す
+4. named case と同じカテゴリの正常系・境界値を回帰テストへ含める
+5. 見た目の修正では、DOM と実表示の両方を確認する
 
-### M6: MVP UI
+### データ更新
 
-目的: 実際にユーザーが仮想敵を入れて候補を見られる状態にする。
+1. generated file の生成元を特定する
+2. script または override を変更する
+3. 再生成する
+4. validation を実行する
+5. 意図しない大量差分、重複、ambiguous、canonical 欠損を確認する
 
-完了条件:
+### 保存形式の変更
 
-- 調整対象と仮想敵を入力できる
-- 複数シナリオを同時に扱える
-- 生存回数と生存確率を設定できる
-- 候補一覧と理由を表示できる
-- 1位候補を適用できる
-- 最低限のレスポンシブ表示を確認する
-- 添付参考画像の方向性に寄せた、シンプルで比較しやすい作業画面になっている
+1. 現行 schema と全 load / save / export / import 経路を確認する
+2. schema version、migration、fallback、error 表示を設計する
+3. legacy data、破損 data、unknown schema のテストを追加する
+4. 読み込み後の Worker request 破棄と dirty state 確認を検証する
+5. バックアップ互換性を壊す場合は major 変更として明示する
 
-### M7: MVP 検証・公開準備
+### UI・レスポンシブ変更
 
-目的: 壊れにくく共有しやすい MVP にする。
-
-完了条件:
-
-- `npm test` が通る
-- `npm run build` が通る
-- 代表シナリオの回帰テストがある
-- README に使い方と制限を書く
-- アプリ / `@smogon/calc` / データバージョンを表示できる
-- JSON import/export または URL share の最低限の方針を決める
-- GitHub Pages など静的ホスティングで動く準備をする
-
-### M8: A/C 自動調整と S 調整
-
-目的: 防御側の `H / B / D` 調整だけでなく、攻撃側の `A / C` 火力ラインと `S` ラインを数値化できるようにする。
-
-前提:
-
-- 現状の MVP は十分な計算速度が出ているため、軽量化・全件探索・ページネーションは M8 では扱わない
-- `@smogon/calc` を唯一のダメージ計算の正とする
-- 日本語入力・表示は localization layer に閉じ込め、adapter には resolver 済み canonical name だけを渡す
-- `A / C` 自動調整は、`H / B / D` 探索の逆方向として「任意の仮想敵を指定確率以上で倒すための火力ライン」を求める
-- `S` 調整は、探索というより「任意のすばやさラインを抜くために必要な実数値・SP・性格補正」を求める
-- 手動数値入力の逃げ道は残し、データ未対応や特殊条件でも入力を継続できるようにする
-
-実装対象:
-
-- 仮想敵、技、条件、必要 KO 確率を入力し、必要な `A` または `C` の実数値 / SP / 性格補正ラインを返す
-- 技の分類や既存の参照能力判定に従って、物理技は `A`、特殊技は `C` を基本に火力ラインを算出する
-- 乱数、急所、ランク、持ち物、特性、天候、フィールド、壁など、既存の scenario 条件を `@smogon/calc` へ渡して評価する
-- 指定した KO 確率を満たす最小ライン、近い候補、満たせない場合の理由を表示する
-- 任意のすばやさ実数値、仮想敵、ランク、持ち物、特性などから、抜くために必要な `S` 実数値 / SP / 性格補正ラインを返す
-- `S` ラインは「抜ける」「同速」「届かない」を明示し、同速狙いと確定抜きの違いを UI に出す
-- 調整対象の `A / C / S` 固定 SP と、既存の `H / B / D` 耐久探索の SP 予算が矛盾しないように扱う
-
-完了条件:
-
-- `@smogon/calc` ベースで、指定 KO 確率を満たす最小 `A / C` ラインを算出できる
-- `A / C` ラインの結果に、実数値、SP、性格補正、KO 確率、代表ダメージロールが表示される
-- 条件を満たせない場合に、未達理由や最大到達ラインが表示される
-- 任意のすばやさラインに対して、必要な `S` 実数値、SP、性格補正が表示される
-- `S` 調整で「抜ける」「同速」「届かない」が区別される
-- 算出した `A / C / S` を調整対象へ適用でき、既存の `H / B / D` 探索の固定 SP 予算へ反映される
-- canonical name / domain model / adapter / search / worker の境界を維持している
-- 代表シナリオで `A / C` ラインと `S` ラインの回帰テストがある
-- `npm test` と `npm run build` が通る
-
-### M8.1: ボックス機能
-
-目的: ボックス機能を実装し、内部的には調整条件 JSON を使いながら、UI では JSON を直接見せずに保存 / 読み込み、およびバックアップを扱えるようにする。
-
-前提:
-
-- 静的 Web アプリとして完結させ、runtime backend / DB / scraping には依存しない
-- 保存対象は「あとから同じ調整条件を復元するためのデータ」に限定し、計算結果そのものを唯一の正にしない
-- 保存データには `schemaVersion` を持たせ、古い保存データでもアプリが壊れないよう migration / fallback / エラー表示を用意する
-- resolver 済み canonical name と表示用日本語名の境界を維持し、adapter に日本語入力を直接渡さない
-- `others/` への runtime import はしない
-- localStorage などブラウザ内保存を基本にし、ユーザーが明示した JSON export/import で外部保存できるようにする
-- 非技術者向けのアプリとして、通常操作では JSON textarea や raw JSON を見せない。外部保存が必要な場合も `バックアップを書き出す` / `バックアップを読み込む` のような UI 文言にする
-- PC ではグリッド状のボックスウィンドウをオーバーレイ表示し、モバイルでは下から出るシートへ変形させる
-- 保存カードに出す情報は最小限にし、名前、代表ポケモン、調整種別数など、スロットを見分けるための短い要約に留める
-- ボックス内には削除できない `空スロット` を常設し、読み込むと調整対象と仮想敵シナリオを白紙状態へリセットできるようにする
-- データ未対応や validation 失敗があっても、失敗箇所を表示し、可能な範囲で手動修正・再インポートできる逃げ道を残す
-
-実装対象:
-
-- 現在の調整対象、`A / C / S` 固定 SP、耐久シナリオ、火力ライン、素早さライン、UI 上の有効 / 無効状態を 1 つのボックス項目として保存する
-- 保存済みボックス一覧を表示し、読み込み、上書き保存、別名保存、名前変更、複製、削除ができるようにする
-- 保存項目には、名前、代表ポケモン名、調整種別数など、一覧で見分けるための最小限のメタ情報を持たせる。詳細な条件本文はスロット内へ展開しない
-- 現在の入力と保存済み入力に差分がある状態で読み込み / 削除 / 上書きする場合は、意図せず作業内容を失わない確認導線を用意する
-- JSON export は単一ボックスと全ボックスの両方を検討し、import 時は `schemaVersion`、必須フィールド、resolver 状態、SP 予算を validation する
-- import で一部のポケモン / 技 / 特性 / 持ち物が解決できない場合は、欠損を握りつぶさず UI に表示し、手動修正できる状態で読み込む
-- 既存の URL share / 条件 JSON copy がある場合は、同じ serialization 方針を再利用し、似た形式を複数増やしすぎない
-- 保存 / 読み込み後に探索を自動実行するかは UI 上で明確にし、古い Worker request の結果が読み込み後の状態へ混ざらないようにする
-
-完了条件:
-
-- UI から現在の調整条件を名前付きボックスとして保存できる
-- 保存済みボックスを読み込み、調整対象、シナリオ、`A / C / S` 固定 SP、各種条件が復元される
-- 保存済みボックスの名前変更、複製、削除、上書き保存ができる
-- 単一ボックスまたは全ボックスを JSON として export/import できる
-- import validation で、成功、古い schema、必須項目欠落、resolver 未解決、SP 予算超過を区別して表示できる
-- 読み込み後の探索は、canonical name / domain model / adapter / search / worker の境界を維持して実行される
-- localStorage 破損、空データ、未知 schema でもアプリ全体が落ちない
-- 保存 / 読み込み / import / export / validation / Worker request 破棄の代表テストがある
-- `npm test` と `npm run build` が通る
-
-### M8.2: モバイル表示最適化
-
-目的: モバイルデバイスでの表示と操作性を改善し、調整対象、シナリオ、候補、詳細、ボックス機能を小さい画面でも破綻なく扱えるようにする。
-
-前提:
-
-- 派手なランディングページ化や大きいヒーロー化はしない。既存の「シンプルで密度のある調整ツール」の方向性を保つ
-- デスクトップの一覧比較体験を壊さず、モバイルでは入力、候補確認、詳細確認を段階的に切り替えられる構成にする
-- hover 前提の操作は避け、タップ、フォーカス、キーボード操作で同じ機能へ到達できるようにする
-- テキスト、ボタン、入力欄、候補行、ポップオーバーが重ならないことを優先する
-- in-app Browser 確認が必要な場合は、この AGENTS の in-app Browser 方針に従う。`skipInAppBrowserCheck: true` のときだけ静的検証や代替確認を優先する
-
-実装対象:
-
-- 小画面では、調整対象、シナリオ、候補一覧、選択候補詳細、ボックスをタブ / セグメント / 折りたたみで移動できるようにする
-- 計算開始、キャンセル、1位候補の適用、保存などの主要アクションは、画面下部または現在パネル内で見失わない位置に置く
-- 候補一覧は横スクロールだけに頼らず、順位、配分、使用 SP、PASS / FAIL、ボトルネックがスマホ幅で読める表示へ切り替える
-- シナリオ編集は追加、削除、有効 / 無効、折りたたみ、条件の要点確認をタップしやすい密度で扱えるようにする
-- ボックス一覧は、保存名、代表ポケモン、更新日時、操作メニューがスマホ幅で読みやすい行表示にする
-- popover / select / datalist / dialog が画面外にはみ出さず、入力中のソフトウェアキーボードで重要な操作が隠れにくいようにする
-- 最小対応幅を決め、代表的なスマホ幅、タブレット幅、デスクトップ幅でレイアウト崩れを確認する
-- 画像、SP 表示、ステータス色、タイプ色は意味のある補助として維持し、装飾過多で入力密度を落とさない
-
-完了条件:
-
-- 代表的なスマホ幅で、初期表示、調整対象入力、シナリオ編集、探索実行、候補確認、候補適用、ボックス保存 / 読み込みが一通り操作できる
-- テキストや UI 要素が重ならず、ボタン内テキスト、入力値、候補ラベルが親要素からはみ出さない
-- 主要操作が hover なしで実行でき、キーボードフォーカスでも致命的に迷子にならない
-- 候補一覧と詳細表示がスマホ幅で比較 / 確認しやすく、デスクトップ表示の情報量も大きく後退しない
-- ボックス機能の import/export 操作がモバイルでも破綻しない
-- 代表幅の CSS / DOM / render 確認、または可能なら Browser / Playwright のスクリーンショット確認を実施する
-- モバイル表示に関わるテストまたは静的 render 確認を追加し、`npm test` と `npm run build` が通る
-
-### M9: 全件閲覧・ページネーション・性能改善
-
-目的: 条件を満たす候補全体へアクセスしやすくし、必要になった時点で探索体験を軽くする。
-
-前提:
-
-- M8 では軽量化を急がず、`A / C / S` 調整機能を優先する
-- 速くするために独自ダメージ式へ戻したり、adapter / search / worker の境界を崩したりしない
-- `@smogon/calc` ベースの最終合否判定を維持する
-
-改善候補:
-
-- 上位20件が確定した時点で探索を打ち切る現行方式を見直し、条件を満たす候補全体へアクセスできるようにする
-- 候補一覧は20件単位のページネーションとし、全候補を同時に DOM へ描画しない
-- `合格候補数 / 評価済み配分数 / 全配分数` を区別して表示し、探索件数を合格候補数と誤認しない文言にする
-- 使用SP、最厳条件への余裕、H / B / D、残りSPなどによる並び替えを検討し、使用SP最小だけを唯一の評価軸にしない
-- `Scenario` / `ScenarioHit` を探索前に compiled form へ正規化し、attacker / move / field / side 入力の再構築を減らす
-- 同一の候補・同一の hit 条件に対する `damage rolls` をキャッシュする
-- Worker 内で評価をバッチ化し、progress / partialResult の頻度を調整して UI 更新コストを抑える
-- 粗探索モードと精密探索モードを分け、まず早く候補を見せてから必要に応じて詰める
-- HP / B / D の単調性を使った安全な枝刈りを検討する
-- 代表シナリオで計測し、最適化前後の所要時間と候補一致をテストで確認する
-
-完了条件:
-
-- 条件を満たす候補全体へページネーションでアクセスでき、1ページあたり20件を表示できる
-- 探索進捗と合格候補総数が別の値として明確に表示される
-- 並び替えを変更しても候補の合否判定と最終再検証結果が変わらない
-- 代表シナリオで候補結果が最適化前と一致する、または差分理由を説明できる
-- 計算時間または UI 応答性の改善を計測できる
-- canonical name / domain model / adapter / search / worker の境界を維持している
-- `npm test` と `npm run build` が通る
+1. 既存 helper、primitive、semantic class を再利用する
+2. desktop の比較体験を壊していないか確認する
+3. 代表的なスマホ幅と狭い幅で、重なり、切れ、横 overflow を確認する
+4. click / tap、focus、keyboard、popover / sheet の到達性を確認する
+5. ユーザー向け表示なら app version も確認する
 
 ## 検証方針
 
-優先して書くテスト:
+変更に関係する狭いテストから実行し、最後に必要な全体確認へ広げる。
 
-- resolver が日本語・別名・未発見・曖昧候補を正しく返す
-- adapter が direct `@smogon/calc` と同じ damage rolls / range を返す
-- 1 hit の生存判定
-- 連続被弾の生存判定
-- ステルスロックなど定数ダメージ込みの判定
-- 合法努力値しか候補に出さない
-- 最終再検証で不合格候補が落ちる
-- Worker の cancel / requestId が古い結果を捨てる
-
-実装後の基本確認:
+基本コマンド:
 
 ```powershell
+npm run typecheck
 npm test
 npm run build
+npm run check
 ```
 
-まだ scripts がない段階では、M0 でこれらを整える。
+使い分け:
 
-### in-app Browser 確認方針
+- logic / calc / search / Worker: `npm run typecheck`、対象テスト、`npm test`、`npm run build`
+- generated data: 対象 generator、対応 validator、対象テスト、`npm run build`
+- UI: `npm run typecheck`、対象テスト、`npm run build`、Browser 確認
+- release 前または横断変更: `npm run check`
+- docs / AGENTS / コメントだけ: 内容確認と `git diff --check`。アプリ test / build と version 更新は原則不要
 
-Codex in-app Browser / Browser plugin は `windows sandbox failed: spawn setup refresh` が再発しやすい。現在は直近の健康診断で通っているため、in-app Browser 確認は通常工程として実施する。
+優先する回帰テスト:
 
-現在値:
+- resolver の exact / alias / ambiguous / not-found
+- adapter と direct `@smogon/calc` の damage rolls / range parity
+- 単発、複数回、連続技、HP イベント込みの生存・KO 判定
+- 合法 SP、固定 SP 予算、最終再検証
+- A/C 最小ラインと未達理由
+- S の抜ける / 同速 / 届かない
+- Worker cancel と stale requestId 破棄
+- 全件候補数、20件ページング、sort 後の合否不変
+- share / box schema の migration、import / export、破損データ
+- exact な UI 文言と responsive DOM
+
+### in-app Browser
+
+現在の方針:
 
 ```yaml
 skipInAppBrowserCheck: false
 ```
 
-- `false`: in-app Browser 確認を実施する。UI 表示に関わる変更では DOM snapshot、必要なクリック操作、スクリーンショット確認を行う。
-- `true`: in-app Browser / Browser plugin が壊れていて復旧に時間を取られる場合だけ、一時的に確認をパスし、静的検証・HTTP 確認・配信 CSS / DOM 相当の代替確認を優先する。
-- `true` に切り替えた場合は、最終報告と `PROGRESS.md` に「AGENTS の一時スルー方針に従い未実施」と代替確認の結果を明記する。
+- UI 表示に関わる変更は、in-app Browser で DOM、対象操作、スクリーンショット、console を確認する
+- desktop、代表スマホ幅、レイアウトに関係する場合は狭幅を確認する
+- Browser が一時的に使えない場合は、静的 render、HTTP 200、配信 CSS / JS / HTML、対象関数テストで代替し、未実施範囲を最終報告と `PROGRESS.md` に書く
+- Browser 復旧そのものをユーザーが依頼した場合だけ、個人用 `fix-in-app-browser-node-repl` skill で切り分ける
+- `--disable-sandbox`、wrapper、Codex 設定変更など隔離を弱める操作は、ユーザーの明示承認なしに行わない
 
-方針:
+## バージョン更新ルール
 
-- UI 修正後は、`npm run typecheck`、対象テスト、`npm run build`、必要に応じて `npm run check` を実行する。
-- `skipInAppBrowserCheck: false` の場合、UI 表示に関わる変更では in-app Browser で DOM snapshot、対象操作、スクリーンショット確認を行う。
-- `skipInAppBrowserCheck: true` の場合、dev / preview server の HTTP 200、配信中の CSS / JS / HTML、必要に応じて React の静的 render や対象関数テストで代替確認する。
-- ユーザーが明示的に「in-app Browser で確認して」「スクショを取って」「Browser を直して」と依頼した場合だけ、`in-app Browser / node_repl 復旧メモ` に従って切り分ける。
-- Browser runtime の復旧に設定変更、wrapper、`--disable-sandbox` が必要な場合は、sandbox 隔離を弱めるためユーザーの明示承認を得る。
+ユーザー向けの挙動、機能、計算結果、表示内容を変更した場合は、同じ作業内でアプリバージョンを更新する。
+
+- patch: 後方互換なバグ修正、小規模な表示修正
+- minor: 後方互換な機能追加、大きな機能拡張
+- major: 保存データや利用方法を含む非互換変更
+- docs、テスト、コメント、AGENTS だけの変更では原則更新しない
+
+バージョンの正は `package.json`。`package-lock.json` の root package version を同期し、`src/appVersion.ts` や UI へ重複ハードコードしない。
+
+更新後は、テストと build に加えて画面の `app v...` 表示を確認する。
 
 ## 長期保守ルール
 
-- 基本は静的 Web アプリとして完結させる。runtime backend / DB / scraping に依存しない。
-- GitHub Pages などで消えにくく動く形を優先する。
-- 依存追加は必要性を説明できるものに絞る。
-- lockfile を保ち、再現可能な install / build を優先する。
-- 公式画像や sprite を使う場合も、計算正確性の境界には入れない。
-- データ未対応でも手動数値入力で逃げ道を残す。
-- localStorage を使う場合は `schemaVersion` を持たせ、古い保存データでアプリが壊れないようにする。
-- JSON copy/import、URL share、Markdown copy など、計算条件をあとから復元できる機能を重視する。
-
-### バージョン更新ルール
-
-- ユーザー向けの挙動、機能、計算結果、表示内容を変更した場合は、変更規模に応じて同じ作業内でアプリバージョンを更新する。
-- 後方互換なバグ修正や小規模な表示修正は patch、後方互換な機能追加や大きな機能拡張は minor、既存データや利用方法に互換性がない変更は major とする。
-- ドキュメント、テスト、コメントだけの変更でアプリの挙動が変わらない場合は、原則としてバージョンを更新しない。
-- バージョンの正は `package.json` とし、`package-lock.json` のルート package version も同じ値へ同期する。`src/appVersion.ts` や UI にバージョンを重複してハードコードしない。
-- 更新後はテストと build に加え、画面の `app v...` 表示が新しいバージョンになっていることを確認する。
+- 基本は静的 Web アプリとして完結させ、runtime backend / DB / scraping に依存しない
+- GitHub Pages など静的ホスティングで継続運用できる構成を優先する
+- 依存追加は必要性を説明できるものに絞り、package churn を最小化する
+- lockfile と vendor provenance を保ち、再現可能な install / build を優先する
+- 公式画像や sprite は表示専用とし、計算正確性の境界へ入れない
+- データ未対応でも、可能な範囲で手動入力の逃げ道を残す
+- localStorage、条件 JSON、バックアップでは schema と migration を優先する
+- ユーザーが作成・削除した保存内容を、初期化処理で勝手に上書きしない
+- 公開仕様、対応機能、制限は `README.md` とガイドへ反映する
+- 未対応を推測実装で埋めず、UI とドキュメントで明示する
 
 ## 作業スタイル
 
-- 既存変更を勝手に戻さない。
-- 最小差分で進める。
-- 迷ったら、計算精度・再現性・説明可能性・静的運用を優先する。
-- `others/` の資料は便利に使ってよいが、必要なものだけ本体へ昇格させる。
-- 大きい作業は milestone 単位で区切り、次スレでも再開しやすいように README / PROGRESS / docs を更新する。
-- ユーザーが「PROGRESS 更新いらない」と言った場合は更新しない。
-- サブエージェントが使える環境では、データ収集、日本語対応、Showdown adapter 調査、UI 実装調査を分担してよい。
+- 既存変更を勝手に戻さない
+- dirty worktree では、自分の変更と既存変更を分けて扱う
+- 最小差分で owning layer を修正する
+- 大きい変更でも、既存の canonical / domain / calc / search / Worker / UI 境界を崩さない
+- ユーザーの exact な文字列、URL、数値、cutoff、画面幅をそのまま再確認する
+- 実装前に処理の流れを聞かれた場合は、コード上の real control flow を先に説明する
+- 診断依頼では原因と修正案を分け、実装を依頼されていない変更は勝手に行わない
+- ドキュメントへローカル絶対パス、実ユーザー名、環境固有の秘密情報を書かない
+- 生成物は生成経路から更新し、手作業の差分を正にしない
+- UI 変更では diff だけで完了扱いにせず、ユーザーが見る表示を確認する
 
-## in-app Browser / node_repl 復旧メモ
+## `PROGRESS.md` 運用
 
-このメモは、ユーザーが明示的に in-app Browser の復旧や実画面スクリーンショット確認を依頼した場合だけ使う。通常の UI 作業では上の一時スルー方針を優先し、復旧作業へ自動で入らない。
+個人用の汎用 skill `progress-update` を使い、意味のある作業単位ごとに `PROGRESS.md` へ1件追記する。
 
-Codex in-app Browser や Browser plugin が `windows sandbox failed: spawn setup refresh` で起動できない場合は、ページやアプリの不具合と決めつけず、まず `node_repl` の最小実行を確認する。
+- `PROGRESS.md` は git 追跡対象外のローカル進捗メモとして扱う
+- 既存形式を維持し、末尾へ時系列順に追記する
+- `No.N` はファイル全体の最大値に1を足す
+- 変更内容、変更ファイル、検証、残課題、次の一手を書く
+- repo 相対パスだけを使い、ローカル絶対パスや実ユーザー名を書かない
+- micro-step や単なる調査メモは記録しない
+- ユーザーが「PROGRESS 更新いらない」と指定した場合は更新しない
 
-復旧方針:
+## 完了済みマイルストーン
 
-- 個人用 skill `fix-in-app-browser-node-repl` を使う。
-- まず `node_repl` で `1 + 1` 相当の最小実行を試す。
-- 最小実行が成功する場合は、設定上の `args = []` や direct `node_repl.exe` 起動だけを理由に失敗扱いしない。Browser 接続、localhost navigation、DOM snapshot、クリック、スクリーンショットで実動作を確認する。
-- direct 起動のまま実動作が通る場合は native/direct recovery として扱い、そのセッションでは wrapper 修理を重ねない。
-- Codex 設定を触る場合は、必ず `%USERPROFILE%\.codex\config.toml` を timestamp 付きでバックアップする。
-- fresh probe が継続して失敗する場合だけ、`[mcp_servers.node_repl]` の `args = ["--disable-sandbox"]` や wrapper 修理を検討する。
-- Codex Desktop が `args` を実プロセスへ反映しない場合は、`node_repl_disable_sandbox.cmd` のような wrapper で `node_repl.exe --disable-sandbox %*` を起動する。
-- `[mcp_servers.node_repl.env]` に `CODEX_CLI_PATH = ...` が残っていると sandbox launcher 経由になる場合があるため、fallback 時はこの行だけを外す。他の env や他 MCP 設定は触らない。
-- この変更は `node_repl` の sandbox 隔離を弱めるため、ユーザーの明示承認がある場合だけ行う。
-- 復旧後は Codex Desktop の再起動が必要になることがある。
+以下は完了済みの開発履歴。詳細、検証、後続修正は `PROGRESS.md` を参照する。
 
-復旧後の確認:
+| Milestone | 完了内容 |
+| --- | --- |
+| M0 | React / Vite / TypeScript の静的アプリ土台 |
+| M1 | 日本語 resolver / catalog 境界 |
+| M2 | domain model / scenario 設計 |
+| M3 | `@smogon/calc` adapter |
+| M4 | H/B/D 同時探索 |
+| M5 | Web Worker、進捗、cancel、requestId |
+| M6 | MVP 作業画面 |
+| M7 | 回帰テスト、共有、version、Pages 公開準備 |
+| M8 | A/C 火力ラインと S ライン |
+| M8.1 | 調整対象・仮想敵ボックスとバックアップ |
+| M8.2 | モバイル overview / sheet と responsive 対応 |
+| M9 | 全合格候補、20件ページネーション、並び替え、探索軸絞り込み |
 
-- `node_repl` の最小実行が成功する。
-- in-app Browser で `http://127.0.0.1:5173/` を開ける。
-- スクリーンショット取得、DOM evaluate、簡単なクリック操作を確認する。
-- 実施内容と検証結果は `PROGRESS.md` に残す。
-
-## ユーザー追記
-- ドキュメントに絶対パス、ユーザー名を含めないでください
-- 個人用の汎用 skill `progress-update` を使い、`PROGRESS.md`に作業内容に記録してください。プロジェクトの進捗は`PROGRESS.md`を参照してください。汎用 skill `progress-update` は `~/.agents/skills` に配置されています。
-- `PROGRESS.md` は git 追跡対象外のローカル進捗メモです。更新しても `git status` に出ない前提で扱ってください。
+今後の機能追加や性能改善は新しい依頼単位で扱う。完了済みマイルストーンの未完了項目として自動的に再開しない。
