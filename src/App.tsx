@@ -9,11 +9,13 @@ import {
   sumStatPoints,
 } from "./domain/championsStats";
 import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
+import { getMovePowerCatalogEntry, type MovePowerCatalogEntry } from "./domain/movePowerCatalog";
 import { getHpEventRuleDefinition } from "./calc/hpEventRules";
 import {
   toEntityRef,
   type CandidateResult,
   type GameType,
+  type MovePowerEvaluation,
   type PokemonStatus,
   type ScenarioHit,
   type StatBoostTable,
@@ -42,9 +44,10 @@ import {
   applyMaximizeRemainingBulkToTarget,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
-  applyMoveHitCountDefaults,
+  applyMoveInputDefaults,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
+  buildMovePowerPreviewInputFromUi,
   buildTargetBuildFromUi,
   bulkMaximizeUiReducer,
   calculateOffenseAdjustmentsForCandidateRanking,
@@ -61,6 +64,7 @@ import {
   startMaximizeRemainingBulkFromUi,
   type BulkMaximizeUiState,
   type HpEventFormState,
+  type MovePowerMode,
   type OffenseScenarioResult,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
@@ -69,6 +73,13 @@ import {
   type SpeedScenarioResult,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import { calculateSmogonHit } from "./calc/smogonAdapter";
+import {
+  getMovePowerAssistRule,
+  isSinglePowerMoveUnsupported,
+  isMovePowerOverrideAllowed,
+  type MovePowerAssistRule,
+} from "./calc/movePowerRules";
 import type { MaximizeRemainingBulkResult } from "./search/maximizeRemainingBulk";
 import type { SpeedAdjustmentResult, SpeedManualMultiplier } from "./search/speedAdjustment";
 import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStatReference";
@@ -113,6 +124,7 @@ import {
 import {
   getAutomaticMoveHpNotices,
 } from "./calc/hpSequenceMoveUses";
+import { isCurrentHpDependentMoveCanonicalName } from "./calc/moveHpMechanics";
 
 const statLabels: Record<StatKey, string> = {
   hp: "H",
@@ -541,7 +553,64 @@ const localizeDamageDescriptionNames = (description: string): string =>
   );
 
 const formatDamageDescriptionPowerLabels = (description: string): string =>
-  description.replace(/\((\d+)\s+BP\)/g, "($1 DMG)");
+  description.replace(/\((\d+(?:\.\d+)?)\s+BP\)/g, "(威力$1)");
+
+const stripLocalizedDamagePowerLabel = (description: string): string =>
+  description.replace(/\s*\(威力\d+(?:\.\d+)?\)/g, "");
+
+export const formatMovePowerEvaluation = (
+  evaluation: MovePowerEvaluation | undefined,
+  options: { hpDependent?: boolean } = {},
+): string => {
+  if (!evaluation) {
+    return "威力 未計算";
+  }
+  if (evaluation.source === "status") {
+    return "変化技（数値威力なし）";
+  }
+  if (evaluation.source === "fixed-damage") {
+    return options.hpDependent
+      ? "固定ダメージ（数値威力なし・各攻撃直前のHPで自動計算）"
+      : "固定ダメージ（数値威力なし）";
+  }
+  if (evaluation.source === "unsupported") {
+    return "個別威力（現在の計算には未対応）";
+  }
+
+  const perHitBasePowers = evaluation.perHitBasePowers;
+  if (perHitBasePowers && perHitBasePowers.length > 1) {
+    const uniquePowers = new Set(perHitBasePowers);
+    if (uniquePowers.size > 1) {
+      return `威力 ${perHitBasePowers.join("→")}（各ヒット）`;
+    }
+    return `威力 ${perHitBasePowers[0]}（1ヒットあたり・${perHitBasePowers.length}ヒット）`;
+  }
+
+  const appliedPower = evaluation.appliedBasePower;
+  if (appliedPower === undefined) {
+    return "威力 未計算";
+  }
+  if (evaluation.source === "assisted") {
+    return `威力 ${appliedPower}（条件: ${evaluation.detailLabel ?? "指定値"}）`;
+  }
+  if (evaluation.source === "manual") {
+    return `威力 ${appliedPower}（手動）`;
+  }
+  if (options.hpDependent) {
+    return `HP依存威力（満タン時 ${appliedPower}・各攻撃直前に自動計算）`;
+  }
+  if (
+    evaluation.source === "automatic"
+    && evaluation.catalogBasePower > 0
+    && evaluation.catalogBasePower !== appliedPower
+  ) {
+    return `基礎威力 ${evaluation.catalogBasePower} → 適用威力 ${appliedPower}（自動計算）`;
+  }
+  if (evaluation.source === "automatic") {
+    return `威力 ${appliedPower}（自動計算）`;
+  }
+  return `威力 ${appliedPower}`;
+};
 
 const formatLocalizedDamageResult = (resultText: string): string =>
   resultText
@@ -1048,8 +1117,12 @@ export function App({
             ...scenario,
             attacks: scenario.attacks.map((attack) => (
               attack.id === attackId
-                ? key === "moveInput" && scenario.adjustmentType === "defence"
-                  ? applyMoveHitCountDefaults(attack, String(value))
+                ? key === "moveInput"
+                  ? applyMoveInputDefaults(
+                      attack,
+                      String(value),
+                      scenario.adjustmentType === "defence",
+                    )
                   : key === "speedMoveModifier"
                     ? applySpeedMoveModifierDefaults(
                         attack,
@@ -4535,6 +4608,360 @@ function HpEventsEditor({
   );
 }
 
+type MovePowerFieldProps = {
+  attackLabel: string;
+  hasMove: boolean;
+  mode: MovePowerMode;
+  value: number;
+  evaluation?: MovePowerEvaluation;
+  catalogEntry?: MovePowerCatalogEntry;
+  assistRule?: MovePowerAssistRule;
+  hpDependent: boolean;
+  manualAllowed: boolean;
+  unsupported: boolean;
+  onCommit: (mode: MovePowerMode, value: number) => void;
+};
+
+const isValidManualMovePower = (value: number): boolean =>
+  Number.isInteger(value) && value >= 1 && value <= 10_000;
+
+function MovePowerField({
+  attackLabel,
+  hasMove,
+  mode,
+  value,
+  evaluation,
+  catalogEntry,
+  assistRule,
+  hpDependent,
+  manualAllowed,
+  unsupported,
+  onCommit,
+}: MovePowerFieldProps) {
+  const defaultPower = assistRule?.defaultPower ?? 0;
+  const selectedPower = mode === "assisted" && isValidManualMovePower(value)
+    ? value
+    : defaultPower;
+  const selectedOptionIndex = Math.max(
+    0,
+    assistRule?.options.findIndex((option) => option.power === selectedPower) ?? 0,
+  );
+  const selectedOption = assistRule?.options[selectedOptionIndex];
+  const [showManualEditor, setShowManualEditor] = useState(mode === "manual");
+  const manualErrorId = useId();
+  const [manualDraft, setManualDraft] = useState(String(
+    mode === "manual" && isValidManualMovePower(value)
+      ? value
+      : selectedOption?.power ?? 1,
+  ));
+
+  useEffect(() => {
+    if (mode === "manual" && isValidManualMovePower(value)) {
+      setManualDraft(String(value));
+      setShowManualEditor(true);
+    } else {
+      setShowManualEditor(false);
+    }
+  }, [mode, value]);
+
+  const compactPower = (() => {
+    if (evaluation?.source === "status") {
+      return "—";
+    }
+    if (evaluation?.source === "fixed-damage") {
+      return "固定";
+    }
+    if (unsupported || evaluation?.source === "unsupported") {
+      return "個別";
+    }
+    if (evaluation?.perHitBasePowers && evaluation.perHitBasePowers.length > 1) {
+      const uniquePowers = new Set(evaluation.perHitBasePowers);
+      return uniquePowers.size > 1
+        ? evaluation.perHitBasePowers.join("/")
+        : `${evaluation.perHitBasePowers[0]}×${evaluation.perHitBasePowers.length}`;
+    }
+    if (evaluation?.appliedBasePower !== undefined) {
+      return String(evaluation.appliedBasePower);
+    }
+    if ((mode === "assisted" || mode === "manual") && isValidManualMovePower(value)) {
+      return String(value);
+    }
+    if (assistRule) {
+      return String(selectedOption?.power ?? assistRule.defaultPower);
+    }
+    if (catalogEntry?.category === "Status") {
+      return "—";
+    }
+    if ((catalogEntry?.basePower ?? 0) > 0) {
+      return String(catalogEntry?.basePower);
+    }
+    if (hpDependent) {
+      return "自動";
+    }
+    return hasMove ? "自動" : "—";
+  })();
+
+  const summary = (() => {
+    if (evaluation) {
+      return formatMovePowerEvaluation(evaluation, { hpDependent });
+    }
+    if (unsupported) {
+      return "個別威力（現在の計算には未対応）";
+    }
+    if (mode === "manual" && isValidManualMovePower(value)) {
+      return `威力 ${value}（手動・計算前）`;
+    }
+    if (assistRule) {
+      return `威力 ${selectedOption?.power ?? assistRule.defaultPower}（条件: ${selectedOption?.label ?? "基本値"}）`;
+    }
+    if (catalogEntry?.category === "Status") {
+      return "変化技（数値威力なし）";
+    }
+    if (hpDependent) {
+      return (catalogEntry?.basePower ?? 0) > 0
+        ? `HP依存威力（満タン時 ${catalogEntry?.basePower}・各攻撃直前に自動計算）`
+        : "HP依存威力（各攻撃直前に自動計算）";
+    }
+    if ((catalogEntry?.basePower ?? 0) > 0) {
+      return `威力 ${catalogEntry?.basePower}（基礎値・計算前）`;
+    }
+    return hasMove
+      ? "計算条件が揃うと、実際に使う威力を表示します。"
+      : "技を選ぶと威力を表示します。";
+  })();
+  const summaryForAria = summary.replace(/。$/u, "");
+  const manualValue = Number(manualDraft);
+  const manualValueIsValid = isValidManualMovePower(manualValue);
+  const canStepDown = Boolean(assistRule && selectedOptionIndex > 0 && mode !== "manual");
+  const canStepUp = Boolean(
+    assistRule
+    && selectedOptionIndex < assistRule.options.length - 1
+    && mode !== "manual",
+  );
+  const commitOption = (index: number) => {
+    const option = assistRule?.options[index];
+    if (option) {
+      onCommit("assisted", option.power);
+    }
+  };
+  const automaticPowerForUnlock = evaluation?.appliedBasePower
+    ?? ((catalogEntry?.basePower ?? 0) > 0 ? catalogEntry?.basePower : undefined);
+  const canUseInlinePowerLock = Boolean(
+    manualAllowed
+    && !assistRule
+    && automaticPowerForUnlock !== undefined
+    && isValidManualMovePower(automaticPowerForUnlock)
+    && evaluation?.source !== "fixed-damage"
+    && evaluation?.source !== "status"
+    && evaluation?.source !== "unsupported"
+    && catalogEntry?.category !== "Status"
+    && !unsupported,
+  );
+  const updateInlineManualDraft = (nextDraft: string) => {
+    setManualDraft(nextDraft);
+    const nextValue = Number(nextDraft);
+    if (isValidManualMovePower(nextValue)) {
+      onCommit("manual", nextValue);
+    }
+  };
+  const unlockInlineManualPower = () => {
+    const nextValue = automaticPowerForUnlock;
+    if (nextValue !== undefined && isValidManualMovePower(nextValue)) {
+      setManualDraft(String(nextValue));
+      onCommit("manual", nextValue);
+    }
+  };
+  const restoreAutomaticPower = () => {
+    onCommit("auto", 0);
+  };
+
+  return (
+    <div
+      className={`move-power-field${assistRule && mode !== "manual" ? " steppable" : ""}`}
+      role="group"
+      aria-label={`${attackLabel} 威力`}
+    >
+      <span className="move-power-label">威力</span>
+      {assistRule ? (
+        <UiPopover.Root
+          onOpenChange={(open) => {
+            if (open) {
+              setShowManualEditor(mode === "manual");
+              setManualDraft(String(
+                mode === "manual" && isValidManualMovePower(value)
+                  ? value
+                  : selectedOption?.power ?? 1,
+              ));
+            }
+          }}
+        >
+          <div className="move-power-control">
+            <UiPopover.Trigger asChild>
+              <button
+                className="move-power-trigger"
+                type="button"
+                aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
+              >
+                <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+              </button>
+            </UiPopover.Trigger>
+            {mode !== "manual" ? (
+              <span className="move-power-stepper" aria-label="威力条件ステッパー">
+                <button
+                  type="button"
+                  aria-label={`${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`}
+                  disabled={!canStepUp}
+                  onClick={() => commitOption(selectedOptionIndex + 1)}
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  aria-label={`${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`}
+                  disabled={!canStepDown}
+                  onClick={() => commitOption(selectedOptionIndex - 1)}
+                >
+                  ▼
+                </button>
+              </span>
+            ) : null}
+          </div>
+          <UiPopover.Portal>
+            <UiPopover.Content
+              className="move-power-popover"
+              sideOffset={6}
+              align="end"
+              collisionPadding={8}
+              aria-label={`${attackLabel} 威力条件`}
+            >
+              <div className="move-power-option-group" aria-label={`${attackLabel} 威力条件`}>
+                {assistRule.options.map((option, optionIndex) => (
+                  <UiPopover.Close asChild key={`${option.power}-${option.label}`}>
+                    <button
+                      className={`move-power-option${mode !== "manual" && optionIndex === selectedOptionIndex ? " selected" : ""}`}
+                      type="button"
+                      aria-pressed={mode !== "manual" && optionIndex === selectedOptionIndex}
+                      onClick={() => onCommit("assisted", option.power)}
+                    >
+                      <strong>{option.power}</strong>
+                      <span>{option.label}</span>
+                    </button>
+                  </UiPopover.Close>
+                ))}
+              </div>
+              <div className="move-power-manual">
+                {showManualEditor ? (
+                  <>
+                    <label>
+                      <span>任意の威力</span>
+                      <input
+                        {...numericInputProps}
+                        value={manualDraft}
+                        min={1}
+                        max={10_000}
+                        aria-label={`${attackLabel} 任意威力`}
+                        aria-invalid={!manualValueIsValid}
+                        aria-describedby={!manualValueIsValid ? manualErrorId : undefined}
+                        onFocus={selectInputValueOnFocus}
+                        onChange={(event) => setManualDraft(event.target.value)}
+                      />
+                    </label>
+                    <div className="move-power-manual-actions">
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={() => {
+                          onCommit("assisted", selectedOption?.power ?? defaultPower);
+                          setShowManualEditor(false);
+                        }}
+                      >
+                        条件指定に戻す
+                      </Button>
+                      <UiPopover.Close asChild>
+                        <Button
+                          variant="primary"
+                          size="small"
+                          disabled={!manualValueIsValid}
+                          onClick={() => onCommit("manual", manualValue)}
+                        >
+                          適用
+                        </Button>
+                      </UiPopover.Close>
+                    </div>
+                    {!manualValueIsValid ? (
+                      <small id={manualErrorId} role="alert">1〜10000の整数で入力してください。</small>
+                    ) : null}
+                  </>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    onClick={() => {
+                      setManualDraft(String(
+                        selectedOption?.power ?? (isValidManualMovePower(value) ? value : 1),
+                      ));
+                      setShowManualEditor(true);
+                    }}
+                  >
+                    任意の威力を入力
+                  </Button>
+                )}
+              </div>
+              <UiPopover.Arrow className="move-power-popover-arrow" />
+            </UiPopover.Content>
+          </UiPopover.Portal>
+        </UiPopover.Root>
+      ) : canUseInlinePowerLock ? (
+        mode === "manual" ? (
+          <div className="move-power-inline-control is-manual">
+            <input
+              {...numericInputProps}
+              value={manualDraft}
+              min={1}
+              max={10_000}
+              aria-label={`${attackLabel} 任意威力`}
+              aria-invalid={!manualValueIsValid}
+              onFocus={selectInputValueOnFocus}
+              onChange={(event) => updateInlineManualDraft(event.target.value)}
+              onBlur={() => {
+                if (!manualValueIsValid) {
+                  setManualDraft(String(value));
+                }
+              }}
+            />
+            <button
+              className="move-power-lock-toggle is-open"
+              type="button"
+              aria-label={`${attackLabel} 威力を自動入力に戻す`}
+              title="自動入力に戻す"
+              onClick={restoreAutomaticPower}
+            >
+              <img src={getAssetSrc("assets/ui/lock-open.svg")} alt="" aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <div className="move-power-inline-control is-automatic">
+            <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+            <button
+              className="move-power-lock-toggle is-closed"
+              type="button"
+              aria-label={`${attackLabel} 威力の自動入力を解除`}
+              title="手動入力へ切り替え"
+              onClick={unlockInlineManualPower}
+            >
+              <img src={getAssetSrc("assets/ui/lock.svg")} alt="" aria-hidden="true" />
+            </button>
+          </div>
+        )
+      ) : (
+        <div className="move-power-inline-control is-readonly" aria-label={summaryForAria}>
+          <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AttackCard({
   attack,
   attackIndex,
@@ -4599,6 +5026,24 @@ function AttackCard({
     "spd",
     ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
   ]));
+  const moveCanonicalName = resolveCanonicalEntityName("move", attack.moveInput);
+  const movePowerAssistRule = moveCanonicalName
+    ? getMovePowerAssistRule(moveCanonicalName)
+    : undefined;
+  const hpDependentMovePower = moveCanonicalName
+    ? isCurrentHpDependentMoveCanonicalName(moveCanonicalName)
+    : false;
+  const movePowerEvaluation = useMemo(() => {
+    const preview = buildMovePowerPreviewInputFromUi(targetForm, adjustmentType, attack);
+    if (!preview) {
+      return undefined;
+    }
+    try {
+      return calculateSmogonHit(preview.defenderBuild, preview.hit, preview.field).movePower;
+    } catch {
+      return undefined;
+    }
+  }, [adjustmentType, attack, targetForm]);
   const speedOpponentStatSection = (
     <section className="attack-stat-section attack-setting-section-body speed-opponent-stat-section" aria-label={`${attackLabel} 相手S能力`}>
       <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
@@ -4677,54 +5122,18 @@ function AttackCard({
       </div>
 
       <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
-        <ScenarioTextField
-          kind="pokemon"
-          label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
-          showLabel
-          value={attack.attackerPokemonInput}
-          onChange={onInput("attackerPokemonInput")}
-          onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
-        />
-        {!isSpeedAdjustment ? (
+        <div className={`attack-card-field-row attack-card-identity-row${isAbilitySupport ? " single" : ""}`}>
           <ScenarioTextField
-            kind="move"
-            label="技"
+            kind="pokemon"
+            label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
             showLabel
-            value={attack.moveInput}
-            onChange={onInput("moveInput")}
-            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
+            value={attack.attackerPokemonInput}
+            onChange={onInput("attackerPokemonInput")}
+            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
           />
-        ) : null}
-        {!isAbilitySupport ? (
-          <NatureMatrixField
-            className="scenario-cell"
-            label="性格"
-            value={attack.attackerNatureInput}
-            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
-          />
-        ) : null}
-        {!isAbilitySupport ? (
-          <ScenarioTextField
-            kind="item"
-            label="持ち物"
-            showLabel
-            value={attack.attackerItemInput}
-            placeholder="任意"
-            onChange={onInput("attackerItemInput")}
-            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
-          />
-        ) : null}
-        <AbilityTextField
-          className="scenario-cell"
-          label="特性"
-          value={attack.attackerAbilityInput}
-          pokemonAbilityOptions={attackerAbilityOptions}
-          onChange={onInput("attackerAbilityInput")}
-          onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
-        />
-        {!isAbilitySupport ? (
-          <>
+          {!isAbilitySupport ? (
             <ScenarioNumberField
+              className="attack-level-field"
               label="レベル"
               showLabel
               value={attack.attackerLevel}
@@ -4732,22 +5141,89 @@ function AttackCard({
               max={100}
               onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
             />
-            <MechanicControls
-              pokemonInput={attack.attackerPokemonInput}
-              teraEnabled={attack.attackerTeraEnabled}
-              dmaxEnabled={attack.attackerDmaxEnabled}
-              teraTypeInput={attack.attackerTeraTypeInput}
-              teraLabel={
-                isOffenseAdjustment
-                  ? attack.attackerTeraEnabled ? "仮想敵テラス解除" : "仮想敵テラス"
-                  : attack.attackerTeraEnabled ? "攻撃テラス解除" : "攻撃テラス"
-              }
-              onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
-              onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
-              onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
-              onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
+          ) : null}
+        </div>
+        {!isSpeedAdjustment ? (
+          <div className="attack-card-field-row attack-move-power-cell">
+            <ScenarioTextField
+              kind="move"
+              label="技"
+              showLabel
+              value={attack.moveInput}
+              onChange={onInput("moveInput")}
+              onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
             />
-          </>
+            <MovePowerField
+              attackLabel={attackLabel}
+              hasMove={Boolean(moveCanonicalName)}
+              mode={attack.movePowerMode}
+              value={attack.movePowerValue}
+              evaluation={movePowerEvaluation}
+              catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
+              assistRule={movePowerAssistRule}
+              hpDependent={hpDependentMovePower}
+              manualAllowed={Boolean(
+                moveCanonicalName
+                && isMovePowerOverrideAllowed(moveCanonicalName)
+                && movePowerEvaluation?.source !== "fixed-damage",
+              )}
+              unsupported={Boolean(
+                moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
+              )}
+              onCommit={(mode, value) => {
+                onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
+                onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
+              }}
+            />
+          </div>
+        ) : null}
+        <div className={`attack-card-field-row attack-card-details-row${isAbilitySupport ? " single" : ""}`}>
+          {!isAbilitySupport ? (
+            <NatureMatrixField
+              className="scenario-cell"
+              label="性格"
+              value={attack.attackerNatureInput}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
+            />
+          ) : null}
+          <AbilityTextField
+            className="scenario-cell"
+            label="特性"
+            value={attack.attackerAbilityInput}
+            pokemonAbilityOptions={attackerAbilityOptions}
+            onChange={onInput("attackerAbilityInput")}
+            onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
+          />
+        </div>
+        {!isAbilitySupport ? (
+          <div className="attack-card-field-row attack-card-item-row">
+            <ScenarioTextField
+              kind="item"
+              label="持ち物"
+              showLabel
+              value={attack.attackerItemInput}
+              placeholder="任意"
+              onChange={onInput("attackerItemInput")}
+              onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
+            />
+          </div>
+        ) : null}
+        {!isAbilitySupport ? (
+          <MechanicControls
+            pokemonInput={attack.attackerPokemonInput}
+            teraEnabled={attack.attackerTeraEnabled}
+            dmaxEnabled={attack.attackerDmaxEnabled}
+            teraTypeInput={attack.attackerTeraTypeInput}
+            teraLabel={
+              isOffenseAdjustment
+                ? attack.attackerTeraEnabled ? "仮想敵テラス解除" : "仮想敵テラス"
+                : attack.attackerTeraEnabled ? "攻撃テラス解除" : "攻撃テラス"
+            }
+            onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+            onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
+            onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
+            onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
+          />
         ) : null}
       </div>
 
@@ -5320,19 +5796,29 @@ const formatOffenseCandidateDetail = (
   const attacker = scenario?.attacks.find((attack) => attack.id === entry.attackId);
   const defenderLabel = attacker?.attackerPokemonInput.trim() || entry.attackLabel;
   const moveLabel = attacker?.moveInput.trim() || "技";
+  const moveCanonicalName = attacker
+    ? resolveCanonicalEntityName("move", attacker.moveInput)
+    : undefined;
+  const hpDependentMovePower = moveCanonicalName
+    ? isCurrentHpDependentMoveCanonicalName(moveCanonicalName)
+    : false;
   const statPointLabel = entry.result.stat
     ? `${statLabels[entry.result.stat]}${entry.result.requiredStatPoints ?? "-"}`
     : entry.result.label;
   const sourceLabel = [statPointLabel, targetLabel.trim() || "調整対象", moveLabel].join(" ");
+  const movePowerLabel = entry.result.movePower
+    ? `${formatMovePowerEvaluation(entry.result.movePower, { hpDependent: hpDependentMovePower })} / `
+    : "";
   if (entry.result.description) {
-    return `${formatLocalizedDamageDescription(entry.result.description)} / KO率 ${formatPercent(entry.result.koProbability)}`;
+    const description = formatLocalizedDamageDescription(entry.result.description);
+    return `${movePowerLabel}${entry.result.movePower ? stripLocalizedDamagePowerLabel(description) : description} / KO率 ${formatPercent(entry.result.koProbability)}`;
   }
   const damageLabel = entry.result.damageRange
     ? `${formatDamageRange(entry.result.damageRange.min, entry.result.damageRange.max)} `
       + `(${entry.result.damageRange.percentMin.toFixed(1)}-${entry.result.damageRange.percentMax.toFixed(1)}%)`
     : entry.result.reason;
 
-  return `${sourceLabel} → ${defenderLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
+  return `${movePowerLabel}${sourceLabel} → ${defenderLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
 };
 
 const formatBottleneckDisplayLabel = (label: string): string => `最厳条件: ${label}`;
@@ -5499,8 +5985,11 @@ export function ResultsPanel({
     () => new Map(scenarios.map((scenario) => [
       scenario.id,
       scenario.attacks
-        .filter((attack) => attack.moveInput.trim())
-        .map((attack, attackIndex) => formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)),
+        .map((attack, attackIndex) => ({ attack, attackIndex }))
+        .filter(({ attack }) => attack.moveInput.trim())
+        .map(({ attack, attackIndex }) => (
+          formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)
+        )),
     ])),
     [scenarios],
   );
@@ -5661,6 +6150,8 @@ export function ResultsPanel({
                 <div className="candidate-expanded-detail" id={`${candidate.id}-details`}>
                   {candidate.scenarioResults.map((result) => {
                     const scenarioLabel = scenarioLabels.get(result.scenarioId) ?? result.scenarioId;
+                    const sourceAttacks = scenariosById.get(result.scenarioId)?.attacks
+                      .filter((attack) => attack.moveInput.trim()) ?? [];
                     return (
                       <section className="candidate-scenario-detail" key={result.scenarioId}>
                         <div className="candidate-scenario-status">
@@ -5675,6 +6166,13 @@ export function ResultsPanel({
                           <ul>
                             {result.hitEvaluations.map((hit, hitIndex) => {
                               const attackLabel = attackLabelsByScenarioId.get(result.scenarioId)?.[hitIndex];
+                              const sourceMoveCanonicalName = resolveCanonicalEntityName(
+                                "move",
+                                sourceAttacks[hitIndex]?.moveInput ?? "",
+                              );
+                              const hpDependentMovePower = sourceMoveCanonicalName
+                                ? isCurrentHpDependentMoveCanonicalName(sourceMoveCanonicalName)
+                                : false;
                               const detailLabel = attackLabel ? `${scenarioLabel} / ${attackLabel}` : scenarioLabel;
                               const hpEvents = (result.hpEventEvaluations ?? [])
                                 .filter((evaluation) => evaluation.cardId === hit.hitId);
@@ -5693,8 +6191,13 @@ export function ResultsPanel({
                                   <li>
                                     <strong>{detailLabel}</strong>
                                     <span>
+                                      {hit.movePower
+                                        ? `${formatMovePowerEvaluation(hit.movePower, { hpDependent: hpDependentMovePower })} / `
+                                        : ""}
                                       {hit.description
-                                        ? formatLocalizedDamageDescription(hit.description)
+                                        ? hit.movePower
+                                          ? stripLocalizedDamagePowerLabel(formatLocalizedDamageDescription(hit.description))
+                                          : formatLocalizedDamageDescription(hit.description)
                                         : `被ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}
                                     </span>
                                   </li>

@@ -35,7 +35,17 @@ describe("boxStorage", () => {
 
   it("round-trips box entries as versioned browser storage", () => {
     const target = createDefaultTargetForm();
-    const scenarios = createDefaultScenarioForms();
+    const scenarios = createDefaultScenarioForms().map((scenario, scenarioIndex) => ({
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => scenarioIndex === 0
+        ? {
+            ...attack,
+            moveInput: "おはかまいり",
+            movePowerMode: "assisted" as const,
+            movePowerValue: 100,
+          }
+        : attack),
+    }));
     const entry = createBoxEntryFromState(target, scenarios, {
       id: "box-1",
       now: "2026-06-11T00:00:00.000Z",
@@ -53,6 +63,41 @@ describe("boxStorage", () => {
       },
     });
     expect(parsed[0]?.payload.target.pokemonInput).toBe("メガマフォクシー");
+    expect(parsed[0]?.payload.scenarios[0].attacks[0]).toMatchObject({
+      moveInput: "おはかまいり",
+      movePowerMode: "assisted",
+      movePowerValue: 100,
+    });
+  });
+
+  it("migrates schema v7 box attacks without move-power fields", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map(({
+        movePowerMode: _movePowerMode,
+        movePowerValue: _movePowerValue,
+        ...attack
+      }) => attack),
+    }));
+    const [entry] = parseBoxStorageDocument(JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [{
+        id: "legacy-power-box",
+        name: "旧威力ボックス",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+        payload: {
+          schemaVersion: 7,
+          target: createDefaultTargetForm(),
+          scenarios,
+        },
+      }],
+    }));
+
+    expect(entry.payload.scenarios[0].attacks[0]).toMatchObject({
+      movePowerMode: "auto",
+      movePowerValue: 0,
+    });
   });
 
   it.each([3, 4, 5] as const)(

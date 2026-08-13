@@ -9,7 +9,10 @@ import type {
 } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
-import { getMoveHpMechanicsProfile } from "./moveHpMechanics";
+import {
+  getMoveHpMechanicsProfile,
+  isCurrentHpDependentMoveCanonicalName,
+} from "./moveHpMechanics";
 import { calculateSmogonHit, toSmogonPokemon } from "./smogonAdapter";
 
 const mustResolve = <K extends EntityKind>(
@@ -83,6 +86,12 @@ const field = {
 } as const;
 
 describe("getMoveHpMechanicsProfile", () => {
+  it("identifies moves whose power or damage depends on current HP", () => {
+    expect(isCurrentHpDependentMoveCanonicalName("Eruption")).toBe(true);
+    expect(isCurrentHpDependentMoveCanonicalName("Water Spout")).toBe(true);
+    expect(isCurrentHpDependentMoveCanonicalName("Sucker Punch")).toBe(false);
+  });
+
   it("derives contact and damage-based recoil from @smogon/calc Move metadata", () => {
     const doubleEdge = getMoveHpMechanicsProfile(makeHit("Double-Edge"));
     const thunderbolt = getMoveHpMechanicsProfile(makeHit("Thunderbolt"));

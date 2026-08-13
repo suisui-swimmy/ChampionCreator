@@ -28,7 +28,18 @@ describe("enemyBoxStorage", () => {
   });
 
   it("round-trips scenario-only entries without a target payload", () => {
-    const entry = createEnemyBoxEntryFromScenarios(createDefaultScenarioForms(), {
+    const scenarios = createDefaultScenarioForms().map((scenario, scenarioIndex) => ({
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => scenarioIndex === 0
+        ? {
+            ...attack,
+            moveInput: "おはかまいり",
+            movePowerMode: "manual" as const,
+            movePowerValue: 137,
+          }
+        : attack),
+    }));
+    const entry = createEnemyBoxEntryFromScenarios(scenarios, {
       id: "enemy-box-1",
       now: "2026-07-29T00:00:00.000Z",
     });
@@ -49,6 +60,40 @@ describe("enemyBoxStorage", () => {
       },
     });
     expect(parsed[0]?.payload).not.toHaveProperty("target");
+    expect(parsed[0]?.payload.scenarios[0].attacks[0]).toMatchObject({
+      moveInput: "おはかまいり",
+      movePowerMode: "manual",
+      movePowerValue: 137,
+    });
+  });
+
+  it("migrates schema v7 enemy-box attacks without move-power fields", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map(({
+        movePowerMode: _movePowerMode,
+        movePowerValue: _movePowerValue,
+        ...attack
+      }) => attack),
+    }));
+    const [entry] = parseEnemyBoxStorageDocument(JSON.stringify({
+      schemaVersion: ENEMY_BOX_STORAGE_SCHEMA_VERSION,
+      entries: [{
+        id: "legacy-power-enemy",
+        name: "旧威力仮想敵",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+        payload: {
+          schemaVersion: 7,
+          scenarios,
+        },
+      }],
+    }));
+
+    expect(entry.payload.scenarios[0].attacks[0]).toMatchObject({
+      movePowerMode: "auto",
+      movePowerValue: 0,
+    });
   });
 
   it.each([3, 4, 5] as const)(

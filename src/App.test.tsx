@@ -23,6 +23,7 @@ import {
   getScenarioPanelVisibleScenarios,
   isAbilitySupportCard,
   isUnresolvedEntityInput,
+  formatMovePowerEvaluation,
   normalizeNumericInputText,
 } from "./App";
 import {
@@ -517,6 +518,181 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+  });
+
+  it("keeps a compact power field beside every non-speed move input", () => {
+    const html = renderExampleApp();
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(html.match(/class="attack-card-field-row attack-card-identity-row"/g)).toHaveLength(3);
+    expect(html.match(/class="attack-card-field-row attack-move-power-cell"/g)).toHaveLength(2);
+    expect(html.match(/class="attack-card-field-row attack-card-details-row"/g)).toHaveLength(3);
+    expect(html.match(/class="attack-card-field-row attack-card-item-row"/g)).toHaveLength(3);
+    expect(html.match(/class="move-power-inline-control is-readonly"/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="威力 70"');
+    expect(html).toContain('aria-label="威力 90"');
+    expect(html).not.toContain('aria-label="素早さ調整A 威力');
+    expect(css).toMatch(/\.attack-card-identity-row,\s*\.attack-move-power-cell\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
+    expect(css).toMatch(/\.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(52px, max-content\) minmax\(0, 1fr\);/s);
+    expect(css).toMatch(/\.mobile-scenarios-open \.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(54px, auto\) minmax\(0, 1fr\);/s);
+    expect(html).toMatch(/attack-card-identity-row[^>]*>[\s\S]*?aria-label="ポケモン"[\s\S]*?aria-label="レベル"/);
+    expect(html).toMatch(/attack-move-power-cell[^>]*>[\s\S]*?placeholder="技"[\s\S]*?move-power-field/);
+    expect(html).toMatch(/move-power-field[^>]*aria-label="耐久調整A 威力"[^>]*>[\s\S]*?<span class="move-power-label">威力<\/span>[\s\S]*?move-power-inline-control is-readonly/);
+    expect(html).toMatch(/attack-card-details-row[^>]*>[\s\S]*?aria-label="性格:[^"]+"[\s\S]*?aria-label="特性候補を開く"/);
+    expect(html).toMatch(/attack-card-item-row[^>]*>[\s\S]*?placeholder="持ち物"/);
+
+    const [scenario] = createDefaultScenarioForms();
+    const calculationPendingHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={{ ...createDefaultTargetForm(), pokemonInput: "" }}
+        initialScenarioForms={[{
+          ...scenario,
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            attackerPokemonInput: "",
+            moveInput: "ふいうち",
+          })),
+        }]}
+      />,
+    );
+    expect(calculationPendingHtml).toContain('aria-label="威力 70（基礎値・計算前）"');
+  });
+
+  it("shows assisted and HP-dependent powers through the same compact field", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const lastRespectsScenario = {
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        moveInput: "おはかまいり",
+        movePowerMode: "assisted" as const,
+        movePowerValue: 150,
+      })),
+    };
+    const lastRespectsHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[lastRespectsScenario]}
+      />,
+    );
+
+    expect(lastRespectsHtml).toContain('class="move-power-field steppable"');
+    expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力 150（条件: ひんしの味方 2体）。条件を開く"');
+    expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を上げる: ひんしの味方 3体"');
+    expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を下げる: ひんしの味方 1体"');
+    expect(lastRespectsHtml).toContain("▲");
+    expect(lastRespectsHtml).toContain("▼");
+
+    const eruptionScenario = {
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        moveInput: "ふんか",
+        movePowerMode: "auto" as const,
+        movePowerValue: 0,
+      })),
+    };
+    const eruptionHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[eruptionScenario]}
+      />,
+    );
+
+    expect(eruptionHtml).toContain('aria-label="耐久調整A 威力の自動入力を解除"');
+    expect(eruptionHtml).toContain(
+      '<strong>150</strong><button class="move-power-lock-toggle is-closed"',
+    );
+    expect(eruptionHtml).toContain('src="/assets/ui/lock.svg"');
+    expect(eruptionHtml).not.toContain("技の威力設定");
+    expect(eruptionHtml).not.toContain('<small>HP</small>');
+    expect(eruptionHtml).not.toContain("威力条件ステッパー");
+
+    const incompleteEruptionHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={{ ...createDefaultTargetForm(), pokemonInput: "" }}
+        initialScenarioForms={[{
+          ...eruptionScenario,
+          attacks: eruptionScenario.attacks.map((attack) => ({
+            ...attack,
+            attackerPokemonInput: "",
+          })),
+        }]}
+      />,
+    );
+    expect(incompleteEruptionHtml).toContain('<strong>150</strong><button class="move-power-lock-toggle is-closed"');
+
+    const manualEruptionHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[{
+          ...eruptionScenario,
+          attacks: eruptionScenario.attacks.map((attack) => ({
+            ...attack,
+            movePowerMode: "manual" as const,
+            movePowerValue: 87,
+          })),
+        }]}
+      />,
+    );
+    expect(manualEruptionHtml).toContain('aria-label="耐久調整A 任意威力"');
+    expect(manualEruptionHtml).toContain('aria-label="耐久調整A 威力を自動入力に戻す"');
+    expect(manualEruptionHtml).toContain('src="/assets/ui/lock-open.svg"');
+  });
+
+  it("formats the actually applied power without mixing it with damage", () => {
+    expect(formatMovePowerEvaluation({
+      catalogBasePower: 65,
+      appliedBasePower: 130,
+      source: "automatic",
+    })).toBe("基礎威力 65 → 適用威力 130（自動計算）");
+    expect(formatMovePowerEvaluation({
+      catalogBasePower: 50,
+      appliedBasePower: 300,
+      source: "assisted",
+      detailLabel: "ひんしの味方 5体",
+    })).toBe("威力 300（条件: ひんしの味方 5体）");
+    expect(formatMovePowerEvaluation({
+      catalogBasePower: 20,
+      appliedBasePower: 120,
+      source: "automatic",
+      perHitBasePowers: [20, 40, 60],
+    })).toBe("威力 20→40→60（各ヒット）");
+    expect(formatMovePowerEvaluation({
+      catalogBasePower: 150,
+      appliedBasePower: 150,
+      source: "automatic",
+    }, { hpDependent: true })).toBe("HP依存威力（満タン時 150・各攻撃直前に自動計算）");
+    expect(formatMovePowerEvaluation({ catalogBasePower: 0, source: "fixed-damage" }))
+      .toBe("固定ダメージ（数値威力なし）");
+    expect(formatMovePowerEvaluation(
+      { catalogBasePower: 0, source: "fixed-damage" },
+      { hpDependent: true },
+    )).toBe("固定ダメージ（数値威力なし・各攻撃直前のHPで自動計算）");
+    expect(formatMovePowerEvaluation({ catalogBasePower: 0, source: "status" }))
+      .toBe("変化技（数値威力なし）");
+    expect(formatMovePowerEvaluation({ catalogBasePower: 0, source: "unsupported" }))
+      .toBe("個別威力（現在の計算には未対応）");
+  });
+
+  it("shows Beat Up as unsupported instead of an automatic zero-power move", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[{
+          ...scenario,
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            moveInput: "ふくろだたき",
+          })),
+        }]}
+      />,
+    );
+
+    expect(html).toContain('aria-label="個別威力（現在の計算には未対応）"');
+    expect(html).toContain("<strong>個別</strong>");
+    expect(html).not.toContain("威力 0");
   });
 
   it("keeps HP events collapsed in attack cards and summarizes them on mobile", () => {
@@ -1088,7 +1264,10 @@ describe("App", () => {
     )).toBe("A32+ ドドゲザン ふいうち → H9 / B30 メガマフォクシー : 134-158 (84.2-99.3%) / 確定2発");
     expect(formatLocalizedDamageDescription(
       "252 SpA Raichu Grass Knot (120 BP) vs. 0 HP / 0 SpD Snorlax: 186-220 (79.1 - 93.6%) -- guaranteed 2HKO",
-    )).toBe("C32 ライチュウ くさむすび (120 DMG) → H0 / D0 カビゴン : 186-220 (79.1-93.6%) / 確定2発");
+    )).toBe("C32 ライチュウ くさむすび (威力120) → H0 / D0 カビゴン : 186-220 (79.1-93.6%) / 確定2発");
+    expect(formatLocalizedDamageDescription(
+      "0 Atk Mew Knock Off (97.5 BP) vs. 0 HP / 0 Def Mew: 140-166 (41 - 48.6%) -- guaranteed 3HKO",
+    )).toContain("(威力97.5)");
   });
 
   it("integrates the selected candidate detail into the candidate list", () => {
@@ -1116,6 +1295,11 @@ describe("App", () => {
           damageRolls: [122, 146],
           damageRange: { min: 122, max: 146, percentMin: 82.9, percentMax: 99.3 },
           description: "252+ Atk Kingambit Sucker Punch vs. 92 HP / 52 Def Starmie-Mega: 122-146 (82.9 - 99.3%) -- guaranteed 2HKO",
+          movePower: {
+            catalogBasePower: 70,
+            appliedBasePower: 70,
+            source: "standard" as const,
+          },
         }],
       }],
     };
@@ -1153,6 +1337,11 @@ describe("App", () => {
         koProbability: 1,
         targetKoProbability: 1,
         damageRange: { min: 168, max: 198, percentMin: 100.6, percentMax: 118.6 },
+        movePower: {
+          catalogBasePower: 90,
+          appliedBasePower: 90,
+          source: "standard" as const,
+        },
         hpEventEvaluations: [
           {
             cardId: "offense-adjustment-card",
@@ -1276,9 +1465,9 @@ describe("App", () => {
     expect(html).toContain('class="candidate-disclosure"');
     expect(html).not.toContain("▼");
     expect(html).not.toContain("▲");
-    expect(html).toContain("シナリオA / 耐久調整A</strong><span>A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
+    expect(html).toContain("シナリオA / 耐久調整A</strong><span>威力 70 / A32+ ドドゲザン ふいうち → H12 / B7 メガスターミー : 122-146 (82.9-99.3%) / 確定2発");
     expect(html).toContain("シナリオ2</strong><span>KO率 100.0%");
-    expect(html).toContain("シナリオ2</strong><span>C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
+    expect(html).toContain("シナリオ2</strong><span>威力 90 / C7 メガマフォクシー サイコキネシス → メガゲンガー : 168-198 (100.6-118.6%) / KO率 100.0%");
     expect(html).toContain("シナリオ2 / 定数ダメージ・回復</strong><span>すなあらしダメージ / 仮想敵 / ターン終了時・ターンごと: 10ダメージ");
     expect(html).toContain("みがわりのHP消費 / 調整対象 / 技使用前・技ごと: 25消費");
     expect(html).toContain("ワイルドボルトの反動 / 調整対象 / 技使用後・技ごと: 12-15反動");
@@ -1415,8 +1604,9 @@ describe("App", () => {
       id: "scenario-multi",
       label: "連続被弾",
       attacks: [
-        { ...baseScenario.attacks[0], id: "attack-a", label: "物理技A", moveInput: "ふいうち" },
-        { ...baseScenario.attacks[0], id: "attack-b", label: "特殊技B", moveInput: "サイコキネシス" },
+        { ...baseScenario.attacks[0], id: "attack-a", label: "攻撃A", moveInput: "" },
+        { ...baseScenario.attacks[0], id: "attack-b", label: "攻撃B", moveInput: "ふいうち" },
+        { ...baseScenario.attacks[0], id: "attack-c", label: "攻撃C", moveInput: "サイコキネシス" },
       ],
     };
     const html = renderToStaticMarkup(
@@ -1436,9 +1626,9 @@ describe("App", () => {
       />,
     );
 
-    expect(html).toContain("連続被弾 / 物理技A</strong><span>被ダメージ 40 (25.0-25.0%)");
-    expect(html).toContain("連続被弾 / 物理技A / 定数ダメージ・回復</strong><span>すなあらしダメージ / 調整対象 / ターン終了時・ターンごと: 11ダメージ");
-    expect(html).toContain("連続被弾 / 特殊技B</strong><span>被ダメージ 50 (31.3-31.3%)");
+    expect(html).toContain("連続被弾 / 耐久調整B</strong><span>被ダメージ 40 (25.0-25.0%)");
+    expect(html).toContain("連続被弾 / 耐久調整B / 定数ダメージ・回復</strong><span>すなあらしダメージ / 調整対象 / ターン終了時・ターンごと: 11ダメージ");
+    expect(html).toContain("連続被弾 / 耐久調整C</strong><span>被ダメージ 50 (31.3-31.3%)");
   });
 
   it("places integrated firepower failures in the candidate list", () => {

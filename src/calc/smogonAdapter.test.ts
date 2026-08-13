@@ -129,6 +129,11 @@ describe("calculateSmogonHit", () => {
       percentMax: (max / directDefender.maxHP()) * 100,
     });
     expect(adapterResult.description).toBe(directResult.desc());
+    expect(adapterResult.movePower).toEqual({
+      catalogBasePower: 100,
+      appliedBasePower: 100,
+      source: "standard",
+    });
   });
 
   it("uses resolved canonical names rather than Japanese display labels", () => {
@@ -208,6 +213,12 @@ describe("calculateSmogonHit", () => {
     expect(adapterResult.damageRange).toMatchObject({ min, max });
     expect(adapterResult.description).toBe(directResult.desc());
     expect(adapterResult.description).toContain("(5 hits)");
+    expect(adapterResult.movePower).toEqual({
+      catalogBasePower: 25,
+      appliedBasePower: 25,
+      source: "standard",
+      perHitBasePowers: [25, 25, 25, 25, 25],
+    });
   });
 
   it("maps an active ally's direct damage abilities to @smogon/calc field flags", () => {
@@ -645,5 +656,272 @@ describe("calculateSmogonHit", () => {
 
     expect(manualItemSpeed).toBeLessThan(autoSpeed);
     expect(manualAbilitySpeed).toBeLessThan(autoSpeed);
+  });
+
+  it("reports the base power selected by the same automatic @smogon/calc result", () => {
+    const result = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "けたぐり"),
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(result.movePower).toEqual({
+      catalogBasePower: 0,
+      appliedBasePower: 20,
+      source: "automatic",
+    });
+  });
+
+  it("preserves fractional effective base power reported by @smogon/calc", () => {
+    const result = calculateSmogonHit(
+      { ...defender, item: mustResolve("item", "たべのこし") },
+      {
+        ...hit,
+        move: mustResolve("move", "はたきおとす"),
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(result.movePower).toEqual({
+      catalogBasePower: 65,
+      appliedBasePower: 97.5,
+      source: "automatic",
+    });
+    expect(result.description).toContain("(97.5 BP)");
+  });
+
+  it("applies an audited manual power once and restores the canonical move name", () => {
+    const neutralDefender = {
+      ...defender,
+      pokemon: mustResolve("pokemon", "ミュウ"),
+      ability: undefined,
+      item: undefined,
+      teraType: undefined,
+      evs: zeroEvs,
+    };
+    const lastRespectsHit: ScenarioHit = {
+      ...hit,
+      move: mustResolve("move", "おはかまいり"),
+      repeat: 1,
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+    };
+    const automatic = calculateSmogonHit(
+      neutralDefender,
+      lastRespectsHit,
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+    const manual = calculateSmogonHit(
+      neutralDefender,
+      {
+        ...lastRespectsHit,
+        movePowerOverride: { value: 300, source: "manual" },
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(manual.damageRange.max).toBeGreaterThan(automatic.damageRange.max);
+    expect(manual.movePower).toEqual({
+      catalogBasePower: 50,
+      appliedBasePower: 300,
+      source: "manual",
+      detailLabel: "任意威力",
+    });
+    expect(manual.description).toContain("Last Respects");
+    expect(manual.description).not.toContain("ChampionCreator Power Override");
+  });
+
+  it("applies a manual power to an HP-dependent move without reapplying its automatic formula", () => {
+    const eruptionHit: ScenarioHit = {
+      ...hit,
+      attacker: {
+        ...hit.attacker,
+        pokemon: mustResolve("pokemon", "コータス"),
+      },
+      move: mustResolve("move", "ふんか"),
+      repeat: 1,
+      attackerBoosts: {},
+      defenderBoosts: {},
+      attackerSide: emptySide,
+      defenderSide: emptySide,
+    };
+    const automatic = calculateSmogonHit(
+      defender,
+      eruptionHit,
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+    const manual = calculateSmogonHit(
+      defender,
+      {
+        ...eruptionHit,
+        movePowerOverride: { value: 87, source: "manual" },
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(automatic.movePower?.appliedBasePower).toBe(150);
+    expect(manual.movePower).toEqual({
+      catalogBasePower: 150,
+      appliedBasePower: 87,
+      source: "manual",
+      detailLabel: "任意威力",
+    });
+    expect(manual.damageRange.max).toBeLessThan(automatic.damageRange.max);
+    expect(manual.description).toContain("Eruption");
+    expect(manual.description).not.toContain("ChampionCreator Power Override");
+  });
+
+  it("uses the assisted option label and ignores overrides outside the audited registry", () => {
+    const assisted = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "ゆきなだれ"),
+        movePowerOverride: { value: 120, source: "assisted" },
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+    const automaticEarthquake = calculateSmogonHit(
+      defender,
+      hit,
+      fieldState,
+    );
+    const ignoredEarthquakeOverride = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        movePowerOverride: { value: 300, source: "manual" },
+      },
+      fieldState,
+    );
+
+    expect(assisted.movePower).toEqual({
+      catalogBasePower: 60,
+      appliedBasePower: 120,
+      source: "assisted",
+      detailLabel: "同じターンに相手からダメージを受けた",
+    });
+    expect(assisted.description).toContain("Avalanche");
+    expect(ignoredEarthquakeOverride.damageRolls).toEqual(automaticEarthquake.damageRolls);
+    expect(ignoredEarthquakeOverride.movePower?.source).toBe("standard");
+  });
+
+  it("reports increasing and ordinary multi-hit base powers without flattening their meaning", () => {
+    const tripleAxel = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "トリプルアクセル"),
+        moveHits: 3,
+        repeat: 3,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+    const tripleKick = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "トリプルキック"),
+        moveHits: 3,
+        repeat: 3,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(tripleAxel.movePower).toEqual({
+      catalogBasePower: 20,
+      appliedBasePower: 120,
+      source: "automatic",
+      perHitBasePowers: [20, 40, 60],
+    });
+    expect(tripleKick.movePower).toEqual({
+      catalogBasePower: 10,
+      appliedBasePower: 60,
+      source: "automatic",
+      perHitBasePowers: [10, 20, 30],
+    });
+  });
+
+  it("distinguishes status and fixed-damage moves from base-power attacks", () => {
+    const fixedDamage = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "ちきゅうなげ"),
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+    const status = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "まもる"),
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+    const unsupported = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "ふくろだたき"),
+        repeat: 1,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(fixedDamage.movePower).toEqual({
+      catalogBasePower: 0,
+      source: "fixed-damage",
+    });
+    expect(status.movePower).toEqual({
+      catalogBasePower: 0,
+      source: "status",
+    });
+    expect(unsupported.movePower).toEqual({
+      catalogBasePower: 0,
+      source: "unsupported",
+    });
   });
 });

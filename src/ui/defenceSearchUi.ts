@@ -36,9 +36,15 @@ import {
   compileHpEventForMove,
   getHpEventRuleDefinition,
 } from "../calc/hpEventRules";
+import {
+  getMovePowerAssistRule,
+  isSinglePowerMoveUnsupported,
+  resolveAllowedMovePowerOverride,
+} from "../calc/movePowerRules";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 import {
+  buildOffenseHit,
   calculateOffenseAdjustment,
   type OffenseAdjustmentInput,
   type OffenseAdjustmentResult,
@@ -65,6 +71,7 @@ import natureOptionsData from "../data/generated/nature-options.gen.json";
 
 export type SpeedTargetMode = "opponent" | "manual";
 export type SpeedMoveModifier = "none" | "tailwind" | "trick-room";
+export type MovePowerMode = "auto" | "assisted" | "manual";
 
 export interface HpEventFormState {
   id: string;
@@ -104,6 +111,8 @@ export interface ScenarioAttackFormState {
   attackerBoosts: StatBoostTable;
   defenderBoosts: StatBoostTable;
   moveInput: string;
+  movePowerMode: MovePowerMode;
+  movePowerValue: number;
   hpEvents: HpEventFormState[];
   repeat: number;
   requiredSurvivedHits: number;
@@ -151,6 +160,8 @@ export interface OffenseAdjustmentFormState {
   defenderStatPoints: StatPointTable;
   defenderBoosts: StatBoostTable;
   moveInput: string;
+  movePowerMode: MovePowerMode;
+  movePowerValue: number;
   hpEvents: HpEventFormState[];
   targetKoProbabilityPercent: number;
   gameType: GameType;
@@ -443,6 +454,8 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerBoosts: { ...zeroBoosts },
   defenderBoosts: { ...zeroBoosts },
   moveInput: "ふいうち",
+  movePowerMode: "auto",
+  movePowerValue: 0,
   hpEvents: [],
   repeat: 1,
   requiredSurvivedHits: 1,
@@ -493,6 +506,76 @@ export const applyMoveHitCountDefaults = (
   return shouldClearPreviousAutoFill
     ? { ...nextAttackForm, repeat: 1, requiredSurvivedHits: 1 }
     : nextAttackForm;
+};
+
+const resolveMoveCanonicalName = (moveInput: string): string | undefined =>
+  toEntityRef(resolveEntity("move", moveInput), "move")?.canonicalName;
+
+const resolveMovePowerOverrideFromUi = (
+  canonicalName: string,
+  mode: MovePowerMode,
+  value: number,
+) => {
+  if (
+    mode === "auto"
+    || !Number.isInteger(value)
+    || value < 1
+    || value > 10_000
+  ) {
+    return undefined;
+  }
+  return resolveAllowedMovePowerOverride(canonicalName, {
+    value,
+    source: mode,
+  });
+};
+
+const assertMovePowerCalculationSupported = (canonicalName: string): void => {
+  if (isSinglePowerMoveUnsupported(canonicalName)) {
+    throw new Error("ふくろだたきは参加ポケモンごとに威力が異なるため、現在の計算には対応していません");
+  }
+};
+
+export const applyMovePowerDefaults = (
+  attackForm: ScenarioAttackFormState,
+  moveInput: string,
+): ScenarioAttackFormState => {
+  const previousCanonicalName = resolveMoveCanonicalName(attackForm.moveInput);
+  const nextCanonicalName = resolveMoveCanonicalName(moveInput);
+  if (previousCanonicalName === nextCanonicalName) {
+    return { ...attackForm, moveInput };
+  }
+
+  const assistRule = nextCanonicalName
+    ? getMovePowerAssistRule(nextCanonicalName)
+    : undefined;
+  return {
+    ...attackForm,
+    moveInput,
+    movePowerMode: assistRule ? "assisted" : "auto",
+    movePowerValue: assistRule?.defaultPower ?? 0,
+  };
+};
+
+export const applyMoveInputDefaults = (
+  attackForm: ScenarioAttackFormState,
+  moveInput: string,
+  syncHitCount: boolean,
+): ScenarioAttackFormState => {
+  const withPowerDefaults = applyMovePowerDefaults(attackForm, moveInput);
+  if (!syncHitCount) {
+    return withPowerDefaults;
+  }
+
+  // Both helpers must inspect the same pre-change move. Calling one helper
+  // with the other's result would lose the previous move needed to clear an
+  // automatically selected multi-hit count.
+  const withHitCountDefaults = applyMoveHitCountDefaults(attackForm, moveInput);
+  return {
+    ...withPowerDefaults,
+    repeat: withHitCountDefaults.repeat,
+    requiredSurvivedHits: withHitCountDefaults.requiredSurvivedHits,
+  };
 };
 
 export const formatScenarioAttackLabel = (
@@ -573,6 +656,8 @@ export const createDefaultOffenseAdjustmentForm = (): OffenseAdjustmentFormState
   defenderStatPoints: { ...zeroStatPoints },
   defenderBoosts: { ...zeroBoosts },
   moveInput: "ふいうち",
+  movePowerMode: "auto",
+  movePowerValue: 0,
   hpEvents: [],
   targetKoProbabilityPercent: 100,
   gameType: "singles",
@@ -654,6 +739,13 @@ const toScenarioHit = (
     attackForm,
     `${scenarioForm.id}-${attackForm.id}-attacker`,
   );
+  const move = mustResolve("move", attackForm.moveInput, "技");
+  assertMovePowerCalculationSupported(move.canonicalName);
+  const movePowerOverride = resolveMovePowerOverrideFromUi(
+    move.canonicalName,
+    attackForm.movePowerMode,
+    attackForm.movePowerValue,
+  );
 
   return {
     id: `${scenarioForm.id}-hit-${index + 1}`,
@@ -670,8 +762,9 @@ const toScenarioHit = (
         .filter((ability): ability is NonNullable<typeof ability> => Boolean(ability))
         .filter((ability) => isActiveAllyAbilityCanonicalName(ability.canonicalName))
       : undefined,
-    move: mustResolve("move", attackForm.moveInput, "技"),
+    move,
     moveHits: moveHitRange ? repeat : undefined,
+    ...(movePowerOverride ? { movePowerOverride } : {}),
     hpEvents: toDomainHpEvents(attackForm.hpEvents ?? []),
     field: toFieldState(attackForm),
     constraint: {
@@ -811,42 +904,107 @@ export const buildDefenceSearchInput = (
 export const buildOffenseAdjustmentInput = (
   targetForm: TargetFormState,
   offenseForm: OffenseAdjustmentFormState,
-): OffenseAdjustmentInput => ({
-  attackerBuild: buildTargetBuildFromUi(targetForm, "offense-attacker"),
-  defenderBuild: toBuild({
-    pokemonInput: offenseForm.defenderPokemonInput,
-    natureInput: offenseForm.defenderNatureInput,
-    abilityInput: offenseForm.defenderAbilityInput,
-    itemInput: offenseForm.defenderItemInput,
-    teraTypeInput: offenseForm.defenderTeraTypeInput,
-    teraEnabled: offenseForm.defenderTeraEnabled,
-    dmaxEnabled: offenseForm.defenderDmaxEnabled,
-    status: offenseForm.defenderStatus,
-    level: offenseForm.defenderLevel,
-    statPoints: offenseForm.defenderStatPoints,
-    boosts: { ...zeroBoosts },
-  }, "offense-defender"),
-  move: mustResolve("move", offenseForm.moveInput, "火力調整の技"),
-  moveInput: offenseForm.moveInput,
-  hpEvents: toDomainHpEvents(offenseForm.hpEvents ?? []),
-  targetKoProbability: clampProbabilityPercent(offenseForm.targetKoProbabilityPercent),
-  field: toFieldState(offenseForm),
-  critical: offenseForm.critical,
-  attackerBoosts: normalizeBoosts(targetForm.boosts),
-  defenderBoosts: normalizeBoosts(offenseForm.defenderBoosts),
-  attackerSide: { ...emptySide, helpingHand: offenseForm.helpingHand },
-  defenderSide: {
-    ...emptySide,
-    reflect: offenseForm.reflect,
-    lightScreen: offenseForm.lightScreen,
-    auroraVeil: offenseForm.auroraVeil,
-    friendGuard: offenseForm.gameType === "doubles" && offenseForm.friendGuard,
-  },
-  boostedNatures: {
-    atk: mustResolve("nature", "いじっぱり", "A上昇補正"),
-    spa: mustResolve("nature", "ひかえめ", "C上昇補正"),
-  },
-});
+): OffenseAdjustmentInput => {
+  const move = mustResolve("move", offenseForm.moveInput, "火力調整の技");
+  assertMovePowerCalculationSupported(move.canonicalName);
+  const movePowerOverride = resolveMovePowerOverrideFromUi(
+    move.canonicalName,
+    offenseForm.movePowerMode,
+    offenseForm.movePowerValue,
+  );
+  return {
+    attackerBuild: buildTargetBuildFromUi(targetForm, "offense-attacker"),
+    defenderBuild: toBuild({
+      pokemonInput: offenseForm.defenderPokemonInput,
+      natureInput: offenseForm.defenderNatureInput,
+      abilityInput: offenseForm.defenderAbilityInput,
+      itemInput: offenseForm.defenderItemInput,
+      teraTypeInput: offenseForm.defenderTeraTypeInput,
+      teraEnabled: offenseForm.defenderTeraEnabled,
+      dmaxEnabled: offenseForm.defenderDmaxEnabled,
+      status: offenseForm.defenderStatus,
+      level: offenseForm.defenderLevel,
+      statPoints: offenseForm.defenderStatPoints,
+      boosts: { ...zeroBoosts },
+    }, "offense-defender"),
+    move,
+    moveInput: offenseForm.moveInput,
+    ...(movePowerOverride ? { movePowerOverride } : {}),
+    hpEvents: toDomainHpEvents(offenseForm.hpEvents ?? []),
+    targetKoProbability: clampProbabilityPercent(offenseForm.targetKoProbabilityPercent),
+    field: toFieldState(offenseForm),
+    critical: offenseForm.critical,
+    attackerBoosts: normalizeBoosts(targetForm.boosts),
+    defenderBoosts: normalizeBoosts(offenseForm.defenderBoosts),
+    attackerSide: { ...emptySide, helpingHand: offenseForm.helpingHand },
+    defenderSide: {
+      ...emptySide,
+      reflect: offenseForm.reflect,
+      lightScreen: offenseForm.lightScreen,
+      auroraVeil: offenseForm.auroraVeil,
+      friendGuard: offenseForm.gameType === "doubles" && offenseForm.friendGuard,
+    },
+    boostedNatures: {
+      atk: mustResolve("nature", "いじっぱり", "A上昇補正"),
+      spa: mustResolve("nature", "ひかえめ", "C上昇補正"),
+    },
+  };
+};
+
+export interface MovePowerPreviewInput {
+  defenderBuild: Build;
+  hit: ScenarioHit;
+  field: FieldState;
+}
+
+export const buildMovePowerPreviewInputFromUi = (
+  targetForm: TargetFormState,
+  adjustmentType: ScenarioAdjustmentType,
+  attackForm: ScenarioAttackFormState,
+): MovePowerPreviewInput | null => {
+  if (adjustmentType === "speed") {
+    return null;
+  }
+  if (!toEntityRef(resolveEntity("move", attackForm.moveInput), "move")) {
+    return null;
+  }
+
+  try {
+    if (adjustmentType === "offense") {
+      const offenseInput = buildOffenseAdjustmentInput(
+        targetForm,
+        createOffenseAdjustmentFormFromScenarioAttack(attackForm),
+      );
+      return {
+        defenderBuild: offenseInput.defenderBuild,
+        hit: buildOffenseHit(offenseInput.attackerBuild, offenseInput),
+        field: offenseInput.field,
+      };
+    }
+
+    const previewScenario: ScenarioFormState = {
+      id: "move-power-preview",
+      label: "威力プレビュー",
+      enabled: true,
+      adjustmentType: "defence",
+      attacks: [attackForm],
+    };
+    const hit = toScenarioHit(
+      previewScenario,
+      attackForm,
+      0,
+      0,
+      normalizeBoosts(targetForm.boosts),
+    );
+    return {
+      defenderBuild: buildTargetBuildFromUi(targetForm, "move-power-preview-defender"),
+      hit,
+      field: hit.field ?? toFieldState(attackForm),
+    };
+  } catch {
+    return null;
+  }
+};
 
 export const createOffenseAdjustmentFormFromScenarioAttack = (
   attackForm: ScenarioAttackFormState,
@@ -863,6 +1021,8 @@ export const createOffenseAdjustmentFormFromScenarioAttack = (
   defenderStatPoints: attackForm.attackerStatPoints,
   defenderBoosts: attackForm.attackerBoosts,
   moveInput: attackForm.moveInput,
+  movePowerMode: attackForm.movePowerMode,
+  movePowerValue: attackForm.movePowerValue,
   hpEvents: attackForm.hpEvents ?? [],
   targetKoProbabilityPercent: attackForm.targetKoProbabilityPercent,
   gameType: attackForm.gameType,

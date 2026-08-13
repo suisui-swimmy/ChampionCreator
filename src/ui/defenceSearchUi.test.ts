@@ -8,10 +8,13 @@ import {
   applyCandidateToTarget,
   applyMaximizeRemainingBulkToTarget,
   applyMoveHitCountDefaults,
+  applyMoveInputDefaults,
+  applyMovePowerDefaults,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
   applyTopCandidateToTarget,
   buildMaximizeRemainingBulkInputFromUi,
+  buildMovePowerPreviewInputFromUi,
   buildOffenseAdjustmentInput,
   buildDefenceSearchInput,
   buildIntegratedDefenceSearchInput,
@@ -581,6 +584,128 @@ describe("buildDefenceSearchInput", () => {
     expect(updated.requiredSurvivedHits).toBe(1);
   });
 
+  it("resets power and an auto-filled hit count from the same previous move", () => {
+    const base = createDefaultScenarioForms()[0].attacks[0];
+    const multiHit = applyMoveInputDefaults(base, "タネマシンガン", true);
+    const assisted = applyMoveInputDefaults(multiHit, "おはかまいり", true);
+    const singleHit = applyMoveInputDefaults(assisted, "ふいうち", true);
+
+    expect(multiHit).toMatchObject({ repeat: 5, requiredSurvivedHits: 5 });
+    expect(assisted).toMatchObject({
+      repeat: 1,
+      requiredSurvivedHits: 1,
+      movePowerMode: "assisted",
+      movePowerValue: 50,
+    });
+    expect(singleHit).toMatchObject({
+      repeat: 1,
+      requiredSurvivedHits: 1,
+      movePowerMode: "auto",
+      movePowerValue: 0,
+    });
+  });
+
+  it("rejects Beat Up instead of evaluating it as a zero-power move", () => {
+    const target = createDefaultTargetForm();
+    const [scenario] = createDefaultScenarioForms();
+    const beatUpScenario = {
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        moveInput: "ふくろだたき",
+      })),
+    };
+    const offenseForm = {
+      ...createDefaultOffenseAdjustmentForm(),
+      moveInput: "ふくろだたき",
+    };
+
+    expect(() => buildDefenceSearchInput(target, [beatUpScenario]))
+      .toThrow("ふくろだたきは参加ポケモンごとに威力が異なる");
+    expect(() => buildOffenseAdjustmentInput(target, offenseForm))
+      .toThrow("ふくろだたきは参加ポケモンごとに威力が異なる");
+  });
+
+  it("selects the assisted default only when the resolved move changes", () => {
+    const attack = {
+      ...createDefaultScenarioForms()[0].attacks[0],
+      movePowerMode: "manual" as const,
+      movePowerValue: 99,
+    };
+
+    const assisted = applyMovePowerDefaults(attack, "おはかまいり");
+    expect(assisted).toMatchObject({
+      moveInput: "おはかまいり",
+      movePowerMode: "assisted",
+      movePowerValue: 50,
+    });
+
+    const sameCanonical = applyMovePowerDefaults({
+      ...assisted,
+      movePowerValue: 150,
+    }, "Last Respects");
+    expect(sameCanonical).toMatchObject({
+      moveInput: "Last Respects",
+      movePowerMode: "assisted",
+      movePowerValue: 150,
+    });
+
+    expect(applyMovePowerDefaults(sameCanonical, "ふいうち")).toMatchObject({
+      movePowerMode: "auto",
+      movePowerValue: 0,
+    });
+  });
+
+  it("passes only registry-approved move-power overrides to defence hits", () => {
+    const target = createDefaultTargetForm();
+    const [scenario] = createDefaultScenarioForms();
+    const buildWithPower = (movePowerMode: "assisted" | "manual", movePowerValue: number) =>
+      buildDefenceSearchInput(target, [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          moveInput: "おはかまいり",
+          movePowerMode,
+          movePowerValue,
+        }],
+      }]).scenarios[0].hits[0];
+
+    expect(buildWithPower("assisted", 150).movePowerOverride).toEqual({
+      source: "assisted",
+      value: 150,
+    });
+    expect(buildWithPower("assisted", 125).movePowerOverride).toBeUndefined();
+    expect(buildWithPower("manual", 137).movePowerOverride).toEqual({
+      source: "manual",
+      value: 137,
+    });
+
+    const hpDependentMove = buildDefenceSearchInput(target, [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        moveInput: "ふんか",
+        movePowerMode: "manual" as const,
+        movePowerValue: 87,
+      }],
+    }]).scenarios[0].hits[0];
+    expect(hpDependentMove.movePowerOverride).toEqual({
+      source: "manual",
+      value: 87,
+    });
+
+    const fixedMove = buildDefenceSearchInput(target, [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        moveInput: "ふいうち",
+        movePowerMode: "manual" as const,
+        movePowerValue: 137,
+      }],
+    }]).scenarios[0].hits[0];
+    expect(fixedMove.movePowerOverride).toBeUndefined();
+  });
+
   it("passes multi-hit move counts to the domain hit", () => {
     const target = createDefaultTargetForm();
     const [defaultScenario] = createDefaultScenarioForms();
@@ -851,6 +976,8 @@ describe("buildOffenseAdjustmentInput", () => {
       attackerStatPoints: { ...scenario.attacks[0].attackerStatPoints, hp: 4, def: 2 },
       attackerBoosts: { ...scenario.attacks[0].attackerBoosts, def: 1 },
       moveInput: "インファイト",
+      movePowerMode: "manual" as const,
+      movePowerValue: 137,
       hpEvents: [{
         id: "sand",
         effectId: "sandstorm-damage",
@@ -868,6 +995,8 @@ describe("buildOffenseAdjustmentInput", () => {
       defenderStatPoints: { hp: 4, def: 2 },
       defenderBoosts: { def: 1 },
       moveInput: "インファイト",
+      movePowerMode: "manual",
+      movePowerValue: 137,
       hpEvents: [{
         id: "sand",
         effectId: "sandstorm-damage",
@@ -892,6 +1021,8 @@ describe("buildOffenseAdjustmentInput", () => {
       defenderStatus: "par" as const,
       defenderStatPoints: { hp: 4, atk: 0, def: 2, spa: 0, spd: 0, spe: 0 },
       moveInput: "インファイト",
+      movePowerMode: "assisted" as const,
+      movePowerValue: 150,
       hpEvents: [
         {
           id: "life-orb",
@@ -922,6 +1053,7 @@ describe("buildOffenseAdjustmentInput", () => {
     expect(input.defenderBuild.status).toBe("par");
     expect(input.defenderBuild.statPoints?.hp).toBe(4);
     expect(input.move.canonicalName).toBe("Close Combat");
+    expect(input.movePowerOverride).toBeUndefined();
     expect(input.targetKoProbability).toBe(0.75);
     expect(input.hpEvents).toEqual([
       {
@@ -946,6 +1078,19 @@ describe("buildOffenseAdjustmentInput", () => {
     ]);
     expect(input.attackerBoosts.atk).toBe(1);
     expect(input.defenderSide.reflect).toBe(true);
+  });
+
+  it("passes an approved assisted power through the offense input", () => {
+    const offense = {
+      ...createDefaultOffenseAdjustmentForm(),
+      moveInput: "おはかまいり",
+      movePowerMode: "assisted" as const,
+      movePowerValue: 200,
+    };
+
+    const input = buildOffenseAdjustmentInput(createDefaultTargetForm(), offense);
+
+    expect(input.movePowerOverride).toEqual({ source: "assisted", value: 200 });
   });
 
   it("returns unresolved offense results without throwing when the move cannot be resolved", () => {
@@ -1024,6 +1169,61 @@ describe("buildOffenseAdjustmentInput", () => {
     expect(bodyPress?.owner).toBe("attacker");
     expect(bodyPress?.stat).toBe("def");
     expect(bodyPress?.requiredStatPoints).not.toBeNull();
+  });
+});
+
+describe("buildMovePowerPreviewInputFromUi", () => {
+  it("reuses the defence conversion including an assisted power", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const attack = {
+      ...scenario.attacks[0],
+      moveInput: "おはかまいり",
+      movePowerMode: "assisted" as const,
+      movePowerValue: 150,
+    };
+
+    const preview = buildMovePowerPreviewInputFromUi(
+      createDefaultTargetForm(),
+      "defence",
+      attack,
+    );
+
+    expect(preview?.defenderBuild.pokemon.canonicalName).toBe("Delphox-Mega");
+    expect(preview?.hit).toMatchObject({
+      attacker: { pokemon: { canonicalName: "Kingambit" } },
+      move: { canonicalName: "Last Respects" },
+      movePowerOverride: { source: "assisted", value: 150 },
+    });
+    expect(preview?.field.gameType).toBe("singles");
+  });
+
+  it("reuses the offense conversion with the target as attacker", () => {
+    const [, scenario] = createDefaultScenarioForms();
+    const preview = buildMovePowerPreviewInputFromUi(
+      createDefaultTargetForm(),
+      "offense",
+      scenario.attacks[0],
+    );
+
+    expect(preview?.hit.attacker.pokemon.canonicalName).toBe("Delphox-Mega");
+    expect(preview?.defenderBuild.pokemon.canonicalName).toBe("Gengar-Mega");
+    expect(preview?.hit.move.canonicalName).toBe("Psychic");
+  });
+
+  it("returns null for speed cards and unresolved inputs", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const attack = scenario.attacks[0];
+
+    expect(buildMovePowerPreviewInputFromUi(
+      createDefaultTargetForm(),
+      "speed",
+      attack,
+    )).toBeNull();
+    expect(buildMovePowerPreviewInputFromUi(
+      createDefaultTargetForm(),
+      "defence",
+      { ...attack, moveInput: "しらないわざ" },
+    )).toBeNull();
   });
 });
 

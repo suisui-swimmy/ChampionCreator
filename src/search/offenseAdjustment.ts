@@ -15,6 +15,8 @@ import type { HpEvent, HpEventEvaluation } from "../domain/hpEvents";
 import type {
   Build,
   FieldState,
+  MovePowerEvaluation,
+  MovePowerOverride,
   MoveRef,
   NatureRef,
   ScenarioHit,
@@ -37,6 +39,7 @@ export interface OffenseAdjustmentInput {
   defenderBuild: Build;
   move: MoveRef;
   moveInput: string;
+  movePowerOverride?: MovePowerOverride;
   targetKoProbability: number;
   field: FieldState;
   critical: boolean;
@@ -62,6 +65,7 @@ export interface OffenseAdjustmentResult {
   koProbability: number;
   targetKoProbability: number;
   damageRange: ScenarioHitEvaluation["damageRange"] | null;
+  movePower?: MovePowerEvaluation;
   hpEventEvaluations: HpEventEvaluation[];
   description?: string;
   reason: string;
@@ -102,7 +106,7 @@ const clampProbability = (value: number): number => {
   return Math.min(1, Math.max(0, value));
 };
 
-const buildOffenseHit = (
+export const buildOffenseHit = (
   attackerBuild: Build,
   input: OffenseAdjustmentInput,
 ): ScenarioHit => ({
@@ -110,6 +114,7 @@ const buildOffenseHit = (
   attacker: attackerBuild,
   defenderStatus: input.defenderBuild.status,
   move: input.move,
+  movePowerOverride: input.movePowerOverride,
   repeat: 1,
   critical: input.critical,
   attackerBoosts: input.attackerBoosts,
@@ -253,6 +258,7 @@ const makeFixedResult = (
     koProbability: evaluation.koProbability,
     targetKoProbability: clampProbability(input.targetKoProbability),
     damageRange: evaluation.hitEvaluation.damageRange,
+    movePower: evaluation.hitEvaluation.movePower,
     hpEventEvaluations: evaluation.hpEventEvaluations,
     description: evaluation.hitEvaluation.description,
     reason: passed
@@ -328,6 +334,7 @@ const calculateReferenceLine = (
     koProbability: best.koProbability,
     targetKoProbability,
     damageRange: best.hitEvaluation.damageRange,
+    movePower: best.hitEvaluation.movePower,
     hpEventEvaluations: best.hpEventEvaluations,
     description: best.hitEvaluation.description,
     reason: passed

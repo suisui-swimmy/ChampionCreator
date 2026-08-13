@@ -72,6 +72,28 @@ export interface SideState {
   friendGuard?: boolean;
 }
 
+export interface MovePowerOverride {
+  value: number;
+  source: "assisted" | "manual";
+}
+
+export type MovePowerSource =
+  | "standard"
+  | "automatic"
+  | "assisted"
+  | "manual"
+  | "fixed-damage"
+  | "unsupported"
+  | "status";
+
+export interface MovePowerEvaluation {
+  catalogBasePower: number;
+  appliedBasePower?: number;
+  source: MovePowerSource;
+  perHitBasePowers?: number[];
+  detailLabel?: string;
+}
+
 export interface ScenarioHit {
   id: string;
   attacker: Build;
@@ -79,6 +101,7 @@ export interface ScenarioHit {
   allyAbilities?: AbilityRef[];
   move: MoveRef;
   moveHits?: number;
+  movePowerOverride?: MovePowerOverride;
   hpEvents?: HpEvent[];
   field?: FieldState;
   constraint?: SurvivalConstraint;
@@ -118,6 +141,8 @@ export interface ScenarioHitEvaluation {
   damageRollsByHit?: number[][];
   damageRange: DamageRange;
   description?: string;
+  /** Optional while legacy fixtures and imported evaluations are migrated. */
+  movePower?: MovePowerEvaluation;
 }
 
 export interface ScenarioEvaluation {

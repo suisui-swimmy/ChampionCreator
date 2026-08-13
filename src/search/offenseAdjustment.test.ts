@@ -116,6 +116,19 @@ describe("calculateKoProbability", () => {
 });
 
 describe("calculateOffenseAdjustment", () => {
+  it("returns the actually applied assisted move power", () => {
+    const result = calculateOffenseAdjustment(makeInput("おはかまいり", {
+      movePowerOverride: { value: 200, source: "assisted" },
+    }))[0];
+
+    expect(result.movePower).toEqual({
+      catalogBasePower: 50,
+      appliedBasePower: 200,
+      source: "assisted",
+      detailLabel: "ひんしの味方 3体",
+    });
+  });
+
   it("keeps the direct-only result compatible when no HP events are configured", () => {
     const result = calculateOffenseAdjustment(makeInput("ふいうち"))[0];
 

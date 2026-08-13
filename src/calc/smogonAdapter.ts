@@ -1,4 +1,4 @@
-import { calculate, Field, Generations, Move, Pokemon, Side, type Result, type State } from "@smogon/calc";
+import { calculate, Field, Generations, Move, Pokemon, Side, toID, type Result, type State } from "@smogon/calc";
 import {
   getFinalSpeed,
   isGrounded as isSmogonGroundedInternal,
@@ -6,11 +6,18 @@ import {
 import type {
   Build,
   FieldState,
+  MovePowerEvaluation,
+  MovePowerOverride,
   ScenarioHit,
   ScenarioHitEvaluation,
   SideState,
   StatBoostTable,
 } from "../domain/model";
+import {
+  getMovePowerOverrideDetailLabel,
+  isSinglePowerMoveUnsupported,
+  resolveAllowedMovePowerOverride,
+} from "./movePowerRules";
 
 const SMOGON_GENERATION = Generations.get(9);
 
@@ -225,15 +232,55 @@ const CURRENT_HP_HALF_COMPATIBILITY_MOVES = new Set([
   "Ruination",
 ]);
 
+const FIXED_DAMAGE_MOVES = new Set([
+  "Seismic Toss",
+  "Night Shade",
+  "Dragon Rage",
+  "Sonic Boom",
+  "Final Gambit",
+  "Guardian of Alola",
+  "Nature's Madness",
+  "Super Fang",
+  "Ruination",
+]);
+
+const MOVE_POWER_OVERRIDE_PROXY_PREFIX = "ChampionCreator Power Override: ";
+
 const toSmogonCalculationMove = (
   hit: ScenarioHit,
 ): {
   move: Move;
+  originalMove: Move;
   displayNameOverride?: string;
+  appliedPowerOverride?: MovePowerOverride;
 } => {
   const originalMove = toSmogonMove(hit);
+  const appliedPowerOverride = resolveAllowedMovePowerOverride(
+    originalMove.name,
+    hit.movePowerOverride,
+  );
+  if (appliedPowerOverride) {
+    // Keep the canonical move data, but use a proxy display name so @smogon/calc
+    // does not run a second name-based base-power branch after the explicit
+    // effective base power has been selected.
+    const overrideMove = new Move(SMOGON_GENERATION, originalMove.name, {
+      isCrit: hit.critical,
+      hits: hit.moveHits,
+      overrides: {
+        name: `${MOVE_POWER_OVERRIDE_PROXY_PREFIX}${originalMove.name}` as State.Move["name"],
+        basePower: appliedPowerOverride.value,
+      },
+    });
+    return {
+      move: overrideMove,
+      originalMove,
+      displayNameOverride: originalMove.name,
+      appliedPowerOverride,
+    };
+  }
+
   if (!CURRENT_HP_HALF_COMPATIBILITY_MOVES.has(originalMove.name)) {
-    return { move: originalMove };
+    return { move: originalMove, originalMove };
   }
 
   // This vendor revision only wires the shared half-current-HP formula to
@@ -253,7 +300,75 @@ const toSmogonCalculationMove = (
 
   return {
     move: compatibilityMove,
+    originalMove,
     displayNameOverride: originalMove.name,
+  };
+};
+
+const getCatalogBasePower = (canonicalName: string, originalMove: Move): number =>
+  SMOGON_GENERATION.moves.get(toID(canonicalName))?.basePower ?? originalMove.bp ?? 0;
+
+const getPerHitBasePowers = (
+  canonicalName: string,
+  hitCount: number,
+  appliedBasePower: number | undefined,
+): number[] | undefined => {
+  const normalizedHitCount = Math.max(1, Math.trunc(hitCount));
+  if (normalizedHitCount <= 1) {
+    return undefined;
+  }
+
+  if (canonicalName === "Triple Axel") {
+    return [20, 40, 60].slice(0, normalizedHitCount);
+  }
+  if (canonicalName === "Triple Kick") {
+    return [10, 20, 30].slice(0, normalizedHitCount);
+  }
+  if (appliedBasePower === undefined) {
+    return undefined;
+  }
+  return Array.from({ length: normalizedHitCount }, () => appliedBasePower);
+};
+
+const getMovePowerEvaluation = (
+  canonicalName: string,
+  originalMove: Move,
+  result: Result,
+  appliedPowerOverride?: MovePowerOverride,
+): MovePowerEvaluation => {
+  const catalogBasePower = getCatalogBasePower(canonicalName, originalMove);
+  if (originalMove.category === "Status") {
+    return { catalogBasePower, source: "status" };
+  }
+  if (isSinglePowerMoveUnsupported(originalMove.name)) {
+    return { catalogBasePower, source: "unsupported" };
+  }
+  if (FIXED_DAMAGE_MOVES.has(originalMove.name)) {
+    return { catalogBasePower, source: "fixed-damage" };
+  }
+
+  const appliedBasePower = result.rawDesc.moveBP ?? result.move.bp;
+  const perHitBasePowers = getPerHitBasePowers(
+    originalMove.name,
+    result.move.hits,
+    appliedBasePower,
+  );
+  const source = appliedPowerOverride?.source
+    ?? (result.rawDesc.moveBP === undefined ? "standard" : "automatic");
+
+  return {
+    catalogBasePower,
+    ...(appliedBasePower === undefined ? {} : { appliedBasePower }),
+    source,
+    ...(perHitBasePowers ? { perHitBasePowers } : {}),
+    ...(appliedPowerOverride
+      ? {
+          detailLabel: getMovePowerOverrideDetailLabel(
+            originalMove.name,
+            appliedPowerOverride,
+          ),
+        }
+      : {}),
   };
 };
 
@@ -315,7 +430,12 @@ export const calculateSmogonHit = (
     false,
     { currentHp: defenderCurrentHp },
   );
-  const { move, displayNameOverride } = toSmogonCalculationMove(hit);
+  const {
+    move,
+    originalMove,
+    displayNameOverride,
+    appliedPowerOverride,
+  } = toSmogonCalculationMove(hit);
   const field = toSmogonField(fieldState, hit);
   const result = calculate(SMOGON_GENERATION, attacker, defender, move, field);
   if (displayNameOverride) {
@@ -335,5 +455,11 @@ export const calculateSmogonHit = (
       percentMax: (max / defenderMaxHp) * 100,
     },
     description: getSmogonResultDescription(result),
+    movePower: getMovePowerEvaluation(
+      originalMoveName,
+      originalMove,
+      result,
+      appliedPowerOverride,
+    ),
   };
 };

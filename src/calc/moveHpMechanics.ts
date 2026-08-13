@@ -153,6 +153,9 @@ const currentHpDamageProfiles: Partial<
   },
 };
 
+export const isCurrentHpDependentMoveCanonicalName = (canonicalName: string): boolean =>
+  currentHpDamageProfiles[canonicalName] !== undefined;
+
 const getHpCostProfile = (
   hit: ScenarioHit,
   canonicalName: string,

@@ -26,7 +26,9 @@ describe("shareState", () => {
       attacks: scenario.attacks.map((attack) => ({
         ...attack,
         attackerPokemonInput: "オオニューラ",
-        moveInput: "インファイト",
+        moveInput: "おはかまいり",
+        movePowerMode: "manual" as const,
+        movePowerValue: 137,
         attackerTeraTypeInput: "かくとう",
         attackerTeraEnabled: true,
         attackerDmaxEnabled: true,
@@ -66,7 +68,9 @@ describe("shareState", () => {
     expect(parsed.scenarios[1].adjustmentType).toBe("speed");
     expect(parsed.scenarios[0].attacks[0]).toMatchObject({
       attackerPokemonInput: "オオニューラ",
-      moveInput: "インファイト",
+      moveInput: "おはかまいり",
+      movePowerMode: "manual",
+      movePowerValue: 137,
       attackerTeraEnabled: true,
       attackerDmaxEnabled: true,
       defenderStatus: "brn",
@@ -127,6 +131,93 @@ describe("shareState", () => {
     expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
     expect(parsed).not.toHaveProperty("offenseAdjustment");
     expect(stringifyShareStateDocument(parsed.target, parsed.scenarios)).not.toContain("ピチュー");
+  });
+
+  it("migrates schema v7 attacks without move-power fields to auto", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map(({
+        movePowerMode: _movePowerMode,
+        movePowerValue: _movePowerValue,
+        ...attack
+      }) => attack),
+    }));
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 7,
+      target: createDefaultTargetForm(),
+      scenarios,
+    }));
+
+    expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(parsed.scenarios[0].attacks[0]).toMatchObject({
+      movePowerMode: "auto",
+      movePowerValue: 0,
+    });
+  });
+
+  it.each([
+    [{ movePowerValue: 0 }, "movePowerMode"],
+    [{ movePowerMode: "future", movePowerValue: 80 }, "movePowerMode"],
+    [{ movePowerMode: "auto", movePowerValue: 1 }, "movePowerValue"],
+    [{ movePowerMode: "assisted", movePowerValue: 0 }, "movePowerValue"],
+    [{ movePowerMode: "manual", movePowerValue: 10_001 }, "movePowerValue"],
+    [{ movePowerMode: "manual", movePowerValue: "80" }, "movePowerValue"],
+  ] as const)("rejects invalid schema v8 move-power state %#", (movePower, expectedField) => {
+    const [scenario] = createDefaultScenarioForms();
+    const { movePowerMode: _movePowerMode, movePowerValue: _movePowerValue, ...attack } = scenario.attacks[0];
+
+    expect(() => parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{ ...attack, ...movePower }],
+      }],
+    }))).toThrow(expectedField);
+  });
+
+  it.each([
+    ["じしん", "manual", 137],
+    ["おはかまいり", "assisted", 125],
+    ["未解決の技", "manual", 100],
+  ] as const)("rejects a move-power override that cannot be applied: %s", (
+    moveInput,
+    movePowerMode,
+    movePowerValue,
+  ) => {
+    const [scenario] = createDefaultScenarioForms();
+    expect(() => parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          moveInput,
+          movePowerMode,
+          movePowerValue,
+        }],
+      }],
+    }))).toThrow("技と一致しない威力指定");
+  });
+
+  it("round-trips a manual power for an HP-dependent move", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const document = stringifyShareStateDocument(createDefaultTargetForm(), [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        moveInput: "ふんか",
+        movePowerMode: "manual",
+        movePowerValue: 87,
+      }],
+    }]);
+
+    expect(parseShareStateDocument(document).scenarios[0].attacks[0]).toMatchObject({
+      moveInput: "ふんか",
+      movePowerMode: "manual",
+      movePowerValue: 87,
+    });
   });
 
   it.each([1, 2] as const)("migrates schema version %s attacks without HP events", (schemaVersion) => {

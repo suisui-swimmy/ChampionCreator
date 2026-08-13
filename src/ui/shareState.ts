@@ -3,15 +3,19 @@ import {
   createDefaultScenarioForms,
   createDefaultTargetForm,
   type HpEventFormState,
+  type MovePowerMode,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
   type ScenarioFormState,
   type TargetFormState,
 } from "./defenceSearchUi";
 import type { PokemonStatus } from "../domain/model";
+import { toEntityRef } from "../domain/model";
 import { isSupportedHpEventEffectId } from "../domain/hpEvents";
+import { resolveAllowedMovePowerOverride } from "../calc/movePowerRules";
+import { resolveEntity } from "../localization/resolver";
 
-export const SHARE_SCHEMA_VERSION = 7;
+export const SHARE_SCHEMA_VERSION = 8;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -32,7 +36,8 @@ const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["o
 const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["outspeed", "tie"]);
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | typeof SHARE_SCHEMA_VERSION;
+const movePowerModes = new Set<MovePowerMode>(["auto", "assisted", "manual"]);
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeHpEventNumber = (
   value: unknown,
@@ -112,6 +117,48 @@ const normalizeAttack = (
   const hasSpeedMoveModifier = isRecord(value) && "speedMoveModifier" in value;
   const hasSpeedItemMultiplier = isRecord(value) && "speedItemMultiplier" in value;
   const hasSpeedAbilityMultiplier = isRecord(value) && "speedAbilityMultiplier" in value;
+  const hasMovePowerMode = isRecord(value) && "movePowerMode" in value;
+  const hasMovePowerValue = isRecord(value) && "movePowerValue" in value;
+  let movePowerMode = defaults.movePowerMode;
+  let movePowerValue = defaults.movePowerValue;
+  if (sourceSchemaVersion >= 8) {
+    if (
+      !hasMovePowerMode
+      || typeof input.movePowerMode !== "string"
+      || !movePowerModes.has(input.movePowerMode as MovePowerMode)
+    ) {
+      throw new Error(`条件JSONの攻撃${index + 1}に不正な movePowerMode があります`);
+    }
+    if (
+      !hasMovePowerValue
+      || typeof input.movePowerValue !== "number"
+      || !Number.isFinite(input.movePowerValue)
+      || !Number.isInteger(input.movePowerValue)
+      || (
+        input.movePowerMode === "auto"
+          ? input.movePowerValue !== 0
+          : input.movePowerValue < 1 || input.movePowerValue > 10_000
+      )
+    ) {
+      throw new Error(`条件JSONの攻撃${index + 1}に不正な movePowerValue があります`);
+    }
+    movePowerMode = input.movePowerMode as MovePowerMode;
+    movePowerValue = input.movePowerValue;
+    if (movePowerMode !== "auto") {
+      const canonicalMoveName = typeof input.moveInput === "string"
+        ? toEntityRef(resolveEntity("move", input.moveInput), "move")?.canonicalName
+        : undefined;
+      const allowedOverride = canonicalMoveName
+        ? resolveAllowedMovePowerOverride(canonicalMoveName, {
+            value: movePowerValue,
+            source: movePowerMode,
+          })
+        : undefined;
+      if (!allowedOverride) {
+        throw new Error(`条件JSONの攻撃${index + 1}に技と一致しない威力指定があります`);
+      }
+    }
+  }
   return {
     ...defaults,
     ...input,
@@ -141,6 +188,8 @@ const normalizeAttack = (
       && speedManualMultipliers.has(input.speedAbilityMultiplier as ScenarioAttackFormState["speedAbilityMultiplier"])
       ? input.speedAbilityMultiplier as ScenarioAttackFormState["speedAbilityMultiplier"]
       : defaults.speedAbilityMultiplier,
+    movePowerMode,
+    movePowerValue,
     defenderStatus: hasDefenderStatus
       ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
       : legacyTargetStatus,
@@ -198,6 +247,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 7
       && parsed.schemaVersion !== 6
       && parsed.schemaVersion !== 5
       && parsed.schemaVersion !== 4
