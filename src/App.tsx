@@ -45,6 +45,8 @@ import {
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
   applyMoveInputDefaults,
+  applyBeatUpGameTypeDefaults,
+  applyBeatUpParticipants,
   buildScenarioAttackBuildFromUi,
   buildIntegratedDefenceSearchInput,
   buildMovePowerPreviewInputFromUi,
@@ -63,6 +65,7 @@ import {
   startDefenceSearchFromUi,
   startMaximizeRemainingBulkFromUi,
   type BulkMaximizeUiState,
+  type BeatUpParticipantFormState,
   type HpEventFormState,
   type MovePowerMode,
   type OffenseScenarioResult,
@@ -73,6 +76,11 @@ import {
   type SpeedScenarioResult,
   type TargetFormState,
 } from "./ui/defenceSearchUi";
+import {
+  BEAT_UP_CANONICAL_NAME,
+  getBeatUpBasePowerForPokemon,
+  getBeatUpParticipantLimit,
+} from "./calc/beatUp";
 import { calculateSmogonHit } from "./calc/smogonAdapter";
 import {
   getMovePowerAssistRule,
@@ -578,8 +586,11 @@ export const formatMovePowerEvaluation = (
   }
 
   const perHitBasePowers = evaluation.perHitBasePowers;
-  if (perHitBasePowers && perHitBasePowers.length > 1) {
+  if (perHitBasePowers && perHitBasePowers.length > 0) {
     const uniquePowers = new Set(perHitBasePowers);
+    if (perHitBasePowers.length === 1) {
+      return `威力 ${perHitBasePowers[0]}（1ヒット）`;
+    }
     if (uniquePowers.size > 1) {
       return `威力 ${perHitBasePowers.join("→")}（各ヒット）`;
     }
@@ -1123,6 +1134,16 @@ export function App({
                       String(value),
                       scenario.adjustmentType === "defence",
                     )
+                  : key === "beatUpParticipants"
+                    ? applyBeatUpParticipants(
+                        attack,
+                        value as ScenarioAttackFormState["beatUpParticipants"],
+                      )
+                  : key === "gameType"
+                    ? applyBeatUpGameTypeDefaults(
+                        attack,
+                        value as ScenarioAttackFormState["gameType"],
+                      )
                   : key === "speedMoveModifier"
                     ? applySpeedMoveModifierDefaults(
                         attack,
@@ -4625,6 +4646,215 @@ type MovePowerFieldProps = {
 const isValidManualMovePower = (value: number): boolean =>
   Number.isInteger(value) && value >= 1 && value <= 10_000;
 
+type BeatUpPowerFieldProps = {
+  attackLabel: string;
+  attackerPokemonInput: string;
+  participants: BeatUpParticipantFormState[];
+  gameType: GameType;
+  evaluation?: MovePowerEvaluation;
+  onChange: (participants: BeatUpParticipantFormState[]) => void;
+};
+
+const getBeatUpParticipantPower = (
+  participant: BeatUpParticipantFormState,
+  attackerPokemonInput: string,
+): number | undefined => {
+  if (participant.powerMode === "manual" && isValidManualMovePower(participant.powerValue)) {
+    return participant.powerValue;
+  }
+  const pokemonInput = participant.source === "attacker"
+    ? attackerPokemonInput
+    : participant.pokemonInput;
+  const canonicalName = resolveCanonicalEntityName("pokemon", pokemonInput);
+  return canonicalName ? getBeatUpBasePowerForPokemon(canonicalName) : undefined;
+};
+
+function BeatUpPowerField({
+  attackLabel,
+  attackerPokemonInput,
+  participants,
+  gameType,
+  evaluation,
+  onChange,
+}: BeatUpPowerFieldProps) {
+  const limit = getBeatUpParticipantLimit(gameType);
+  const displayedPowers = evaluation?.perHitBasePowers
+    ?? participants.map((participant) => getBeatUpParticipantPower(
+      participant,
+      attackerPokemonInput,
+    ));
+  const compactPower = displayedPowers.length > 0
+    ? displayedPowers.map((power) => power ?? "?").join("/")
+    : "—";
+  const updateParticipant = (
+    index: number,
+    patch: Partial<BeatUpParticipantFormState>,
+  ) => onChange(participants.map((participant, participantIndex) => (
+    participantIndex === index ? { ...participant, ...patch } : participant
+  )));
+  const moveParticipant = (index: number, offset: -1 | 1) => {
+    const nextIndex = index + offset;
+    if (nextIndex < 0 || nextIndex >= participants.length) {
+      return;
+    }
+    const nextParticipants = [...participants];
+    [nextParticipants[index], nextParticipants[nextIndex]] = [
+      nextParticipants[nextIndex],
+      nextParticipants[index],
+    ];
+    onChange(nextParticipants);
+  };
+  const removeParticipant = (index: number) => {
+    if (participants[index]?.source === "attacker") {
+      return;
+    }
+    onChange(participants.filter((_participant, participantIndex) => participantIndex !== index));
+  };
+  const addParticipant = () => {
+    if (participants.length >= limit) {
+      return;
+    }
+    onChange([...participants, {
+      id: `beat-up-party-${Date.now()}-${participants.length}`,
+      source: "party",
+      pokemonInput: "",
+      powerMode: "auto",
+      powerValue: 0,
+    }]);
+  };
+
+  return (
+    <div className="move-power-field beat-up-power-field" role="group" aria-label={`${attackLabel} 威力`}>
+      <span className="move-power-label">威力</span>
+      <UiPopover.Root>
+        <UiPopover.Trigger asChild>
+          <button
+            className="move-power-trigger"
+            type="button"
+            aria-label={`${attackLabel} ふくろだたき参加ポケモンを設定。威力 ${compactPower}`}
+          >
+            <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+          </button>
+        </UiPopover.Trigger>
+        <UiPopover.Portal>
+          <UiPopover.Content
+            className="move-power-popover beat-up-popover"
+            sideOffset={6}
+            align="end"
+            collisionPadding={8}
+            aria-label={`${attackLabel} ふくろだたき参加ポケモン`}
+          >
+            <div className="beat-up-popover-header">
+              <strong>参加ポケモン</strong>
+              <span>{participants.length} / {limit}</span>
+            </div>
+            <ol className="beat-up-participant-list">
+              {participants.map((participant, index) => {
+                const automaticPower = getBeatUpParticipantPower(
+                  { ...participant, powerMode: "auto", powerValue: 0 },
+                  attackerPokemonInput,
+                );
+                const isManual = participant.powerMode === "manual";
+                return (
+                  <li className="beat-up-participant-row" key={participant.id}>
+                    <div className="beat-up-order-controls" aria-label={`${index + 1}番目の並び順`}>
+                      <button
+                        type="button"
+                        aria-label={`${index + 1}番目を前へ`}
+                        disabled={index === 0}
+                        onClick={() => moveParticipant(index, -1)}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${index + 1}番目を後ろへ`}
+                        disabled={index === participants.length - 1}
+                        onClick={() => moveParticipant(index, 1)}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                    <div className="beat-up-participant-pokemon">
+                      {participant.source === "attacker" ? (
+                        <span className="beat-up-attacker-label">
+                          <strong>{attackerPokemonInput || "使用者"}</strong>
+                          <small>使用者</small>
+                        </span>
+                      ) : (
+                        <ScenarioTextField
+                          kind="pokemon"
+                          label={`参加ポケモン${index + 1}`}
+                          showLabel={false}
+                          value={participant.pokemonInput}
+                          onChange={(event) => updateParticipant(index, { pokemonInput: event.target.value })}
+                          onSelectValue={(pokemonInput) => updateParticipant(index, { pokemonInput })}
+                        />
+                      )}
+                    </div>
+                    <div className={`move-power-inline-control beat-up-participant-power ${isManual ? "is-manual" : "is-automatic"}`}>
+                      {isManual ? (
+                        <input
+                          {...numericInputProps}
+                          value={participant.powerValue}
+                          min={1}
+                          max={10_000}
+                          aria-label={`${index + 1}番目の任意威力`}
+                          onFocus={selectInputValueOnFocus}
+                          onChange={(event) => updateParticipant(index, {
+                            powerValue: clampNumberInput(toNumber(event.target.value, 1), 1, 10_000),
+                          })}
+                        />
+                      ) : (
+                        <strong>{automaticPower ?? "?"}</strong>
+                      )}
+                      <button
+                        className={`move-power-lock-toggle ${isManual ? "is-open" : "is-closed"}`}
+                        type="button"
+                        disabled={!isManual && automaticPower === undefined}
+                        aria-label={isManual
+                          ? `${index + 1}番目の威力を自動入力に戻す`
+                          : `${index + 1}番目の威力の自動入力を解除`}
+                        onClick={() => updateParticipant(index, isManual
+                          ? { powerMode: "auto", powerValue: 0 }
+                          : { powerMode: "manual", powerValue: automaticPower ?? 1 })}
+                      >
+                        <img
+                          src={getAssetSrc(isManual ? "assets/ui/lock-open.svg" : "assets/ui/lock.svg")}
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </div>
+                    <button
+                      className="beat-up-remove-participant"
+                      type="button"
+                      aria-label={`${index + 1}番目の参加ポケモンを削除`}
+                      disabled={participant.source === "attacker"}
+                      onClick={() => removeParticipant(index)}
+                    >
+                      <img src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+            <Button
+              variant="ghost"
+              size="small"
+              disabled={participants.length >= limit}
+              onClick={addParticipant}
+            >
+              参加ポケモンを追加
+            </Button>
+            <UiPopover.Arrow className="move-power-popover-arrow" />
+          </UiPopover.Content>
+        </UiPopover.Portal>
+      </UiPopover.Root>
+    </div>
+  );
+}
+
 function MovePowerField({
   attackLabel,
   hasMove,
@@ -5027,6 +5257,7 @@ function AttackCard({
     ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
   ]));
   const moveCanonicalName = resolveCanonicalEntityName("move", attack.moveInput);
+  const isBeatUp = moveCanonicalName === BEAT_UP_CANONICAL_NAME;
   const movePowerAssistRule = moveCanonicalName
     ? getMovePowerAssistRule(moveCanonicalName)
     : undefined;
@@ -5153,28 +5384,46 @@ function AttackCard({
               onChange={onInput("moveInput")}
               onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
             />
-            <MovePowerField
-              attackLabel={attackLabel}
-              hasMove={Boolean(moveCanonicalName)}
-              mode={attack.movePowerMode}
-              value={attack.movePowerValue}
-              evaluation={movePowerEvaluation}
-              catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
-              assistRule={movePowerAssistRule}
-              hpDependent={hpDependentMovePower}
-              manualAllowed={Boolean(
-                moveCanonicalName
-                && isMovePowerOverrideAllowed(moveCanonicalName)
-                && movePowerEvaluation?.source !== "fixed-damage",
-              )}
-              unsupported={Boolean(
-                moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
-              )}
-              onCommit={(mode, value) => {
-                onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
-                onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
-              }}
-            />
+            {isBeatUp ? (
+              <BeatUpPowerField
+                attackLabel={attackLabel}
+                attackerPokemonInput={isOffenseAdjustment
+                  ? targetForm.pokemonInput
+                  : attack.attackerPokemonInput}
+                participants={attack.beatUpParticipants}
+                gameType={attack.gameType}
+                evaluation={movePowerEvaluation}
+                onChange={(participants) => onUpdateAttack(
+                  scenarioId,
+                  attack.id,
+                  "beatUpParticipants",
+                  participants,
+                )}
+              />
+            ) : (
+              <MovePowerField
+                attackLabel={attackLabel}
+                hasMove={Boolean(moveCanonicalName)}
+                mode={attack.movePowerMode}
+                value={attack.movePowerValue}
+                evaluation={movePowerEvaluation}
+                catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
+                assistRule={movePowerAssistRule}
+                hpDependent={hpDependentMovePower}
+                manualAllowed={Boolean(
+                  moveCanonicalName
+                  && isMovePowerOverrideAllowed(moveCanonicalName)
+                  && movePowerEvaluation?.source !== "fixed-damage",
+                )}
+                unsupported={Boolean(
+                  moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
+                )}
+                onCommit={(mode, value) => {
+                  onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
+                  onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
+                }}
+              />
+            )}
           </div>
         ) : null}
         <div className={`attack-card-field-row attack-card-details-row${isAbilitySupport ? " single" : ""}`}>
@@ -5453,6 +5702,7 @@ function AttackCard({
                 value={attack.repeat}
                 min={1}
                 max={10}
+                disabled={isBeatUp}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)}
               />
               <ScenarioNumberField
@@ -5711,6 +5961,7 @@ type ScenarioNumberFieldProps = {
   value: number;
   min: number;
   max: number;
+  disabled?: boolean;
   onFocus?: () => void;
   onChange: (value: number) => void;
   suffix?: string;
@@ -5723,6 +5974,7 @@ function ScenarioNumberField({
   value,
   min,
   max,
+  disabled,
   onFocus,
   onChange,
   suffix,
@@ -5736,6 +5988,7 @@ function ScenarioNumberField({
         <input
           {...numericInputProps}
           value={value}
+          disabled={disabled}
           aria-label={ariaLabel}
           onFocus={(event) => {
             selectInputValueOnFocus(event);

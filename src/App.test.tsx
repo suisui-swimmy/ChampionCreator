@@ -27,6 +27,7 @@ import {
   normalizeNumericInputText,
 } from "./App";
 import {
+  applyMoveInputDefaults,
   createDefaultScenarioForms,
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
@@ -675,24 +676,22 @@ describe("App", () => {
       .toBe("個別威力（現在の計算には未対応）");
   });
 
-  it("shows Beat Up as unsupported instead of an automatic zero-power move", () => {
+  it("shows Beat Up power and opens its participant settings", () => {
     const [scenario] = createDefaultScenarioForms();
+    const beatUpAttack = applyMoveInputDefaults(scenario.attacks[0], "ふくろだたき", true);
     const html = renderToStaticMarkup(
       <App
         initialTargetForm={createDefaultTargetForm()}
         initialScenarioForms={[{
           ...scenario,
-          attacks: scenario.attacks.map((attack) => ({
-            ...attack,
-            moveInput: "ふくろだたき",
-          })),
+          attacks: [beatUpAttack],
         }]}
       />,
     );
 
-    expect(html).toContain('aria-label="個別威力（現在の計算には未対応）"');
-    expect(html).toContain("<strong>個別</strong>");
-    expect(html).not.toContain("威力 0");
+    expect(html).toContain("ふくろだたき参加ポケモンを設定。威力 18");
+    expect(html).toContain("<strong>18</strong>");
+    expect(html).toContain('disabled="" aria-label="攻撃回数" value="1"');
   });
 
   it("keeps HP events collapsed in attack cards and summarizes them on mobile", () => {

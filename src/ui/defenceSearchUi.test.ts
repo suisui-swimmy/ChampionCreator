@@ -10,6 +10,8 @@ import {
   applyMoveHitCountDefaults,
   applyMoveInputDefaults,
   applyMovePowerDefaults,
+  applyBeatUpGameTypeDefaults,
+  applyBeatUpParticipants,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
   applyTopCandidateToTarget,
@@ -605,25 +607,59 @@ describe("buildDefenceSearchInput", () => {
     });
   });
 
-  it("rejects Beat Up instead of evaluating it as a zero-power move", () => {
+  it("builds Beat Up as an ordered participant sequence", () => {
     const target = createDefaultTargetForm();
     const [scenario] = createDefaultScenarioForms();
+    const beatUpAttack = applyMoveInputDefaults(
+      scenario.attacks[0],
+      "ふくろだたき",
+      true,
+    );
     const beatUpScenario = {
       ...scenario,
-      attacks: scenario.attacks.map((attack) => ({
-        ...attack,
-        moveInput: "ふくろだたき",
-      })),
+      attacks: [beatUpAttack],
     };
-    const offenseForm = {
-      ...createDefaultOffenseAdjustmentForm(),
-      moveInput: "ふくろだたき",
-    };
+    const offenseForm = createOffenseAdjustmentFormFromScenarioAttack(beatUpAttack);
 
-    expect(() => buildDefenceSearchInput(target, [beatUpScenario]))
-      .toThrow("ふくろだたきは参加ポケモンごとに威力が異なる");
-    expect(() => buildOffenseAdjustmentInput(target, offenseForm))
-      .toThrow("ふくろだたきは参加ポケモンごとに威力が異なる");
+    const defenceInput = buildDefenceSearchInput(target, [beatUpScenario]);
+    const offenseInput = buildOffenseAdjustmentInput(target, offenseForm);
+
+    expect(defenceInput.scenarios[0].hits[0]).toMatchObject({
+      repeat: 1,
+      moveHits: 1,
+      moveContext: {
+        kind: "beat-up",
+        participants: [{ pokemon: { canonicalName: "Kingambit" } }],
+      },
+    });
+    expect(offenseInput.moveContext).toMatchObject({
+      kind: "beat-up",
+      participants: [{ pokemon: { canonicalName: "Delphox-Mega" } }],
+    });
+  });
+
+  it("uses three Beat Up slots in singles and four in doubles", () => {
+    const base = applyMoveInputDefaults(
+      createDefaultScenarioForms()[0].attacks[0],
+      "ふくろだたき",
+      true,
+    );
+    const withThree = applyBeatUpParticipants(base, [
+      base.beatUpParticipants[0],
+      { id: "party-1", source: "party", pokemonInput: "コータス", powerMode: "auto", powerValue: 0 },
+      { id: "party-2", source: "party", pokemonInput: "コノヨザル", powerMode: "auto", powerValue: 0 },
+    ]);
+    const doubles = applyBeatUpGameTypeDefaults(withThree, "doubles");
+    const withFour = applyBeatUpParticipants(doubles, [
+      ...doubles.beatUpParticipants,
+      { id: "party-3", source: "party", pokemonInput: "ピカチュウ", powerMode: "manual", powerValue: 22 },
+    ]);
+    const singlesAgain = applyBeatUpGameTypeDefaults(withFour, "singles");
+
+    expect(withThree).toMatchObject({ repeat: 3, requiredSurvivedHits: 3 });
+    expect(withFour).toMatchObject({ repeat: 4, requiredSurvivedHits: 4 });
+    expect(singlesAgain.beatUpParticipants).toHaveLength(3);
+    expect(singlesAgain.beatUpParticipants.some((participant) => participant.source === "attacker")).toBe(true);
   });
 
   it("selects the assisted default only when the resolved move changes", () => {

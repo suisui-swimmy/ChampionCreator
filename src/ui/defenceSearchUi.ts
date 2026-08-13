@@ -7,6 +7,7 @@ import type {
 import { createBulkMaximizeRequestId, createDefenceSearchRequestId } from "../worker/defenceSearchWorkerClient";
 import type {
   Build,
+  BeatUpMoveContext,
   CandidateResult,
   DefenceSearchStatKey,
   EntityRef,
@@ -38,9 +39,12 @@ import {
 } from "../calc/hpEventRules";
 import {
   getMovePowerAssistRule,
-  isSinglePowerMoveUnsupported,
   resolveAllowedMovePowerOverride,
 } from "../calc/movePowerRules";
+import {
+  BEAT_UP_CANONICAL_NAME,
+  getBeatUpParticipantLimit,
+} from "../calc/beatUp";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 import {
@@ -72,6 +76,15 @@ import natureOptionsData from "../data/generated/nature-options.gen.json";
 export type SpeedTargetMode = "opponent" | "manual";
 export type SpeedMoveModifier = "none" | "tailwind" | "trick-room";
 export type MovePowerMode = "auto" | "assisted" | "manual";
+export type BeatUpParticipantPowerMode = "auto" | "manual";
+
+export interface BeatUpParticipantFormState {
+  id: string;
+  source: "attacker" | "party";
+  pokemonInput: string;
+  powerMode: BeatUpParticipantPowerMode;
+  powerValue: number;
+}
 
 export interface HpEventFormState {
   id: string;
@@ -113,6 +126,7 @@ export interface ScenarioAttackFormState {
   moveInput: string;
   movePowerMode: MovePowerMode;
   movePowerValue: number;
+  beatUpParticipants: BeatUpParticipantFormState[];
   hpEvents: HpEventFormState[];
   repeat: number;
   requiredSurvivedHits: number;
@@ -162,6 +176,7 @@ export interface OffenseAdjustmentFormState {
   moveInput: string;
   movePowerMode: MovePowerMode;
   movePowerValue: number;
+  beatUpParticipants: BeatUpParticipantFormState[];
   hpEvents: HpEventFormState[];
   targetKoProbabilityPercent: number;
   gameType: GameType;
@@ -456,6 +471,7 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   moveInput: "ふいうち",
   movePowerMode: "auto",
   movePowerValue: 0,
+  beatUpParticipants: [],
   hpEvents: [],
   repeat: 1,
   requiredSurvivedHits: 1,
@@ -530,10 +546,59 @@ const resolveMovePowerOverrideFromUi = (
   });
 };
 
-const assertMovePowerCalculationSupported = (canonicalName: string): void => {
-  if (isSinglePowerMoveUnsupported(canonicalName)) {
-    throw new Error("ふくろだたきは参加ポケモンごとに威力が異なるため、現在の計算には対応していません");
+export const createDefaultBeatUpParticipants = (
+  attackId = "attack",
+): BeatUpParticipantFormState[] => [{
+  id: `${attackId}-beat-up-attacker`,
+  source: "attacker",
+  pokemonInput: "",
+  powerMode: "auto",
+  powerValue: 0,
+}];
+
+const isBeatUpInput = (moveInput: string): boolean =>
+  resolveMoveCanonicalName(moveInput) === BEAT_UP_CANONICAL_NAME;
+
+export const applyBeatUpParticipants = (
+  attackForm: ScenarioAttackFormState,
+  participants: BeatUpParticipantFormState[],
+): ScenarioAttackFormState => {
+  const limit = getBeatUpParticipantLimit(attackForm.gameType);
+  const nextParticipants = participants.slice(0, limit);
+  const previousCount = Math.max(1, attackForm.beatUpParticipants.length);
+  const nextCount = Math.max(1, nextParticipants.length);
+  const shouldSyncRequiredHits = attackForm.requiredSurvivedHits === previousCount;
+  return {
+    ...attackForm,
+    beatUpParticipants: nextParticipants,
+    repeat: nextCount,
+    requiredSurvivedHits: shouldSyncRequiredHits
+      ? nextCount
+      : Math.min(attackForm.requiredSurvivedHits, nextCount),
+  };
+};
+
+export const applyBeatUpGameTypeDefaults = (
+  attackForm: ScenarioAttackFormState,
+  gameType: GameType,
+): ScenarioAttackFormState => {
+  const nextForm = { ...attackForm, gameType };
+  if (!isBeatUpInput(attackForm.moveInput)) {
+    return nextForm;
   }
+  const limit = getBeatUpParticipantLimit(gameType);
+  const attackerParticipant = attackForm.beatUpParticipants.find(
+    (participant) => participant.source === "attacker",
+  ) ?? createDefaultBeatUpParticipants(attackForm.id)[0];
+  const nextParticipants = attackForm.beatUpParticipants.slice(0, limit);
+  if (!nextParticipants.some((participant) => participant.source === "attacker")) {
+    if (nextParticipants.length === 0) {
+      nextParticipants.push(attackerParticipant);
+    } else {
+      nextParticipants[nextParticipants.length - 1] = attackerParticipant;
+    }
+  }
+  return applyBeatUpParticipants(nextForm, nextParticipants);
 };
 
 export const applyMovePowerDefaults = (
@@ -554,6 +619,9 @@ export const applyMovePowerDefaults = (
     moveInput,
     movePowerMode: assistRule ? "assisted" : "auto",
     movePowerValue: assistRule?.defaultPower ?? 0,
+    beatUpParticipants: nextCanonicalName === BEAT_UP_CANONICAL_NAME
+      ? createDefaultBeatUpParticipants(attackForm.id)
+      : [],
   };
 };
 
@@ -571,10 +639,65 @@ export const applyMoveInputDefaults = (
   // with the other's result would lose the previous move needed to clear an
   // automatically selected multi-hit count.
   const withHitCountDefaults = applyMoveHitCountDefaults(attackForm, moveInput);
+  const beatUpParticipantCount = withPowerDefaults.beatUpParticipants.length;
+  if (beatUpParticipantCount > 0) {
+    return {
+      ...withPowerDefaults,
+      repeat: beatUpParticipantCount,
+      requiredSurvivedHits: beatUpParticipantCount,
+    };
+  }
   return {
     ...withPowerDefaults,
     repeat: withHitCountDefaults.repeat,
     requiredSurvivedHits: withHitCountDefaults.requiredSurvivedHits,
+  };
+};
+
+const toBeatUpMoveContext = (
+  canonicalMoveName: string,
+  attacker: Build,
+  participants: BeatUpParticipantFormState[],
+  gameType: GameType,
+): BeatUpMoveContext | undefined => {
+  if (canonicalMoveName !== BEAT_UP_CANONICAL_NAME) {
+    return undefined;
+  }
+  const limit = getBeatUpParticipantLimit(gameType);
+  if (participants.length < 1 || participants.length > limit) {
+    throw new Error(`ふくろだたきの参加ポケモンは${gameType === "doubles" ? "ダブル4体" : "シングル3体"}までです`);
+  }
+  if (participants.filter((participant) => participant.source === "attacker").length !== 1) {
+    throw new Error("ふくろだたきの参加ポケモンに使用者を1体指定してください");
+  }
+
+  return {
+    kind: "beat-up",
+    participants: participants.map((participant, participantIndex) => {
+      const pokemon = participant.source === "attacker"
+        ? attacker.pokemon
+        : mustResolve(
+          "pokemon",
+          participant.pokemonInput,
+          `ふくろだたき参加ポケモン${participantIndex + 1}`,
+        );
+      if (
+        participant.powerMode === "manual"
+        && (
+          !Number.isInteger(participant.powerValue)
+          || participant.powerValue < 1
+          || participant.powerValue > 10_000
+        )
+      ) {
+        throw new Error(`ふくろだたき参加ポケモン${participantIndex + 1}の威力が不正です`);
+      }
+      return {
+        pokemon,
+        ...(participant.powerMode === "manual"
+          ? { powerOverride: participant.powerValue }
+          : {}),
+      };
+    }),
   };
 };
 
@@ -658,6 +781,7 @@ export const createDefaultOffenseAdjustmentForm = (): OffenseAdjustmentFormState
   moveInput: "ふいうち",
   movePowerMode: "auto",
   movePowerValue: 0,
+  beatUpParticipants: [],
   hpEvents: [],
   targetKoProbabilityPercent: 100,
   gameType: "singles",
@@ -728,7 +852,7 @@ const toScenarioHit = (
   targetBoosts: StatBoostTable,
 ): ScenarioHit => {
   const moveHitRange = getMoveHitCountRangeFromInput(attackForm.moveInput);
-  const repeat = moveHitRange
+  const configuredRepeat = moveHitRange
     ? clampInt(attackForm.repeat, moveHitRange.minHits, moveHitRange.maxHits)
     : Math.max(1, clampInt(attackForm.repeat, 1, 10));
   const requiredSurvivedHits = Math.max(
@@ -740,7 +864,13 @@ const toScenarioHit = (
     `${scenarioForm.id}-${attackForm.id}-attacker`,
   );
   const move = mustResolve("move", attackForm.moveInput, "技");
-  assertMovePowerCalculationSupported(move.canonicalName);
+  const moveContext = toBeatUpMoveContext(
+    move.canonicalName,
+    attacker,
+    attackForm.beatUpParticipants,
+    attackForm.gameType,
+  );
+  const repeat = moveContext?.participants.length ?? configuredRepeat;
   const movePowerOverride = resolveMovePowerOverrideFromUi(
     move.canonicalName,
     attackForm.movePowerMode,
@@ -763,8 +893,9 @@ const toScenarioHit = (
         .filter((ability) => isActiveAllyAbilityCanonicalName(ability.canonicalName))
       : undefined,
     move,
-    moveHits: moveHitRange ? repeat : undefined,
+    moveHits: moveContext ? repeat : moveHitRange ? repeat : undefined,
     ...(movePowerOverride ? { movePowerOverride } : {}),
+    ...(moveContext ? { moveContext } : {}),
     hpEvents: toDomainHpEvents(attackForm.hpEvents ?? []),
     field: toFieldState(attackForm),
     constraint: {
@@ -906,14 +1037,20 @@ export const buildOffenseAdjustmentInput = (
   offenseForm: OffenseAdjustmentFormState,
 ): OffenseAdjustmentInput => {
   const move = mustResolve("move", offenseForm.moveInput, "火力調整の技");
-  assertMovePowerCalculationSupported(move.canonicalName);
+  const attackerBuild = buildTargetBuildFromUi(targetForm, "offense-attacker");
+  const moveContext = toBeatUpMoveContext(
+    move.canonicalName,
+    attackerBuild,
+    offenseForm.beatUpParticipants,
+    offenseForm.gameType,
+  );
   const movePowerOverride = resolveMovePowerOverrideFromUi(
     move.canonicalName,
     offenseForm.movePowerMode,
     offenseForm.movePowerValue,
   );
   return {
-    attackerBuild: buildTargetBuildFromUi(targetForm, "offense-attacker"),
+    attackerBuild,
     defenderBuild: toBuild({
       pokemonInput: offenseForm.defenderPokemonInput,
       natureInput: offenseForm.defenderNatureInput,
@@ -930,6 +1067,7 @@ export const buildOffenseAdjustmentInput = (
     move,
     moveInput: offenseForm.moveInput,
     ...(movePowerOverride ? { movePowerOverride } : {}),
+    ...(moveContext ? { moveContext } : {}),
     hpEvents: toDomainHpEvents(offenseForm.hpEvents ?? []),
     targetKoProbability: clampProbabilityPercent(offenseForm.targetKoProbabilityPercent),
     field: toFieldState(offenseForm),
@@ -1023,6 +1161,7 @@ export const createOffenseAdjustmentFormFromScenarioAttack = (
   moveInput: attackForm.moveInput,
   movePowerMode: attackForm.movePowerMode,
   movePowerValue: attackForm.movePowerValue,
+  beatUpParticipants: attackForm.beatUpParticipants,
   hpEvents: attackForm.hpEvents ?? [],
   targetKoProbabilityPercent: attackForm.targetKoProbabilityPercent,
   gameType: attackForm.gameType,

@@ -14,6 +14,7 @@ import {
 import type { HpEvent, HpEventEvaluation } from "../domain/hpEvents";
 import type {
   Build,
+  BeatUpMoveContext,
   FieldState,
   MovePowerEvaluation,
   MovePowerOverride,
@@ -40,6 +41,7 @@ export interface OffenseAdjustmentInput {
   move: MoveRef;
   moveInput: string;
   movePowerOverride?: MovePowerOverride;
+  moveContext?: BeatUpMoveContext;
   targetKoProbability: number;
   field: FieldState;
   critical: boolean;
@@ -115,6 +117,8 @@ export const buildOffenseHit = (
   defenderStatus: input.defenderBuild.status,
   move: input.move,
   movePowerOverride: input.movePowerOverride,
+  moveContext: input.moveContext,
+  moveHits: input.moveContext?.participants.length,
   repeat: 1,
   critical: input.critical,
   attackerBoosts: input.attackerBoosts,

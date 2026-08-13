@@ -2607,6 +2607,142 @@ textarea {
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.56);
 }
 
+.beat-up-popover {
+  width: min(410px, calc(100vw - 24px));
+}
+
+.beat-up-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.beat-up-popover-header span {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+}
+
+.beat-up-participant-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.beat-up-participant-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 70px 28px;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.beat-up-order-controls {
+  display: grid;
+  grid-template-rows: repeat(2, 26px);
+}
+
+.beat-up-order-controls button,
+.beat-up-remove-participant {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  min-height: 26px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--muted);
+  padding: 0;
+}
+
+.beat-up-order-controls button:first-child {
+  border-radius: 5px 5px 0 0;
+}
+
+.beat-up-order-controls button:last-child {
+  border-top: 0;
+  border-radius: 0 0 5px 5px;
+}
+
+.beat-up-order-controls button:hover:not(:disabled),
+.beat-up-remove-participant:hover:not(:disabled) {
+  border-color: var(--gold-line);
+  color: var(--gold);
+}
+
+.beat-up-order-controls button:disabled,
+.beat-up-remove-participant:disabled {
+  opacity: 0.35;
+}
+
+.beat-up-participant-pokemon {
+  min-width: 0;
+}
+
+.beat-up-participant-pokemon > .scenario-cell,
+.beat-up-participant-pokemon input {
+  width: 100%;
+  min-width: 0;
+}
+
+.beat-up-attacker-label {
+  display: grid;
+  min-height: 34px;
+  align-content: center;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 3px 7px;
+}
+
+.beat-up-attacker-label strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.beat-up-attacker-label small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.beat-up-participant-power {
+  height: 34px;
+  grid-template-columns: minmax(0, 1fr) 24px;
+}
+
+.beat-up-participant-power .move-power-lock-toggle {
+  width: 24px;
+}
+
+.beat-up-remove-participant {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+}
+
+.beat-up-remove-participant img {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 380px) {
+  .beat-up-participant-row {
+    grid-template-columns: 26px minmax(0, 1fr) 66px 26px;
+    gap: 4px;
+  }
+
+  .beat-up-popover {
+    padding-inline: 8px;
+  }
+}
+
 .move-power-option-group {
   display: grid;
   gap: 4px;

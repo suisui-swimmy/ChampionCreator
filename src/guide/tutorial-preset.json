@@ -13,7 +13,7 @@
         "statPointSummary": "H0 / A0 / B0 / C0 / D0 / S0"
       },
       "payload": {
-        "schemaVersion": 8,
+  "schemaVersion": 9,
         "target": {
           "pokemonInput": "メガマフォクシー",
           "natureInput": "おくびょう",
@@ -84,6 +84,7 @@
                 "moveInput": "ふいうち",
                 "movePowerMode": "auto",
                 "movePowerValue": 0,
+                "beatUpParticipants": [],
                 "hpEvents": [],
                 "repeat": 1,
                 "requiredSurvivedHits": 1,
@@ -153,6 +154,7 @@
                 "moveInput": "サイコキネシス",
                 "movePowerMode": "auto",
                 "movePowerValue": 0,
+                "beatUpParticipants": [],
                 "hpEvents": [],
                 "repeat": 1,
                 "requiredSurvivedHits": 1,
@@ -222,6 +224,7 @@
                 "moveInput": "",
                 "movePowerMode": "auto",
                 "movePowerValue": 0,
+                "beatUpParticipants": [],
                 "hpEvents": [],
                 "repeat": 1,
                 "requiredSurvivedHits": 1,

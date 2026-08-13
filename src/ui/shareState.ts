@@ -1,8 +1,10 @@
 import {
   createDefaultScenarioAttackForm,
+  createDefaultBeatUpParticipants,
   createDefaultScenarioForms,
   createDefaultTargetForm,
   type HpEventFormState,
+  type BeatUpParticipantFormState,
   type MovePowerMode,
   type ScenarioAdjustmentType,
   type ScenarioAttackFormState,
@@ -14,8 +16,12 @@ import { toEntityRef } from "../domain/model";
 import { isSupportedHpEventEffectId } from "../domain/hpEvents";
 import { resolveAllowedMovePowerOverride } from "../calc/movePowerRules";
 import { resolveEntity } from "../localization/resolver";
+import {
+  BEAT_UP_CANONICAL_NAME,
+  getBeatUpParticipantLimit,
+} from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 8;
+export const SHARE_SCHEMA_VERSION = 9;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -37,7 +43,81 @@ const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["o
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
 const movePowerModes = new Set<MovePowerMode>(["auto", "assisted", "manual"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | typeof SHARE_SCHEMA_VERSION;
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | typeof SHARE_SCHEMA_VERSION;
+
+const normalizeBeatUpParticipants = (
+  value: unknown,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
+  attackIndex: number,
+  attackId: string,
+  canonicalMoveName: string | undefined,
+  gameType: ScenarioAttackFormState["gameType"],
+): BeatUpParticipantFormState[] => {
+  if (sourceSchemaVersion < 9) {
+    return canonicalMoveName === BEAT_UP_CANONICAL_NAME
+      ? createDefaultBeatUpParticipants(attackId)
+      : [];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`条件JSONの攻撃${attackIndex + 1}に beatUpParticipants がありません`);
+  }
+  if (canonicalMoveName !== BEAT_UP_CANONICAL_NAME) {
+    if (value.length > 0) {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}に技と一致しないふくろだたき設定があります`);
+    }
+    return [];
+  }
+
+  const limit = getBeatUpParticipantLimit(gameType);
+  if (value.length < 1 || value.length > limit) {
+    throw new Error(`条件JSONの攻撃${attackIndex + 1}のふくろだたき参加枠が上限を超えています`);
+  }
+  const participants = value.map((participant, participantIndex): BeatUpParticipantFormState => {
+    if (!isRecord(participant)) {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}に不正なふくろだたき参加枠があります`);
+    }
+    const source = participant.source;
+    const pokemonInput = participant.pokemonInput;
+    const powerMode = participant.powerMode;
+    const powerValue = participant.powerValue;
+    if (source !== "attacker" && source !== "party") {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}に不正なふくろだたき参加種別があります`);
+    }
+    if (typeof pokemonInput !== "string" || (source === "party" && !pokemonInput.trim())) {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}の参加ポケモン${participantIndex + 1}が未入力です`);
+    }
+    if (
+      source === "party"
+      && !toEntityRef(resolveEntity("pokemon", pokemonInput), "pokemon")
+    ) {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}の参加ポケモン${participantIndex + 1}を解決できません`);
+    }
+    if (powerMode !== "auto" && powerMode !== "manual") {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}に不正なふくろだたき威力モードがあります`);
+    }
+    if (
+      typeof powerValue !== "number"
+      || !Number.isInteger(powerValue)
+      || !Number.isFinite(powerValue)
+      || (powerMode === "auto" ? powerValue !== 0 : powerValue < 1 || powerValue > 10_000)
+    ) {
+      throw new Error(`条件JSONの攻撃${attackIndex + 1}に不正なふくろだたき威力があります`);
+    }
+    return {
+      id: typeof participant.id === "string" && participant.id
+        ? participant.id
+        : `${attackId}-beat-up-${participantIndex + 1}`,
+      source,
+      pokemonInput,
+      powerMode,
+      powerValue,
+    };
+  });
+  if (participants.filter((participant) => participant.source === "attacker").length !== 1) {
+    throw new Error(`条件JSONの攻撃${attackIndex + 1}のふくろだたき使用者枠が不正です`);
+  }
+  return participants;
+};
 
 const normalizeHpEventNumber = (
   value: unknown,
@@ -119,6 +199,10 @@ const normalizeAttack = (
   const hasSpeedAbilityMultiplier = isRecord(value) && "speedAbilityMultiplier" in value;
   const hasMovePowerMode = isRecord(value) && "movePowerMode" in value;
   const hasMovePowerValue = isRecord(value) && "movePowerValue" in value;
+  const attackId = typeof input.id === "string" && input.id ? input.id : defaults.id;
+  const canonicalMoveName = typeof input.moveInput === "string"
+    ? toEntityRef(resolveEntity("move", input.moveInput), "move")?.canonicalName
+    : undefined;
   let movePowerMode = defaults.movePowerMode;
   let movePowerValue = defaults.movePowerValue;
   if (sourceSchemaVersion >= 8) {
@@ -145,9 +229,6 @@ const normalizeAttack = (
     movePowerMode = input.movePowerMode as MovePowerMode;
     movePowerValue = input.movePowerValue;
     if (movePowerMode !== "auto") {
-      const canonicalMoveName = typeof input.moveInput === "string"
-        ? toEntityRef(resolveEntity("move", input.moveInput), "move")?.canonicalName
-        : undefined;
       const allowedOverride = canonicalMoveName
         ? resolveAllowedMovePowerOverride(canonicalMoveName, {
             value: movePowerValue,
@@ -159,10 +240,19 @@ const normalizeAttack = (
       }
     }
   }
+  const gameType = input.gameType === "doubles" ? "doubles" : "singles";
+  const beatUpParticipants = normalizeBeatUpParticipants(
+    input.beatUpParticipants,
+    sourceSchemaVersion,
+    index,
+    attackId,
+    canonicalMoveName,
+    gameType,
+  );
   return {
     ...defaults,
     ...input,
-    id: typeof input.id === "string" && input.id ? input.id : defaults.id,
+    id: attackId,
     speedTargetMode: hasSpeedTargetMode
       && typeof input.speedTargetMode === "string"
       && speedTargetModes.has(input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"])
@@ -190,6 +280,8 @@ const normalizeAttack = (
       : defaults.speedAbilityMultiplier,
     movePowerMode,
     movePowerValue,
+    beatUpParticipants,
+    gameType,
     defenderStatus: hasDefenderStatus
       ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
       : legacyTargetStatus,
@@ -247,6 +339,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 8
       && parsed.schemaVersion !== 7
       && parsed.schemaVersion !== 6
       && parsed.schemaVersion !== 5

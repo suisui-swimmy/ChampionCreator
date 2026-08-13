@@ -924,4 +924,40 @@ describe("calculateSmogonHit", () => {
       source: "unsupported",
     });
   });
+
+  it("calculates Beat Up as one ordered hit per participant", () => {
+    const result = calculateSmogonHit(
+      defender,
+      {
+        ...hit,
+        move: mustResolve("move", "ふくろだたき"),
+        moveHits: 3,
+        repeat: 3,
+        attackerBoosts: {},
+        defenderBoosts: {},
+        attackerSide: emptySide,
+        defenderSide: emptySide,
+        moveContext: {
+          kind: "beat-up",
+          participants: [
+            { pokemon: mustResolve("pokemon", "ガブリアス") },
+            { pokemon: mustResolve("pokemon", "コータス") },
+            { pokemon: mustResolve("pokemon", "コノヨザル"), powerOverride: 22 },
+          ],
+        },
+      },
+      { gameType: "singles", weather: "none", terrain: "none" },
+    );
+
+    expect(result.movePower).toEqual({
+      catalogBasePower: 0,
+      source: "manual",
+      perHitBasePowers: [18, 13, 22],
+      detailLabel: "参加ポケモン別",
+    });
+    expect(result.damageRollsByHit).toHaveLength(3);
+    expect(result.damageRollsByHit?.every((rolls) => rolls.length > 0)).toBe(true);
+    expect(result.damageRange.min).toBeGreaterThan(0);
+    expect(result.damageRange.max).toBeGreaterThanOrEqual(result.damageRange.min);
+  });
 });

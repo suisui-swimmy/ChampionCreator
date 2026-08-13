@@ -162,7 +162,7 @@ describe("shareState", () => {
     [{ movePowerMode: "assisted", movePowerValue: 0 }, "movePowerValue"],
     [{ movePowerMode: "manual", movePowerValue: 10_001 }, "movePowerValue"],
     [{ movePowerMode: "manual", movePowerValue: "80" }, "movePowerValue"],
-  ] as const)("rejects invalid schema v8 move-power state %#", (movePower, expectedField) => {
+  ] as const)("rejects invalid move-power state %#", (movePower, expectedField) => {
     const [scenario] = createDefaultScenarioForms();
     const { movePowerMode: _movePowerMode, movePowerValue: _movePowerValue, ...attack } = scenario.attacks[0];
 
@@ -218,6 +218,85 @@ describe("shareState", () => {
       movePowerMode: "manual",
       movePowerValue: 87,
     });
+  });
+
+  it("migrates schema v8 Beat Up to the attacker-only participant sequence", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const { beatUpParticipants: _beatUpParticipants, ...legacyAttack } = scenario.attacks[0];
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 8,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{ ...legacyAttack, moveInput: "ふくろだたき" }],
+      }],
+    }));
+
+    expect(parsed.scenarios[0].attacks[0].beatUpParticipants).toEqual([{
+      id: `${legacyAttack.id}-beat-up-attacker`,
+      source: "attacker",
+      pokemonInput: "",
+      powerMode: "auto",
+      powerValue: 0,
+    }]);
+  });
+
+  it("round-trips Beat Up order and per-participant manual power", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const document = stringifyShareStateDocument(createDefaultTargetForm(), [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        moveInput: "ふくろだたき",
+        gameType: "singles",
+        repeat: 3,
+        requiredSurvivedHits: 3,
+        beatUpParticipants: [
+          { id: "party-1", source: "party", pokemonInput: "コータス", powerMode: "auto", powerValue: 0 },
+          { id: "attacker", source: "attacker", pokemonInput: "", powerMode: "manual", powerValue: 21 },
+          { id: "party-2", source: "party", pokemonInput: "コノヨザル", powerMode: "auto", powerValue: 0 },
+        ],
+      }],
+    }]);
+
+    expect(parseShareStateDocument(document).scenarios[0].attacks[0].beatUpParticipants)
+      .toEqual([
+        { id: "party-1", source: "party", pokemonInput: "コータス", powerMode: "auto", powerValue: 0 },
+        { id: "attacker", source: "attacker", pokemonInput: "", powerMode: "manual", powerValue: 21 },
+        { id: "party-2", source: "party", pokemonInput: "コノヨザル", powerMode: "auto", powerValue: 0 },
+      ]);
+  });
+
+  it("rejects Beat Up participants beyond singles and doubles limits", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const participant = (id: string, source: "attacker" | "party", pokemonInput: string) => ({
+      id,
+      source,
+      pokemonInput,
+      powerMode: "auto" as const,
+      powerValue: 0,
+    });
+    const makeDocument = (gameType: "singles" | "doubles", count: number) => JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          moveInput: "ふくろだたき",
+          gameType,
+          beatUpParticipants: [
+            participant("attacker", "attacker", ""),
+            ...Array.from({ length: count - 1 }, (_, index) => (
+              participant(`party-${index}`, "party", "コータス")
+            )),
+          ],
+        }],
+      }],
+    });
+
+    expect(() => parseShareStateDocument(makeDocument("singles", 4))).toThrow("参加枠が上限");
+    expect(() => parseShareStateDocument(makeDocument("doubles", 5))).toThrow("参加枠が上限");
   });
 
   it.each([1, 2] as const)("migrates schema version %s attacks without HP events", (schemaVersion) => {

@@ -18,6 +18,10 @@ import {
   isSinglePowerMoveUnsupported,
   resolveAllowedMovePowerOverride,
 } from "./movePowerRules";
+import {
+  BEAT_UP_CANONICAL_NAME,
+  getBeatUpBasePowerForPokemon,
+} from "./beatUp";
 
 const SMOGON_GENERATION = Generations.get(9);
 
@@ -403,6 +407,67 @@ const getSmogonResultDescription = (result: Result): string => {
   }
 };
 
+const calculateBeatUpHit = (
+  hit: ScenarioHit,
+  attacker: Pokemon,
+  defender: Pokemon,
+  field: Field,
+): ScenarioHitEvaluation => {
+  const participants = hit.moveContext?.kind === "beat-up"
+    ? hit.moveContext.participants
+    : [];
+  if (participants.length === 0) {
+    throw new Error("ふくろだたきの参加ポケモンが設定されていません");
+  }
+
+  const powers = participants.map((participant, index) => {
+    const power = participant.powerOverride
+      ?? getBeatUpBasePowerForPokemon(participant.pokemon.canonicalName);
+    if (!power || !Number.isFinite(power)) {
+      throw new Error(`ふくろだたき参加ポケモン${index + 1}の威力を計算できません`);
+    }
+    return power;
+  });
+  const results = powers.map((power, index) => calculate(
+    SMOGON_GENERATION,
+    attacker,
+    defender,
+    new Move(SMOGON_GENERATION, BEAT_UP_CANONICAL_NAME, {
+      isCrit: hit.critical,
+      overrides: {
+        name: `${MOVE_POWER_OVERRIDE_PROXY_PREFIX}${BEAT_UP_CANONICAL_NAME} ${index + 1}` as State.Move["name"],
+        basePower: power,
+      },
+    }),
+    field,
+  ));
+  const damageRollsByHit = results.map((result) => flattenDamageRolls(result.damage));
+  const ranges = results.map((result) => result.range());
+  const min = ranges.reduce((total, range) => total + range[0], 0);
+  const max = ranges.reduce((total, range) => total + range[1], 0);
+  const defenderMaxHp = defender.maxHP();
+
+  return {
+    hitId: hit.id,
+    damageRolls: damageRollsByHit.flat(),
+    damageRollsByHit,
+    damageRange: {
+      min,
+      max,
+      percentMin: (min / defenderMaxHp) * 100,
+      percentMax: (max / defenderMaxHp) * 100,
+    },
+    movePower: {
+      catalogBasePower: 0,
+      source: participants.some((participant) => participant.powerOverride !== undefined)
+        ? "manual"
+        : "automatic",
+      perHitBasePowers: powers,
+      detailLabel: "参加ポケモン別",
+    },
+  };
+};
+
 export const calculateSmogonHit = (
   defenderBuild: Build,
   hit: ScenarioHit,
@@ -430,13 +495,19 @@ export const calculateSmogonHit = (
     false,
     { currentHp: defenderCurrentHp },
   );
+  const field = toSmogonField(fieldState, hit);
+  if (
+    originalMoveName === BEAT_UP_CANONICAL_NAME
+    && hit.moveContext?.kind === "beat-up"
+  ) {
+    return calculateBeatUpHit(hit, attacker, defender, field);
+  }
   const {
     move,
     originalMove,
     displayNameOverride,
     appliedPowerOverride,
   } = toSmogonCalculationMove(hit);
-  const field = toSmogonField(fieldState, hit);
   const result = calculate(SMOGON_GENERATION, attacker, defender, move, field);
   if (displayNameOverride) {
     result.rawDesc.moveName = displayNameOverride;

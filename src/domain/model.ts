@@ -77,6 +77,16 @@ export interface MovePowerOverride {
   source: "assisted" | "manual";
 }
 
+export interface BeatUpParticipant {
+  pokemon: PokemonRef;
+  powerOverride?: number;
+}
+
+export interface BeatUpMoveContext {
+  kind: "beat-up";
+  participants: BeatUpParticipant[];
+}
+
 export type MovePowerSource =
   | "standard"
   | "automatic"
@@ -102,6 +112,7 @@ export interface ScenarioHit {
   move: MoveRef;
   moveHits?: number;
   movePowerOverride?: MovePowerOverride;
+  moveContext?: BeatUpMoveContext;
   hpEvents?: HpEvent[];
   field?: FieldState;
   constraint?: SurvivalConstraint;
