@@ -644,7 +644,7 @@ textarea:focus-visible,
 
 .workbench {
   display: grid;
-  grid-template-columns: 420px minmax(0, 1fr);
+  grid-template-columns: 468px minmax(0, 1fr);
   grid-template-rows: auto auto auto;
   gap: 12px;
   align-items: start;
@@ -4121,6 +4121,59 @@ textarea {
   background: #3f433f;
   border-color: #565f5d;
   color: #d7d0bf;
+}
+
+@media (min-width: 1181px) {
+  .target-identity,
+  .target-summary.compact {
+    gap: 6px;
+  }
+
+  .target-summary.compact > .pokemon-autocomplete-field,
+  .target-summary.compact > .dropdown-text-field input,
+  .target-summary.compact > .nature-field .nature-trigger {
+    height: 28px;
+    padding: 0 7px;
+    font-size: 12px;
+  }
+
+  .target-summary.compact > .dropdown-text-field .ability-menu-trigger,
+  .target-summary.compact > .dropdown-text-field .dropdown-menu-trigger {
+    width: 30px;
+    height: 26px;
+    padding: 0;
+  }
+
+  .target-summary.compact > .dropdown-text-field .ability-input-row.has-ability-menu input,
+  .target-summary.compact > .dropdown-text-field .dropdown-input-row input {
+    padding-right: 34px;
+  }
+
+  .target-level-field,
+  .placeholder-field.target-level-field {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .target-level-field span {
+    color: #8fa09f;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 14px;
+  }
+
+  .target-level-field .level-inline-control {
+    height: 28px;
+  }
+
+  .target-level-field .move-power-lock-toggle {
+    width: 22px;
+  }
+
+  .target-level-field .level-inline-control > strong,
+  .target-level-field .level-inline-control > input {
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 1180px) {

@@ -563,6 +563,25 @@ describe("App", () => {
     expect(calculationPendingHtml).toContain('aria-label="威力 70（基礎値・計算前）"');
   });
 
+  it("matches the target form density to attack cards on desktop only", () => {
+    const html = renderExampleApp();
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const desktopStart = css.indexOf("@media (min-width: 1181px)");
+    const desktopEnd = css.indexOf("@media (max-width: 1180px)", desktopStart);
+    const desktopCss = css.slice(desktopStart, desktopEnd);
+
+    expect(html).toMatch(/class="target-summary compact"[\s\S]*?aria-label="ポケモン"[\s\S]*?aria-label="性格:[^"]+"[\s\S]*?placeholder="持ち物"[\s\S]*?aria-label="特性候補を開く"[\s\S]*?>レベル<\/span>/);
+    expect(css).toMatch(/\.workbench\s*\{[^}]*grid-template-columns:\s*468px minmax\(0, 1fr\);/s);
+    expect(desktopStart).toBeGreaterThanOrEqual(0);
+    expect(desktopEnd).toBeGreaterThan(desktopStart);
+    expect(desktopCss).toMatch(/\.target-identity,\s*\.target-summary\.compact\s*\{[^}]*gap:\s*6px;/s);
+    expect(desktopCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field,[\s\S]*?height:\s*28px;[\s\S]*?padding:\s*0 7px;[\s\S]*?font-size:\s*12px;/s);
+    expect(desktopCss).toMatch(/\.target-level-field,\s*\.placeholder-field\.target-level-field\s*\{[^}]*grid-template-columns:\s*52px minmax\(0, 1fr\);[^}]*gap:\s*6px;/s);
+    expect(desktopCss).toMatch(/\.target-level-field \.level-inline-control\s*\{[^}]*height:\s*28px;/s);
+    expect(desktopCss).toMatch(/\.target-level-field \.move-power-lock-toggle\s*\{[^}]*width:\s*22px;/s);
+    expect(css.slice(desktopEnd)).toMatch(/\.workbench\s*\{[^}]*grid-template-columns:\s*1fr;/s);
+  });
+
   it("uses the power-lock design for an unlocked level without adding it to the Tab order", () => {
     const [scenario] = createDefaultScenarioForms();
     const html = renderToStaticMarkup(

@@ -320,6 +320,8 @@ skipInAppBrowserCheck: false
 
 - UI 表示に関わる変更は、in-app Browser で DOM、対象操作、スクリーンショット、console を確認する
 - desktop、代表スマホ幅、レイアウトに関係する場合は狭幅を確認する
+- `design-qa` のスクリーンショット、比較画像、レポートは検証中だけの一時成果物として扱い、完了後に削除する
+- 検証結果の要点は `PROGRESS.md` と最終報告へ残し、ユーザーが明示的に保存を求めない限り `design-qa*.png` や `design-qa.md` を作業差分へ残さない
 - Browser が一時的に使えない場合は、静的 render、HTTP 200、配信 CSS / JS / HTML、対象関数テストで代替し、未実施範囲を最終報告と `PROGRESS.md` に書く
 - Browser 復旧そのものをユーザーが依頼した場合だけ、個人用 `fix-in-app-browser-node-repl` skill で切り分ける
 - `--disable-sandbox`、wrapper、Codex 設定変更など隔離を弱める操作は、ユーザーの明示承認なしに行わない
