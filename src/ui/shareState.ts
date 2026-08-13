@@ -3,6 +3,8 @@ import {
   createDefaultBeatUpParticipants,
   createDefaultScenarioForms,
   createDefaultTargetForm,
+  DEFAULT_LEVEL,
+  type LevelInputMode,
   type HpEventFormState,
   type BeatUpParticipantFormState,
   type MovePowerMode,
@@ -21,7 +23,7 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 9;
+export const SHARE_SCHEMA_VERSION = 10;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -43,7 +45,8 @@ const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["o
 const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
 const movePowerModes = new Set<MovePowerMode>(["auto", "assisted", "manual"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | typeof SHARE_SCHEMA_VERSION;
+const levelInputModes = new Set<LevelInputMode>(["auto", "manual"]);
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeBeatUpParticipants = (
   value: unknown,
@@ -170,14 +173,46 @@ const normalizeScenarioAdjustmentType = (value: unknown, fallback: ScenarioAdjus
     ? value as ScenarioAdjustmentType
     : fallback;
 
-const normalizeTarget = (value: unknown): TargetFormState => {
+const normalizeTarget = (
+  value: unknown,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
+): TargetFormState => {
   const defaults = createDefaultTargetForm();
   const input = mergeObject(defaults, value) as TargetFormState & Record<string, unknown>;
+  const hasLevel = isRecord(value) && "level" in value;
+  const hasLevelMode = isRecord(value) && "levelMode" in value;
+  let level = Number.isInteger(input.level) && input.level >= 1 && input.level <= 100
+    ? input.level
+    : DEFAULT_LEVEL;
+  let levelMode: LevelInputMode = level === DEFAULT_LEVEL ? "auto" : "manual";
+  if (sourceSchemaVersion >= 10) {
+    if (
+      !hasLevel
+      || typeof input.level !== "number"
+      || !Number.isInteger(input.level)
+      || input.level < 1
+      || input.level > 100
+    ) {
+      throw new Error("条件JSONの調整対象に不正な level があります");
+    }
+    if (
+      !hasLevelMode
+      || typeof input.levelMode !== "string"
+      || !levelInputModes.has(input.levelMode as LevelInputMode)
+      || (input.levelMode === "auto" && input.level !== DEFAULT_LEVEL)
+    ) {
+      throw new Error("条件JSONの調整対象に不正な levelMode があります");
+    }
+    level = input.level;
+    levelMode = input.levelMode as LevelInputMode;
+  }
   const normalized = {
     ...defaults,
     ...input,
     statPoints: mergeObject(defaults.statPoints, input.statPoints),
     boosts: mergeObject(defaults.boosts, input.boosts),
+    level,
+    levelMode,
   } as TargetFormState;
   delete (normalized as TargetFormState & { status?: unknown }).status;
   return normalized;
@@ -199,10 +234,41 @@ const normalizeAttack = (
   const hasSpeedAbilityMultiplier = isRecord(value) && "speedAbilityMultiplier" in value;
   const hasMovePowerMode = isRecord(value) && "movePowerMode" in value;
   const hasMovePowerValue = isRecord(value) && "movePowerValue" in value;
+  const hasAttackerLevel = isRecord(value) && "attackerLevel" in value;
+  const hasAttackerLevelMode = isRecord(value) && "attackerLevelMode" in value;
   const attackId = typeof input.id === "string" && input.id ? input.id : defaults.id;
   const canonicalMoveName = typeof input.moveInput === "string"
     ? toEntityRef(resolveEntity("move", input.moveInput), "move")?.canonicalName
     : undefined;
+  let attackerLevel = Number.isInteger(input.attackerLevel)
+    && input.attackerLevel >= 1
+    && input.attackerLevel <= 100
+    ? input.attackerLevel
+    : DEFAULT_LEVEL;
+  let attackerLevelMode: LevelInputMode = attackerLevel === DEFAULT_LEVEL
+    ? "auto"
+    : "manual";
+  if (sourceSchemaVersion >= 10) {
+    if (
+      !hasAttackerLevel
+      || typeof input.attackerLevel !== "number"
+      || !Number.isInteger(input.attackerLevel)
+      || input.attackerLevel < 1
+      || input.attackerLevel > 100
+    ) {
+      throw new Error(`条件JSONの攻撃${index + 1}に不正な attackerLevel があります`);
+    }
+    if (
+      !hasAttackerLevelMode
+      || typeof input.attackerLevelMode !== "string"
+      || !levelInputModes.has(input.attackerLevelMode as LevelInputMode)
+      || (input.attackerLevelMode === "auto" && input.attackerLevel !== DEFAULT_LEVEL)
+    ) {
+      throw new Error(`条件JSONの攻撃${index + 1}に不正な attackerLevelMode があります`);
+    }
+    attackerLevel = input.attackerLevel;
+    attackerLevelMode = input.attackerLevelMode as LevelInputMode;
+  }
   let movePowerMode = defaults.movePowerMode;
   let movePowerValue = defaults.movePowerValue;
   if (sourceSchemaVersion >= 8) {
@@ -253,6 +319,8 @@ const normalizeAttack = (
     ...defaults,
     ...input,
     id: attackId,
+    attackerLevel,
+    attackerLevelMode,
     speedTargetMode: hasSpeedTargetMode
       && typeof input.speedTargetMode === "string"
       && speedTargetModes.has(input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"])
@@ -339,6 +407,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 9
       && parsed.schemaVersion !== 8
       && parsed.schemaVersion !== 7
       && parsed.schemaVersion !== 6
@@ -362,7 +431,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
 
   return {
     schemaVersion: SHARE_SCHEMA_VERSION,
-    target: normalizeTarget(parsed.target),
+    target: normalizeTarget(parsed.target, sourceSchemaVersion),
     scenarios: parsed.scenarios.map((scenario, index) => normalizeScenario(
       scenario,
       index,

@@ -75,8 +75,11 @@ import natureOptionsData from "../data/generated/nature-options.gen.json";
 
 export type SpeedTargetMode = "opponent" | "manual";
 export type SpeedMoveModifier = "none" | "tailwind" | "trick-room";
+export type LevelInputMode = "auto" | "manual";
 export type MovePowerMode = "auto" | "assisted" | "manual";
 export type BeatUpParticipantPowerMode = "auto" | "manual";
+
+export const DEFAULT_LEVEL = 50;
 
 export interface BeatUpParticipantFormState {
   id: string;
@@ -103,6 +106,7 @@ export interface TargetFormState {
   teraEnabled: boolean;
   dmaxEnabled: boolean;
   level: number;
+  levelMode: LevelInputMode;
   statPoints: StatPointTable;
   boosts: StatBoostTable;
 }
@@ -120,6 +124,7 @@ export interface ScenarioAttackFormState {
   attackerStatus: PokemonStatus;
   defenderStatus: PokemonStatus;
   attackerLevel: number;
+  attackerLevelMode: LevelInputMode;
   attackerStatPoints: StatPointTable;
   attackerBoosts: StatBoostTable;
   defenderBoosts: StatBoostTable;
@@ -447,7 +452,8 @@ export const createDefaultTargetForm = (): TargetFormState => ({
   teraTypeInput: "",
   teraEnabled: false,
   dmaxEnabled: false,
-  level: 50,
+  level: DEFAULT_LEVEL,
+  levelMode: "auto",
   statPoints: { ...zeroStatPoints, atk: 0, spa: 0, spe: 0 },
   boosts: { ...zeroBoosts },
 });
@@ -464,7 +470,8 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   attackerDmaxEnabled: false,
   attackerStatus: "none",
   defenderStatus: "none",
-  attackerLevel: 50,
+  attackerLevel: DEFAULT_LEVEL,
+  attackerLevelMode: "auto",
   attackerStatPoints: createDefaultAttackerStatPoints(),
   attackerBoosts: { ...zeroBoosts },
   defenderBoosts: { ...zeroBoosts },
@@ -494,6 +501,26 @@ export const createDefaultScenarioAttackForm = (id = "attack-a", label = "攻撃
   speedAbilityMultiplier: "auto",
   speedMoveModifier: "none",
   tailwind: false,
+});
+
+export const applyAttackerLevelMode = (
+  attackForm: ScenarioAttackFormState,
+  attackerLevelMode: LevelInputMode,
+): ScenarioAttackFormState => ({
+  ...attackForm,
+  attackerLevelMode,
+  attackerLevel: attackerLevelMode === "auto"
+    ? DEFAULT_LEVEL
+    : attackForm.attackerLevel,
+});
+
+export const applyTargetLevelMode = (
+  targetForm: TargetFormState,
+  levelMode: LevelInputMode,
+): TargetFormState => ({
+  ...targetForm,
+  levelMode,
+  level: levelMode === "auto" ? DEFAULT_LEVEL : targetForm.level,
 });
 
 export const applyMoveHitCountDefaults = (
@@ -795,7 +822,9 @@ export const createDefaultOffenseAdjustmentForm = (): OffenseAdjustmentFormState
   friendGuard: false,
 });
 
-const toBuild = (form: TargetFormState & { status?: PokemonStatus }, id: string): Build => {
+type BuildFormState = Omit<TargetFormState, "levelMode"> & { status?: PokemonStatus };
+
+const toBuild = (form: BuildFormState, id: string): Build => {
   const statPoints = clampStatPointTable(form.statPoints);
   const teraType = form.teraEnabled
     ? mustResolve("type", form.teraTypeInput, "テラスタイプ")

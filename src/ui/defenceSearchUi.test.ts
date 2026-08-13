@@ -6,6 +6,8 @@ import type {
 } from "../worker/defenceSearchWorkerClient";
 import {
   applyCandidateToTarget,
+  applyAttackerLevelMode,
+  applyTargetLevelMode,
   applyMaximizeRemainingBulkToTarget,
   applyMoveHitCountDefaults,
   applyMoveInputDefaults,
@@ -564,6 +566,40 @@ describe("buildDefenceSearchInput", () => {
     const input = buildDefenceSearchInput(target, [multiAttackScenario]);
 
     expect(input.scenarios[0].hits[1].constraint?.requiredSurvivedHits).toBe(2);
+  });
+
+  it("locks attacker level to 50 and preserves the value while unlocked", () => {
+    const attack = {
+      ...createDefaultScenarioForms()[0].attacks[0],
+      attackerLevel: 73,
+      attackerLevelMode: "manual" as const,
+    };
+
+    expect(applyAttackerLevelMode(attack, "manual")).toMatchObject({
+      attackerLevel: 73,
+      attackerLevelMode: "manual",
+    });
+    expect(applyAttackerLevelMode(attack, "auto")).toMatchObject({
+      attackerLevel: 50,
+      attackerLevelMode: "auto",
+    });
+  });
+
+  it("locks target level to 50 and preserves the value while unlocked", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      level: 73,
+      levelMode: "manual" as const,
+    };
+
+    expect(applyTargetLevelMode(target, "manual")).toMatchObject({
+      level: 73,
+      levelMode: "manual",
+    });
+    expect(applyTargetLevelMode(target, "auto")).toMatchObject({
+      level: 50,
+      levelMode: "auto",
+    });
   });
 
   it("auto-fills defence hit counts to the selected multi-hit move's maximum", () => {

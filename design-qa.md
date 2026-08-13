@@ -141,3 +141,16 @@ final result: passed
 - The production build keeps `../assets/...` for static guide assets, while runtime tutorial assets resolve from the explicit app root. Pure URL tests cover both a custom-domain root and a GitHub Pages project prefix.
 
 final result: passed
+
+## Level lock inputs — 2026-08-13
+
+- Source visual truth: supplied compact level/power lock screenshot and the existing shipped `assets/ui/lock.svg` / `lock-open.svg`.
+- Structure: the target panel and every scenario attack card default to locked level 50; unlocking exposes a 1–100 input, and relocking restores 50. Supported move-power controls keep the same lock pattern.
+- Keyboard: level and move-power compact inputs, lock buttons, and condition steppers remain enabled for click/touch but use `tabIndex=-1` so normal Tab navigation skips them.
+- Persistence: share schema 10 stores target and attacker level modes; schema 9 and earlier migrate level 50 to locked mode and valid non-50 levels to manual mode.
+- Desktop 1186x698: target and attack-card level locks render with the existing two-part control, document horizontal overflow is 0, and the app displays `app v0.10.1`.
+- Mobile 390x844 and narrow 320x700: target/scenario panels have no horizontal overflow; level 50 and move power 150 remain readable at 320px.
+- Runtime: lock → level 73 → relock 50 was verified for both target and attack-card levels; move power 150 unlock was verified; a clean Browser load produced 0 console errors.
+- Automated verification: `npm run check` passed with 28 test files / 398 tests and a production build.
+
+final result: passed

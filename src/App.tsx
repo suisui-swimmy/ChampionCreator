@@ -44,6 +44,8 @@ import {
   applyMaximizeRemainingBulkToTarget,
   applyOffenseAdjustmentToTarget,
   applySpeedAdjustmentToTarget,
+  applyAttackerLevelMode,
+  applyTargetLevelMode,
   applyMoveInputDefaults,
   applyBeatUpGameTypeDefaults,
   applyBeatUpParticipants,
@@ -65,6 +67,7 @@ import {
   startDefenceSearchFromUi,
   startMaximizeRemainingBulkFromUi,
   type BulkMaximizeUiState,
+  type LevelInputMode,
   type BeatUpParticipantFormState,
   type HpEventFormState,
   type MovePowerMode,
@@ -800,6 +803,7 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   attackerDmaxEnabled: false,
   attackerStatus: "none",
   attackerLevel: 50,
+  attackerLevelMode: "auto",
   attackerStatPoints: createDefaultAttackerStatPoints(),
   attackerBoosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   defenderBoosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
@@ -1058,7 +1062,11 @@ export function App({
 
   const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
     resetActiveSearch();
-    setTargetForm((current) => ({ ...current, [key]: value }));
+    setTargetForm((current) => (
+      key === "levelMode"
+        ? applyTargetLevelMode(current, value as TargetFormState["levelMode"])
+        : { ...current, [key]: value }
+    ));
   };
 
   const updateTargetEv = (key: StatKey, value: number) => {
@@ -1148,6 +1156,11 @@ export function App({
                     ? applySpeedMoveModifierDefaults(
                         attack,
                         value as ScenarioAttackFormState["speedMoveModifier"],
+                      )
+                  : key === "attackerLevelMode"
+                    ? applyAttackerLevelMode(
+                        attack,
+                        value as ScenarioAttackFormState["attackerLevelMode"],
                       )
                   : { ...attack, [key]: value }
                 : attack
@@ -3747,15 +3760,14 @@ function TargetPanel({
               onChange={(event) => onUpdateField("abilityInput", event.target.value)}
               onSelectAbility={(value) => onUpdateField("abilityInput", value)}
             />
-            <label className="placeholder-field target-level-field">
-              <span>レベル</span>
-              <input
-                {...numericInputProps}
-                value={targetForm.level}
-                onFocus={selectInputValueOnFocus}
-                onChange={(event) => onUpdateField("level", clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
-              />
-            </label>
+            <LevelLockField
+              ownerLabel="調整対象"
+              className="placeholder-field target-level-field"
+              mode={targetForm.levelMode}
+              value={targetForm.level}
+              onModeChange={(mode) => onUpdateField("levelMode", mode)}
+              onChange={(value) => onUpdateField("level", value)}
+            />
             <MechanicControls
               pokemonInput={targetForm.pokemonInput}
               teraEnabled={targetForm.teraEnabled}
@@ -4643,6 +4655,65 @@ type MovePowerFieldProps = {
   onCommit: (mode: MovePowerMode, value: number) => void;
 };
 
+type LevelLockFieldProps = {
+  ownerLabel: string;
+  className: string;
+  labelClassName?: string;
+  mode: LevelInputMode;
+  value: number;
+  onModeChange: (mode: LevelInputMode) => void;
+  onChange: (value: number) => void;
+};
+
+function LevelLockField({
+  ownerLabel,
+  className,
+  labelClassName,
+  mode,
+  value,
+  onModeChange,
+  onChange,
+}: LevelLockFieldProps) {
+  const isManual = mode === "manual";
+
+  return (
+    <div className={className}>
+      <span className={labelClassName}>レベル</span>
+      <div className={`move-power-inline-control level-inline-control ${isManual ? "is-manual" : "is-automatic"}`}>
+        {isManual ? (
+          <input
+            {...numericInputProps}
+            value={value}
+            min={1}
+            max={100}
+            tabIndex={-1}
+            aria-label="レベル"
+            onFocus={selectInputValueOnFocus}
+            onChange={(event) => onChange(clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
+          />
+        ) : (
+          <strong>{value}</strong>
+        )}
+        <button
+          className={`move-power-lock-toggle ${isManual ? "is-open" : "is-closed"}`}
+          type="button"
+          tabIndex={-1}
+          aria-label={isManual
+            ? `${ownerLabel} レベルを50に戻して固定`
+            : `${ownerLabel} レベルの固定を解除`}
+          onClick={() => onModeChange(isManual ? "auto" : "manual")}
+        >
+          <img
+            src={getAssetSrc(isManual ? "assets/ui/lock-open.svg" : "assets/ui/lock.svg")}
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const isValidManualMovePower = (value: number): boolean =>
   Number.isInteger(value) && value >= 1 && value <= 10_000;
 
@@ -4731,6 +4802,7 @@ function BeatUpPowerField({
           <button
             className="move-power-trigger"
             type="button"
+            tabIndex={-1}
             aria-label={`${attackLabel} ふくろだたき参加ポケモンを設定。威力 ${compactPower}`}
           >
             <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
@@ -5030,6 +5102,7 @@ function MovePowerField({
               <button
                 className="move-power-trigger"
                 type="button"
+                tabIndex={-1}
                 aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
               >
                 <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
@@ -5039,6 +5112,7 @@ function MovePowerField({
               <span className="move-power-stepper" aria-label="威力条件ステッパー">
                 <button
                   type="button"
+                  tabIndex={-1}
                   aria-label={`${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`}
                   disabled={!canStepUp}
                   onClick={() => commitOption(selectedOptionIndex + 1)}
@@ -5047,6 +5121,7 @@ function MovePowerField({
                 </button>
                 <button
                   type="button"
+                  tabIndex={-1}
                   aria-label={`${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`}
                   disabled={!canStepDown}
                   onClick={() => commitOption(selectedOptionIndex - 1)}
@@ -5149,6 +5224,7 @@ function MovePowerField({
               value={manualDraft}
               min={1}
               max={10_000}
+              tabIndex={-1}
               aria-label={`${attackLabel} 任意威力`}
               aria-invalid={!manualValueIsValid}
               onFocus={selectInputValueOnFocus}
@@ -5162,6 +5238,7 @@ function MovePowerField({
             <button
               className="move-power-lock-toggle is-open"
               type="button"
+              tabIndex={-1}
               aria-label={`${attackLabel} 威力を自動入力に戻す`}
               title="自動入力に戻す"
               onClick={restoreAutomaticPower}
@@ -5175,6 +5252,7 @@ function MovePowerField({
             <button
               className="move-power-lock-toggle is-closed"
               type="button"
+              tabIndex={-1}
               aria-label={`${attackLabel} 威力の自動入力を解除`}
               title="手動入力へ切り替え"
               onClick={unlockInlineManualPower}
@@ -5363,13 +5441,13 @@ function AttackCard({
             onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
           />
           {!isAbilitySupport ? (
-            <ScenarioNumberField
-              className="attack-level-field"
-              label="レベル"
-              showLabel
+            <LevelLockField
+              ownerLabel={attackLabel}
+              className="scenario-cell number-cell number-labeled-field attack-level-field"
+              labelClassName="row-label"
+              mode={attack.attackerLevelMode}
               value={attack.attackerLevel}
-              min={1}
-              max={100}
+              onModeChange={(mode) => onUpdateAttack(scenarioId, attack.id, "attackerLevelMode", mode)}
               onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
             />
           ) : null}

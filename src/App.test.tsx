@@ -415,6 +415,8 @@ describe("App", () => {
     expect(html).toContain('aria-expanded="false"');
     expect(html.match(/assets\/ui\/pokebox\.svg/g)?.length).toBeGreaterThanOrEqual(4);
     expect(html).toContain(">レベル</span>");
+    expect(html).toMatch(/class="placeholder-field target-level-field"[\s\S]*?aria-label="調整対象 レベルの固定を解除"/);
+    expect(html).toMatch(/aria-label="調整対象 レベルの固定を解除"[^>]*>[\s\S]*?assets\/ui\/lock\.svg/);
     expect(html).toContain(">残りSPで耐久最大化</button>");
     expect(html).toContain(">性格変更を許可する</span>");
     expect(html).toContain('class="sp-summary-actions"');
@@ -536,7 +538,9 @@ describe("App", () => {
     expect(css).toMatch(/\.attack-card-identity-row,\s*\.attack-move-power-cell\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     expect(css).toMatch(/\.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(52px, max-content\) minmax\(0, 1fr\);/s);
     expect(css).toMatch(/\.mobile-scenarios-open \.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(54px, auto\) minmax\(0, 1fr\);/s);
-    expect(html).toMatch(/attack-card-identity-row[^>]*>[\s\S]*?aria-label="ポケモン"[\s\S]*?aria-label="レベル"/);
+    expect(html).toMatch(/attack-card-identity-row[^>]*>[\s\S]*?aria-label="ポケモン"[\s\S]*?<span class="row-label">レベル<\/span>/);
+    expect(html.match(/aria-label="[^"]+ レベルの固定を解除"/g)).toHaveLength(4);
+    expect(html).toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A レベルの固定を解除"/);
     expect(html).toMatch(/attack-move-power-cell[^>]*>[\s\S]*?placeholder="技"[\s\S]*?move-power-field/);
     expect(html).toMatch(/move-power-field[^>]*aria-label="耐久調整A 威力"[^>]*>[\s\S]*?<span class="move-power-label">威力<\/span>[\s\S]*?move-power-inline-control is-readonly/);
     expect(html).toMatch(/attack-card-details-row[^>]*>[\s\S]*?aria-label="性格:[^"]+"[\s\S]*?aria-label="特性候補を開く"/);
@@ -559,6 +563,47 @@ describe("App", () => {
     expect(calculationPendingHtml).toContain('aria-label="威力 70（基礎値・計算前）"');
   });
 
+  it("uses the power-lock design for an unlocked level without adding it to the Tab order", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[{
+          ...scenario,
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            attackerLevel: 73,
+            attackerLevelMode: "manual" as const,
+          })),
+        }]}
+      />,
+    );
+
+    expect(html).toContain("level-inline-control is-manual");
+    expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
+    expect(html).toContain('aria-label="耐久調整A レベルを50に戻して固定"');
+    expect(html).toContain('src="/assets/ui/lock-open.svg"');
+    expect(html).not.toContain('aria-label="耐久調整A レベルを50に戻して固定" disabled=""');
+  });
+
+  it("uses the same unlocked level field in the target panel", () => {
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={{
+          ...createDefaultTargetForm(),
+          level: 73,
+          levelMode: "manual",
+        }}
+        initialScenarioForms={createDefaultScenarioForms()}
+      />,
+    );
+
+    expect(html).toMatch(/class="placeholder-field target-level-field"[\s\S]*?level-inline-control is-manual/);
+    expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
+    expect(html).toContain('aria-label="調整対象 レベルを50に戻して固定"');
+    expect(html).not.toContain('aria-label="調整対象 レベルを50に戻して固定" disabled=""');
+  });
+
   it("shows assisted and HP-dependent powers through the same compact field", () => {
     const [scenario] = createDefaultScenarioForms();
     const lastRespectsScenario = {
@@ -579,6 +624,7 @@ describe("App", () => {
 
     expect(lastRespectsHtml).toContain('class="move-power-field steppable"');
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力 150（条件: ひんしの味方 2体）。条件を開く"');
+    expect(lastRespectsHtml).toMatch(/class="move-power-trigger" type="button" tabindex="-1" aria-label="耐久調整A 威力 150/);
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を上げる: ひんしの味方 3体"');
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を下げる: ひんしの味方 1体"');
     expect(lastRespectsHtml).toContain("▲");
@@ -601,6 +647,7 @@ describe("App", () => {
     );
 
     expect(eruptionHtml).toContain('aria-label="耐久調整A 威力の自動入力を解除"');
+    expect(eruptionHtml).toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A 威力の自動入力を解除"/);
     expect(eruptionHtml).toContain(
       '<strong>150</strong><button class="move-power-lock-toggle is-closed"',
     );
@@ -637,6 +684,7 @@ describe("App", () => {
       />,
     );
     expect(manualEruptionHtml).toContain('aria-label="耐久調整A 任意威力"');
+    expect(manualEruptionHtml).toMatch(/<input[^>]*tabindex="-1"[^>]*aria-label="耐久調整A 任意威力"/);
     expect(manualEruptionHtml).toContain('aria-label="耐久調整A 威力を自動入力に戻す"');
     expect(manualEruptionHtml).toContain('src="/assets/ui/lock-open.svg"');
   });
@@ -690,6 +738,7 @@ describe("App", () => {
     );
 
     expect(html).toContain("ふくろだたき参加ポケモンを設定。威力 18");
+    expect(html).toMatch(/class="move-power-trigger" type="button" tabindex="-1" aria-label="耐久調整A ふくろだたき参加ポケモンを設定/);
     expect(html).toContain("<strong>18</strong>");
     expect(html).toContain('disabled="" aria-label="攻撃回数" value="1"');
   });

@@ -17,6 +17,8 @@ describe("shareState", () => {
       teraTypeInput: "かくとう",
       teraEnabled: true,
       dmaxEnabled: true,
+      level: 73,
+      levelMode: "manual" as const,
       boosts: { atk: 0, def: 2, spa: 0, spd: -1, spe: 0 },
     };
     const scenarios = createDefaultScenarioForms().map((scenario, index) => ({
@@ -27,6 +29,8 @@ describe("shareState", () => {
         ...attack,
         attackerPokemonInput: "オオニューラ",
         moveInput: "おはかまいり",
+        attackerLevel: 73,
+        attackerLevelMode: "manual" as const,
         movePowerMode: "manual" as const,
         movePowerValue: 137,
         attackerTeraTypeInput: "かくとう",
@@ -62,6 +66,8 @@ describe("shareState", () => {
       teraTypeInput: "かくとう",
       teraEnabled: true,
       dmaxEnabled: true,
+      level: 73,
+      levelMode: "manual",
       boosts: { def: 2, spd: -1 },
     });
     expect(parsed.scenarios[0].label).toBe("対オオニューラ");
@@ -69,6 +75,8 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0]).toMatchObject({
       attackerPokemonInput: "オオニューラ",
       moveInput: "おはかまいり",
+      attackerLevel: 73,
+      attackerLevelMode: "manual",
       movePowerMode: "manual",
       movePowerValue: 137,
       attackerTeraEnabled: true,
@@ -239,6 +247,73 @@ describe("shareState", () => {
       powerMode: "auto",
       powerValue: 0,
     }]);
+  });
+
+  it("migrates schema v9 attacker levels into locked and manual modes", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const { attackerLevelMode: _mode, ...legacyAttack } = scenario.attacks[0];
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 9,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [
+          { ...legacyAttack, id: "level-50", attackerLevel: 50 },
+          { ...legacyAttack, id: "level-73", attackerLevel: 73 },
+        ],
+      }],
+    }));
+
+    expect(parsed.scenarios[0].attacks[0]).toMatchObject({
+      attackerLevel: 50,
+      attackerLevelMode: "auto",
+    });
+    expect(parsed.scenarios[0].attacks[1]).toMatchObject({
+      attackerLevel: 73,
+      attackerLevelMode: "manual",
+    });
+  });
+
+  it("migrates schema v9 target levels into locked and manual modes", () => {
+    const { levelMode: _levelMode, ...legacyTarget } = createDefaultTargetForm();
+
+    const locked = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 9,
+      target: { ...legacyTarget, level: 50 },
+      scenarios: createDefaultScenarioForms(),
+    }));
+    const manual = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 9,
+      target: { ...legacyTarget, level: 73 },
+      scenarios: createDefaultScenarioForms(),
+    }));
+
+    expect(locked.target).toMatchObject({ level: 50, levelMode: "auto" });
+    expect(manual.target).toMatchObject({ level: 73, levelMode: "manual" });
+  });
+
+  it("rejects current JSON whose locked target level is not 50", () => {
+    expect(() => parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: { ...createDefaultTargetForm(), level: 73, levelMode: "auto" },
+      scenarios: createDefaultScenarioForms(),
+    }))).toThrow("不正な levelMode");
+  });
+
+  it("rejects current JSON whose locked attacker level is not 50", () => {
+    const [scenario] = createDefaultScenarioForms();
+    expect(() => parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          attackerLevel: 73,
+          attackerLevelMode: "auto",
+        }],
+      }],
+    }))).toThrow("不正な attackerLevelMode");
   });
 
   it("round-trips Beat Up order and per-participant manual power", () => {
