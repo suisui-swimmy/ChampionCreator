@@ -4453,8 +4453,12 @@ textarea {
     gap: 6px;
   }
 
+  .suggestion-format-toggle {
+    height: 36px;
+  }
+
   .suggestion-format-option-content {
-    min-height: 38px;
+    min-height: 34px;
     gap: 4px;
     padding: 0 clamp(5px, 1.6vw, 7px);
     font-size: 11px;
@@ -4466,8 +4470,8 @@ textarea {
   }
 
   .readme-link {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 
   .app-footer-version {
@@ -6022,7 +6026,7 @@ textarea {
   }
 
   .suggestion-format-option-content {
-    min-height: 38px;
+    min-height: 34px;
     gap: 3px;
     padding: 0 5px;
     font-size: 9px;
@@ -6034,8 +6038,8 @@ textarea {
   }
 
   .readme-link {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 
   .mobile-symmetric-board {

@@ -123,8 +123,9 @@ describe("App", () => {
     expect(css).toMatch(/\.brand-title,\s*\.brand-line\s*\{[^}]*display:\s*contents;/s);
     expect(css).toMatch(/\.topbar \.brand-description\s*\{[^}]*grid-area:\s*description;[^}]*text-align:\s*center;[^}]*text-wrap:\s*balance;/s);
     expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*display:\s*none;/s);
-    expect(css).toMatch(/\.suggestion-format-option-content\s*\{[^}]*min-height:\s*38px;/s);
-    expect(css).toMatch(/\.readme-link\s*\{[^}]*width:\s*40px;[^}]*height:\s*40px;/s);
+    expect(css).toMatch(/\.suggestion-format-toggle\s*\{[^}]*height:\s*36px;/s);
+    expect(css).toMatch(/\.suggestion-format-option-content\s*\{[^}]*min-height:\s*34px;/s);
+    expect(css).toMatch(/\.readme-link\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
     expect(css).toMatch(/\.app-footer-version\s*\{[^}]*display:\s*block;/s);
     expect(html).toContain("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール");
     expect(html).toContain('class="app-footer-version"');
