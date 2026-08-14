@@ -1,4 +1,4 @@
-import { Fragment, type ChangeEvent, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { Fragment, createContext, type ChangeEvent, type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import {
@@ -32,6 +32,16 @@ import type {
 } from "./domain/hpEvents";
 import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo } from "./appVersion";
+import {
+  formatUsageDataDateJst,
+  getUsageMatchingEntityInputOptions,
+  loadChampionsUsageData,
+  loadSuggestionFormat,
+  saveSuggestionFormat,
+  type ChampionsUsageData,
+  type SuggestionFormat,
+  type UsageRankingCategory,
+} from "./usage";
 import {
   getEntityInputOptions,
   getMatchingEntityInputOptions,
@@ -862,10 +872,104 @@ export const createScenario = (index: number): ScenarioFormState => ({
 const BLANK_BOX_SLOT_ID = "blank-box-slot";
 const BLANK_ENEMY_BOX_SLOT_ID = "blank-enemy-box-slot";
 
+type SuggestionUsageContextValue = {
+  data: ChampionsUsageData | null;
+  format: SuggestionFormat;
+};
+
+const SuggestionUsageContext = createContext<SuggestionUsageContextValue>({
+  data: null,
+  format: "Singles",
+});
+
+const useUsageSuggestionOptions = (
+  category: UsageRankingCategory,
+  input: string,
+  ownerPokemonCanonicalName: string | undefined,
+  baseOptions: readonly EntityInputOption[] = getEntityInputOptions(category),
+  limit = 40,
+): EntityInputOption[] => {
+  const { data, format } = useContext(SuggestionUsageContext);
+  return getUsageMatchingEntityInputOptions(
+    baseOptions,
+    input,
+    data,
+    format,
+    ownerPokemonCanonicalName,
+    category,
+    limit,
+  );
+};
+
+export const getAttackSuggestionRankingOwners = (
+  adjustmentType: ScenarioAdjustmentType,
+  targetPokemonCanonicalName: string | undefined,
+  attackerPokemonCanonicalName: string | undefined,
+): Record<UsageRankingCategory, string | undefined> => ({
+  move: adjustmentType === "offense"
+    ? targetPokemonCanonicalName
+    : attackerPokemonCanonicalName,
+  ability: attackerPokemonCanonicalName,
+  item: attackerPokemonCanonicalName,
+});
+
+type SuggestionFormatToggleProps = {
+  value?: SuggestionFormat;
+  onChange?: (format: SuggestionFormat) => void;
+};
+
+export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatToggleProps) {
+  const [internalValue, setInternalValue] = useState<SuggestionFormat>("Singles");
+  const selectedValue = value ?? internalValue;
+  const options: Array<{ format: SuggestionFormat; label: string; assetPath: string }> = [
+    { format: "Singles", label: "シングル", assetPath: "assets/ui/single.svg" },
+    { format: "Doubles", label: "ダブル", assetPath: "assets/ui/double.svg" },
+  ];
+
+  return (
+    <div className="suggestion-format-toggle" role="radiogroup" aria-label="サジェスト基準">
+      {options.map(({ format, label, assetPath }) => {
+        const checked = selectedValue === format;
+        const iconStyle = {
+          WebkitMaskImage: `url("${getAssetSrc(assetPath)}")`,
+          maskImage: `url("${getAssetSrc(assetPath)}")`,
+        } satisfies CSSProperties;
+        return (
+          <label
+            className="suggestion-format-option"
+            data-checked={checked ? "true" : "false"}
+            key={format}
+          >
+            <input
+              type="radio"
+              name="suggestion-format"
+              value={format}
+              checked={checked}
+              aria-label={label}
+              onChange={() => {
+                if (value === undefined) setInternalValue(format);
+                onChange?.(format);
+              }}
+            />
+            <span className="suggestion-format-option-content">
+              <span className="suggestion-format-icon" style={iconStyle} aria-hidden="true" />
+              <span className="suggestion-format-option-label">{label}</span>
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 type AppProps = {
   initialTargetForm?: TargetFormState;
   initialScenarioForms?: ScenarioFormState[];
   variant?: "default" | "tutorial";
+  suggestionFormat?: SuggestionFormat;
+  onSuggestionFormatChange?: (format: SuggestionFormat) => void;
+  usageData?: ChampionsUsageData | null;
+  usageSourceGeneratedAt?: string | null;
   onSearchStatusChange?: (status: SearchStatus) => void;
   onCandidateApplied?: () => void;
 };
@@ -874,9 +978,23 @@ export function App({
   initialTargetForm,
   initialScenarioForms,
   variant = "default",
+  suggestionFormat,
+  onSuggestionFormatChange,
+  usageData,
+  usageSourceGeneratedAt,
   onSearchStatusChange,
   onCandidateApplied,
 }: AppProps = {}) {
+  const [savedSuggestionFormat, setSavedSuggestionFormat] = useState<SuggestionFormat>(
+    () => variant === "tutorial" ? "Singles" : loadSuggestionFormat(),
+  );
+  const [loadedUsageData, setLoadedUsageData] = useState<ChampionsUsageData | null>(null);
+  const activeSuggestionFormat = suggestionFormat ?? savedSuggestionFormat;
+  const activeUsageData = variant === "tutorial"
+    ? null
+    : usageData === undefined
+      ? loadedUsageData
+      : usageData;
   const [targetForm, setTargetForm] = useState<TargetFormState>(
     () => initialTargetForm ?? createBlankTargetForm(),
   );
@@ -973,6 +1091,29 @@ export function App({
       : searchState.errorMessage && !isCanonicalResolutionMessage(searchState.errorMessage)
         ? searchState.errorMessage
         : null;
+
+  useEffect(() => {
+    if (variant !== "default" || usageData !== undefined) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    void loadChampionsUsageData({ signal: controller.signal }).then((result) => {
+      if (result.data) {
+        setLoadedUsageData(result.data);
+      }
+    });
+
+    return () => controller.abort();
+  }, [usageData, variant]);
+
+  const handleSuggestionFormatChange = (format: SuggestionFormat) => {
+    if (suggestionFormat === undefined) {
+      setSavedSuggestionFormat(format);
+    }
+    saveSuggestionFormat(format);
+    onSuggestionFormatChange?.(format);
+  };
 
   useEffect(() => {
     return () => {
@@ -1785,14 +1926,18 @@ export function App({
   };
 
   return (
-    <div
-      className={[
-        "app-shell",
-        variant === "tutorial" ? "app-shell--tutorial" : "",
-        searchState.status === "running" ? "is-running" : "",
-        mobileSheet ? `mobile-sheet-open mobile-${mobileSheet}-open` : "",
-      ].filter(Boolean).join(" ")}
-    >
+    <SuggestionUsageContext.Provider value={{
+      data: activeUsageData,
+      format: activeSuggestionFormat,
+    }}>
+      <div
+        className={[
+          "app-shell",
+          variant === "tutorial" ? "app-shell--tutorial" : "",
+          searchState.status === "running" ? "is-running" : "",
+          mobileSheet ? `mobile-sheet-open mobile-${mobileSheet}-open` : "",
+        ].filter(Boolean).join(" ")}
+      >
       {variant === "default" ? <header className="topbar">
         <div className="brand-title">
           <div className="brand-line">
@@ -1808,13 +1953,19 @@ export function App({
           </div>
         </div>
         <div className="topbar-meta">
-          <a
-            className="readme-link"
-            href="/guide/"
-            aria-label="使い方ガイドを開く"
-          >
-            <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
-          </a>
+          <div className="topbar-action-row">
+            <SuggestionFormatToggle
+              value={activeSuggestionFormat}
+              onChange={handleSuggestionFormatChange}
+            />
+            <a
+              className="readme-link"
+              href="/guide/"
+              aria-label="使い方ガイドを開く"
+            >
+              <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
+            </a>
+          </div>
           <p className="brand-version">
             app v{appVersionInfo.appVersion}
             {" / "}
@@ -2085,8 +2236,28 @@ export function App({
             <img src={getAssetSrc("assets/social/github-invertocat-white.svg")} alt="" />
           </a>
         </div>
+        <div className="app-footer-source">
+          <a
+            className="app-footer-source-link"
+            href="https://championsbattledata.com/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Pokemon Champions Battle Data
+          </a>
+          <span className="app-footer-source-date">
+            データ更新日: {formatUsageDataDateJst(
+              usageSourceGeneratedAt === undefined
+                ? activeUsageData?.dataVersion === "empty"
+                  ? undefined
+                  : activeUsageData?.sourceGeneratedAt
+                : usageSourceGeneratedAt ?? undefined,
+            )}
+          </span>
+        </div>
       </footer> : null}
-    </div>
+      </div>
+    </SuggestionUsageContext.Provider>
   );
 }
 
@@ -3699,8 +3870,19 @@ function TargetPanel({
   onCloseMobileSheet,
 }: TargetPanelProps) {
   const isSpLimitReached = totalStatPoints >= CHAMPIONS_TOTAL_STAT_POINTS;
-  const abilityOptions = getPokemonAbilityInputOptions(
-    canonicalPokemon ?? resolveCanonicalEntityName("pokemon", targetForm.pokemonInput),
+  const rankingOwnerPokemon = canonicalPokemon
+    ?? resolveCanonicalEntityName("pokemon", targetForm.pokemonInput);
+  const pokemonAbilityOptions = getPokemonAbilityInputOptions(rankingOwnerPokemon);
+  const itemOptions = useUsageSuggestionOptions(
+    "item",
+    targetForm.itemInput,
+    rankingOwnerPokemon,
+  );
+  const abilityOptions = useUsageSuggestionOptions(
+    "ability",
+    targetForm.abilityInput,
+    rankingOwnerPokemon,
+    pokemonAbilityOptions ?? getEntityInputOptions("ability"),
   );
 
   return (
@@ -3750,6 +3932,7 @@ function TargetPanel({
               kind="item"
               label="持ち物"
               value={targetForm.itemInput}
+              options={itemOptions}
               onChange={(event) => onUpdateField("itemInput", event.target.value)}
               onSelectValue={(value) => onUpdateField("itemInput", value)}
             />
@@ -5311,8 +5494,28 @@ function AttackCard({
   );
   const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
   const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
-  const attackerAbilityOptions = getPokemonAbilityInputOptions(
+  const targetCanonicalPokemon = resolveCanonicalEntityName("pokemon", targetForm.pokemonInput);
+  const suggestionRankingOwners = getAttackSuggestionRankingOwners(
+    adjustmentType,
+    targetCanonicalPokemon,
     attackerCanonicalPokemon,
+  );
+  const pokemonAbilityOptions = getPokemonAbilityInputOptions(attackerCanonicalPokemon);
+  const moveOptions = useUsageSuggestionOptions(
+    "move",
+    attack.moveInput,
+    suggestionRankingOwners.move,
+  );
+  const attackerAbilityOptions = useUsageSuggestionOptions(
+    "ability",
+    attack.attackerAbilityInput,
+    suggestionRankingOwners.ability,
+    pokemonAbilityOptions ?? getEntityInputOptions("ability"),
+  );
+  const attackerItemOptions = useUsageSuggestionOptions(
+    "item",
+    attack.attackerItemInput,
+    suggestionRankingOwners.item,
   );
   const statReferencePlan = getMoveStatReferencePlan(attack.moveInput, {
     teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
@@ -5459,6 +5662,7 @@ function AttackCard({
               label="技"
               showLabel
               value={attack.moveInput}
+              options={moveOptions}
               onChange={onInput("moveInput")}
               onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
             />
@@ -5530,6 +5734,7 @@ function AttackCard({
               showLabel
               value={attack.attackerItemInput}
               placeholder="任意"
+              options={attackerItemOptions}
               onChange={onInput("attackerItemInput")}
               onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
             />

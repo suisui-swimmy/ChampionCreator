@@ -5,6 +5,9 @@ on:
     branches:
       - main
   workflow_dispatch:
+  schedule:
+    - cron: "17 0 * * *"
+      timezone: "Asia/Tokyo"
 
 permissions:
   contents: read
@@ -16,7 +19,76 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.usage.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: usage
+        name: Fetch Champions usage data
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          LIVE_USAGE_URL: https://championcreator.suisui-swimmy.com/data/champions-usage-current.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          work_dir="${RUNNER_TEMP}/champions-usage"
+          mkdir -p "$work_dir"
+          candidate="${work_dir}/champions-usage-current.json"
+
+          write_empty_payload() {
+            node -e 'const fs = require("node:fs"); const path = process.argv[1]; const payload = { schemaVersion: 1, dataVersion: "empty", sourceGeneratedAt: "1970-01-01T00:00:00.000Z", formats: { Singles: {}, Doubles: {} } }; fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, "utf8");' "$candidate"
+          }
+
+          validate_payload() {
+            node scripts/generate-champions-usage.mjs --validate "$1"
+          }
+
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            if ! node scripts/generate-champions-usage.mjs --output "$candidate"; then
+              echo "Scheduled Champions usage refresh failed; keeping the last-good Pages deployment." >&2
+              exit 1
+            fi
+
+            candidate_version="$(node -e 'const fs = require("node:fs"); const payload = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(payload.dataVersion);' "$candidate")"
+            current="${work_dir}/current.json"
+            current_version=""
+            if curl --fail --silent --show-error --location --max-time 30 "$LIVE_USAGE_URL" -o "$current" && validate_payload "$current"; then
+              current_version="$(node -e 'const fs = require("node:fs"); const payload = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(payload.dataVersion);' "$current")"
+            fi
+
+            if [[ -n "$current_version" && "$candidate_version" == "$current_version" ]]; then
+              echo "Champions usage dataVersion=$candidate_version is already deployed; skipping Pages build."
+              echo "deploy=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "Champions usage dataVersion changed: ${current_version:-none} -> $candidate_version"
+              echo "deploy=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            if ! node scripts/generate-champions-usage.mjs --output "$candidate"; then
+              echo "Champions usage API failed on a push/manual run; trying the live Pages JSON." >&2
+              if ! curl --fail --silent --show-error --location --max-time 30 "$LIVE_USAGE_URL" -o "$candidate" || ! validate_payload "$candidate"; then
+                echo "Live Pages JSON is unavailable or invalid; using an empty ranking payload." >&2
+                write_empty_payload
+              fi
+            fi
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload usage candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: champions-usage-candidate
+          path: ${{ runner.temp }}/champions-usage/champions-usage-current.json
+          if-no-files-found: error
+
   build:
+    needs: prepare
+    if: needs.prepare.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +97,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: champions-usage-candidate
+          path: ${{ runner.temp }}/champions-usage
+      - name: Install generated Champions usage data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/data
+          cp "${RUNNER_TEMP}/champions-usage/champions-usage-current.json" public/data/champions-usage-current.json
       - run: npm run check
       - uses: actions/upload-pages-artifact@v3
         with:

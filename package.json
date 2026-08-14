@@ -1,6 +1,6 @@
 {
   "name": "championcreator",
-  "version": "0.10.2",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "generate:localization-seed": "node scripts/generate-localization-seed.mjs",
     "generate:move-hit-counts": "node scripts/add-move-hit-counts.mjs",
     "generate:pokemon-abilities": "node scripts/generate-pokemon-abilities.mjs",
+    "generate:champions-usage": "node scripts/generate-champions-usage.mjs",
     "validate:artwork-assets": "node scripts/validate-artwork-assets.mjs",
     "validate:localization": "node scripts/validate-localization.mjs",
     "validate:pokemon-abilities": "node scripts/validate-pokemon-abilities.mjs",

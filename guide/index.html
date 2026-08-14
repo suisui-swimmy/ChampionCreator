@@ -105,6 +105,7 @@
           <a href="#screen">画面の見方</a>
           <a href="#basic-flow">基本の流れ</a>
           <a href="#target">調整対象</a>
+          <a href="#suggestions">入力サジェスト</a>
           <a href="#sp">SPの考え方</a>
           <a href="#scenarios">仮想敵シナリオ</a>
           <a id="constant-damage-nav" href="#constant-damage">定数ダメージ・回復</a>
@@ -193,6 +194,15 @@
           <h2>調整対象</h2>
           <p>探索のベースになるポケモンを設定します。主な入力項目は、ポケモン名、性格、特性、持ち物、レベル、現在のH/A/B/C/D/S SP、テラスタイプ、ランク、状態異常です。</p>
           <p>H/B/Dは耐久候補として同時探索されます。A/C/Sは、入力済みSPや火力調整・素早さ調整で必要になった固定条件として、耐久探索の予算にも反映されます。</p>
+        </section>
+
+        <section class="guide-section" id="suggestions">
+          <p class="guide-section-kicker">SUGGESTIONS</p>
+          <h2>入力サジェスト</h2>
+          <p>技・特性・持ち物の入力候補は、<a href="https://championsbattledata.com/" target="_blank" rel="noreferrer">Pokemon Champions Battle Data</a> の <code>Current</code> 使用率を基準に並びます。ヘッダー右上の「シングル」「ダブル」でサジェスト基準を切り替えられます。</p>
+          <p>初期値はシングルです。選択したサジェスト基準だけが同じブラウザに保存され、入力中の値や計算結果は変わりません。</p>
+          <p>使用率データに掲載されていない候補は五十音順で表示します。順位や使用率そのものは表示せず、候補の並び順だけに反映します。チュートリアル画面では従来の候補順を維持します。</p>
+          <p>データは1日1回確認し、更新されている場合だけ反映されます。提供元とデータ更新日はアプリ本体のフッターで確認できます。</p>
         </section>
 
         <section class="guide-section" id="sp">
@@ -368,6 +378,14 @@
         >
           <img src="/assets/social/github-invertocat-white.svg" alt="" />
         </a>
+        <span aria-hidden="true"> | </span>
+        <a
+          class="app-footer-contact"
+          href="https://championsbattledata.com/"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="使用率データ提供元 Pokemon Champions Battle Data"
+        >使用率データ提供元</a>
       </div>
     </footer>
     <script type="module" src="/src/guide/main.tsx"></script>

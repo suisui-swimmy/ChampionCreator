@@ -7,11 +7,13 @@ import {
   CandidateStatPointBars,
   CandidateStatPointSpread,
   ResultsPanel,
+  SuggestionFormatToggle,
   applyScenarioAdjustmentTypeDefaults,
   applySpeedMoveModifierDefaults,
   clampTargetStatPointChange,
   compareResultCandidates,
   createScenario,
+  getAttackSuggestionRankingOwners,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
@@ -26,6 +28,7 @@ import {
   formatMovePowerEvaluation,
   normalizeNumericInputText,
 } from "./App";
+import { formatUsageDataDateJst, type ChampionsUsageData } from "./usage";
 import {
   applyMoveInputDefaults,
   createDefaultScenarioForms,
@@ -42,7 +45,32 @@ const renderExampleApp = (): string => renderToStaticMarkup(
   />,
 );
 
+const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => ({
+  schemaVersion: 1,
+  dataVersion,
+  sourceGeneratedAt: "2026-08-13T15:30:00Z",
+  formats: { Singles: {}, Doubles: {} },
+});
+
 describe("App", () => {
+  it("uses the intended Pokemon as each suggestion ranking owner", () => {
+    expect(getAttackSuggestionRankingOwners("defence", "Target", "Attacker")).toEqual({
+      move: "Attacker",
+      ability: "Attacker",
+      item: "Attacker",
+    });
+    expect(getAttackSuggestionRankingOwners("offense", "Target", "Virtual Enemy")).toEqual({
+      move: "Target",
+      ability: "Virtual Enemy",
+      item: "Virtual Enemy",
+    });
+    expect(getAttackSuggestionRankingOwners("speed", "Target", "Virtual Enemy")).toEqual({
+      move: "Virtual Enemy",
+      ability: "Virtual Enemy",
+      item: "Virtual Enemy",
+    });
+  });
+
   it("only treats field-wide or ally-targeting abilities as move-less support cards", () => {
     for (const skinAbility of [
       "フェアリースキン",
@@ -158,8 +186,11 @@ describe("App", () => {
       expect(footer).toContain("assets/social/github-invertocat-white.svg");
       expect(footer.indexOf("不具合報告")).toBeLessThan(footer.indexOf("お問い合わせ"));
       expect(footer.indexOf("お問い合わせ")).toBeLessThan(footer.indexOf("https://github.com/suisui-swimmy/ChampionCreator"));
-      expect(footer.match(/ \| /g)).toHaveLength(2);
     }
+
+    expect(appFooter.match(/ \| /g)).toHaveLength(2);
+    expect(guideFooter.match(/ \| /g)).toHaveLength(3);
+    expect(guideFooter).toContain('href="https://championsbattledata.com/"');
 
     expect(githubIcon).toContain('<svg width="98" height="96"');
     expect(githubIcon).toContain('fill="white"');
@@ -366,6 +397,7 @@ describe("App", () => {
     expect(tutorialHtml).toContain('value="メガゲンガー"');
     expect(tutorialHtml).toContain('value="サイコキネシス"');
     expect(tutorialHtml).not.toContain('class="topbar"');
+    expect(tutorialHtml).not.toContain('aria-label="サジェスト基準"');
     expect(tutorialHtml).not.toContain('class="app-footer"');
     expect(robots).toContain("Sitemap: https://championcreator.suisui-swimmy.com/sitemap.xml");
   });
@@ -506,6 +538,14 @@ describe("App", () => {
     expect(html).toContain("© 2026 suisui-swimmy");
     expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
     expect(html).toContain('class="app-footer-links"');
+    expect(html).toContain('role="radiogroup" aria-label="サジェスト基準"');
+    expect(html).toContain('aria-label="シングル"');
+    expect(html).toContain('aria-label="ダブル"');
+    expect(html).toContain("assets/ui/single.svg");
+    expect(html).toContain("assets/ui/double.svg");
+    expect(html).toContain('href="https://championsbattledata.com/"');
+    expect(html).toContain("Pokemon Champions Battle Data");
+    expect(html).toContain("データ更新日: 未取得");
     expect(html).not.toContain("ゲームフリーク に帰属します。");
     expect(html).toContain('href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"');
     expect(html).toContain('href="https://x.com/peixe0307"');
@@ -521,6 +561,34 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+  });
+
+  it("keeps the suggestion format selector native, accessible, and single-first", () => {
+    const html = renderToStaticMarkup(<SuggestionFormatToggle />);
+
+    expect(html).toMatch(/role="radiogroup" aria-label="サジェスト基準"/);
+    expect(html).toMatch(/type="radio"[^>]*checked=""[^>]*value="Singles"/);
+    expect(html).toMatch(/type="radio"[^>]*value="Doubles"/);
+    expect(html).toContain('aria-label="シングル"');
+    expect(html).toContain('aria-label="ダブル"');
+    expect(html).not.toContain("title=");
+  });
+
+  it("formats source update timestamps as JST dates and falls back when unavailable", () => {
+    expect(formatUsageDataDateJst("2026-08-13T15:30:00Z")).toBe("2026-08-14");
+    expect(formatUsageDataDateJst(undefined)).toBe("未取得");
+    expect(formatUsageDataDateJst("not-a-date")).toBe("未取得");
+  });
+
+  it("uses loaded usage metadata in the footer and keeps an empty fallback unavailable", () => {
+    const loadedHtml = renderToStaticMarkup(
+      <App suggestionFormat="Doubles" usageData={usageDataFixture()} />,
+    );
+    const emptyHtml = renderToStaticMarkup(<App usageData={usageDataFixture("empty")} />);
+
+    expect(loadedHtml).toContain("データ更新日: 2026-08-14");
+    expect(loadedHtml).toMatch(/type="radio"[^>]*checked=""[^>]*value="Doubles"/);
+    expect(emptyHtml).toContain("データ更新日: 未取得");
   });
 
   it("keeps a compact power field beside every non-speed move input", () => {
