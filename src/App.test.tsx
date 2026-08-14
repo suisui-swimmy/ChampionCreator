@@ -440,6 +440,18 @@ describe("App", () => {
     expect(isUnresolvedEntityInput("pokemon", "イッカネズミ ４ひきかぞく")).toBe(false);
     expect(isUnresolvedEntityInput("pokemon", "オーガポン いしずえのめん")).toBe(false);
     expect(isUnresolvedEntityInput("pokemon", "オーガポン いしずえのかめん")).toBe(false);
+    for (const input of [
+      "チャデス マガイモノのすがた",
+      "チャデス タカイモノのすがた",
+      "ヤバソチャ ボンサクのすがた",
+      "ヤバソチャ ケッサクのすがた",
+      "ヤバチャ がんさくフォルム",
+      "ヤバチャ しんさくフォルム",
+      "ポットデス がんさくフォルム",
+      "ポットデス しんさくフォルム",
+    ]) {
+      expect(isUnresolvedEntityInput("pokemon", input)).toBe(false);
+    }
   });
 
   it("renders the M0 workbench sections", () => {

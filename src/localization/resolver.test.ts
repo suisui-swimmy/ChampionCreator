@@ -116,6 +116,40 @@ describe("resolveEntity", () => {
     });
   });
 
+  it("keeps tea Pokemon form suggestions unique and resolvable", () => {
+    const formCases = [
+      ["チャデス マガイモノのすがた", "Poltchageist"],
+      ["チャデス タカイモノのすがた", "Poltchageist-Artisan"],
+      ["ヤバソチャ ボンサクのすがた", "Sinistcha"],
+      ["ヤバソチャ ケッサクのすがた", "Sinistcha-Masterpiece"],
+      ["ヤバチャ がんさくフォルム", "Sinistea"],
+      ["ヤバチャ しんさくフォルム", "Sinistea-Antique"],
+      ["ポットデス がんさくフォルム", "Polteageist"],
+      ["ポットデス しんさくフォルム", "Polteageist-Antique"],
+    ] as const;
+
+    for (const [input, canonicalName] of formCases) {
+      expect(resolveEntity("pokemon", input)).toMatchObject({
+        status: "exact",
+        canonicalName,
+        displayNameJa: input,
+      });
+    }
+
+    const suggestionCases = [
+      ["チャデス", ["Poltchageist", "Poltchageist-Artisan"]],
+      ["ヤバソチャ", ["Sinistcha", "Sinistcha-Masterpiece"]],
+      ["ヤバチャ", ["Sinistea", "Sinistea-Antique"]],
+      ["ポットデス", ["Polteageist", "Polteageist-Antique"]],
+    ] as const;
+
+    for (const [input, canonicalNames] of suggestionCases) {
+      expect(getMatchingEntityInputOptions("pokemon", input).map((option) => option.canonicalName)).toEqual(
+        expect.arrayContaining([...canonicalNames]),
+      );
+    }
+  });
+
   it("resolves generated option data for other UI entity fields", () => {
     expect(resolveEntity("move", "インファイト")).toMatchObject({
       status: "exact",

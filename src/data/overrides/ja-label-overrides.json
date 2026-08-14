@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "manual-overrides-2026-06-16",
+  "dataVersion": "manual-overrides-2026-08-15",
   "entries": [
     {
       "kind": "pokemon",
@@ -8,6 +8,34 @@
       "displayNameJa": "イッカネズミ",
       "sourceStatus": "manual",
       "note": "Avoids the generated duplicate 4-family label so イッカネズミ ４ひきかぞく resolves to Maushold-Four."
+    },
+    {
+      "kind": "pokemon",
+      "id": "poltchageistartisan",
+      "displayNameJa": "チャデス タカイモノのすがた",
+      "sourceStatus": "manual",
+      "note": "Distinguishes the Artisan form from the generated Counterfeit-form label."
+    },
+    {
+      "kind": "pokemon",
+      "id": "sinistchamasterpiece",
+      "displayNameJa": "ヤバソチャ ケッサクのすがた",
+      "sourceStatus": "manual",
+      "note": "Distinguishes the Masterpiece form from the generated Unremarkable-form label."
+    },
+    {
+      "kind": "pokemon",
+      "id": "sinisteaantique",
+      "displayNameJa": "ヤバチャ しんさくフォルム",
+      "sourceStatus": "manual",
+      "note": "Distinguishes the Antique form from the generated Phony-form label."
+    },
+    {
+      "kind": "pokemon",
+      "id": "polteageistantique",
+      "displayNameJa": "ポットデス しんさくフォルム",
+      "sourceStatus": "manual",
+      "note": "Distinguishes the Antique form from the generated Phony-form label."
     },
     {
       "kind": "pokemon",
