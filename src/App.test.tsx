@@ -115,6 +115,21 @@ describe("App", () => {
     expect(css).toMatch(/\.mobile-candidate-dock\s*\{[^}]*position:\s*static;[^}]*margin-top:\s*auto;/s);
   });
 
+  it("keeps the mobile header actions compact while leaving the product description visible", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const html = renderExampleApp();
+
+    expect(css).toContain('"brand actions"\n      "description description"');
+    expect(css).toMatch(/\.brand-title,\s*\.brand-line\s*\{[^}]*display:\s*contents;/s);
+    expect(css).toMatch(/\.topbar \.brand-description\s*\{[^}]*grid-area:\s*description;[^}]*text-align:\s*center;[^}]*text-wrap:\s*balance;/s);
+    expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*display:\s*none;/s);
+    expect(css).toMatch(/\.suggestion-format-option-content\s*\{[^}]*min-height:\s*38px;/s);
+    expect(css).toMatch(/\.readme-link\s*\{[^}]*width:\s*40px;[^}]*height:\s*40px;/s);
+    expect(css).toMatch(/\.app-footer-version\s*\{[^}]*display:\s*block;/s);
+    expect(html).toContain("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール");
+    expect(html).toContain('class="app-footer-version"');
+  });
+
   it("publishes indexable metadata and canonical XML and text sitemaps", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -538,6 +553,7 @@ describe("App", () => {
     expect(html).toContain("© 2026 suisui-swimmy");
     expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
     expect(html).toContain('class="app-footer-links"');
+    expect(html).toContain('class="app-footer-version"');
     expect(html).toContain('role="radiogroup" aria-label="サジェスト基準"');
     expect(html).toContain('aria-label="シングル"');
     expect(html).toContain('aria-label="ダブル"');

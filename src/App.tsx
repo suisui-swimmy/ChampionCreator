@@ -2255,6 +2255,13 @@ export function App({
             )}
           </span>
         </div>
+        <p className="app-footer-version">
+          app v{appVersionInfo.appVersion}
+          {" / "}
+          calc {appVersionInfo.smogonCalcVersion}
+          {" / "}
+          data {appVersionInfo.localizationEntries}
+        </p>
       </footer> : null}
       </div>
     </SuggestionUsageContext.Provider>
