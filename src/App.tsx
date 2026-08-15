@@ -781,6 +781,30 @@ export const applyScenarioAdjustmentTypeDefaults = (
   })),
 });
 
+export const toScenarioGameType = (format: SuggestionFormat): GameType => (
+  format === "Doubles" ? "doubles" : "singles"
+);
+
+export const syncScenarioGameTypesToSuggestionFormat = (
+  scenarios: ScenarioFormState[],
+  format: SuggestionFormat,
+): ScenarioFormState[] => {
+  const gameType = toScenarioGameType(format);
+  return scenarios.map((scenario) => {
+    let changed = false;
+    const attacks = scenario.attacks.map((attack) => {
+      if (attack.gameType === gameType) {
+        return attack;
+      }
+
+      changed = true;
+      return applyBeatUpGameTypeDefaults(attack, gameType);
+    });
+
+    return changed ? { ...scenario, attacks } : scenario;
+  });
+};
+
 export const applySpeedMoveModifierDefaults = (
   attack: ScenarioAttackFormState,
   speedMoveModifier: ScenarioAttackFormState["speedMoveModifier"],
@@ -802,7 +826,7 @@ export const applySpeedMoveModifierDefaults = (
   };
 };
 
-const createBlankAttack = (index: number): ScenarioAttackFormState => ({
+const createBlankAttack = (index: number, gameType: GameType = "singles"): ScenarioAttackFormState => ({
   ...createDefaultScenarioAttackForm(`attack-${Date.now()}-${index}`, `攻撃${String.fromCharCode(65 + index)}`),
   attackerPokemonInput: "",
   attackerNatureInput: "",
@@ -822,7 +846,7 @@ const createBlankAttack = (index: number): ScenarioAttackFormState => ({
   requiredSurvivedHits: Math.min(10, index + 1),
   minSurvivalProbabilityPercent: 100,
   targetKoProbabilityPercent: 100,
-  gameType: "singles",
+  gameType,
   weather: "none",
   terrain: "none",
   critical: false,
@@ -855,16 +879,16 @@ const createBlankTargetForm = (): TargetFormState => ({
   boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
 });
 
-const createBlankScenario = (index: number): ScenarioFormState => ({
+const createBlankScenario = (index: number, gameType: GameType = "singles"): ScenarioFormState => ({
   ...createDefaultScenarioForms()[0],
   id: `scenario-${Date.now()}-${index}`,
   label: `シナリオ${index + 1}`,
   enabled: true,
-  attacks: [createBlankAttack(0)],
+  attacks: [createBlankAttack(0, gameType)],
 });
 
-export const createScenario = (index: number): ScenarioFormState => ({
-  ...createBlankScenario(index),
+export const createScenario = (index: number, gameType: GameType = "singles"): ScenarioFormState => ({
+  ...createBlankScenario(index, gameType),
   id: `scenario-${Date.now()}-${index}`,
   label: `シナリオ${index + 1}`,
 });
@@ -927,7 +951,7 @@ export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatTogg
   ];
 
   return (
-    <div className="suggestion-format-toggle" role="radiogroup" aria-label="サジェスト基準">
+    <div className="suggestion-format-toggle" role="radiogroup" aria-label="バトル形式とサジェスト基準">
       {options.map(({ format, label, assetPath }) => {
         const checked = selectedValue === format;
         const iconStyle = {
@@ -999,7 +1023,7 @@ export function App({
     () => initialTargetForm ?? createBlankTargetForm(),
   );
   const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(
-    () => initialScenarioForms ?? [createBlankScenario(0)],
+    () => initialScenarioForms ?? [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))],
   );
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [bulkMaximizeState, dispatchBulkMaximize] = useReducer(
@@ -1107,14 +1131,6 @@ export function App({
     return () => controller.abort();
   }, [usageData, variant]);
 
-  const handleSuggestionFormatChange = (format: SuggestionFormat) => {
-    if (suggestionFormat === undefined) {
-      setSavedSuggestionFormat(format);
-    }
-    saveSuggestionFormat(format);
-    onSuggestionFormatChange?.(format);
-  };
-
   useEffect(() => {
     return () => {
       activeRequestRef.current?.cancel();
@@ -1199,6 +1215,16 @@ export function App({
     }
     dispatchSearch({ type: "reset" });
     dispatchBulkMaximize({ type: "reset" });
+  };
+
+  const handleSuggestionFormatChange = (format: SuggestionFormat) => {
+    resetActiveSearch();
+    setScenarioForms((current) => syncScenarioGameTypesToSuggestionFormat(current, format));
+    if (suggestionFormat === undefined) {
+      setSavedSuggestionFormat(format);
+    }
+    saveSuggestionFormat(format);
+    onSuggestionFormatChange?.(format);
   };
 
   const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
@@ -1366,7 +1392,10 @@ export function App({
 
   const handleAddScenario = (): ScenarioFormState => {
     resetActiveSearch();
-    const nextScenario = createScenario(scenarioForms.length);
+    const nextScenario = createScenario(
+      scenarioForms.length,
+      toScenarioGameType(activeSuggestionFormat),
+    );
     setScenarioForms((current) => [...current, nextScenario]);
     return nextScenario;
   };
@@ -1497,7 +1526,7 @@ export function App({
     if (entryId === BLANK_BOX_SLOT_ID) {
       resetActiveSearch();
       setTargetForm(createBlankTargetForm());
-      setScenarioForms([createBlankScenario(0)]);
+      setScenarioForms([createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]);
       setBoxMessage(null);
       setBoxOpen(false);
       return;
@@ -1701,7 +1730,7 @@ export function App({
   const handleLoadEnemyBoxEntry = (entryId: string) => {
     if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
       resetActiveSearch();
-      setScenarioForms([createBlankScenario(0)]);
+      setScenarioForms([createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]);
       setEnemyBoxMessage(null);
       setEnemyBoxOpen(false);
       return;
@@ -5836,6 +5865,12 @@ function AttackCard({
             >
               <h3 id={`${scenarioId}-${attack.id}-speed-environment-title`}>相手S条件</h3>
               <div className="attack-field-grid speed-field-grid attack-setting-section-body">
+                <SelectField
+                  label="ルール"
+                  value={attack.gameType}
+                  options={gameTypeOptions}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
+                />
                 <SelectField
                   label="状態"
                   value={attack.attackerStatus}

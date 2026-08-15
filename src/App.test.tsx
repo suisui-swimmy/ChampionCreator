@@ -27,6 +27,7 @@ import {
   isUnresolvedEntityInput,
   formatMovePowerEvaluation,
   normalizeNumericInputText,
+  syncScenarioGameTypesToSuggestionFormat,
 } from "./App";
 import { formatUsageDataDateJst, type ChampionsUsageData } from "./usage";
 import {
@@ -413,7 +414,7 @@ describe("App", () => {
     expect(tutorialHtml).toContain('value="メガゲンガー"');
     expect(tutorialHtml).toContain('value="サイコキネシス"');
     expect(tutorialHtml).not.toContain('class="topbar"');
-    expect(tutorialHtml).not.toContain('aria-label="サジェスト基準"');
+    expect(tutorialHtml).not.toContain('aria-label="バトル形式とサジェスト基準"');
     expect(tutorialHtml).not.toContain('class="app-footer"');
     expect(robots).toContain("Sitemap: https://championcreator.suisui-swimmy.com/sitemap.xml");
   });
@@ -567,7 +568,7 @@ describe("App", () => {
     expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
     expect(html).toContain('class="app-footer-links"');
     expect(html).toContain('class="app-footer-version"');
-    expect(html).toContain('role="radiogroup" aria-label="サジェスト基準"');
+    expect(html).toContain('role="radiogroup" aria-label="バトル形式とサジェスト基準"');
     expect(html).toContain('aria-label="シングル"');
     expect(html).toContain('aria-label="ダブル"');
     expect(html).toContain("assets/ui/single.svg");
@@ -592,15 +593,84 @@ describe("App", () => {
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
   });
 
-  it("keeps the suggestion format selector native, accessible, and single-first", () => {
+  it("keeps the battle format selector native, accessible, and single-first", () => {
     const html = renderToStaticMarkup(<SuggestionFormatToggle />);
 
-    expect(html).toMatch(/role="radiogroup" aria-label="サジェスト基準"/);
+    expect(html).toMatch(/role="radiogroup" aria-label="バトル形式とサジェスト基準"/);
     expect(html).toMatch(/type="radio"[^>]*checked=""[^>]*value="Singles"/);
     expect(html).toMatch(/type="radio"[^>]*value="Doubles"/);
     expect(html).toContain('aria-label="シングル"');
     expect(html).toContain('aria-label="ダブル"');
     expect(html).not.toContain("title=");
+  });
+
+  it("syncs every scenario attack to the header format while preserving individual overrides", () => {
+    const [baseScenario] = createDefaultScenarioForms();
+    const scenarios = [
+      {
+        ...baseScenario,
+        attacks: [
+          baseScenario.attacks[0],
+          { ...baseScenario.attacks[0], id: "attack-b", label: "攻撃B" },
+        ],
+      },
+      {
+        ...baseScenario,
+        id: "scenario-b",
+        label: "シナリオ2",
+        attacks: [{ ...baseScenario.attacks[0], id: "attack-c", label: "攻撃C" }],
+      },
+    ];
+
+    const synced = syncScenarioGameTypesToSuggestionFormat(scenarios, "Doubles");
+    expect(synced.flatMap((scenario) => scenario.attacks.map((attack) => attack.gameType))).toEqual([
+      "doubles",
+      "doubles",
+      "doubles",
+    ]);
+
+    const withIndividualOverride = synced.map((scenario, scenarioIndex) => (
+      scenarioIndex === 0
+        ? {
+            ...scenario,
+            attacks: scenario.attacks.map((attack, attackIndex) => (
+              attackIndex === 1 ? { ...attack, gameType: "singles" as const } : attack
+            )),
+          }
+        : scenario
+    ));
+    expect(withIndividualOverride[0].attacks.map((attack) => attack.gameType)).toEqual([
+      "doubles",
+      "singles",
+    ]);
+  });
+
+  it("applies the existing Beat Up participant limit during header synchronization", () => {
+    const [baseScenario] = createDefaultScenarioForms();
+    const beatUpAttack = {
+      ...baseScenario.attacks[0],
+      moveInput: "ふくろだたき",
+      gameType: "doubles" as const,
+      repeat: 4,
+      requiredSurvivedHits: 4,
+      beatUpParticipants: [
+        { id: "attacker", source: "attacker" as const, pokemonInput: "", powerMode: "auto" as const, powerValue: 0 },
+        { id: "party-1", source: "party" as const, pokemonInput: "コータス", powerMode: "auto" as const, powerValue: 0 },
+        { id: "party-2", source: "party" as const, pokemonInput: "コノヨザル", powerMode: "auto" as const, powerValue: 0 },
+        { id: "party-3", source: "party" as const, pokemonInput: "ピカチュウ", powerMode: "manual" as const, powerValue: 22 },
+      ],
+    };
+
+    const [synced] = syncScenarioGameTypesToSuggestionFormat([
+      { ...baseScenario, attacks: [beatUpAttack] },
+    ], "Singles");
+
+    expect(synced.attacks[0]).toMatchObject({
+      gameType: "singles",
+      repeat: 3,
+      requiredSurvivedHits: 3,
+    });
+    expect(synced.attacks[0].beatUpParticipants).toHaveLength(3);
   });
 
   it("formats source update timestamps as JST dates and falls back when unavailable", () => {
@@ -1118,13 +1188,19 @@ describe("App", () => {
     expect(getMobileAttackNavigationTargets({ ...scenarios[0], attacks: [] })).toBeNull();
   });
 
-  it("creates added scenarios as enabled by default", () => {
+  it("creates added scenarios as enabled by default and accepts the current header format", () => {
     const scenario = createScenario(3);
+    const doublesScenario = createScenario(4, "doubles");
 
     expect(scenario).toMatchObject({
       label: "シナリオ4",
       enabled: true,
       adjustmentType: "defence",
+    });
+    expect(doublesScenario).toMatchObject({
+      label: "シナリオ5",
+      enabled: true,
+      attacks: [{ gameType: "doubles" }],
     });
   });
 
