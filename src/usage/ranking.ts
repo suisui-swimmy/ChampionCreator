@@ -1,6 +1,8 @@
 import { normalizeSearchText } from "../localization/normalize";
 import type {
   ChampionsUsageData,
+  NatureUsageDatum,
+  NatureUsageState,
   SuggestionFormat,
   UsageRankingCategory,
   UsagePokemonEntry,
@@ -59,6 +61,53 @@ export const getUsageRanking = (
   pokemonCanonicalName: string | undefined,
   category: UsageRankingCategory,
 ): readonly string[] | undefined => getUsagePokemonEntry(data, format, pokemonCanonicalName)?.[category];
+
+/**
+ * Look up the optional top-nature list for exactly one owner Pokemon and
+ * format.  The owner lookup is deliberately shared with the existing
+ * ranking path so a form never inherits the base Pokemon's data and Singles
+ * never inherits Doubles data.
+ */
+export const getUsageNatureRanking = (
+  data: ChampionsUsageData | null | undefined,
+  format: SuggestionFormat,
+  pokemonCanonicalName: string | undefined,
+): readonly NatureUsageDatum[] | undefined => getUsagePokemonEntry(
+  data,
+  format,
+  pokemonCanonicalName,
+)?.nature;
+
+/**
+ * Resolve one nature's display state from a loaded usage payload.
+ *
+ * - unavailable: no owner entry or no optional nature feed
+ * - unlisted: a feed exists, but the nature is outside the published top 10
+ * - listed: the exact canonical nature was published, including a real 0.0%
+ */
+export const getNatureUsageState = (
+  data: ChampionsUsageData | null | undefined,
+  format: SuggestionFormat,
+  pokemonCanonicalName: string | undefined,
+  natureCanonicalName: string | undefined,
+): NatureUsageState => {
+  if (!natureCanonicalName) {
+    return { kind: "unavailable" };
+  }
+
+  const ranking = getUsageNatureRanking(data, format, pokemonCanonicalName);
+  if (!ranking || ranking.length === 0) {
+    return { kind: "unavailable" };
+  }
+
+  const datum = ranking.find((entry) => entry.canonicalName === natureCanonicalName);
+  return datum
+    ? { kind: "listed", rank: datum.rank, percentage: datum.percentage }
+    : { kind: "unlisted" };
+};
+
+/** Alias emphasizing that this lookup is backed by the usage payload. */
+export const getUsageNatureState = getNatureUsageState;
 
 /**
  * Apply a usage ranking to an already-filtered autocomplete list.

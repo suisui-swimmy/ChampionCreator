@@ -1408,6 +1408,8 @@ input {
 
 .nature-option {
   position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1424,25 +1426,56 @@ input {
   transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
+.nature-option::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: rgba(32, 194, 108, 0.72);
+  content: "";
+  opacity: var(--nature-usage-opacity, 0);
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.nature-option-label {
+  position: relative;
+  z-index: 1;
+}
+
 .nature-option:hover {
   border-color: rgba(245, 197, 66, 0.24);
-  background: rgba(245, 197, 66, 0.12);
+  box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.08);
   color: #ffe08a;
+}
+
+.nature-option:focus-visible {
+  border-color: rgba(245, 197, 66, 0.78);
+  box-shadow: 0 0 0 2px rgba(245, 197, 66, 0.22), inset 0 0 0 1px rgba(245, 197, 66, 0.16);
 }
 
 .nature-option.selected {
   border-color: rgba(245, 197, 66, 0.46);
-  background: rgba(245, 197, 66, 0.13);
   color: var(--gold);
   box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.12);
 }
 
 .nature-option.selected::after {
   position: absolute;
+  z-index: 1;
   right: 8px;
   color: var(--gold);
   font-size: 11px;
   content: "✓";
+}
+
+.nature-usage-detail {
+  min-height: 18px;
+  margin: 7px 2px 1px;
+  color: #b8c6bd;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .nature-option.neutral {

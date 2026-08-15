@@ -61,6 +61,34 @@ describe("parseChampionsUsageData", () => {
       .toThrow(UsageDataValidationError);
   });
 
+  it("accepts optional nature usage while preserving null and real zero percentages", () => {
+    const result = parseChampionsUsageData({
+      ...validPayload,
+      formats: {
+        ...validPayload.formats,
+        Singles: {
+          pikachu: {
+            ...validPayload.formats.Singles.pikachu,
+            nature: [
+              { canonicalName: "Jolly", rank: 1, percentage: 0 },
+              { canonicalName: "Timid", rank: 2, percentage: null },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(result.formats.Singles.pikachu.nature).toEqual([
+      { canonicalName: "Jolly", rank: 1, percentage: 0 },
+      { canonicalName: "Timid", rank: 2, percentage: null },
+    ]);
+  });
+
+  it("keeps an old v1 payload without nature valid and omits the optional field", () => {
+    const result = parseChampionsUsageData(validPayload);
+    expect(result.formats.Singles.pikachu).not.toHaveProperty("nature");
+  });
+
   it.each([
     ["schemaVersion", { schemaVersion: 2 }],
     ["dataVersion", { dataVersion: "" }],
@@ -105,5 +133,63 @@ describe("parseChampionsUsageData", () => {
       },
     })).toThrow(/duplicate/);
   });
-});
 
+  it.each([
+    ["duplicate canonical names", [
+      { canonicalName: "Jolly", rank: 1, percentage: 10 },
+      { canonicalName: "Jolly", rank: 2, percentage: 5 },
+    ], /canonicalName.*duplicate/],
+    ["duplicate ranks", [
+      { canonicalName: "Jolly", rank: 1, percentage: 10 },
+      { canonicalName: "Timid", rank: 1, percentage: 5 },
+    ], /rank.*duplicate/],
+    ["zero rank", [{ canonicalName: "Jolly", rank: 0, percentage: 10 }], /rank/],
+    ["fractional rank", [{ canonicalName: "Jolly", rank: 1.5, percentage: 10 }], /rank/],
+    ["rank above top ten", [{ canonicalName: "Jolly", rank: 11, percentage: 10 }], /rank/],
+    ["negative percentage", [{ canonicalName: "Jolly", rank: 1, percentage: -0.1 }], /percentage/],
+    ["percentage above 100", [{ canonicalName: "Jolly", rank: 1, percentage: 100.1 }], /percentage/],
+    ["string percentage", [{ canonicalName: "Jolly", rank: 1, percentage: "10" }], /percentage/],
+    ["missing percentage", [{ canonicalName: "Jolly", rank: 1 }], /percentage/],
+  ])("rejects malformed nature ranking: %s", (_label, nature, message) => {
+    expect(() => parseChampionsUsageData({
+      ...validPayload,
+      formats: {
+        ...validPayload.formats,
+        Singles: {
+          pikachu: {
+            ...validPayload.formats.Singles.pikachu,
+            nature,
+          },
+        },
+      },
+    })).toThrow(message);
+  });
+
+  it("rejects non-finite nature percentages", () => {
+    expect(() => parseChampionsUsageData({
+      ...validPayload,
+      formats: {
+        ...validPayload.formats,
+        Singles: {
+          pikachu: {
+            ...validPayload.formats.Singles.pikachu,
+            nature: [{ canonicalName: "Jolly", rank: 1, percentage: Number.NaN }],
+          },
+        },
+      },
+    })).toThrow(/percentage/);
+
+    expect(() => parseChampionsUsageData({
+      ...validPayload,
+      formats: {
+        ...validPayload.formats,
+        Singles: {
+          pikachu: {
+            ...validPayload.formats.Singles.pikachu,
+            nature: [{ canonicalName: "Jolly", rank: 1, percentage: Number.POSITIVE_INFINITY }],
+          },
+        },
+      },
+    })).toThrow(/percentage/);
+  });
+});

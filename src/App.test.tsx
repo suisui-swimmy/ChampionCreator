@@ -17,11 +17,15 @@ import {
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
+  formatNatureModifierLabel,
+  formatNatureUsageAriaLabel,
+  formatNatureUsageDetail,
   formatScenarioResultStatusLabel,
   getDropdownEntityOptions,
   getMobileAttackNavigationTargets,
   getMobileScenarioDirectionIconPath,
   getNatureModifierDirection,
+  getNatureUsageOverlayOpacity,
   getScenarioPanelVisibleScenarios,
   isAbilitySupportCard,
   isUnresolvedEntityInput,
@@ -688,6 +692,131 @@ describe("App", () => {
     expect(loadedHtml).toContain("データ更新日: 2026-08-14");
     expect(loadedHtml).toMatch(/type="radio"[^>]*checked=""[^>]*value="Doubles"/);
     expect(emptyHtml).toContain("データ更新日: 未取得");
+  });
+
+  it("keeps nature usage formatting explicit for listed, unlisted, unavailable, and real zero values", () => {
+    const jolly = { label: "ようき", plus: "spe" as const, minus: "spa" as const };
+    const hardy = { label: "がんばりや", plus: "atk" as const, minus: "atk" as const };
+
+    expect(formatNatureModifierLabel(jolly)).toBe("S↑ C↓");
+    expect(formatNatureModifierLabel(hardy)).toBe("補正なし");
+    expect(formatNatureUsageDetail(
+      jolly,
+      "Doubles",
+      { kind: "listed", rank: 1, percentage: 66.2 },
+    )).toBe("ようき｜S↑ C↓｜ダブル使用率 66.2%（1位）");
+    expect(formatNatureUsageDetail(
+      hardy,
+      "Doubles",
+      { kind: "listed", rank: 10, percentage: 0 },
+    )).toBe("がんばりや｜補正なし｜ダブル使用率 0.0%（10位）");
+    expect(formatNatureUsageDetail(
+      hardy,
+      "Doubles",
+      { kind: "listed", rank: 10, percentage: null },
+    )).toBe("がんばりや｜補正なし｜ダブル使用率 10位");
+    expect(formatNatureUsageDetail(
+      hardy,
+      "Doubles",
+      { kind: "unlisted" },
+    )).toBe("がんばりや｜補正なし｜ダブル使用率 上位外／データなし");
+    expect(formatNatureUsageDetail(
+      hardy,
+      "Doubles",
+      { kind: "unavailable" },
+    )).toBe("使用率データなし");
+    expect(formatNatureUsageAriaLabel(
+      hardy,
+      "Doubles",
+      { kind: "unavailable" },
+    )).toBe("がんばりや｜補正なし｜使用率データなし");
+    expect(getNatureUsageOverlayOpacity({ kind: "listed", rank: 1, percentage: 0 })).toBe(0);
+    expect(getNatureUsageOverlayOpacity({ kind: "listed", rank: 1, percentage: null })).toBeNull();
+    expect(getNatureUsageOverlayOpacity({ kind: "unlisted" })).toBeNull();
+  });
+
+  it("renders nature heatmaps for both owners while keeping tutorial matrices data-free", () => {
+    const [defaultScenario] = createDefaultScenarioForms();
+    const natureUsageData: ChampionsUsageData = {
+      ...usageDataFixture("nature-test"),
+      formats: {
+        Singles: {
+          Pikachu: {
+            move: [],
+            ability: [],
+            item: [],
+            nature: [
+              { canonicalName: "Timid", rank: 2, percentage: 66.2 },
+              { canonicalName: "Hardy", rank: 10, percentage: 0 },
+            ],
+          },
+        },
+        Doubles: {
+          Pikachu: {
+            move: [],
+            ability: [],
+            item: [],
+            nature: [
+              { canonicalName: "Jolly", rank: 1, percentage: 66.2 },
+              { canonicalName: "Hardy", rank: 10, percentage: 0 },
+            ],
+          },
+        },
+      },
+    };
+    const initialTargetForm = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "ピカチュウ",
+      natureInput: "おくびょう",
+    };
+    const initialScenarioForms = [{
+      ...defaultScenario,
+      attacks: [{
+        ...defaultScenario.attacks[0],
+        attackerPokemonInput: "ピカチュウ",
+        attackerNatureInput: "ようき",
+      }],
+    }];
+    const html = renderToStaticMarkup(
+      <App
+        suggestionFormat="Doubles"
+        usageData={natureUsageData}
+        initialTargetForm={initialTargetForm}
+        initialScenarioForms={initialScenarioForms}
+      />,
+    );
+
+    // Radix portals intentionally omit the open matrix during SSR.  The
+    // per-cell usage contract is covered by the pure formatting assertions
+    // above; this render still guards that both owner fields remain present.
+    expect(html.match(/class="nature-trigger"/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="性格: おくびょう"');
+
+    const tutorialHtml = renderToStaticMarkup(
+      <App
+        variant="tutorial"
+        suggestionFormat="Doubles"
+        usageData={natureUsageData}
+        initialTargetForm={initialTargetForm}
+        initialScenarioForms={initialScenarioForms}
+      />,
+    );
+
+    expect(tutorialHtml).not.toContain("nature-usage-detail");
+    expect(tutorialHtml).not.toContain("data-usage-kind");
+    expect(tutorialHtml).not.toContain("nature-usage-opacity");
+    expect(tutorialHtml.match(/class="nature-trigger"/g)).toHaveLength(2);
+  });
+
+  it("keeps usage heatmap color separate from selection and keyboard focus styles", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(css).toMatch(/\.nature-option::before\s*\{[^}]*background:\s*rgba\(32, 194, 108, 0\.72\);[^}]*opacity:\s*var\(--nature-usage-opacity, 0\);/s);
+    expect(css).toMatch(/\.nature-option:hover\s*\{[^}]*border-color:[^}]*box-shadow:[^}]*color:[^}]*\}/s);
+    expect(css).toMatch(/\.nature-option:focus-visible\s*\{[^}]*border-color:[^}]*box-shadow:/s);
+    expect(css).toMatch(/\.nature-option\.selected\s*\{[^}]*border-color:[^}]*color:[^}]*box-shadow:/s);
+    expect(css).not.toMatch(/\.nature-option:hover\s*\{[^}]*background:/s);
+    expect(css).not.toMatch(/\.nature-option\.selected\s*\{[^}]*background:/s);
   });
 
   it("keeps a compact power field beside every non-speed move input", () => {

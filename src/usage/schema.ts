@@ -5,6 +5,7 @@ import {
   type ChampionsUsageData,
   type SuggestionFormat,
   type UsageFormatEntries,
+  type NatureUsageDatum,
   type UsagePokemonEntry,
 } from "./types";
 
@@ -55,12 +56,76 @@ const parseRanking = (value: unknown, path: string): string[] => {
   });
 };
 
+const parseNatureRanking = (
+  value: unknown,
+  path: string,
+): NatureUsageDatum[] | undefined => {
+  // `nature` was added as an optional field to schema v1.  Keeping the
+  // property omitted for older payloads lets the client distinguish an
+  // unavailable feed from a feed that did publish a top-nature list.
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new UsageDataValidationError(path, "expected an array");
+  }
+
+  const seenNames = new Set<string>();
+  const seenRanks = new Set<number>();
+  return value.map((rawEntry, index) => {
+    const entryPath = `${path}[${index}]`;
+    assertRecord(rawEntry, entryPath);
+
+    const canonicalName = rawEntry.canonicalName;
+    assertNonEmptyString(canonicalName, `${entryPath}.canonicalName`);
+    if (seenNames.has(canonicalName)) {
+      throw new UsageDataValidationError(
+        `${entryPath}.canonicalName`,
+        `duplicate canonical name ${JSON.stringify(canonicalName)}`,
+      );
+    }
+    seenNames.add(canonicalName);
+
+    const rawRank = rawEntry.rank;
+    if (typeof rawRank !== "number" || !Number.isInteger(rawRank) || rawRank < 1 || rawRank > 10) {
+      throw new UsageDataValidationError(
+        `${entryPath}.rank`,
+        "expected a positive integer rank from 1 through 10",
+      );
+    }
+    const rank = rawRank;
+    if (seenRanks.has(rank)) {
+      throw new UsageDataValidationError(`${entryPath}.rank`, `duplicate rank ${rank}`);
+    }
+    seenRanks.add(rank);
+
+    const percentage = rawEntry.percentage;
+    if (percentage !== null && (
+      typeof percentage !== "number"
+      || !Number.isFinite(percentage)
+      || percentage < 0
+      || percentage > 100
+    )) {
+      throw new UsageDataValidationError(
+        `${entryPath}.percentage`,
+        "expected null or a finite percentage from 0 through 100",
+      );
+    }
+
+    return { canonicalName, rank, percentage };
+  });
+};
+
 const parsePokemonEntry = (value: unknown, path: string): UsagePokemonEntry => {
   assertRecord(value, path);
 
   const entry = {} as UsagePokemonEntry;
   for (const category of USAGE_RANKING_CATEGORIES) {
     entry[category] = parseRanking(value[category], `${path}.${category}`);
+  }
+  const nature = parseNatureRanking(value.nature, `${path}.nature`);
+  if (nature !== undefined) {
+    entry.nature = nature;
   }
   return entry;
 };

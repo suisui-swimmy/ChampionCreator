@@ -4,6 +4,8 @@ import {
   getMatchingEntityInputOptionsWithUsage,
   getUsagePokemonEntry,
   getUsageRanking,
+  getUsageNatureRanking,
+  getNatureUsageState,
 } from "./ranking";
 import type { ChampionsUsageData } from "./types";
 
@@ -17,6 +19,10 @@ const data: ChampionsUsageData = {
         move: ["Thunderbolt", "Protect"],
         ability: ["Lightning Rod"],
         item: ["Focus Sash"],
+        nature: [
+          { canonicalName: "Jolly", rank: 1, percentage: 0 },
+          { canonicalName: "Timid", rank: 2, percentage: null },
+        ],
       },
       "Aegislash-Shield": {
         move: ["King's Shield"],
@@ -53,6 +59,55 @@ describe("getUsageRanking", () => {
     });
     expect(getUsagePokemonEntry(data, "Singles", "Aegislash-Blade")).toBeUndefined();
     expect(getUsageRanking(data, "Singles", undefined, "move")).toBeUndefined();
+  });
+});
+
+describe("getNatureUsageState", () => {
+  it("distinguishes listed, unlisted, unavailable, and a real 0.0% value", () => {
+    expect(getNatureUsageState(data, "Singles", "Pikachu", "Jolly")).toEqual({
+      kind: "listed",
+      rank: 1,
+      percentage: 0,
+    });
+    expect(getNatureUsageState(data, "Singles", "Pikachu", "Timid")).toEqual({
+      kind: "listed",
+      rank: 2,
+      percentage: null,
+    });
+    expect(getNatureUsageState(data, "Singles", "Pikachu", "Bold")).toEqual({
+      kind: "unlisted",
+    });
+    expect(getNatureUsageState(data, "Doubles", "Pikachu", "Jolly")).toEqual({
+      kind: "unavailable",
+    });
+    expect(getNatureUsageState(data, "Singles", "Missingmon", "Jolly")).toEqual({
+      kind: "unavailable",
+    });
+    expect(getNatureUsageState(data, "Singles", "Pikachu", undefined)).toEqual({
+      kind: "unavailable",
+    });
+    expect(getNatureUsageState({
+      ...data,
+      formats: {
+        ...data.formats,
+        Singles: {
+          ...data.formats.Singles,
+          Emptymon: { move: [], ability: [], item: [], nature: [] },
+        },
+      },
+    }, "Singles", "Emptymon", "Jolly")).toEqual({
+      kind: "unavailable",
+    });
+  });
+
+  it("uses the existing exact/toID owner lookup without inheriting another form", () => {
+    expect(getUsageNatureRanking(data, "Singles", "pikachu")).toEqual([
+      { canonicalName: "Jolly", rank: 1, percentage: 0 },
+      { canonicalName: "Timid", rank: 2, percentage: null },
+    ]);
+    expect(getNatureUsageState(data, "Singles", "Aegislash-Blade", "Jolly")).toEqual({
+      kind: "unavailable",
+    });
   });
 });
 

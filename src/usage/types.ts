@@ -17,7 +17,24 @@ export interface UsagePokemonEntry {
   move: string[];
   ability: string[];
   item: string[];
+  /**
+   * Optional top-nature usage data.  The API only publishes its leading
+   * natures, so an omitted list must not be interpreted as 0% for every
+   * nature in the catalog.
+   */
+  nature?: NatureUsageDatum[];
 }
+
+export interface NatureUsageDatum {
+  canonicalName: string;
+  rank: number;
+  percentage: number | null;
+}
+
+export type NatureUsageState =
+  | { kind: "listed"; rank: number; percentage: number | null }
+  | { kind: "unlisted" }
+  | { kind: "unavailable" };
 
 export type UsageFormatEntries = Record<string, UsagePokemonEntry>;
 
