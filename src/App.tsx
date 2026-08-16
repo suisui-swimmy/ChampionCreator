@@ -36,7 +36,6 @@ import {
   formatUsageDataDateJst,
   getUsageMatchingEntityInputOptions,
   getNatureUsageState,
-  getUsageNatureRanking,
   loadChampionsUsageData,
   loadSuggestionFormat,
   saveSuggestionFormat,
@@ -2721,13 +2720,13 @@ export const getNatureUsageOverlayOpacity = (
   return Math.max(0, Math.min(100, state.percentage)) / 100;
 };
 
-export const formatNatureUsageDetail = (
+export const formatNatureUsageAriaLabel = (
   option: Pick<NatureOption, "label" | "plus" | "minus">,
   format: SuggestionFormat,
   state: NatureUsageState,
 ): string => {
   if (state.kind === "unavailable") {
-    return "使用率データなし";
+    return `${option.label}｜${formatNatureModifierLabel(option)}｜使用率データなし`;
   }
 
   if (state.kind === "unlisted") {
@@ -2741,17 +2740,6 @@ export const formatNatureUsageDetail = (
   return `${option.label}｜${formatNatureModifierLabel(option)}｜${format === "Doubles" ? "ダブル" : "シングル"}使用率 ${usageLabel}`;
 };
 
-export const formatNatureUsageAriaLabel = (
-  option: Pick<NatureOption, "label" | "plus" | "minus">,
-  format: SuggestionFormat,
-  state: NatureUsageState,
-): string => {
-  const detail = formatNatureUsageDetail(option, format, state);
-  return state.kind === "unavailable" && detail === "使用率データなし"
-    ? `${option.label}｜${formatNatureModifierLabel(option)}｜${detail}`
-    : detail;
-};
-
 function NatureMatrixField({
   label,
   value,
@@ -2761,28 +2749,10 @@ function NatureMatrixField({
 }: NatureMatrixFieldProps) {
   const labelClassName = ["nature-field", isUnresolvedEntityInput("nature", value) && "is-invalid", className].filter(Boolean).join(" ");
   const { data, format, enabled: usageEnabled } = useContext(SuggestionUsageContext);
-  const [hoveredNature, setHoveredNature] = useState<string | null>(null);
-  const [focusedNature, setFocusedNature] = useState<string | null>(null);
-  const activeNature = focusedNature ?? hoveredNature;
-  const selectedOption = natureOptionsByLabel.get(value);
-  const activeOption = activeNature ? natureOptionsByLabel.get(activeNature) : undefined;
-  const natureRanking = getUsageNatureRanking(data, format, ownerPokemonCanonicalName);
-  const instruction = !natureRanking || natureRanking.length === 0
-    ? "使用率データなし"
-    : "性格を選択すると使用率を表示";
 
   const getUsageState = (option: NatureOption): NatureUsageState => (
     getNatureUsageState(data, format, ownerPokemonCanonicalName, option.showdownName)
   );
-  const activeUsageState = usageEnabled && activeOption ? getUsageState(activeOption) : null;
-  const selectedUsageState = usageEnabled && selectedOption ? getUsageState(selectedOption) : null;
-  const detail = usageEnabled
-    ? activeOption && activeUsageState
-      ? formatNatureUsageDetail(activeOption, format, activeUsageState)
-      : selectedOption && selectedUsageState
-        ? formatNatureUsageDetail(selectedOption, format, selectedUsageState)
-        : instruction
-    : null;
 
   return (
     <div className={labelClassName}>
@@ -2838,10 +2808,6 @@ function NatureMatrixField({
                                 ? usageState.percentage.toFixed(1)
                                 : undefined}
                               style={usageStyle}
-                              onMouseEnter={() => setHoveredNature(option.label)}
-                              onMouseLeave={() => setHoveredNature(null)}
-                              onFocus={() => setFocusedNature(option.label)}
-                              onBlur={() => setFocusedNature(null)}
                               onClick={() => onChange(option.label)}
                             >
                               <span className="nature-option-label">{option.label}</span>
@@ -2856,11 +2822,6 @@ function NatureMatrixField({
                 </div>
               ))}
             </div>
-            {usageEnabled ? (
-              <p className="nature-usage-detail" aria-live="polite">
-                {detail}
-              </p>
-            ) : null}
           </UiPopover.Content>
         </UiPopover.Portal>
       </UiPopover.Root>

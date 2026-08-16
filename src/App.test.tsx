@@ -19,7 +19,6 @@ import {
   formatLocalizedDamageDescription,
   formatNatureModifierLabel,
   formatNatureUsageAriaLabel,
-  formatNatureUsageDetail,
   formatScenarioResultStatusLabel,
   getDropdownEntityOptions,
   getMobileAttackNavigationTargets,
@@ -694,37 +693,32 @@ describe("App", () => {
     expect(emptyHtml).toContain("データ更新日: 未取得");
   });
 
-  it("keeps nature usage formatting explicit for listed, unlisted, unavailable, and real zero values", () => {
+  it("keeps nature usage ARIA explicit for listed, unlisted, unavailable, and real zero values", () => {
     const jolly = { label: "ようき", plus: "spe" as const, minus: "spa" as const };
     const hardy = { label: "がんばりや", plus: "atk" as const, minus: "atk" as const };
 
     expect(formatNatureModifierLabel(jolly)).toBe("S↑ C↓");
     expect(formatNatureModifierLabel(hardy)).toBe("補正なし");
-    expect(formatNatureUsageDetail(
+    expect(formatNatureUsageAriaLabel(
       jolly,
       "Doubles",
       { kind: "listed", rank: 1, percentage: 66.2 },
     )).toBe("ようき｜S↑ C↓｜ダブル使用率 66.2%（1位）");
-    expect(formatNatureUsageDetail(
+    expect(formatNatureUsageAriaLabel(
       hardy,
       "Doubles",
       { kind: "listed", rank: 10, percentage: 0 },
     )).toBe("がんばりや｜補正なし｜ダブル使用率 0.0%（10位）");
-    expect(formatNatureUsageDetail(
+    expect(formatNatureUsageAriaLabel(
       hardy,
       "Doubles",
       { kind: "listed", rank: 10, percentage: null },
     )).toBe("がんばりや｜補正なし｜ダブル使用率 10位");
-    expect(formatNatureUsageDetail(
+    expect(formatNatureUsageAriaLabel(
       hardy,
       "Doubles",
       { kind: "unlisted" },
     )).toBe("がんばりや｜補正なし｜ダブル使用率 上位外／データなし");
-    expect(formatNatureUsageDetail(
-      hardy,
-      "Doubles",
-      { kind: "unavailable" },
-    )).toBe("使用率データなし");
     expect(formatNatureUsageAriaLabel(
       hardy,
       "Doubles",
@@ -817,6 +811,7 @@ describe("App", () => {
     expect(css).toMatch(/\.nature-option\.selected\s*\{[^}]*border-color:[^}]*color:[^}]*box-shadow:/s);
     expect(css).not.toMatch(/\.nature-option:hover\s*\{[^}]*background:/s);
     expect(css).not.toMatch(/\.nature-option\.selected\s*\{[^}]*background:/s);
+    expect(css).not.toContain(".nature-usage-detail");
   });
 
   it("keeps a compact power field beside every non-speed move input", () => {
