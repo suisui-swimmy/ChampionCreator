@@ -109,6 +109,16 @@ describe("App", () => {
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
 
+  it("keeps box dialogs above mobile sheets and candidate budget values compact", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(css).toMatch(/--mobile-sheet-z:\s*70;/);
+    expect(css).toMatch(/--box-overlay-z:\s*100;/);
+    expect(css).toMatch(/\.box-overlay\s*\{[^}]*z-index:\s*var\(--box-overlay-z\);/s);
+    expect(css).toMatch(/\.mobile-results-open \.candidate-row-toggle\s*\{[^}]*grid-template-columns:\s*30px max-content max-content minmax\(0, 1fr\) 18px;/s);
+    expect(css).toMatch(/\.mobile-results-open \.candidate-budget-value\s*\{[^}]*min-width:\s*48px;/s);
+  });
+
   it("lets the mobile board follow its content while keeping the footer at the viewport bottom", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 

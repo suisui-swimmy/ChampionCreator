@@ -32,6 +32,7 @@
   --mobile-backdrop-z: 65;
   --mobile-sheet-z: 70;
   --floating-menu-z: 90;
+  --box-overlay-z: 100;
   font-family: "LINE Seed JP", "Segoe UI", "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif;
 }
 
@@ -484,7 +485,7 @@ textarea:focus-visible,
 .box-overlay {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--box-overlay-z);
   display: grid;
   place-items: center;
   padding: 18px;
@@ -5641,7 +5642,7 @@ textarea {
   }
 
   .mobile-results-open .candidate-row-toggle {
-    grid-template-columns: 30px minmax(0, 1fr) 48px 48px 18px;
+    grid-template-columns: 30px max-content max-content minmax(0, 1fr) 18px;
     grid-template-rows: auto auto auto;
     gap: 5px 6px;
     min-height: 0;
@@ -5668,6 +5669,7 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 48px;
     min-height: 24px;
     border: 1px solid rgba(124, 143, 144, 0.22);
     border-radius: 5px;
