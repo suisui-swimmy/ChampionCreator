@@ -5,6 +5,7 @@ import type { Build, EntityRef, FieldState, Scenario, ScenarioHit, SideState, St
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 import {
+  applyDefenceStatPointCandidate,
   calculateSurvivalProbability,
   enumerateDefenceEvCandidates,
   evaluateCandidate,
@@ -242,6 +243,31 @@ describe("evaluateScenario", () => {
 });
 
 describe("evaluateCandidate", () => {
+  it("stores exact bulk scores from the applied build's calc stats, including level, IVs, and nature", () => {
+    const defender: Build = {
+      ...makeBuild("target", "カイリュー", zeroEvs, 37, "ずぶとい"),
+      ivs: { ...defaultIvs, hp: 17, def: 7, spd: 19 },
+    };
+    const candidate = { hp: 5, def: 7, spd: 3 };
+    const appliedBuild = applyDefenceStatPointCandidate(defender, candidate);
+    const calculatedPokemon = toSmogonPokemon(appliedBuild);
+    const actualHp = calculatedPokemon.maxHP();
+    const actualDef = calculatedPokemon.stats.def;
+    const actualSpd = calculatedPokemon.stats.spd;
+    const result = evaluateCandidate(defender, [], candidate);
+
+    expect(actualHp).toBeGreaterThan(candidate.hp);
+    expect(actualDef).toBeGreaterThan(candidate.def);
+    expect(actualSpd).toBeGreaterThan(candidate.spd);
+    expect(result.bulkScore).toEqual({
+      physicalBulk: actualHp * actualDef,
+      specialBulk: actualHp * actualSpd,
+      overallBulk: (actualHp * actualDef * actualSpd) / (actualDef + actualSpd),
+    });
+    expect(result.bulkScore.physicalBulk).not.toBe(candidate.hp * candidate.def);
+    expect(result.bulkScore.specialBulk).not.toBe(candidate.hp * candidate.spd);
+  });
+
   it("fails the whole candidate if any enabled scenario fails", () => {
     const defender = makeBuild("target", "カイリュー");
     const easyAttacker = makeBuild("easy-attacker", "ピカチュウ", zeroEvs, 1);

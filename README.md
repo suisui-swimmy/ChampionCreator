@@ -84,6 +84,8 @@ ChampionCreator は、日本語入力・表示と Showdown canonical name を分
 - 探索対象は Pokemon Champions の Stat Points / SP です
 - 探索は Web Worker で実行し、UI 側は requestId で古い結果を破棄します
 - 候補は使用SP、残りSP、最厳条件への余裕などで順位付けします
+- 候補一覧は、`総合耐久指数=HBD/(B+D)`、`物理耐久指数=H*B`、`特殊耐久指数=H*D` でも並び替えられます。H/B/D は候補適用後の実数値（H=`maxHP()`、B=`stats.def`、D=`stats.spd`）を使い、SP値の積ではありません
+- 3つの耐久指数はシナリオ固有のダメージ、タイプ相性、特性、持ち物、HPイベントを含まない並び替え用の補助指標で、検索の合否判定やシナリオ評価を置き換えません
 - 上位候補は最終的に全シナリオで再評価します
 
 ## SP モデル

@@ -1,4 +1,3 @@
-import { toSmogonPokemon } from "../calc/smogonAdapter";
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
@@ -9,12 +8,17 @@ import {
 } from "../domain/championsStats";
 import type {
   Build,
+  BulkScore,
   DefenceSearchStatKey,
   NatureRef,
   StatKey,
   StatTable,
 } from "../domain/model";
+import { computeBulkScore, getBuildDerivedStats } from "./bulkScore";
 import { getBuildStatPoints } from "./defenceSearch";
+
+export { computeBulkScore, getBuildDerivedStats } from "./bulkScore";
+export type { BulkScore } from "../domain/model";
 
 const DEFENSIVE_STAT_KEYS = ["hp", "def", "spd"] as const satisfies readonly DefenceSearchStatKey[];
 const NATURE_STAT_KEYS = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly Exclude<StatKey, "hp">[];
@@ -37,12 +41,6 @@ export type NatureChangeImpact = {
   loweredStats: Array<Exclude<StatKey, "hp">>;
   raisedStats: Array<Exclude<StatKey, "hp">>;
   notes: string[];
-};
-
-export type BulkScore = {
-  physicalBulk: number;
-  specialBulk: number;
-  overallBulk: number;
 };
 
 export type MaximizeRemainingBulkResult = {
@@ -89,16 +87,6 @@ type MaximizeRemainingBulkContext = {
   keepCurrentPhysicalSpecialBulk: boolean;
 };
 
-export const computeBulkScore = (
-  stats: Pick<StatTable, "hp" | "def" | "spd">,
-): BulkScore => ({
-  physicalBulk: stats.hp * stats.def,
-  specialBulk: stats.hp * stats.spd,
-  overallBulk: stats.def + stats.spd === 0
-    ? 0
-    : (stats.hp * stats.def * stats.spd) / (stats.def + stats.spd),
-});
-
 const cloneStatPoints = (statPoints: StatTable): StatTable => ({ ...statPoints });
 
 const getNatureLabel = (nature: NatureRef | undefined): string =>
@@ -140,14 +128,6 @@ const withStatPointsAndNature = (
   statPoints,
   evs: statPointTableToSmogonEvs(statPoints),
 });
-
-export const getBuildDerivedStats = (build: Build): StatTable => {
-  const pokemon = toSmogonPokemon(build);
-  return {
-    ...pokemon.stats,
-    hp: pokemon.maxHP(),
-  };
-};
 
 const prepareMaximizeRemainingBulkContext = (
   input: MaximizeRemainingBulkInput,

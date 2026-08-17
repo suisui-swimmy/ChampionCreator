@@ -173,7 +173,15 @@ const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies 
 const RESULTS_PAGE_SIZE = 20;
 const MOBILE_RESULTS_PAGE_SIZE = 5;
 
-type CandidateSortKey = "recommended" | "used" | "remaining" | "margin" | StatKey;
+type CandidateSortKey =
+  | "recommended"
+  | "used"
+  | "remaining"
+  | "margin"
+  | "overallBulk"
+  | "physicalBulk"
+  | "specialBulk"
+  | StatKey;
 type CandidateSortDirection = "asc" | "desc";
 
 const candidateSortOptions: Array<{ value: CandidateSortKey; label: string }> = [
@@ -181,6 +189,9 @@ const candidateSortOptions: Array<{ value: CandidateSortKey; label: string }> = 
   { value: "used", label: "使用SP" },
   { value: "remaining", label: "残りSP" },
   { value: "margin", label: "余裕" },
+  { value: "overallBulk", label: "総合耐久指数" },
+  { value: "physicalBulk", label: "物理耐久指数" },
+  { value: "specialBulk", label: "特殊耐久指数" },
   { value: "hp", label: "H" },
   { value: "atk", label: "A" },
   { value: "def", label: "B" },
@@ -217,6 +228,12 @@ const getCandidateSortValue = (candidate: CandidateResult, sortKey: CandidateSor
       return candidate.remainingStatPointBudget;
     case "margin":
       return getCandidateWorstMargin(candidate);
+    case "overallBulk":
+      return candidate.bulkScore.overallBulk;
+    case "physicalBulk":
+      return candidate.bulkScore.physicalBulk;
+    case "specialBulk":
+      return candidate.bulkScore.specialBulk;
     default:
       return candidate.appliedStatPoints[sortKey];
   }
@@ -3513,7 +3530,7 @@ function MobileOverview({
               aria-expanded={isBoxPanelOpen}
               onClick={onOpenBoxPanel}
             >
-              <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+              <img src={getAssetSrc("assets/ui/box.svg")} alt="" aria-hidden="true" />
             </button>
           </div>
           <button className="mobile-target-mini" type="button" onClick={onOpenTarget} ref={targetMiniRef}>
@@ -3613,7 +3630,7 @@ function MobileOverview({
               aria-expanded={isEnemyBoxPanelOpen}
               onClick={onOpenEnemyBoxPanel}
             >
-              <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+              <img src={getAssetSrc("assets/ui/box.svg")} alt="" aria-hidden="true" />
             </button>
           </div>
 
@@ -3665,7 +3682,7 @@ function MobileOverview({
                         aria-label={`${scenario.label}を削除`}
                         onClick={() => onRemoveScenario(scenario.id)}
                       >
-                        <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+                        <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
                       </button>
                     </div>
 
@@ -4031,7 +4048,7 @@ function TargetPanel({
             aria-expanded={isBoxPanelOpen}
             onClick={onOpenBoxPanel}
           >
-            <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+            <img src={getAssetSrc("assets/ui/box.svg")} alt="" aria-hidden="true" />
           </button>
           <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
             閉じる
@@ -4414,7 +4431,7 @@ function ScenarioPanel({
             aria-expanded={isEnemyBoxPanelOpen}
             onClick={onOpenEnemyBoxPanel}
           >
-            <img src={getAssetSrc("assets/ui/pokebox.svg")} alt="" aria-hidden="true" />
+            <img src={getAssetSrc("assets/ui/box.svg")} alt="" aria-hidden="true" />
           </button>
           {isMobileFocusedScenario ? (
             <Button
@@ -4632,7 +4649,7 @@ function ScenarioRow({
               aria-label={`${scenario.label}を削除`}
               onClick={() => onRemoveScenario(scenario.id)}
             >
-              <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+              <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
             </Button>
           )}
         </div>
@@ -4872,7 +4889,7 @@ function HpEventsEditor({
                       aria-label={`${supported ? getHpEventPresetLabel(hpEvent.effectId) : hpEvent.effectId || "未対応の効果"}を削除`}
                       onClick={() => updateEvents(hpEvents.filter((candidate) => candidate.id !== hpEvent.id))}
                     >
-                      <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+                      <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
                     </Button>
                   </div>
                   <div className="hp-event-rule-meta">
@@ -5221,7 +5238,7 @@ function BeatUpPowerField({
                       disabled={participant.source === "attacker"}
                       onClick={() => removeParticipant(index)}
                     >
-                      <img src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+                      <img src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
                     </button>
                   </li>
                 );
@@ -5762,7 +5779,7 @@ function AttackCard({
           disabled={!canRemove}
           onClick={() => onRemoveAttack(scenarioId, attack.id)}
         >
-          <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash.svg")} alt="" aria-hidden="true" />
+          <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
         </Button>
       </div>
 

@@ -102,6 +102,11 @@ const makeCandidate = (id: string, rank: number, hp: number, def: number, spd: n
   id,
   rank,
   candidate: { hp, def, spd },
+  bulkScore: {
+    overallBulk: 0,
+    physicalBulk: 0,
+    specialBulk: 0,
+  },
   appliedStatPoints: { hp, atk: 0, def, spa: 0, spd, spe: 0 },
   appliedEvs: { hp, atk: 0, def, spa: 0, spd, spe: 0 },
   usedStatPointBudget: hp + def + spd,

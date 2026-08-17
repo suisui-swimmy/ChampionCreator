@@ -32,6 +32,7 @@ import type {
   StatKey,
   StatTable,
 } from "../domain/model";
+import { getBuildBulkScore } from "./bulkScore";
 
 const DEFAULT_MAX_RESULTS = 20;
 const SURVIVAL_EPSILON = 1e-12;
@@ -669,6 +670,7 @@ export const evaluateCandidate = (
 ): CandidateResult => {
   const appliedBuild = applyDefenceStatPointCandidate(defenderBuild, candidate);
   const scenarioResults = scenarios.map((scenario) => evaluateScenario(appliedBuild, scenario, options));
+  const bulkScore = getBuildBulkScore(appliedBuild);
   const appliedStatPoints = getBuildStatPoints(appliedBuild);
   const usedStatPointBudget = sumStatPoints(appliedStatPoints);
   const remainingStatPointBudget = CHAMPIONS_TOTAL_STAT_POINTS - usedStatPointBudget;
@@ -681,6 +683,7 @@ export const evaluateCandidate = (
     id: "candidate-unranked",
     rank: 0,
     candidate,
+    bulkScore,
     appliedStatPoints,
     appliedEvs: appliedBuild.evs,
     usedStatPointBudget,

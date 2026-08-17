@@ -272,6 +272,8 @@ describe("App", () => {
     expect(guideHtml).toContain('src="/assets/guide/lightbulb.svg"');
     expect(guideHtml).toContain("スマホでは？");
     expect(guideHtml).toContain("スマホ表示では、調整対象と仮想敵シナリオをタッチすると拡大シートで入力できます。候補一覧はトップ画面のまま並び替え、詳細確認、適用、ページ移動ができます。");
+    expect(guideHtml).toContain("並び替えでは、<code>総合耐久指数=HBD/(B+D)</code>、<code>物理耐久指数=H*B</code>、<code>特殊耐久指数=H*D</code> を選べます。H/B/D は候補適用後の実数値（H=<code>maxHP()</code>、B=<code>stats.def</code>、D=<code>stats.spd</code>）を使い、SP値の積ではありません。");
+    expect(guideHtml).toContain("これらはシナリオ固有のダメージ、タイプ相性、特性、持ち物、HPイベントを含まない並び替え用の補助指標です。検索の合否判定やシナリオ評価は、従来どおり各条件の計算結果を使います。");
     expect(guideHtml).toContain("画面中央のノードは、小さい丸エッジ側が「攻撃を与える側」「素早さを抜く側」、細長いピル型エッジ側が「攻撃を受ける側」「素早さを抜かれる側」を表しています。");
     expect(guideHtml).toContain('src="/assets/guide/overview_mobile.png"');
     expect(guideHtml.indexOf("素早さを抜かれる側")).toBeLessThan(guideHtml.indexOf('class="guide-mobile-overview-image"'));
@@ -492,7 +494,10 @@ describe("App", () => {
     expect(html.match(/aria-label="調整対象ボックスを開く"/g)).toHaveLength(2);
     expect(html.match(/aria-label="仮想敵ボックスを開く"/g)).toHaveLength(2);
     expect(html).toContain('aria-expanded="false"');
-    expect(html.match(/assets\/ui\/pokebox\.svg/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(html.match(/assets\/ui\/box\.svg/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(html).not.toContain("assets/ui/pokebox.svg");
+    expect(html.match(/assets\/ui\/trash-2\.svg/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(html).not.toContain("assets/ui/trash.svg");
     expect(html).toContain(">レベル</span>");
     expect(html).toMatch(/class="placeholder-field target-level-field"[\s\S]*?aria-label="調整対象 レベルの固定を解除"/);
     expect(html).toMatch(/aria-label="調整対象 レベルの固定を解除"[^>]*>[\s\S]*?assets\/ui\/lock\.svg/);
@@ -1556,6 +1561,7 @@ describe("App", () => {
         id: `candidate-${rank}`,
         rank,
         candidate: { hp: rank, def: 0, spd: 0 },
+        bulkScore: { overallBulk: rank, physicalBulk: rank, specialBulk: rank },
         appliedStatPoints: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         appliedEvs: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         usedStatPointBudget: rank,
@@ -1601,6 +1607,7 @@ describe("App", () => {
         id: `candidate-${rank}`,
         rank,
         candidate: { hp: rank, def: 0, spd: 0 },
+        bulkScore: { overallBulk: rank, physicalBulk: rank, specialBulk: rank },
         appliedStatPoints: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         appliedEvs: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         usedStatPointBudget,
@@ -1662,10 +1669,16 @@ describe("App", () => {
       rank: number,
       statPoints: CandidateResult["appliedStatPoints"],
       margin: number,
+      bulkScore: CandidateResult["bulkScore"] = {
+        overallBulk: rank * 100,
+        physicalBulk: rank * 200,
+        specialBulk: rank * 300,
+      },
     ): CandidateResult => ({
       id,
       rank,
       candidate: { hp: statPoints.hp, def: statPoints.def, spd: statPoints.spd },
+      bulkScore,
       appliedStatPoints: statPoints,
       appliedEvs: statPoints,
       usedStatPointBudget: statPoints.hp + statPoints.atk + statPoints.def + statPoints.spa + statPoints.spd + statPoints.spe,
@@ -1684,13 +1697,45 @@ describe("App", () => {
         bottleneckLabel: `${id} ${margin}`,
       }],
     });
-    const lowHp = makeCandidate("low-hp", 1, { hp: 1, atk: 0, def: 1, spa: 0, spd: 0, spe: 0 }, 0.01);
-    const highHp = makeCandidate("high-hp", 2, { hp: 20, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, 0.2);
+    const lowHp = makeCandidate(
+      "low-hp",
+      1,
+      { hp: 1, atk: 0, def: 1, spa: 0, spd: 0, spe: 0 },
+      0.01,
+      { overallBulk: 100, physicalBulk: 200, specialBulk: 300 },
+    );
+    const highHp = makeCandidate(
+      "high-hp",
+      2,
+      { hp: 20, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      0.2,
+      { overallBulk: 200, physicalBulk: 400, specialBulk: 600 },
+    );
+    const tiedBulkRankOne = makeCandidate(
+      "tied-bulk-rank-one",
+      1,
+      { hp: 2, atk: 0, def: 2, spa: 0, spd: 0, spe: 0 },
+      0.03,
+      { overallBulk: 150, physicalBulk: 250, specialBulk: 350 },
+    );
+    const tiedBulkRankThree = makeCandidate(
+      "tied-bulk-rank-three",
+      3,
+      { hp: 3, atk: 0, def: 3, spa: 0, spd: 0, spe: 0 },
+      0.04,
+      { overallBulk: 150, physicalBulk: 250, specialBulk: 350 },
+    );
 
     expect(compareResultCandidates(highHp, lowHp, "hp", "desc")).toBeLessThan(0);
     expect(compareResultCandidates(lowHp, highHp, "used", "asc")).toBeLessThan(0);
     expect(compareResultCandidates(highHp, lowHp, "margin", "desc")).toBeLessThan(0);
     expect(compareResultCandidates(lowHp, highHp, "recommended", "asc")).toBeLessThan(0);
+    for (const sortKey of ["overallBulk", "physicalBulk", "specialBulk"] as const) {
+      expect(compareResultCandidates(highHp, lowHp, sortKey, "desc")).toBeLessThan(0);
+      expect(compareResultCandidates(highHp, lowHp, sortKey, "asc")).toBeGreaterThan(0);
+      expect(compareResultCandidates(tiedBulkRankThree, tiedBulkRankOne, sortKey, "desc")).toBeGreaterThan(0);
+      expect(compareResultCandidates(tiedBulkRankThree, tiedBulkRankOne, sortKey, "asc")).toBeGreaterThan(0);
+    }
   });
 
   it("labels failed scenario results as FAIL", () => {
@@ -1718,6 +1763,7 @@ describe("App", () => {
       id: "candidate-2",
       rank: 2,
       candidate: { hp: 6, def: 13, spd: 0 },
+      bulkScore: { overallBulk: 1234, physicalBulk: 2345, specialBulk: 3456 },
       appliedStatPoints: { hp: 6, atk: 0, def: 13, spa: 0, spd: 0, spe: 0 },
       appliedEvs: { hp: 44, atk: 0, def: 100, spa: 0, spd: 0, spe: 0 },
       usedStatPointBudget: 19,
@@ -1996,6 +2042,7 @@ describe("App", () => {
       id: "candidate-multi",
       rank: 1,
       candidate: { hp: 8, def: 12, spd: 4 },
+      bulkScore: { overallBulk: 4567, physicalBulk: 5678, specialBulk: 6789 },
       appliedStatPoints: { hp: 8, atk: 0, def: 12, spa: 0, spd: 4, spe: 0 },
       appliedEvs: { hp: 60, atk: 0, def: 92, spa: 0, spd: 28, spe: 0 },
       usedStatPointBudget: 24,
@@ -2146,6 +2193,7 @@ describe("App", () => {
       id: "candidate-speed",
       rank: 1,
       candidate: { hp: 3, def: 32, spd: 0 },
+      bulkScore: { overallBulk: 7890, physicalBulk: 8901, specialBulk: 9012 },
       appliedStatPoints: { hp: 3, atk: 0, def: 32, spa: 2, spd: 0, spe: 12 },
       appliedEvs: { hp: 20, atk: 0, def: 252, spa: 12, spd: 0, spe: 92 },
       usedStatPointBudget: 49,

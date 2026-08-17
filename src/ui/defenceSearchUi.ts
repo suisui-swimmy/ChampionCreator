@@ -66,11 +66,11 @@ import {
   type SpeedManualMultiplier,
 } from "../search/speedAdjustment";
 import {
-  getBuildDerivedStats,
   type BulkNatureCandidate,
   type MaximizeRemainingBulkInput,
   type MaximizeRemainingBulkResult,
 } from "../search/maximizeRemainingBulk";
+import { getBuildDerivedStats } from "../search/bulkScore";
 import natureOptionsData from "../data/generated/nature-options.gen.json";
 
 export type SpeedTargetMode = "opponent" | "manual";

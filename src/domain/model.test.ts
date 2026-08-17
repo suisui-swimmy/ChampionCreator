@@ -114,6 +114,7 @@ describe("domain model shape", () => {
       id: "candidate-1",
       rank: 1,
       candidate: { hp: 12, def: 4, spd: 0 },
+      bulkScore: { overallBulk: 0, physicalBulk: 0, specialBulk: 0 },
       appliedStatPoints: { ...zeroEvs, hp: 12, def: 4 },
       appliedEvs: defender.evs,
       usedStatPointBudget: 16,

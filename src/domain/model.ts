@@ -175,10 +175,17 @@ export interface DefenceStatPointCandidate {
 
 export type DefenceEvCandidate = DefenceStatPointCandidate;
 
+export interface BulkScore {
+  physicalBulk: number;
+  specialBulk: number;
+  overallBulk: number;
+}
+
 export interface CandidateResult {
   id: string;
   rank: number;
   candidate: DefenceStatPointCandidate;
+  bulkScore: BulkScore;
   appliedStatPoints: StatTable;
   appliedEvs: StatTable;
   usedStatPointBudget: number;

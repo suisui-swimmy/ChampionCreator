@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { toSmogonPokemon } from "../calc/smogonAdapter";
 import type { EntityKind } from "../data/localizationTypes";
 import { statPointTableToSmogonEvs } from "../domain/championsStats";
 import type { Build, EntityRef, FieldState, Scenario, ScenarioHit, SideState, StatTable } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
-import { searchDefenceCandidates } from "../search/defenceSearch";
+import { applyDefenceStatPointCandidate, searchDefenceCandidates } from "../search/defenceSearch";
 import {
   DefenceSearchWorkerClient,
   isCurrentWorkerMessage,
@@ -168,6 +169,33 @@ describe("runDefenceSearchWorkerTask", () => {
     expect(complete?.type === "complete" ? complete.passingCandidateCount : 0).toBe(1);
     expect(complete?.type === "complete" ? complete.candidates[0].scenarioResults[0].hitEvaluations[0].description : "")
       .toContain("Thunderbolt");
+
+    const partialCandidate = partial?.type === "partialResult" ? partial.candidates[0] : undefined;
+    const completeCandidate = complete?.type === "complete" ? complete.candidates[0] : undefined;
+    expect(partialCandidate?.bulkScore).toEqual(expect.objectContaining({
+      physicalBulk: expect.any(Number),
+      specialBulk: expect.any(Number),
+      overallBulk: expect.any(Number),
+    }));
+    expect(completeCandidate?.bulkScore).toEqual(expect.objectContaining({
+      physicalBulk: expect.any(Number),
+      specialBulk: expect.any(Number),
+      overallBulk: expect.any(Number),
+    }));
+
+    if (completeCandidate) {
+      const appliedBuild = applyDefenceStatPointCandidate(defender, completeCandidate.candidate);
+      const calculatedPokemon = toSmogonPokemon(appliedBuild);
+      const actualHp = calculatedPokemon.maxHP();
+      const actualDef = calculatedPokemon.stats.def;
+      const actualSpd = calculatedPokemon.stats.spd;
+
+      expect(completeCandidate.bulkScore).toEqual({
+        physicalBulk: actualHp * actualDef,
+        specialBulk: actualHp * actualSpd,
+        overallBulk: (actualHp * actualDef * actualSpd) / (actualDef + actualSpd),
+      });
+    }
   });
 
   it("keeps partial results capped while completing with every passing candidate", async () => {

@@ -64,6 +64,14 @@ describe("computeBulkScore", () => {
     });
   });
 
+  it("returns zero for the overall score when both defensive stats are zero", () => {
+    expect(computeBulkScore({ hp: 100, def: 0, spd: 0 })).toEqual({
+      physicalBulk: 0,
+      specialBulk: 0,
+      overallBulk: 0,
+    });
+  });
+
   it("ranks a balanced B/D profile above a skewed profile when HP is equal", () => {
     const balanced = {
       candidate: {
