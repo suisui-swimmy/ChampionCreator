@@ -138,6 +138,14 @@ import {
   stringifyEnemyBoxBackupDocument,
   type EnemyBoxEntry,
 } from "./ui/enemyBoxStorage";
+import {
+  createDraftFingerprint,
+  discardDraftFromBrowser,
+  loadDraftFromBrowser,
+  saveDraftToBrowser,
+  scheduleDraftAutosave,
+  type DraftLoadResult,
+} from "./ui/draftStorage";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
 import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
@@ -1008,6 +1016,132 @@ export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatTogg
   );
 }
 
+type DraftRecoveryState =
+  | Extract<DraftLoadResult, { status: "success" }>
+  | (Extract<DraftLoadResult, { status: "error" }> & { canRetryDiscard?: boolean });
+
+type DraftSaveUiState =
+  | { status: "idle" | "saving" | "saved" }
+  | { status: "error"; operation: "save" | "discard"; message: string };
+
+const formatDraftSavedAt = (savedAt: string): string => new Intl.DateTimeFormat("ja-JP", {
+  dateStyle: "medium",
+  timeStyle: "short",
+}).format(new Date(savedAt));
+
+type DraftRecoveryDialogProps = {
+  recovery: DraftRecoveryState;
+  onRestore: () => void;
+  onDiscard: () => void;
+  onDismissUnavailable: () => void;
+};
+
+export function DraftRecoveryDialog({
+  recovery,
+  onRestore,
+  onDiscard,
+  onDismissUnavailable,
+}: DraftRecoveryDialogProps) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const canRestore = recovery.status === "success";
+  const canDiscard = canRestore
+    || recovery.reason === "corrupt"
+    || recovery.canRetryDiscard === true;
+  const title = canRestore ? "保存した下書きがあります" : "下書きを読み込めませんでした";
+  const description = canRestore
+    ? "前回の入力条件をこの端末から復元できます。"
+    : recovery.message;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return undefined;
+    }
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+    ));
+    focusable[0]?.focus();
+
+    const keepFocusInside = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Tab" || focusable.length === 0) {
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    dialog.addEventListener("keydown", keepFocusInside);
+
+    return () => {
+      dialog.removeEventListener("keydown", keepFocusInside);
+      previouslyFocused?.focus();
+    };
+  }, [canDiscard, canRestore]);
+
+  return (
+    <div className="draft-recovery-overlay">
+      <div className="draft-recovery-backdrop" aria-hidden="true" />
+      <section
+        ref={dialogRef}
+        className="draft-recovery-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="draft-recovery-title"
+        aria-describedby="draft-recovery-description"
+        tabIndex={-1}
+      >
+        <div className="draft-recovery-copy">
+          <span className="draft-recovery-kicker">この端末の作業中データ</span>
+          <h2 id="draft-recovery-title">{title}</h2>
+          <p id="draft-recovery-description">{description}</p>
+          {canRestore ? (
+            <dl className="draft-recovery-summary">
+              <div>
+                <dt>調整対象</dt>
+                <dd>{recovery.draft.payload.target.pokemonInput.trim() || "未入力"}</dd>
+              </div>
+              <div>
+                <dt>シナリオ</dt>
+                <dd>{recovery.draft.payload.scenarios.length}件</dd>
+              </div>
+              <div>
+                <dt>保存日時</dt>
+                <dd>{formatDraftSavedAt(recovery.draft.savedAt)}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </div>
+        <div className="draft-recovery-actions">
+          {canRestore ? (
+            <Button variant="primary" onClick={onRestore}>
+              下書きを復元
+            </Button>
+          ) : null}
+          {canDiscard ? (
+            <Button variant="danger" onClick={onDiscard}>
+              下書きを破棄
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={onDismissUnavailable}>
+              閉じる
+            </Button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 type AppProps = {
   initialTargetForm?: TargetFormState;
   initialScenarioForms?: ScenarioFormState[];
@@ -1074,12 +1208,27 @@ export function App({
   );
   const [selectedEnemyBoxEntryId, setSelectedEnemyBoxEntryId] = useState<string | null>(null);
   const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
+  const [draftRecovery, setDraftRecovery] = useState<DraftRecoveryState | null>(() => {
+    if (variant !== "default") {
+      return null;
+    }
+    const result = loadDraftFromBrowser();
+    return result.status === "empty" ? null : result;
+  });
+  const [draftSaveState, setDraftSaveState] = useState<DraftSaveUiState>({ status: "idle" });
+  const hasPersistedDraftRef = useRef(draftRecovery?.status === "success");
+  const previousVariantRef = useRef(variant);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
   const applyTimerRef = useRef<number | null>(null);
   const boxImportInputRef = useRef<HTMLInputElement | null>(null);
   const enemyBoxImportInputRef = useRef<HTMLInputElement | null>(null);
   const mobileScenarioPanelRef = useRef<HTMLElement | null>(null);
+  const cancelDraftSaveRef = useRef<(() => void) | null>(null);
+  const lastDraftFingerprintRef = useRef<string | null>(null);
+  if (lastDraftFingerprintRef.current === null) {
+    lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
+  }
 
   const previewInput = useMemo(() => {
     try {
@@ -1154,12 +1303,71 @@ export function App({
   }, [usageData, variant]);
 
   useEffect(() => {
+    if (variant !== "default" || draftRecovery !== null) {
+      return undefined;
+    }
+
+    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
+    if (fingerprint === lastDraftFingerprintRef.current) {
+      setDraftSaveState((current) => (
+        current.status === "saving"
+        || (current.status === "error" && current.operation === "save")
+          ? { status: hasPersistedDraftRef.current ? "saved" : "idle" }
+          : current
+      ));
+      return undefined;
+    }
+
+    setDraftSaveState({ status: "saving" });
+    const cancelScheduledSave = scheduleDraftAutosave(() => {
+      cancelDraftSaveRef.current = null;
+      const result = saveDraftToBrowser(targetForm, scenarioForms);
+      if (result.status === "success") {
+        lastDraftFingerprintRef.current = fingerprint;
+        hasPersistedDraftRef.current = true;
+        setDraftSaveState({ status: "saved" });
+        return;
+      }
+      setDraftSaveState({ status: "error", operation: "save", message: result.message });
+    });
+    cancelDraftSaveRef.current = cancelScheduledSave;
+
+    return () => {
+      cancelScheduledSave();
+      if (cancelDraftSaveRef.current === cancelScheduledSave) {
+        cancelDraftSaveRef.current = null;
+      }
+    };
+  }, [draftRecovery, scenarioForms, targetForm, variant]);
+
+  useEffect(() => {
+    const previousVariant = previousVariantRef.current;
+    previousVariantRef.current = variant;
+    if (previousVariant === variant) {
+      return;
+    }
+
+    lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
+    setDraftSaveState({ status: "idle" });
+    if (variant === "tutorial") {
+      hasPersistedDraftRef.current = false;
+      setDraftRecovery(null);
+      return;
+    }
+
+    const result = loadDraftFromBrowser();
+    hasPersistedDraftRef.current = result.status === "success";
+    setDraftRecovery(result.status === "empty" ? null : result);
+  }, [scenarioForms, targetForm, variant]);
+
+  useEffect(() => {
     return () => {
       activeRequestRef.current?.cancel();
       workerClientRef.current?.dispose();
       if (applyTimerRef.current !== null) {
         window.clearTimeout(applyTimerRef.current);
       }
+      cancelDraftSaveRef.current?.();
     };
   }, []);
 
@@ -1237,6 +1445,79 @@ export function App({
     }
     dispatchSearch({ type: "reset" });
     dispatchBulkMaximize({ type: "reset" });
+  };
+
+  const cancelPendingDraftSave = () => {
+    cancelDraftSaveRef.current?.();
+    cancelDraftSaveRef.current = null;
+  };
+
+  const saveCurrentDraftNow = () => {
+    cancelPendingDraftSave();
+    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
+    setDraftSaveState({ status: "saving" });
+    const result = saveDraftToBrowser(targetForm, scenarioForms);
+    if (result.status === "success") {
+      lastDraftFingerprintRef.current = fingerprint;
+      hasPersistedDraftRef.current = true;
+      setDraftSaveState({ status: "saved" });
+      return;
+    }
+    setDraftSaveState({ status: "error", operation: "save", message: result.message });
+  };
+
+  const retryDiscardCurrentDraft = () => {
+    const result = discardDraftFromBrowser();
+    if (result.status === "success") {
+      hasPersistedDraftRef.current = false;
+      setDraftSaveState({ status: "idle" });
+      return;
+    }
+    setDraftSaveState({
+      status: "error",
+      operation: "discard",
+      message: result.message,
+    });
+  };
+
+  const handleRestoreDraft = () => {
+    if (draftRecovery?.status !== "success") {
+      return;
+    }
+
+    cancelPendingDraftSave();
+    const { target, scenarios } = draftRecovery.draft.payload;
+    lastDraftFingerprintRef.current = createDraftFingerprint(target, scenarios);
+    resetActiveSearch();
+    setTargetForm(target);
+    setScenarioForms(scenarios);
+    hasPersistedDraftRef.current = true;
+    setDraftRecovery(null);
+    setDraftSaveState({ status: "saved" });
+  };
+
+  const handleDiscardDraft = () => {
+    const result = discardDraftFromBrowser();
+    if (result.status === "error") {
+      setDraftRecovery({
+        status: "error",
+        reason: "unavailable",
+        message: result.message,
+        canRetryDiscard: true,
+      });
+      return;
+    }
+
+    cancelPendingDraftSave();
+    lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
+    hasPersistedDraftRef.current = false;
+    setDraftRecovery(null);
+    setDraftSaveState({ status: "idle" });
+  };
+
+  const handleDismissUnavailableDraft = () => {
+    lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
+    setDraftRecovery(null);
   };
 
   const handleSuggestionFormatChange = (format: SuggestionFormat) => {
@@ -1545,9 +1826,24 @@ export function App({
 
   const handleLoadBoxEntry = (entryId: string) => {
     if (entryId === BLANK_BOX_SLOT_ID) {
+      const blankTarget = createBlankTargetForm();
+      const blankScenarios = [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))];
+      cancelPendingDraftSave();
+      lastDraftFingerprintRef.current = createDraftFingerprint(blankTarget, blankScenarios);
+      const discardResult = discardDraftFromBrowser();
+      if (discardResult.status === "success") {
+        hasPersistedDraftRef.current = false;
+        setDraftSaveState({ status: "idle" });
+      } else {
+        setDraftSaveState({
+          status: "error",
+          operation: "discard",
+          message: discardResult.message,
+        });
+      }
       resetActiveSearch();
-      setTargetForm(createBlankTargetForm());
-      setScenarioForms([createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]);
+      setTargetForm(blankTarget);
+      setScenarioForms(blankScenarios);
       setBoxMessage(null);
       setBoxOpen(false);
       return;
@@ -1989,7 +2285,8 @@ export function App({
           mobileSheet ? `mobile-sheet-open mobile-${mobileSheet}-open` : "",
         ].filter(Boolean).join(" ")}
       >
-      {variant === "default" ? <header className="topbar">
+      {variant === "default" ? (
+        <header className={draftSaveState.status === "idle" ? "topbar" : "topbar has-draft-status"}>
         <div className="brand-title">
           <div className="brand-line">
             <h1>
@@ -2024,8 +2321,49 @@ export function App({
             {" / "}
             data {appVersionInfo.localizationEntries}
           </p>
+          {draftSaveState.status !== "idle" ? (
+            <div className="topbar-draft-row">
+              <p
+                className={`draft-save-status ${draftSaveState.status}`}
+                data-draft-status={draftSaveState.status}
+                role="status"
+                aria-live="polite"
+              >
+                {draftSaveState.status === "saving"
+                  ? "下書きを保存中…"
+                  : draftSaveState.status === "saved"
+                    ? "この端末に下書き保存済み"
+                    : "下書き保存エラー"}
+              </p>
+            </div>
+          ) : null}
         </div>
-      </header> : null}
+        </header>
+      ) : null}
+
+      {variant === "default" && draftRecovery ? (
+        <DraftRecoveryDialog
+          recovery={draftRecovery}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+          onDismissUnavailable={handleDismissUnavailableDraft}
+        />
+      ) : null}
+
+      {variant === "default" && draftSaveState.status === "error" ? (
+        <div className="draft-save-error" role="alert">
+          <span>{draftSaveState.message}</span>
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={draftSaveState.operation === "discard"
+              ? retryDiscardCurrentDraft
+              : saveCurrentDraftNow}
+          >
+            再試行
+          </Button>
+        </div>
+      ) : null}
 
       {variant === "default" && boxOpen ? (
         <BoxPanel

@@ -1,11 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CandidateResult } from "./domain/model";
 import {
   App,
   CandidateStatPointBars,
   CandidateStatPointSpread,
+  DraftRecoveryDialog,
   ResultsPanel,
   SuggestionFormatToggle,
   applyScenarioAdjustmentTypeDefaults,
@@ -39,6 +40,10 @@ import {
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
+import {
+  DRAFT_STORAGE_KEY,
+  createDraftStorageDocument,
+} from "./ui/draftStorage";
 import { GuideAllyAbilityTip, allyAbilityLabels } from "./guide/GuideAllyAbilityTip";
 import { GuideTutorial, getTutorialMessage } from "./guide/GuideTutorial";
 
@@ -133,19 +138,29 @@ describe("App", () => {
     expect(css).toMatch(/\.mobile-candidate-dock\s*\{[^}]*position:\s*static;[^}]*margin-top:\s*auto;/s);
   });
 
-  it("keeps the mobile header actions compact while leaving the product description visible", () => {
+  it("adds a third mobile-header row only while a draft status is visible", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = renderExampleApp();
 
-    expect(css).toContain('"brand actions"\n      "description description"');
+    expect(css).toContain('"description description"\n      "brand actions";');
+    expect(css).toMatch(/\.topbar\.has-draft-status\s*\{[^}]*grid-template-areas:\s*"description description"\s*"brand actions"\s*"status status";/s);
     expect(css).toMatch(/\.brand-title,\s*\.brand-line\s*\{[^}]*display:\s*contents;/s);
     expect(css).toMatch(/\.topbar \.brand-description\s*\{[^}]*grid-area:\s*description;[^}]*text-align:\s*center;[^}]*text-wrap:\s*balance;/s);
     expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*display:\s*none;/s);
+    expect(css).toMatch(/\.topbar \.draft-save-status\s*\{[^}]*font-weight:\s*400;/s);
+    expect(css).toMatch(/\.topbar-draft-row\s*\{[^}]*display:\s*contents;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar \.draft-save-status\s*\{[^}]*text-align:\s*right;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-draft-row\s*\{[^}]*display:\s*flex;[^}]*grid-area:\s*status;[^}]*justify-content:\s*flex-end;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-meta\s*\{[^}]*display:\s*contents;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-action-row\s*\{[^}]*grid-area:\s*actions;[^}]*justify-self:\s*end;/s);
     expect(css).toMatch(/\.suggestion-format-toggle\s*\{[^}]*height:\s*36px;/s);
     expect(css).toMatch(/\.suggestion-format-option-content\s*\{[^}]*min-height:\s*34px;/s);
     expect(css).toMatch(/\.readme-link\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
     expect(css).toMatch(/\.app-footer-version\s*\{[^}]*display:\s*block;/s);
     expect(html).toContain("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール");
+    expect(html).toContain('class="topbar"');
+    expect(html).not.toContain("has-draft-status");
+    expect(html).not.toContain('class="topbar-draft-row"');
     expect(html).toContain('class="app-footer-version"');
   });
 
@@ -1294,6 +1309,86 @@ describe("App", () => {
     expect(html).not.toContain('value="ドドゲザン"');
     expect(html).not.toContain('value="メガゲンガー"');
     expect(html).not.toContain('value="サイコキネシス"');
+  });
+
+  it("shows an accessible restore-or-discard dialog only in the default app", () => {
+    const draft = createDraftStorageDocument(
+      { ...createDefaultTargetForm(), pokemonInput: "オオニューラ" },
+      createDefaultScenarioForms(),
+      new Date("2026-08-17T03:04:05.000Z"),
+    );
+    const values = new Map([[DRAFT_STORAGE_KEY, JSON.stringify(draft)]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    };
+    vi.stubGlobal("localStorage", storage);
+
+    try {
+      const html = renderToStaticMarkup(<App />);
+      const tutorialHtml = renderToStaticMarkup(
+        <App
+          variant="tutorial"
+          initialTargetForm={draft.payload.target}
+          initialScenarioForms={draft.payload.scenarios}
+        />,
+      );
+
+      expect(html).toContain('role="dialog"');
+      expect(html).toContain('aria-modal="true"');
+      expect(html).toContain('aria-labelledby="draft-recovery-title"');
+      expect(html).toContain('aria-describedby="draft-recovery-description"');
+      expect(html).toContain("保存した下書きがあります");
+      expect(html).toContain("前回の入力条件をこの端末から復元できます。");
+      expect(html).toContain("下書きを復元");
+      expect(html).toContain("下書きを破棄");
+      expect(html).toContain("オオニューラ");
+      expect(tutorialHtml).not.toContain("draft-recovery-overlay");
+      expect(tutorialHtml).not.toContain("下書きを復元");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps corrupt drafts explicit and the recovery dialog narrow-width safe", () => {
+    const html = renderToStaticMarkup(
+      <DraftRecoveryDialog
+        recovery={{
+          status: "error",
+          reason: "corrupt",
+          message: "前回の下書きを読み込めませんでした: broken JSON",
+        }}
+        onRestore={() => undefined}
+        onDiscard={() => undefined}
+        onDismissUnavailable={() => undefined}
+      />,
+    );
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(html).toContain("下書きを読み込めませんでした");
+    expect(html).toContain("下書きを破棄");
+    expect(html).not.toContain("下書きを復元");
+    expect(css).toMatch(/\.draft-recovery-window\s*\{[^}]*width:\s*min\(480px, calc\(100vw - 36px\)\);[^}]*overflow:\s*auto;/s);
+    expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.draft-recovery-actions\s*\{[^}]*grid-template-columns:\s*1fr;/s);
+  });
+
+  it("documents local drafts separately from boxes and cross-device sync", () => {
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    const guide = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+
+    for (const document of [readme, guide]) {
+      expect(document).toContain("作業中の下書き");
+      expect(document).toContain("下書きを復元");
+      expect(document).toContain("下書きを破棄");
+      expect(document).toContain("計算結果");
+      expect(document).toContain("候補一覧");
+      expect(document).toContain("別端末");
+    }
+    expect(readme).toContain("約0.75秒後");
+    expect(guide).toContain("約0.75秒後");
+    expect(readme).not.toContain("Googleでログイン");
+    expect(guide).not.toContain("Googleでログイン");
   });
 
   it("maps mobile scenario direction icons by adjustment type", () => {
