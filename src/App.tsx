@@ -171,6 +171,7 @@ const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"] as const satisfies re
 const defenceStatKeys = ["hp", "def", "spd"] as const satisfies readonly StatKey[];
 const natureMatrixKeys = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly StatKey[];
 const RESULTS_PAGE_SIZE = 20;
+const MOBILE_RESULTS_PAGE_SIZE = 5;
 
 type CandidateSortKey = "recommended" | "used" | "remaining" | "margin" | StatKey;
 type CandidateSortDirection = "asc" | "desc";
@@ -698,7 +699,7 @@ export const formatScenarioResultStatusLabel = (passed: boolean): "PASS" | "FAIL
 const formatStatPointSpreadLabel = (statPoints: StatTable): string =>
   statKeys.map((key) => `${statLabels[key]} ${statPoints[key]}`).join(" / ");
 
-type MobileSheet = "target" | "scenarios" | "results";
+type MobileSheet = "target" | "scenarios";
 
 const selectInputValueOnFocus = (event: FocusEvent<HTMLInputElement>) => {
   try {
@@ -1418,7 +1419,6 @@ export function App({
 
     if (!hasEnabledDefenceScenario) {
       setSelectedCandidateId(null);
-      setMobileSheet("results");
       return;
     }
 
@@ -2093,10 +2093,18 @@ export function App({
         scenarios={scenarioForms}
         candidates={searchState.candidates}
         passingCandidateCount={searchState.passingCandidateCount}
+        selectedCandidateId={selectedCandidateId}
+        appliedCandidateId={appliedCandidateId}
+        appliedAdjustmentId={appliedAdjustmentId}
         searchStatus={searchState.status}
         searchProgress={searchState.progress}
         searchedCandidates={searchState.searchedCandidates}
         totalCandidates={searchState.totalCandidates}
+        offenseResults={offenseResults}
+        speedResults={speedResults}
+        strictestFailureLabel={searchState.strictestFailureLabel}
+        targetLabel={targetBuildPreview?.pokemon.displayNameJa ?? targetForm.pokemonInput}
+        resultAlertMessage={resultAlertMessage}
         canRunAdjustment={canRunAdjustment}
         runButtonLabel={runButtonLabel}
         isBoxPanelOpen={boxOpen}
@@ -2109,11 +2117,6 @@ export function App({
           setMobileSheet("target");
         }}
         onOpenScenarioDetail={openMobileScenarioDetail}
-        onOpenResults={() => {
-          setMobileScenarioDetailId(null);
-          setMobileFocusedAttackId(null);
-          setMobileSheet("results");
-        }}
         onToggleScenarioAdjustmentFromDirection={toggleScenarioAdjustmentFromDirection}
         onToggleScenarioEnabled={(scenarioId, enabled) => updateScenario(scenarioId, "enabled", enabled)}
         onAddScenario={() => {
@@ -2128,6 +2131,10 @@ export function App({
         }}
         onRun={handleRun}
         onCancel={handleCancel}
+        onSelectCandidate={handleSelectCandidate}
+        onApplyCandidate={handleApplyCandidate}
+        onApplyOffenseResult={handleApplyOffenseAdjustment}
+        onApplySpeedResult={handleApplySpeedAdjustment}
       />
 
       <main className="workbench">
@@ -3098,10 +3105,18 @@ type MobileOverviewProps = {
   scenarios: ScenarioFormState[];
   candidates: CandidateResult[];
   passingCandidateCount: number;
+  selectedCandidateId: string | null;
+  appliedCandidateId: string | null;
+  appliedAdjustmentId: string | null;
   searchStatus: string;
   searchProgress: number;
   searchedCandidates: number;
   totalCandidates: number;
+  offenseResults: OffenseScenarioResult[];
+  speedResults: SpeedScenarioResult[];
+  strictestFailureLabel: string | null;
+  targetLabel: string;
+  resultAlertMessage: string | null;
   canRunAdjustment: boolean;
   runButtonLabel: string;
   isBoxPanelOpen: boolean;
@@ -3110,7 +3125,6 @@ type MobileOverviewProps = {
   onOpenEnemyBoxPanel: () => void;
   onOpenTarget: () => void;
   onOpenScenarioDetail: (scenarioId: string, attackId?: string) => void;
-  onOpenResults: () => void;
   onToggleScenarioAdjustmentFromDirection: (scenarioId: string) => void;
   onToggleScenarioEnabled: (scenarioId: string, enabled: boolean) => void;
   onAddScenario: () => void;
@@ -3118,6 +3132,10 @@ type MobileOverviewProps = {
   onAddAttack: (scenarioId: string) => string | null;
   onRun: () => void;
   onCancel: () => void;
+  onSelectCandidate: (id: string) => void;
+  onApplyCandidate: (candidate: CandidateResult) => void;
+  onApplyOffenseResult: (entry: OffenseScenarioResult) => void;
+  onApplySpeedResult: (entry: SpeedScenarioResult) => void;
 };
 
 type BulkMaximizeResultPreviewProps = {
@@ -3337,10 +3355,18 @@ function MobileOverview({
   scenarios,
   candidates,
   passingCandidateCount,
+  selectedCandidateId,
+  appliedCandidateId,
+  appliedAdjustmentId,
   searchStatus,
   searchProgress,
   searchedCandidates,
   totalCandidates,
+  offenseResults,
+  speedResults,
+  strictestFailureLabel,
+  targetLabel,
+  resultAlertMessage,
   canRunAdjustment,
   runButtonLabel,
   isBoxPanelOpen,
@@ -3349,7 +3375,6 @@ function MobileOverview({
   onOpenEnemyBoxPanel,
   onOpenTarget,
   onOpenScenarioDetail,
-  onOpenResults,
   onToggleScenarioAdjustmentFromDirection,
   onToggleScenarioEnabled,
   onAddScenario,
@@ -3357,6 +3382,10 @@ function MobileOverview({
   onAddAttack,
   onRun,
   onCancel,
+  onSelectCandidate,
+  onApplyCandidate,
+  onApplyOffenseResult,
+  onApplySpeedResult,
 }: MobileOverviewProps) {
   const boardRef = useRef<HTMLElement | null>(null);
   const targetMiniRef = useRef<HTMLButtonElement | null>(null);
@@ -3706,7 +3735,7 @@ function MobileOverview({
         </section>
       </section>
 
-      <section className="mobile-candidate-dock" aria-labelledby="mobile-candidate-title">
+      <section className="mobile-candidate-dock" aria-label="候補一覧と探索操作">
         <div className="mobile-progress-line" aria-hidden="true">
           <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
         </div>
@@ -3729,26 +3758,26 @@ function MobileOverview({
             {searchStatus === "running" ? "計算中..." : runButtonLabel}
           </Button>
         </div>
-        <h2 id="mobile-candidate-title" className="mobile-candidate-title">候補一覧</h2>
-        {candidates.length > 0 ? (
-          <div className="mobile-candidate-preview-list" aria-label="上位候補プレビュー">
-            {candidates.slice(0, 3).map((candidate) => (
-              <button
-                className="mobile-candidate-preview-row"
-                type="button"
-                key={candidate.id}
-                onClick={onOpenResults}
-              >
-                <span className="mobile-candidate-preview-rank">{candidate.rank}位</span>
-                <CandidateStatPointSpread statPoints={candidate.appliedStatPoints} />
-                <span className="mobile-candidate-preview-budget">
-                  使用{candidate.usedStatPointBudget} / 残り{candidate.remainingStatPointBudget}
-                </span>
-                <em>{formatBottleneckDisplayLabel(candidate.bottleneckLabel)}</em>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <ResultsPanel
+          displayMode="mobile-inline"
+          pageSize={MOBILE_RESULTS_PAGE_SIZE}
+          candidates={candidates}
+          passingCandidateCount={passingCandidateCount}
+          selectedCandidateId={selectedCandidateId}
+          appliedCandidateId={appliedCandidateId}
+          appliedAdjustmentId={appliedAdjustmentId}
+          scenarios={scenarios}
+          status={searchStatus}
+          offenseResults={offenseResults}
+          speedResults={speedResults}
+          strictestFailureLabel={strictestFailureLabel}
+          targetLabel={targetLabel}
+          resultAlertMessage={resultAlertMessage}
+          onSelectCandidate={onSelectCandidate}
+          onApplyCandidate={onApplyCandidate}
+          onApplyOffenseResult={onApplyOffenseResult}
+          onApplySpeedResult={onApplySpeedResult}
+        />
       </section>
     </section>
   );
@@ -6397,6 +6426,8 @@ function ScenarioNumberField({
 }
 
 type ResultsPanelProps = {
+  displayMode?: "panel" | "mobile-inline";
+  pageSize?: number;
   candidates: CandidateResult[];
   passingCandidateCount?: number;
   selectedCandidateId: string | null;
@@ -6591,6 +6622,8 @@ function StandaloneAdjustmentResults({
 }
 
 export function ResultsPanel({
+  displayMode = "panel",
+  pageSize = RESULTS_PAGE_SIZE,
   candidates,
   passingCandidateCount = candidates.length,
   selectedCandidateId,
@@ -6646,16 +6679,18 @@ export function ResultsPanel({
     )),
     [candidateSortDirection, candidateSortKey, candidates],
   );
-  const totalCandidatePages = Math.max(1, Math.ceil(sortedCandidates.length / RESULTS_PAGE_SIZE));
+  const totalCandidatePages = Math.max(1, Math.ceil(sortedCandidates.length / pageSize));
   const safeCandidatePage = Math.min(candidatePage, totalCandidatePages);
-  const pageStartIndex = sortedCandidates.length === 0 ? 0 : (safeCandidatePage - 1) * RESULTS_PAGE_SIZE;
-  const pageEndIndex = Math.min(sortedCandidates.length, pageStartIndex + RESULTS_PAGE_SIZE);
+  const pageStartIndex = sortedCandidates.length === 0 ? 0 : (safeCandidatePage - 1) * pageSize;
+  const pageEndIndex = Math.min(sortedCandidates.length, pageStartIndex + pageSize);
   const displayedCandidates = sortedCandidates.slice(pageStartIndex, pageEndIndex);
   const resultCountLabel = status === "running"
-    ? `探索中 / 合格候補 ${passingCandidateCount} 件 / プレビュー${RESULTS_PAGE_SIZE}件まで`
+    ? `探索中 / 合格候補 ${passingCandidateCount} 件 / ${pageSize}件ずつ表示`
     : candidates.length > 0
       ? `候補 ${candidates.length} 件 / ${pageStartIndex + 1}-${pageEndIndex} 件目`
       : `候補 ${candidates.length} 件`;
+  const mobileInline = displayMode === "mobile-inline";
+  const titleId = mobileInline ? "mobile-candidate-title" : "results-title";
 
   useEffect(() => {
     setCandidatePage(1);
@@ -6666,15 +6701,22 @@ export function ResultsPanel({
   }, [totalCandidatePages]);
 
   return (
-    <section className="results-panel" aria-labelledby="results-title">
+    <section
+      className={mobileInline
+        ? "mobile-candidate-results mobile-candidate-layout"
+        : "results-panel mobile-candidate-layout"}
+      aria-labelledby={titleId}
+    >
       <div className="section-heading">
         <div>
-          <h2 id="results-title">候補一覧</h2>
+          <h2 id={titleId}>候補一覧</h2>
           <span>{resultCountLabel}</span>
         </div>
-        <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
-          閉じる
-        </button>
+        {mobileInline ? null : (
+          <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
+            閉じる
+          </button>
+        )}
       </div>
 
       {candidates.length > 0 ? (
@@ -6701,25 +6743,27 @@ export function ResultsPanel({
           <span className="candidate-page-status" aria-live="polite">
             {pageStartIndex + 1}-{pageEndIndex} / {candidates.length}
           </span>
-          <div className="candidate-page-actions" aria-label="候補一覧のページ操作">
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => setCandidatePage((currentPage) => Math.max(1, currentPage - 1))}
-              disabled={safeCandidatePage <= 1}
-            >
-              前へ
-            </Button>
-            <span>{safeCandidatePage} / {totalCandidatePages}</span>
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => setCandidatePage((currentPage) => Math.min(totalCandidatePages, currentPage + 1))}
-              disabled={safeCandidatePage >= totalCandidatePages}
-            >
-              次へ
-            </Button>
-          </div>
+          {mobileInline ? null : (
+            <div className="candidate-page-actions" aria-label="候補一覧のページ操作">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setCandidatePage((currentPage) => Math.max(1, currentPage - 1))}
+                disabled={safeCandidatePage <= 1}
+              >
+                前へ
+              </Button>
+              <span>{safeCandidatePage} / {totalCandidatePages}</span>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setCandidatePage((currentPage) => Math.min(totalCandidatePages, currentPage + 1))}
+                disabled={safeCandidatePage >= totalCandidatePages}
+              >
+                次へ
+              </Button>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -6776,9 +6820,29 @@ export function ResultsPanel({
                     <span className={`rank${candidate.rank === 1 ? " crown" : ""}`}>{candidate.rank}</span>
                     <CandidateStatPointSpread statPoints={candidate.appliedStatPoints} />
                     <span className="candidate-row-spacer" aria-hidden="true" />
-                    <span className="candidate-budget-value used">{candidate.usedStatPointBudget}</span>
-                    <span className="candidate-budget-value remaining">{candidate.remainingStatPointBudget}</span>
-                    <span className="candidate-bottleneck">{candidate.bottleneckLabel}</span>
+                    <span
+                      className="candidate-budget-bar"
+                      style={{
+                        "--candidate-used-track": `${candidate.usedStatPointBudget}fr`,
+                        "--candidate-remaining-track": `${candidate.remainingStatPointBudget}fr`,
+                      } as CSSProperties}
+                    >
+                      <span
+                        className="candidate-budget-value used"
+                      >
+                        <span className="visually-hidden">使用SP</span>
+                        {candidate.usedStatPointBudget}
+                      </span>
+                      <span
+                        className="candidate-budget-value remaining"
+                      >
+                        <span className="visually-hidden">残りSP</span>
+                        {candidate.remainingStatPointBudget}
+                      </span>
+                    </span>
+                    <span className="candidate-bottleneck">
+                      {formatBottleneckDisplayLabel(candidate.bottleneckLabel)}
+                    </span>
                     <span className="candidate-disclosure" aria-hidden="true">
                       <ChevronRightIcon className="disclosure-chevron" />
                     </span>
@@ -6789,12 +6853,16 @@ export function ResultsPanel({
                   size="small"
                   className="candidate-apply-button"
                   onClick={() => onApplyCandidate(candidate)}
+                  aria-label={`${candidate.rank}位の候補を調整対象へ適用`}
                 >
                   {appliedCandidateId === candidate.id ? "適用済み" : "適用"}
                 </Button>
               </div>
               <Collapsible.Content asChild>
-                <div className="candidate-expanded-detail" id={`${candidate.id}-details`}>
+                <div
+                  className="candidate-expanded-detail"
+                  id={`${mobileInline ? "mobile-" : ""}${candidate.id}-details`}
+                >
                   {candidate.scenarioResults.map((result) => {
                     const scenarioLabel = scenarioLabels.get(result.scenarioId) ?? result.scenarioId;
                     const sourceAttacks = scenariosById.get(result.scenarioId)?.attacks
@@ -6920,6 +6988,27 @@ export function ResultsPanel({
           );
         })}
       </div>
+      {mobileInline && candidates.length > 0 ? (
+        <div className="candidate-page-actions mobile-candidate-page-actions" aria-label="候補一覧のページ操作">
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={() => setCandidatePage((currentPage) => Math.max(1, currentPage - 1))}
+            disabled={safeCandidatePage <= 1}
+          >
+            前へ
+          </Button>
+          <span>{safeCandidatePage} / {totalCandidatePages}</span>
+          <Button
+            variant="ghost"
+            size="small"
+            onClick={() => setCandidatePage((currentPage) => Math.min(totalCandidatePages, currentPage + 1))}
+            disabled={safeCandidatePage >= totalCandidatePages}
+          >
+            次へ
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }

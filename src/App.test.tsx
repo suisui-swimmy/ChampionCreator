@@ -109,14 +109,18 @@ describe("App", () => {
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
 
-  it("keeps box dialogs above mobile sheets and candidate budget values compact", () => {
+  it("keeps box dialogs above mobile sheets and candidate budget values proportional", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
     expect(css).toMatch(/--mobile-sheet-z:\s*70;/);
     expect(css).toMatch(/--box-overlay-z:\s*100;/);
     expect(css).toMatch(/\.box-overlay\s*\{[^}]*z-index:\s*var\(--box-overlay-z\);/s);
-    expect(css).toMatch(/\.mobile-results-open \.candidate-row-toggle\s*\{[^}]*grid-template-columns:\s*30px max-content max-content minmax\(0, 1fr\) 18px;/s);
-    expect(css).toMatch(/\.mobile-results-open \.candidate-budget-value\s*\{[^}]*min-width:\s*48px;/s);
+    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-row-toggle\s*\{[^}]*grid-template-columns:\s*36px minmax\(0, 1fr\) 18px;/s);
+    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-bar\s*\{[^}]*grid-template-columns:\s*minmax\(max-content, var\(--candidate-used-track, 1fr\)\)\s*minmax\(max-content, var\(--candidate-remaining-track, 1fr\)\);/s);
+    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\s*\{[^}]*min-width:\s*0;[^}]*width:\s*100%;/s);
+    expect(css).toMatch(/\.mobile-candidate-actions \.ui-button\s*\{[^}]*flex:\s*0 0 auto;[^}]*white-space:\s*nowrap;/s);
+    expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.mobile-candidate-layout \.candidate-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 60px;/s);
+    expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.mobile-candidate-layout \.candidate-apply-button\s*\{[^}]*width:\s*60px;[^}]*min-width:\s*60px;/s);
   });
 
   it("lets the mobile board follow its content while keeping the footer at the viewport bottom", () => {
@@ -267,11 +271,12 @@ describe("App", () => {
     expect(guideHtml).not.toContain('class="guide-feature-grid"');
     expect(guideHtml).toContain('src="/assets/guide/lightbulb.svg"');
     expect(guideHtml).toContain("スマホでは？");
-    expect(guideHtml).toContain("スマホ表示では、各領域をタッチすることで拡大シートを表示、情報を入力します。");
+    expect(guideHtml).toContain("スマホ表示では、調整対象と仮想敵シナリオをタッチすると拡大シートで入力できます。候補一覧はトップ画面のまま並び替え、詳細確認、適用、ページ移動ができます。");
     expect(guideHtml).toContain("画面中央のノードは、小さい丸エッジ側が「攻撃を与える側」「素早さを抜く側」、細長いピル型エッジ側が「攻撃を受ける側」「素早さを抜かれる側」を表しています。");
     expect(guideHtml).toContain('src="/assets/guide/overview_mobile.png"');
     expect(guideHtml.indexOf("素早さを抜かれる側")).toBeLessThan(guideHtml.indexOf('class="guide-mobile-overview-image"'));
     expect(guideHtml).not.toContain("調整対象、シナリオ、候補をタップすると");
+    expect(guideHtml).toContain("デスクトップは20件、スマホは5件ずつ表示します。スマホではトップ画面の候補一覧から並び替えとページ移動を行い、候補を開くと詳細がその場に展開されます。");
     const scenarioColumnText = "同じシナリオ内の「＋」を押すと、調整列を追加できます。シナリオ名・有効状態・調整種別を共有したまま、相手や技などの条件を追加したい場合に使用します。耐久調整や火力調整では、追加した攻撃を左から順に一連の攻撃として評価します。";
     const scenarioRowText = "「シナリオを追加」を押すと、独立したシナリオ行を追加できます。別の調整種別を設定したい場合や、条件ごとに有効・無効を切り替えたい場合は、新しいシナリオ行を追加してください。";
     const scenarioEvaluationText = "計算時は、最終的に有効になっているすべてのシナリオ行を条件として評価します。一時的に条件から外したい場合は、トグルスイッチで無効化することができます。";
@@ -603,7 +608,7 @@ describe("App", () => {
     expect(html).not.toContain("火力ライン結果");
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
-    expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('aria-label="候補一覧"'));
+    expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('id="results-title"'));
   });
 
   it("keeps the battle format selector native, accessible, and single-first", () => {
@@ -1587,6 +1592,70 @@ describe("App", () => {
     expect(html).not.toContain("表示候補21");
   });
 
+  it("keeps the mobile candidate workflow inline with five candidates per page", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const candidates: CandidateResult[] = Array.from({ length: 12 }, (_, index) => {
+      const rank = index + 1;
+      const usedStatPointBudget = rank === 1 ? 33 : rank === 2 ? 64 : rank === 3 ? 0 : rank;
+      return {
+        id: `candidate-${rank}`,
+        rank,
+        candidate: { hp: rank, def: 0, spd: 0 },
+        appliedStatPoints: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+        appliedEvs: { hp: rank, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+        usedStatPointBudget,
+        remainingStatPointBudget: 66 - usedStatPointBudget,
+        usedEvBudget: rank,
+        remainingEvBudget: 66 - rank,
+        passed: true,
+        scenarioResults: [],
+        bottleneckLabel: `モバイル候補${rank}`,
+      };
+    });
+
+    const html = renderToStaticMarkup(
+      <ResultsPanel
+        displayMode="mobile-inline"
+        pageSize={5}
+        candidates={candidates}
+        passingCandidateCount={12}
+        selectedCandidateId="candidate-1"
+        appliedCandidateId={null}
+        scenarios={[scenario]}
+        status="complete"
+        offenseResults={[]}
+        speedResults={[]}
+        strictestFailureLabel={null}
+        targetLabel="メガマフォクシー"
+        resultAlertMessage={null}
+        onSelectCandidate={() => undefined}
+        onApplyCandidate={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('class="mobile-candidate-results mobile-candidate-layout"');
+    expect(html).toContain('id="mobile-candidate-title"');
+    expect(html).toContain("候補 12 件 / 1-5 件目");
+    expect(html).toContain("1-5 / 12");
+    expect(html).toContain("1 / 3");
+    expect(html).toContain("並び替え");
+    expect(html).toContain("順序");
+    expect(html).toContain("モバイル候補5");
+    expect(html).not.toContain("モバイル候補6");
+    expect(html).toContain("--candidate-used-track:33fr;--candidate-remaining-track:33fr");
+    expect(html).toContain("--candidate-used-track:64fr;--candidate-remaining-track:2fr");
+    expect(html).toContain("--candidate-used-track:0fr;--candidate-remaining-track:66fr");
+    expect(html).toContain('<span class="visually-hidden">使用SP</span>33');
+    expect(html).toContain('<span class="visually-hidden">残りSP</span>33');
+    expect(html).toContain("最厳条件: モバイル候補1");
+    expect(html.match(/位の候補を調整対象へ適用/g)).toHaveLength(5);
+    expect(html).toContain('id="mobile-candidate-1-details"');
+    expect(html).not.toContain('class="mobile-sheet-close"');
+    expect(html.indexOf('class="candidate-table"')).toBeLessThan(
+      html.indexOf('class="candidate-page-actions mobile-candidate-page-actions"'),
+    );
+  });
+
   it("sorts result candidates by the selected full-list key before pagination", () => {
     const makeCandidate = (
       id: string,
@@ -1827,7 +1896,7 @@ describe("App", () => {
     expect(html).toContain('class="candidate-budget-value remaining"');
     expect(html).toContain('class="candidate-bottleneck"');
     expect(html).toContain("シナリオA +0.0%");
-    expect(html).not.toContain("最厳条件: シナリオA +0.0%");
+    expect(html).toContain("最厳条件: シナリオA +0.0%");
     expect(html).toContain('class="candidate-sp-bars"');
     expect(html).toContain('aria-label="SPバー: H 6 / A 0 / B 13 / C 0 / D 0 / S 0"');
     expect(html).toContain(">H</span><span>6</span>");
@@ -2136,7 +2205,7 @@ describe("App", () => {
     expect(html).toContain("S12 メガマフォクシー → 任意S150 : 自分 151 / 相手 150 / 抜ける / こだわりスカーフ 1.5倍");
     expect(html).toContain('aria-label="SPバー: H 3 / A 0 / B 32 / C 2 / D 0 / S 12"');
     expect(html).toContain("シナリオ1 +3.7%");
-    expect(html).not.toContain("最厳条件: シナリオ1 +3.7%");
+    expect(html).toContain("最厳条件: シナリオ1 +3.7%");
     expect(html).toContain("自分 151");
     expect(html).toContain("相手 150");
     expect(html).toContain("抜ける");
