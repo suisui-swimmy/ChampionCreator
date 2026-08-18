@@ -43,6 +43,7 @@ type SelectOption<TValue extends string> = {
 
 type SelectFieldProps<TValue extends string> = {
   label: string;
+  ariaLabel?: string;
   value: TValue;
   options: Array<SelectOption<TValue>>;
   onChange: (value: TValue) => void;
@@ -55,6 +56,7 @@ type SelectFieldProps<TValue extends string> = {
 
 export function SelectField<TValue extends string>({
   label,
+  ariaLabel,
   value,
   options,
   onChange,
@@ -76,8 +78,8 @@ export function SelectField<TValue extends string>({
       <Select.Root value={value} onValueChange={(nextValue) => onChange(nextValue as TValue)} disabled={disabled}>
         <Select.Trigger
           className={joinClassNames("select-trigger", showPlaceholderLabel && "select-trigger-placeholder")}
-          aria-label={placeholderLabel ? `${label}: ${selectedLabel}` : undefined}
-          aria-labelledby={placeholderLabel ? undefined : labelId}
+          aria-label={ariaLabel ?? (placeholderLabel ? `${label}: ${selectedLabel}` : undefined)}
+          aria-labelledby={ariaLabel || placeholderLabel ? undefined : labelId}
         >
           <Select.Value>{displayLabel}</Select.Value>
           <Select.Icon className="select-trigger-icon">

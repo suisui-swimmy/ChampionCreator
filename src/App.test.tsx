@@ -10,7 +10,7 @@ import {
   ResultsPanel,
   SuggestionFormatToggle,
   applyScenarioAdjustmentTypeDefaults,
-  applySpeedMoveModifierDefaults,
+  applySpeedOrderModeDefaults,
   clampTargetStatPointChange,
   compareResultCandidates,
   createScenario,
@@ -322,7 +322,8 @@ describe("App", () => {
     expect(guideHtml).toMatch(/<section class="guide-section" id="scenarios">[\s\S]*?<div class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別">[\s\S]*?<section class="guide-mode-section defence" id="defence">[\s\S]*?<section class="guide-mode-section offense" id="offense">[\s\S]*?<section class="guide-mode-section speed" id="speed">[\s\S]*?<\/div>\s*<\/section>\s*<section class="guide-section" id="constant-damage">/s);
     expect(guideHtml).toContain("調整対象が相手の攻撃をどれだけ耐えるかを設定します。攻撃側条件、必要耐久回数、必要生存率を入力し、複数条件をすべて満たす配分だけを候補にします。");
     expect(guideHtml).toContain("指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。");
-    expect(guideHtml).toContain("相手ポケモンや任意の実数値を基準に、確定抜き・+〇などのSラインを計算します。トリックルームでは通常と逆の比較になります。");
+    expect(guideHtml).toContain("相手ポケモンや任意の実数値を基準に、確定抜き・+〇などのSラインを計算します。条件は、全体へ適用する「共通S条件」、相手側へ適用する「相手S条件」、調整対象側へ適用する「調整対象S条件」に分かれています。");
+    expect(guideHtml).toContain("トリックルームと、おいかぜ（両側）は同時に指定できます。");
     expect(guideHtml).not.toContain("確定抜き・同速などのSライン");
     expect(guideHtml).toContain("追加した効果は発動する前提で計算し、入力条件と一致しない場合は警告が表示されます。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。");
     expect(guideHtml).not.toContain("警告を表示しますが、自動削除はしません");
@@ -504,6 +505,7 @@ describe("App", () => {
 
   it("renders the M0 workbench sections", () => {
     const html = renderExampleApp();
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
     expect(html).toContain("ChampionCreator");
     expect(html).toContain('class="brand-line"');
@@ -580,7 +582,21 @@ describe("App", () => {
     expect(html).toContain('class="number-stepper speed-offset-input"');
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1下げる"');
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1上げる"');
-    expect(html).toContain(">技補正</span>");
+    expect(html).toContain(">共通S条件</h3>");
+    expect(html).toContain(">相手S条件</h3>");
+    expect(html).toContain(">調整対象S条件</h3>");
+    expect(html).not.toContain("調整対象Sランク");
+    expect(html).toContain(">状態異常</span>");
+    expect(html).toContain(">行動順</span>");
+    expect(html).toContain(">おいかぜ</span>");
+    expect(html).toContain("両側の手動倍率は、選択中の持ち物・特性による自動補正を置き換えます。");
+    expect(html.match(/両側の手動倍率は、選択中の持ち物・特性による自動補正を置き換えます。/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="素早さ調整A 共通S条件 行動順"');
+    expect(html).toContain('aria-label="素早さ調整A 相手S条件 状態異常"');
+    expect(html).toContain('aria-label="素早さ調整A 調整対象S条件 状態異常"');
+    expect(html).toContain('aria-label="素早さ調整A 任意S値"');
+    expect(css).toMatch(/\.mobile-scenario-flow-row\.trick-room \.mobile-scenario-summary\.speed\s*\{[^}]*border-color:\s*rgba\(181, 108, 255, 0\.64\);/s);
+    expect(html).not.toContain(">技補正</span>");
     expect(html).not.toContain("speed-tailwind-toggle");
     expect(html).toContain('class="scenario-cell number-cell number-labeled-field speed-manual-target-input"');
     expect(html).toContain('inputMode="numeric"');
@@ -641,6 +657,32 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('id="results-title"'));
+  });
+
+  it("keeps common and target speed conditions visible for a manual S target", () => {
+    const scenarios = createDefaultScenarioForms();
+    const speedScenario = scenarios[2];
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={scenarios.map((scenario) => scenario.id === speedScenario.id
+          ? {
+              ...scenario,
+              attacks: scenario.attacks.map((attack) => ({
+                ...attack,
+                speedTargetMode: "manual" as const,
+                speedTargetValue: 150,
+              })),
+            }
+          : scenario)}
+      />,
+    );
+
+    expect(html).toContain(">共通S条件</h3>");
+    expect(html).toContain(">調整対象S条件</h3>");
+    expect(html).not.toContain(">相手S条件</h3>");
+    expect(html).not.toContain("相手S能力");
+    expect(html).toContain(">任意S値</span>");
   });
 
   it("keeps the battle format selector native, accessible, and single-first", () => {
@@ -1467,13 +1509,17 @@ describe("App", () => {
       attacks: scenario.attacks.map((attack) => ({
         ...attack,
         attackerStatPoints: { ...attack.attackerStatPoints, spe: 0 },
-        speedMoveModifier: "trick-room" as const,
+        speedOrderMode: "trick-room" as const,
+        speedTargetTailwind: true,
+        speedOpponentTailwind: true,
       })),
     }, "speed");
 
     expect(speedScenario.adjustmentType).toBe("speed");
     expect(speedScenario.attacks[0].attackerStatPoints.spe).toBe(32);
-    expect(speedScenario.attacks[0].speedMoveModifier).toBe("none");
+    expect(speedScenario.attacks[0].speedOrderMode).toBe("normal");
+    expect(speedScenario.attacks[0].speedTargetTailwind).toBe(false);
+    expect(speedScenario.attacks[0].speedOpponentTailwind).toBe(false);
   });
 
   it("defaults opponent S SP to 0 for Trick Room speed adjustment", () => {
@@ -1485,13 +1531,29 @@ describe("App", () => {
       },
     };
 
-    const trickRoomAttack = applySpeedMoveModifierDefaults(speedAttack, "trick-room");
-    expect(trickRoomAttack.speedMoveModifier).toBe("trick-room");
+    const trickRoomAttack = applySpeedOrderModeDefaults(speedAttack, "trick-room");
+    expect(trickRoomAttack.speedOrderMode).toBe("trick-room");
     expect(trickRoomAttack.attackerStatPoints.spe).toBe(0);
 
-    const normalAttack = applySpeedMoveModifierDefaults(trickRoomAttack, "none");
-    expect(normalAttack.speedMoveModifier).toBe("none");
+    const normalAttack = applySpeedOrderModeDefaults(trickRoomAttack, "normal");
+    expect(normalAttack.speedOrderMode).toBe("normal");
     expect(normalAttack.attackerStatPoints.spe).toBe(32);
+  });
+
+  it("marks Trick Room speed scenarios in the mobile overview", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => scenario.adjustmentType === "speed"
+      ? {
+          ...scenario,
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            speedOrderMode: "trick-room" as const,
+          })),
+        }
+      : scenario);
+    const html = renderToStaticMarkup(<App initialScenarioForms={scenarios} />);
+
+    expect(html).toContain('class="mobile-scenario-flow-row speed trick-room"');
+    expect(html).toContain('aria-label="シナリオ3: 素早さ調整（トリックルーム）。タップで次の調整種別に切り替え"');
   });
 
   it("does not overwrite manually edited opponent S SP for Trick Room", () => {
@@ -1503,7 +1565,7 @@ describe("App", () => {
       },
     };
 
-    const trickRoomAttack = applySpeedMoveModifierDefaults(speedAttack, "trick-room");
+    const trickRoomAttack = applySpeedOrderModeDefaults(speedAttack, "trick-room");
     expect(trickRoomAttack.attackerStatPoints.spe).toBe(12);
   });
 

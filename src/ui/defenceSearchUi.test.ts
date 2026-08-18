@@ -266,7 +266,12 @@ describe("buildDefenceSearchInput", () => {
       speedTargetMode: "opponent",
       speedComparison: "outspeed",
       speedRequiredOffset: 1,
-      speedMoveModifier: "none",
+      speedTargetStatus: "none",
+      speedTargetItemMultiplier: "auto",
+      speedTargetAbilityMultiplier: "auto",
+      speedTargetTailwind: false,
+      speedOpponentTailwind: false,
+      speedOrderMode: "normal",
     });
     expect(buildSpeedAdjustmentInput(target, scenarios[2].attacks[0])).toMatchObject({
       opponentLabel: "メガゲンガー",
@@ -1327,12 +1332,18 @@ describe("buildSpeedAdjustmentInput", () => {
       speedRequiredOffset: 3,
       speedItemMultiplier: "1.5" as const,
       speedAbilityMultiplier: "2" as const,
-      speedMoveModifier: "tailwind" as const,
+      speedTargetStatus: "brn" as const,
+      speedTargetItemMultiplier: "0.5" as const,
+      speedTargetAbilityMultiplier: "1.5" as const,
+      speedTargetTailwind: true,
+      speedOpponentTailwind: true,
+      speedOrderMode: "normal" as const,
     };
 
     const input = buildSpeedAdjustmentInput(target, attack);
 
     expect(input.targetBuild.pokemon.canonicalName).toBe("Delphox-Mega");
+    expect(input.targetBuild.status).toBe("brn");
     expect(input.targetBuild.statPoints?.spe).toBe(8);
     expect(input.targetBoosts.spe).toBe(1);
     expect(input.opponentBuild?.pokemon.canonicalName).toBe("Pikachu");
@@ -1344,11 +1355,14 @@ describe("buildSpeedAdjustmentInput", () => {
     expect(input.opponentBoosts.spe).toBe(2);
     expect(input.field.weather).toBe("rain");
     expect(input.opponentSide.tailwind).toBe(true);
+    expect(input.targetSide.tailwind).toBe(true);
     expect(input.orderMode).toBe("normal");
     expect(input.comparison).toBe("tie");
     expect(input.requiredSpeedOffset).toBe(3);
     expect(input.opponentItemMultiplier).toBe("1.5");
     expect(input.opponentAbilityMultiplier).toBe("2");
+    expect(input.targetItemMultiplier).toBe("0.5");
+    expect(input.targetAbilityMultiplier).toBe("1.5");
   });
 
   it("converts Trick Room move modifier into reversed speed order input", () => {
@@ -1357,7 +1371,7 @@ describe("buildSpeedAdjustmentInput", () => {
       ...scenario.attacks[0],
       attackerPokemonInput: "ピカチュウ",
       speedTargetMode: "opponent" as const,
-      speedMoveModifier: "trick-room" as const,
+      speedOrderMode: "trick-room" as const,
     });
 
     expect(input.opponentSide.tailwind).toBe(false);
@@ -1371,11 +1385,19 @@ describe("buildSpeedAdjustmentInput", () => {
       attackerPokemonInput: "",
       speedTargetMode: "manual" as const,
       speedTargetValue: 220,
+      speedTargetStatus: "par" as const,
+      speedTargetTailwind: true,
+      speedTargetItemMultiplier: "0.5" as const,
+      speedTargetAbilityMultiplier: "1.5" as const,
     });
 
     expect(input.opponentBuild).toBeUndefined();
     expect(input.manualTargetSpeed).toBe(220);
     expect(input.requiredSpeedOffset).toBe(0);
+    expect(input.targetBuild.status).toBe("par");
+    expect(input.targetSide.tailwind).toBe(true);
+    expect(input.targetItemMultiplier).toBe("0.5");
+    expect(input.targetAbilityMultiplier).toBe("1.5");
     expect(calculateSpeedAdjustmentFromUi(createDefaultTargetForm(), {
       ...scenario.attacks[0],
       attackerPokemonInput: "",

@@ -366,10 +366,14 @@ const speedMultiplierOptions: Array<{ value: SpeedManualMultiplier; label: strin
   { value: "0.5", label: "0.5倍" },
 ];
 
-const speedMoveModifierOptions = [
-  { value: "none", label: "なし" },
-  { value: "tailwind", label: "おいかぜ" },
+const speedOrderModeOptions = [
+  { value: "normal", label: "通常" },
   { value: "trick-room", label: "トリックルーム" },
+] as const;
+
+const speedTailwindOptions = [
+  { value: "off", label: "なし" },
+  { value: "on", label: "あり" },
 ] as const;
 
 type HpEventPresetId = SupportedHpEventEffectId;
@@ -806,7 +810,9 @@ export const applyScenarioAdjustmentTypeDefaults = (
     attackerStatPoints: adjustmentType === "speed" && attack.attackerStatPoints.spe === 0
       ? { ...attack.attackerStatPoints, spe: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }
       : attack.attackerStatPoints,
-    speedMoveModifier: "none",
+    speedOrderMode: "normal",
+    speedTargetTailwind: false,
+    speedOpponentTailwind: false,
   })),
 });
 
@@ -834,21 +840,21 @@ export const syncScenarioGameTypesToSuggestionFormat = (
   });
 };
 
-export const applySpeedMoveModifierDefaults = (
+export const applySpeedOrderModeDefaults = (
   attack: ScenarioAttackFormState,
-  speedMoveModifier: ScenarioAttackFormState["speedMoveModifier"],
+  speedOrderMode: ScenarioAttackFormState["speedOrderMode"],
 ): ScenarioAttackFormState => {
   const currentSpe = attack.attackerStatPoints.spe;
-  const nextDefaultSpe = speedMoveModifier === "trick-room"
+  const nextDefaultSpe = speedOrderMode === "trick-room"
     ? 0
     : CHAMPIONS_MAX_STAT_POINTS_PER_STAT;
-  const shouldApplyDefault = speedMoveModifier === "trick-room"
+  const shouldApplyDefault = speedOrderMode === "trick-room"
     ? currentSpe === CHAMPIONS_MAX_STAT_POINTS_PER_STAT
     : currentSpe === 0;
 
   return {
     ...attack,
-    speedMoveModifier,
+    speedOrderMode,
     attackerStatPoints: shouldApplyDefault
       ? { ...attack.attackerStatPoints, spe: nextDefaultSpe }
       : attack.attackerStatPoints,
@@ -890,8 +896,12 @@ const createBlankAttack = (index: number, gameType: GameType = "singles"): Scena
   speedTargetValue: 0,
   speedItemMultiplier: "auto",
   speedAbilityMultiplier: "auto",
-  speedMoveModifier: "none",
-  tailwind: false,
+  speedTargetStatus: "none",
+  speedTargetItemMultiplier: "auto",
+  speedTargetAbilityMultiplier: "auto",
+  speedTargetTailwind: false,
+  speedOpponentTailwind: false,
+  speedOrderMode: "normal",
 });
 
 const createBlankTargetForm = (): TargetFormState => ({
@@ -1717,10 +1727,10 @@ export function App({
                         attack,
                         value as ScenarioAttackFormState["gameType"],
                       )
-                  : key === "speedMoveModifier"
-                    ? applySpeedMoveModifierDefaults(
+                  : key === "speedOrderMode"
+                    ? applySpeedOrderModeDefaults(
                         attack,
-                        value as ScenarioAttackFormState["speedMoveModifier"],
+                        value as ScenarioAttackFormState["speedOrderMode"],
                       )
                   : key === "attackerLevelMode"
                     ? applyAttackerLevelMode(
@@ -3755,7 +3765,7 @@ function formatMobileAttackMeta(
   if (adjustmentType === "speed") {
     return attack.speedTargetMode === "manual"
       ? `任意S ${attack.speedTargetValue}`
-      : `${attack.speedMoveModifier === "trick-room" ? "トリル" : "抜き"} +${attack.speedRequiredOffset}`;
+      : `${attack.speedOrderMode === "trick-room" ? "トリル" : "抜き"} +${attack.speedRequiredOffset}`;
   }
 
   const hpEventCount = attack.hpEvents?.length ?? 0;
@@ -3909,7 +3919,7 @@ function MobileOverview({
 
         const cardRect = card.getBoundingClientRect();
         const isTrickRoom = scenario.adjustmentType === "speed"
-          && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+          && scenario.attacks.some((attack) => attack.speedOrderMode === "trick-room");
         const fromX = targetRight;
         const fromY = anchorStartY + (edgeCount <= 1 ? 0 : (anchorBand * index) / (edgeCount - 1));
         const toX = cardRect.left - boardRect.left + 1;
@@ -4109,8 +4119,11 @@ function MobileOverview({
           <div className="mobile-scenario-flow-list" aria-label="シナリオ調整種別">
             {scenarios.map((scenario) => {
               const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
-                && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+                && scenario.attacks.some((attack) => attack.speedOrderMode === "trick-room");
               const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(scenario.adjustmentType);
+              const currentAdjustmentAriaLabel = isTrickRoomSpeedScenario
+                ? `${currentAdjustmentLabel}（トリックルーム）`
+                : currentAdjustmentLabel;
               const directionIconPath = getMobileScenarioDirectionIconPath(scenario.adjustmentType, isTrickRoomSpeedScenario);
 
               return (
@@ -4161,7 +4174,7 @@ function MobileOverview({
                     <button
                       className="mobile-scenario-adjustment-row"
                       type="button"
-                      aria-label={`${scenario.label}: ${currentAdjustmentLabel}。タップで次の調整種別に切り替え`}
+                      aria-label={`${scenario.label}: ${currentAdjustmentAriaLabel}。タップで次の調整種別に切り替え`}
                       onClick={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
                     >
                       <span
@@ -5080,7 +5093,7 @@ function ScenarioRow({
   hideScenarioRemoveButton = false,
 }: ScenarioRowProps) {
   const isTrickRoomSpeedScenario = scenario.adjustmentType === "speed"
-    && scenario.attacks.some((attack) => attack.speedMoveModifier === "trick-room");
+    && scenario.attacks.some((attack) => attack.speedOrderMode === "trick-room");
   const visibleAttacks = mobileFocusedAttackId
     ? scenario.attacks.filter((attack) => attack.id === mobileFocusedAttackId)
     : scenario.attacks;
@@ -6096,7 +6109,7 @@ function AttackCard({
   const isOffenseAdjustment = adjustmentType === "offense";
   const isSpeedAdjustment = adjustmentType === "speed";
   const isManualSpeedTarget = attack.speedTargetMode === "manual";
-  const isTrickRoomSpeed = attack.speedMoveModifier === "trick-room";
+  const isTrickRoomSpeed = attack.speedOrderMode === "trick-room";
   const speedPrimaryConditionLabel = isTrickRoomSpeed ? "確定トリル先制" : "確定抜き";
   const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
   const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
@@ -6407,7 +6420,7 @@ function AttackCard({
                       onChange={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "opponent")}
                     />
                     <span>{speedPrimaryConditionLabel}</span>
-                    <strong>{actualStats?.spe ?? "-"}</strong>
+                    <strong>{isManualSpeedTarget ? "-" : actualStats?.spe ?? "-"}</strong>
                     <span className="speed-offset-sign">{isTrickRoomSpeed ? "-" : "+"}</span>
                   </label>
                   <NumberStepper
@@ -6432,7 +6445,7 @@ function AttackCard({
                   </label>
                   <ScenarioNumberField
                     className="speed-manual-target-input"
-                    label="任意S値"
+                    label={`${attackLabel} 任意S値`}
                     showLabel={false}
                     value={attack.speedTargetValue}
                     min={0}
@@ -6445,58 +6458,121 @@ function AttackCard({
             </div>
           </section>
 
+          <section
+            className="attack-setting-section attack-setting-section--indented speed-condition-section"
+            aria-labelledby={`${scenarioId}-${attack.id}-speed-common-title`}
+          >
+            <h3 id={`${scenarioId}-${attack.id}-speed-common-title`}>共通S条件</h3>
+            <div className="attack-field-grid speed-field-grid attack-setting-section-body">
+              <SelectField
+                label="ルール"
+                ariaLabel={`${attackLabel} 共通S条件 ルール`}
+                value={attack.gameType}
+                options={gameTypeOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
+              />
+              <SelectField
+                label="天候"
+                ariaLabel={`${attackLabel} 共通S条件 天候`}
+                value={attack.weather}
+                options={weatherOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
+              />
+              <SelectField
+                label="フィールド"
+                ariaLabel={`${attackLabel} 共通S条件 フィールド`}
+                value={attack.terrain}
+                options={terrainOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
+              />
+              <SelectField
+                label="行動順"
+                ariaLabel={`${attackLabel} 共通S条件 行動順`}
+                value={attack.speedOrderMode}
+                options={[...speedOrderModeOptions]}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedOrderMode", value)}
+              />
+            </div>
+          </section>
+
           {!isManualSpeedTarget ? (
             <section
-              className="attack-setting-section attack-setting-section--indented"
-              aria-labelledby={`${scenarioId}-${attack.id}-speed-environment-title`}
+              className="attack-setting-section attack-setting-section--indented speed-condition-section"
+              aria-labelledby={`${scenarioId}-${attack.id}-speed-opponent-title`}
             >
-              <h3 id={`${scenarioId}-${attack.id}-speed-environment-title`}>相手S条件</h3>
+              <h3 id={`${scenarioId}-${attack.id}-speed-opponent-title`}>相手S条件</h3>
               <div className="attack-field-grid speed-field-grid attack-setting-section-body">
                 <SelectField
-                  label="ルール"
-                  value={attack.gameType}
-                  options={gameTypeOptions}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
-                />
-                <SelectField
-                  label="状態"
+                  label="状態異常"
+                  ariaLabel={`${attackLabel} 相手S条件 状態異常`}
                   value={attack.attackerStatus}
                   options={statusOptions}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
                 />
                 <SelectField
-                  label="天候"
-                  value={attack.weather}
-                  options={weatherOptions}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
-                />
-                <SelectField
-                  label="フィールド"
-                  value={attack.terrain}
-                  options={terrainOptions}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
-                />
-                <SelectField
                   label="道具倍率"
+                  ariaLabel={`${attackLabel} 相手S条件 道具倍率`}
                   value={attack.speedItemMultiplier}
                   options={speedMultiplierOptions}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
                 />
                 <SelectField
                   label="特性倍率"
+                  ariaLabel={`${attackLabel} 相手S条件 特性倍率`}
                   value={attack.speedAbilityMultiplier}
                   options={speedMultiplierOptions}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
                 />
                 <SelectField
-                  label="技補正"
-                  value={attack.speedMoveModifier}
-                  options={[...speedMoveModifierOptions]}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedMoveModifier", value)}
+                  label="おいかぜ"
+                  ariaLabel={`${attackLabel} 相手S条件 おいかぜ`}
+                  value={attack.speedOpponentTailwind ? "on" : "off"}
+                  options={[...speedTailwindOptions]}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedOpponentTailwind", value === "on")}
                 />
               </div>
-          </section>
+            </section>
           ) : null}
+
+          <section
+            className="attack-setting-section attack-setting-section--indented speed-condition-section"
+            aria-labelledby={`${scenarioId}-${attack.id}-speed-target-title`}
+          >
+            <h3 id={`${scenarioId}-${attack.id}-speed-target-title`}>調整対象S条件</h3>
+            <div className="attack-field-grid speed-field-grid attack-setting-section-body">
+              <SelectField
+                label="状態異常"
+                ariaLabel={`${attackLabel} 調整対象S条件 状態異常`}
+                value={attack.speedTargetStatus}
+                options={statusOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetStatus", value)}
+              />
+              <SelectField
+                label="道具倍率"
+                ariaLabel={`${attackLabel} 調整対象S条件 道具倍率`}
+                value={attack.speedTargetItemMultiplier}
+                options={speedMultiplierOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetItemMultiplier", value)}
+              />
+              <SelectField
+                label="特性倍率"
+                ariaLabel={`${attackLabel} 調整対象S条件 特性倍率`}
+                value={attack.speedTargetAbilityMultiplier}
+                options={speedMultiplierOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetAbilityMultiplier", value)}
+              />
+              <SelectField
+                label="おいかぜ"
+                ariaLabel={`${attackLabel} 調整対象S条件 おいかぜ`}
+                value={attack.speedTargetTailwind ? "on" : "off"}
+                options={[...speedTailwindOptions]}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetTailwind", value === "on")}
+              />
+            </div>
+            <p className="speed-multiplier-help" role="note">
+              両側の手動倍率は、選択中の持ち物・特性による自動補正を置き換えます。
+            </p>
+          </section>
         </>
       ) : isOffenseAdjustment ? (
         <>

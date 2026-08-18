@@ -35,7 +35,20 @@ const createMemoryStorage = (initial: Record<string, string> = {}) => {
 describe("draftStorage", () => {
   it("round-trips only the current target and scenarios in a versioned draft", () => {
     const target = { ...createDefaultTargetForm(), pokemonInput: "オオニューラ" };
-    const scenarios = createDefaultScenarioForms();
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        speedTargetStatus: "tox" as const,
+        speedTargetItemMultiplier: "2" as const,
+        speedTargetAbilityMultiplier: "1.5" as const,
+        speedTargetTailwind: true,
+        speedOpponentTailwind: true,
+        speedOrderMode: "trick-room" as const,
+        speedItemMultiplier: "0.5" as const,
+        speedAbilityMultiplier: "1.5" as const,
+      })),
+    }));
     const memory = createMemoryStorage();
 
     const saved = saveDraftToBrowser(target, scenarios, {
@@ -61,6 +74,19 @@ describe("draftStorage", () => {
         },
       },
     });
+    if (loaded.status !== "success") {
+      throw new Error("draft did not load");
+    }
+    expect(loaded.draft.payload.scenarios[0].attacks[0]).toMatchObject({
+      speedTargetStatus: "tox",
+      speedTargetItemMultiplier: "2",
+      speedTargetAbilityMultiplier: "1.5",
+      speedTargetTailwind: true,
+      speedOpponentTailwind: true,
+      speedOrderMode: "trick-room",
+      speedItemMultiplier: "0.5",
+      speedAbilityMultiplier: "1.5",
+    });
     const stored = memory.values.get(DRAFT_STORAGE_KEY) ?? "";
     expect(stored).not.toContain("candidates");
     expect(stored).not.toContain("searchState");
@@ -73,12 +99,26 @@ describe("draftStorage", () => {
 
   it("migrates an older ShareState payload through the existing parser", () => {
     const target = createDefaultTargetForm();
-    const scenarios = createDefaultScenarioForms();
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map(({
+        speedTargetStatus: _speedTargetStatus,
+        speedTargetItemMultiplier: _speedTargetItemMultiplier,
+        speedTargetAbilityMultiplier: _speedTargetAbilityMultiplier,
+        speedTargetTailwind: _speedTargetTailwind,
+        speedOpponentTailwind: _speedOpponentTailwind,
+        speedOrderMode: _speedOrderMode,
+        ...attack
+      }) => ({
+        ...attack,
+        speedMoveModifier: "tailwind",
+      })),
+    }));
     const parsed = parseDraftStorageDocument(JSON.stringify({
       schemaVersion: DRAFT_STORAGE_SCHEMA_VERSION,
       savedAt: "2026-08-17T03:04:05.000Z",
       payload: {
-        schemaVersion: 9,
+        schemaVersion: 10,
         target,
         scenarios,
       },
@@ -90,6 +130,15 @@ describe("draftStorage", () => {
       level: target.level,
       levelMode: target.levelMode,
     });
+    expect(parsed.payload.scenarios[0].attacks[0]).toMatchObject({
+      speedTargetStatus: "none",
+      speedTargetItemMultiplier: "auto",
+      speedTargetAbilityMultiplier: "auto",
+      speedTargetTailwind: false,
+      speedOpponentTailwind: true,
+      speedOrderMode: "normal",
+    });
+    expect(parsed.payload.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
   });
 
   it.each([

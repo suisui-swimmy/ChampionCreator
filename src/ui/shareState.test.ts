@@ -43,9 +43,14 @@ describe("shareState", () => {
         speedComparison: "outspeed" as const,
         speedRequiredOffset: 4,
         speedTargetValue: 220,
+        speedTargetStatus: "par" as const,
+        speedTargetItemMultiplier: "0.5" as const,
+        speedTargetAbilityMultiplier: "1.5" as const,
+        speedTargetTailwind: true,
+        speedOpponentTailwind: true,
+        speedOrderMode: "trick-room" as const,
         speedItemMultiplier: "1.5" as const,
         speedAbilityMultiplier: "2" as const,
-        speedMoveModifier: "trick-room" as const,
         hpEvents: [{
           id: "event-life-orb",
           effectId: "life-orb-recoil",
@@ -87,15 +92,21 @@ describe("shareState", () => {
       speedComparison: "outspeed",
       speedRequiredOffset: 4,
       speedTargetValue: 220,
+      speedTargetStatus: "par",
+      speedTargetItemMultiplier: "0.5",
+      speedTargetAbilityMultiplier: "1.5",
+      speedTargetTailwind: true,
+      speedOpponentTailwind: true,
+      speedOrderMode: "trick-room",
       speedItemMultiplier: "1.5",
       speedAbilityMultiplier: "2",
-      speedMoveModifier: "trick-room",
       hpEvents: [{
         id: "event-life-orb",
         effectId: "life-orb-recoil",
         enabled: true,
       }],
     });
+    expect(parsed.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
   });
 
   it("rejects unsupported schema versions", () => {
@@ -574,21 +585,81 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0].speedTargetMode).toBe("manual");
   });
 
-  it("restores legacy tailwind speed conditions as the move modifier", () => {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const)(
+    "restores schema %s legacy tailwind conditions as an opponent-side flag",
+    (schemaVersion) => {
+      const parsed = parseShareStateDocument(JSON.stringify({
+        schemaVersion,
+        target: createDefaultTargetForm(),
+        scenarios: createDefaultScenarioForms().map((scenario) => ({
+          ...scenario,
+          adjustmentType: "speed",
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            tailwind: true,
+          })),
+        })),
+      }));
+
+      expect(parsed.scenarios[0].attacks[0].speedOpponentTailwind).toBe(true);
+      expect(parsed.scenarios[0].attacks[0].speedOrderMode).toBe("normal");
+      expect(parsed.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
+    },
+  );
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const)(
+    "migrates every legacy speedMoveModifier from schema %s",
+    (schemaVersion) => {
+      const [scenario] = createDefaultScenarioForms();
+      for (const [modifier, orderMode, opponentTailwind] of [
+        ["none", "normal", false],
+        ["tailwind", "normal", true],
+        ["trick-room", "trick-room", false],
+      ] as const) {
+        const parsed = parseShareStateDocument(JSON.stringify({
+          schemaVersion,
+          target: createDefaultTargetForm(),
+          scenarios: [{
+            ...scenario,
+            adjustmentType: "speed",
+            attacks: [{
+              ...scenario.attacks[0],
+              speedMoveModifier: modifier,
+            }],
+          }],
+        }));
+
+        expect(parsed.scenarios[0].attacks[0]).toMatchObject({
+          speedOrderMode: orderMode,
+          speedOpponentTailwind: opponentTailwind,
+          speedTargetStatus: "none",
+          speedTargetItemMultiplier: "auto",
+          speedTargetAbilityMultiplier: "auto",
+          speedTargetTailwind: false,
+        });
+        expect(parsed.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
+      }
+    },
+  );
+
+  it("lets a legacy speedMoveModifier take precedence over the legacy tailwind flag", () => {
+    const [scenario] = createDefaultScenarioForms();
     const parsed = parseShareStateDocument(JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: 10,
       target: createDefaultTargetForm(),
-      scenarios: createDefaultScenarioForms().map((scenario) => ({
+      scenarios: [{
         ...scenario,
         adjustmentType: "speed",
-        attacks: scenario.attacks.map(({ speedMoveModifier: _speedMoveModifier, ...attack }) => ({
-          ...attack,
+        attacks: [{
+          ...scenario.attacks[0],
+          speedMoveModifier: "none",
           tailwind: true,
-        })),
-      })),
+        }],
+      }],
     }));
 
-    expect(parsed.scenarios[0].attacks[0].speedMoveModifier).toBe("tailwind");
+    expect(parsed.scenarios[0].attacks[0].speedOrderMode).toBe("normal");
+    expect(parsed.scenarios[0].attacks[0].speedOpponentTailwind).toBe(false);
   });
 
   it("falls back to default speed settings when imported JSON contains invalid values", () => {
@@ -601,6 +672,12 @@ describe("shareState", () => {
         attacks: scenario.attacks.map((attack) => ({
           ...attack,
           speedComparison: "slower",
+          speedTargetStatus: "future-status",
+          speedTargetItemMultiplier: "triple",
+          speedTargetAbilityMultiplier: "half-ish",
+          speedTargetTailwind: "yes",
+          speedOpponentTailwind: "yes",
+          speedOrderMode: "backwards",
           speedItemMultiplier: "triple",
           speedAbilityMultiplier: "half-ish",
         })),
@@ -610,5 +687,11 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0].speedComparison).toBe("outspeed");
     expect(parsed.scenarios[0].attacks[0].speedItemMultiplier).toBe("auto");
     expect(parsed.scenarios[0].attacks[0].speedAbilityMultiplier).toBe("auto");
+    expect(parsed.scenarios[0].attacks[0].speedTargetStatus).toBe("none");
+    expect(parsed.scenarios[0].attacks[0].speedTargetItemMultiplier).toBe("auto");
+    expect(parsed.scenarios[0].attacks[0].speedTargetAbilityMultiplier).toBe("auto");
+    expect(parsed.scenarios[0].attacks[0].speedTargetTailwind).toBe(false);
+    expect(parsed.scenarios[0].attacks[0].speedOpponentTailwind).toBe(false);
+    expect(parsed.scenarios[0].attacks[0].speedOrderMode).toBe("normal");
   });
 });

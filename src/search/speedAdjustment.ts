@@ -35,6 +35,8 @@ export interface SpeedAdjustmentInput {
   orderMode?: SpeedOrderMode;
   requiredSpeedOffset?: number;
   manualTargetSpeed?: number;
+  targetItemMultiplier: SpeedManualMultiplier;
+  targetAbilityMultiplier: SpeedManualMultiplier;
   opponentItemMultiplier: SpeedManualMultiplier;
   opponentAbilityMultiplier: SpeedManualMultiplier;
   boostedNature?: NatureRef;
@@ -65,9 +67,13 @@ type SpeedCandidateEvaluation = {
   relation: SpeedRelation;
 };
 
-const manualMultiplierValue = (multiplier: SpeedManualMultiplier): number | undefined => (
-  multiplier === "auto" ? undefined : Number(multiplier)
+const manualMultiplierValue = (multiplier: SpeedManualMultiplier | undefined): number | undefined => (
+  multiplier === undefined || multiplier === "auto" ? undefined : Number(multiplier)
 );
+
+const getManualMultiplier = (
+  multiplier: SpeedManualMultiplier | undefined,
+): SpeedManualMultiplier => multiplier ?? "auto";
 
 const manualMultiplierLabel = (multiplier: SpeedManualMultiplier): string => {
   switch (multiplier) {
@@ -180,6 +186,10 @@ const getAutoSpeedNotes = (
   field: FieldState,
   side: SideState,
   boosts: StatBoostTable,
+  options: {
+    itemMultiplier?: SpeedManualMultiplier;
+    abilityMultiplier?: SpeedManualMultiplier;
+  } = {},
 ): string[] => {
   if (!build) {
     return [];
@@ -187,6 +197,8 @@ const getAutoSpeedNotes = (
 
   const ability = build.ability?.canonicalName;
   const item = build.item?.canonicalName;
+  const itemMultiplier = getManualMultiplier(options.itemMultiplier);
+  const abilityMultiplier = getManualMultiplier(options.abilityMultiplier);
   const notes: string[] = [];
   if (boosts.spe && boosts.spe !== 0) {
     notes.push(`Sランク ${boosts.spe > 0 ? "+" : ""}${boosts.spe}`);
@@ -194,51 +206,119 @@ const getAutoSpeedNotes = (
   if (side.tailwind) {
     notes.push("おいかぜ 2倍");
   }
-  if (ability === "Chlorophyll" && field.weather === "sun") {
+  if (abilityMultiplier === "auto" && ability === "Chlorophyll" && field.weather === "sun") {
     notes.push("ようりょくそ 晴れ 2倍");
   }
-  if (ability === "Swift Swim" && field.weather === "rain") {
+  if (abilityMultiplier === "auto" && ability === "Swift Swim" && field.weather === "rain") {
     notes.push("すいすい 雨 2倍");
   }
-  if (ability === "Sand Rush" && field.weather === "sand") {
+  if (abilityMultiplier === "auto" && ability === "Sand Rush" && field.weather === "sand") {
     notes.push("すなかき 砂 2倍");
   }
-  if (ability === "Slush Rush" && field.weather === "snow") {
+  if (abilityMultiplier === "auto" && ability === "Slush Rush" && field.weather === "snow") {
     notes.push("ゆきかき 雪 2倍");
   }
-  if (ability === "Surge Surfer" && field.terrain === "electric") {
+  if (abilityMultiplier === "auto" && ability === "Surge Surfer" && field.terrain === "electric") {
     notes.push("サーフテール エレキ 2倍");
   }
-  if (ability === "Quick Feet" && build.status) {
+  if (abilityMultiplier === "auto" && ability === "Quick Feet" && build.status) {
     notes.push("はやあし 状態異常 1.5倍");
   }
-  if (item === "Choice Scarf") {
+  if (itemMultiplier === "auto" && item === "Choice Scarf") {
     notes.push("こだわりスカーフ 1.5倍");
   }
-  if (item === "Iron Ball") {
+  if (itemMultiplier === "auto" && item === "Iron Ball") {
     notes.push("くろいてっきゅう 0.5倍");
   }
-  if (item === "Quick Powder" && build.pokemon.canonicalName === "Ditto") {
+  if (itemMultiplier === "auto" && item === "Quick Powder" && build.pokemon.canonicalName === "Ditto") {
     notes.push("スピードパウダー メタモン 2倍");
   }
-  if (build.status === "par" && ability !== "Quick Feet") {
+  if (build.status === "par" && (abilityMultiplier !== "auto" || ability !== "Quick Feet")) {
     notes.push("まひ 0.5倍");
   }
   return notes;
 };
 
+const speedNoteOwnerLabel = (owner: "target" | "opponent" | "common"): string => {
+  switch (owner) {
+    case "target":
+      return "調整対象";
+    case "opponent":
+      return "相手";
+    case "common":
+    default:
+      return "共通";
+  }
+};
+
+const withSpeedNoteOwner = (
+  owner: "target" | "opponent" | "common",
+  notes: string[],
+): string[] => notes.map((note) => `${speedNoteOwnerLabel(owner)}: ${note}`);
+
+const getManualMultiplierNotes = (
+  owner: "target" | "opponent",
+  itemMultiplier: SpeedManualMultiplier | undefined,
+  abilityMultiplier: SpeedManualMultiplier | undefined,
+): string[] => {
+  const notes: string[] = [];
+  const item = getManualMultiplier(itemMultiplier);
+  const ability = getManualMultiplier(abilityMultiplier);
+  if (item !== "auto") {
+    notes.push(`${speedNoteOwnerLabel(owner)}: 道具倍率 手動 ${manualMultiplierLabel(item)}`);
+  }
+  if (ability !== "auto") {
+    notes.push(`${speedNoteOwnerLabel(owner)}: 特性倍率 手動 ${manualMultiplierLabel(ability)}`);
+  }
+  return notes;
+};
+
 const getNotes = (input: SpeedAdjustmentInput): string[] => {
-  const notes = input.manualTargetSpeed !== undefined && input.manualTargetSpeed > 0
-    ? ["任意S値直接入力"]
-    : getAutoSpeedNotes(input.opponentBuild, input.field, input.opponentSide, input.opponentBoosts);
+  const targetNotes = withSpeedNoteOwner(
+    "target",
+    getAutoSpeedNotes(
+      input.targetBuild,
+      input.field,
+      input.targetSide,
+      input.targetBoosts,
+      {
+        itemMultiplier: input.targetItemMultiplier,
+        abilityMultiplier: input.targetAbilityMultiplier,
+      },
+    ),
+  );
+  const manualTargetSpeed = input.manualTargetSpeed !== undefined && input.manualTargetSpeed > 0;
+  const targetManualNotes = getManualMultiplierNotes(
+    "target",
+    input.targetItemMultiplier,
+    input.targetAbilityMultiplier,
+  );
+  const notes = manualTargetSpeed
+    ? [...targetNotes, ...targetManualNotes, "相手: 任意S値直接入力"]
+    : [
+        ...targetNotes,
+        ...targetManualNotes,
+        ...withSpeedNoteOwner(
+          "opponent",
+          getAutoSpeedNotes(
+            input.opponentBuild,
+            input.field,
+            input.opponentSide,
+            input.opponentBoosts,
+            {
+              itemMultiplier: input.opponentItemMultiplier,
+              abilityMultiplier: input.opponentAbilityMultiplier,
+            },
+          ),
+        ),
+        ...getManualMultiplierNotes(
+          "opponent",
+          input.opponentItemMultiplier,
+          input.opponentAbilityMultiplier,
+        ),
+      ];
   if (getOrderMode(input) === "trick-room") {
-    notes.push("トリックルーム 行動順反転");
-  }
-  if (input.opponentItemMultiplier !== "auto") {
-    notes.push(`道具倍率 手動 ${manualMultiplierLabel(input.opponentItemMultiplier)}`);
-  }
-  if (input.opponentAbilityMultiplier !== "auto") {
-    notes.push(`特性倍率 手動 ${manualMultiplierLabel(input.opponentAbilityMultiplier)}`);
+    notes.push("共通: トリックルーム 行動順反転");
   }
   return notes;
 };
@@ -256,6 +336,8 @@ const evaluateSpeedCandidate = (
     input.targetSide,
     {
       boosts: input.targetBoosts,
+      manualItemMultiplier: manualMultiplierValue(input.targetItemMultiplier),
+      manualAbilityMultiplier: manualMultiplierValue(input.targetAbilityMultiplier),
     },
   );
 

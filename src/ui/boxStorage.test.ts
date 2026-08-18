@@ -43,6 +43,14 @@ describe("boxStorage", () => {
             moveInput: "おはかまいり",
             movePowerMode: "assisted" as const,
             movePowerValue: 100,
+            speedTargetStatus: "par" as const,
+            speedTargetItemMultiplier: "1.5" as const,
+            speedTargetAbilityMultiplier: "2" as const,
+            speedTargetTailwind: true,
+            speedOpponentTailwind: true,
+            speedOrderMode: "trick-room" as const,
+            speedItemMultiplier: "0.5" as const,
+            speedAbilityMultiplier: "1.5" as const,
           }
         : attack),
     }));
@@ -67,7 +75,58 @@ describe("boxStorage", () => {
       moveInput: "おはかまいり",
       movePowerMode: "assisted",
       movePowerValue: 100,
+      speedTargetStatus: "par",
+      speedTargetItemMultiplier: "1.5",
+      speedTargetAbilityMultiplier: "2",
+      speedTargetTailwind: true,
+      speedOpponentTailwind: true,
+      speedOrderMode: "trick-room",
+      speedItemMultiplier: "0.5",
+      speedAbilityMultiplier: "1.5",
     });
+  });
+
+  it("migrates legacy speed fields through the box storage parser", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map(({
+        speedTargetStatus: _speedTargetStatus,
+        speedTargetItemMultiplier: _speedTargetItemMultiplier,
+        speedTargetAbilityMultiplier: _speedTargetAbilityMultiplier,
+        speedTargetTailwind: _speedTargetTailwind,
+        speedOpponentTailwind: _speedOpponentTailwind,
+        speedOrderMode: _speedOrderMode,
+        ...attack
+      }) => ({
+        ...attack,
+        speedMoveModifier: "tailwind",
+      })),
+    }));
+    const [entry] = parseBoxStorageDocument(JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [{
+        id: "legacy-speed-box",
+        name: "旧素早さボックス",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+        payload: {
+          schemaVersion: 10,
+          target: createDefaultTargetForm(),
+          scenarios,
+        },
+      }],
+    }));
+
+    expect(entry.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(entry.payload.scenarios[0].attacks[0]).toMatchObject({
+      speedTargetStatus: "none",
+      speedTargetItemMultiplier: "auto",
+      speedTargetAbilityMultiplier: "auto",
+      speedTargetTailwind: false,
+      speedOpponentTailwind: true,
+      speedOrderMode: "normal",
+    });
+    expect(entry.payload.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
   });
 
   it("migrates schema v7 box attacks without move-power fields", () => {

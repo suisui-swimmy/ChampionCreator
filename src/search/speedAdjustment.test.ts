@@ -89,6 +89,8 @@ const makeInput = (options: Partial<SpeedAdjustmentInput> = {}): SpeedAdjustment
   targetSide: emptySide,
   opponentSide: emptySide,
   comparison: "outspeed",
+  targetItemMultiplier: "auto",
+  targetAbilityMultiplier: "auto",
   opponentItemMultiplier: "auto",
   opponentAbilityMultiplier: "auto",
   boostedNature: mustResolve("nature", "おくびょう"),
@@ -203,7 +205,7 @@ describe("calculateSpeedAdjustment", () => {
     expect(result.requiredStatPoints).not.toBe(32);
     expect(result.actualSpeed).toBeLessThan(opponentSpeed);
     expect(result.reason).toContain("トリル先制ライン");
-    expect(result.notes).toContain("トリックルーム 行動順反転");
+    expect(result.notes).toContain("共通: トリックルーム 行動順反転");
   });
 
   it("allows ties under Trick Room when the explicit offset is zero", () => {
@@ -275,7 +277,148 @@ describe("calculateSpeedAdjustment", () => {
     }));
 
     expect(auto.targetSpeed).toBeGreaterThan(manual.targetSpeed);
-    expect(auto.notes).toEqual(expect.arrayContaining(["こだわりスカーフ 1.5倍", "ようりょくそ 晴れ 2倍"]));
-    expect(manual.notes).toEqual(expect.arrayContaining(["道具倍率 手動 0.5倍", "特性倍率 手動 0.5倍"]));
+    expect(auto.notes).toEqual(expect.arrayContaining(["相手: こだわりスカーフ 1.5倍", "相手: ようりょくそ 晴れ 2倍"]));
+    expect(manual.notes).toEqual(expect.arrayContaining(["相手: 道具倍率 手動 0.5倍", "相手: 特性倍率 手動 0.5倍"]));
+  });
+
+  it("applies target status through the authoritative final-speed calculation", () => {
+    const baseTarget = makeBuild("target", "メガマフォクシー", "おくびょう");
+    const parTarget = makeBuild("target", "メガマフォクシー", "おくびょう", zeroStatPoints, {
+      status: "par",
+    });
+    const baseSpeed = calculateSmogonFinalSpeed(baseTarget, emptyField, emptySide);
+    const parSpeed = calculateSmogonFinalSpeed(parTarget, emptyField, emptySide);
+    const result = calculateSpeedAdjustment(makeInput({
+      targetBuild: parTarget,
+      opponentBuild: undefined,
+      opponentLabel: "任意S値",
+      manualTargetSpeed: 1,
+      comparison: "outspeed",
+      requiredSpeedOffset: 0,
+    }));
+
+    expect(parSpeed).toBe(Math.floor(baseSpeed * 0.5));
+    expect(result.actualSpeed).toBe(parSpeed);
+    expect(result.notes).toContain("調整対象: まひ 0.5倍");
+  });
+
+  it.each(["par", "brn"] as const)(
+    "uses Quick Feet for %s without applying paralysis twice",
+    (status) => {
+      const quickFeetTarget = makeBuild("target", "ピカチュウ", "おくびょう", zeroStatPoints, {
+        ability: mustResolve("ability", "はやあし"),
+        status,
+      });
+      const regularTarget = { ...quickFeetTarget, ability: undefined, status: undefined };
+      const quickFeetSpeed = calculateSmogonFinalSpeed(quickFeetTarget, emptyField, emptySide);
+      const regularSpeed = calculateSmogonFinalSpeed(regularTarget, emptyField, emptySide);
+      const result = calculateSpeedAdjustment(makeInput({
+        targetBuild: quickFeetTarget,
+        opponentBuild: undefined,
+        opponentLabel: "任意S値",
+        manualTargetSpeed: 1,
+        comparison: "outspeed",
+        requiredSpeedOffset: 0,
+      }));
+
+      expect(quickFeetSpeed).toBe(Math.floor(regularSpeed * 1.5));
+      expect(result.actualSpeed).toBe(quickFeetSpeed);
+      expect(result.notes).toContain("調整対象: はやあし 状態異常 1.5倍");
+      expect(result.notes).not.toContain("調整対象: まひ 0.5倍");
+    },
+  );
+
+  it("applies target and opponent Tailwind independently and keeps Trick Room common", () => {
+    const targetBuild = makeBuild("target", "ピカチュウ", "おくびょう", {
+      ...zeroStatPoints,
+      spe: 32,
+    });
+    const opponentBuild = makeBuild("opponent", "ピカチュウ", "おくびょう", {
+      ...zeroStatPoints,
+      spe: 32,
+    });
+    const targetSide = { ...emptySide, tailwind: true };
+    const opponentSide = { ...emptySide, tailwind: true };
+    const result = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild,
+      targetSide,
+      opponentSide,
+      comparison: "tie",
+      orderMode: "trick-room",
+      requiredSpeedOffset: 0,
+    }));
+
+    expect(result).toMatchObject({
+      status: "tie",
+      passed: true,
+      orderMode: "trick-room",
+      requiredStatPoints: 32,
+    });
+    expect(result.notes).toEqual(expect.arrayContaining([
+      "調整対象: おいかぜ 2倍",
+      "相手: おいかぜ 2倍",
+      "共通: トリックルーム 行動順反転",
+    ]));
+  });
+
+  it("passes target manual multipliers to the candidate calculation and suppresses auto notes", () => {
+    const targetBuild = makeBuild("target", "ピカチュウ", "おくびょう", zeroStatPoints, {
+      item: mustResolve("item", "こだわりスカーフ"),
+      ability: mustResolve("ability", "ようりょくそ"),
+    });
+    const expectedSpeed = calculateSmogonFinalSpeed(
+      targetBuild,
+      { ...emptyField, weather: "sun" },
+      emptySide,
+      { manualItemMultiplier: 0.5, manualAbilityMultiplier: 0.5 },
+    );
+    const result = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild: undefined,
+      opponentLabel: "任意S値",
+      field: { ...emptyField, weather: "sun" },
+      manualTargetSpeed: 1,
+      comparison: "outspeed",
+      requiredSpeedOffset: 0,
+      targetItemMultiplier: "0.5",
+      targetAbilityMultiplier: "0.5",
+    }));
+
+    expect(result.actualSpeed).toBe(expectedSpeed);
+    expect(result.notes).toEqual(expect.arrayContaining([
+      "調整対象: 道具倍率 手動 0.5倍",
+      "調整対象: 特性倍率 手動 0.5倍",
+    ]));
+    expect(result.notes).not.toContain("調整対象: こだわりスカーフ 1.5倍");
+    expect(result.notes).not.toContain("調整対象: ようりょくそ 晴れ 2倍");
+  });
+
+  it("uses manual target speed as the opponent line and ignores stale opponent conditions", () => {
+    const targetBuild = makeBuild("target", "ピカチュウ", "おくびょう");
+    const staleOpponent = makeBuild("opponent", "ピカチュウ", "おくびょう", zeroStatPoints, {
+      item: mustResolve("item", "こだわりスカーフ"),
+      ability: mustResolve("ability", "すいすい"),
+      status: "par",
+    });
+    const result = calculateSpeedAdjustment(makeInput({
+      targetBuild,
+      opponentBuild: staleOpponent,
+      opponentLabel: "任意S値",
+      field: { ...emptyField, weather: "rain" },
+      manualTargetSpeed: 123,
+      opponentItemMultiplier: "0.5",
+      opponentAbilityMultiplier: "2",
+      comparison: "tie",
+      requiredSpeedOffset: 0,
+    }));
+
+    expect(result.targetSpeed).toBe(123);
+    expect(result.notes).toContain("相手: 任意S値直接入力");
+    expect(result.notes).not.toContain("相手: こだわりスカーフ 1.5倍");
+    expect(result.notes).not.toContain("相手: すいすい 雨 2倍");
+    expect(result.notes).not.toContain("相手: まひ 0.5倍");
+    expect(result.notes).not.toContain("相手: 道具倍率 手動 0.5倍");
+    expect(result.notes).not.toContain("相手: 特性倍率 手動 2倍");
   });
 });

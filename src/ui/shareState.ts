@@ -23,7 +23,7 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 10;
+export const SHARE_SCHEMA_VERSION = 11;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -42,11 +42,13 @@ const pokemonStatuses = new Set<PokemonStatus>(["none", "slp", "psn", "brn", "fr
 const scenarioAdjustmentTypes = new Set<ScenarioAdjustmentType>(["defence", "offense", "speed"]);
 const speedTargetModes = new Set<ScenarioAttackFormState["speedTargetMode"]>(["opponent", "manual"]);
 const speedComparisons = new Set<ScenarioAttackFormState["speedComparison"]>(["outspeed", "tie"]);
-const speedMoveModifiers = new Set<ScenarioAttackFormState["speedMoveModifier"]>(["none", "tailwind", "trick-room"]);
+type LegacySpeedMoveModifier = "none" | "tailwind" | "trick-room";
+const speedMoveModifiers = new Set<LegacySpeedMoveModifier>(["none", "tailwind", "trick-room"]);
 const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultiplier"]>(["auto", "2", "1.5", "0.5"]);
+const speedOrderModes = new Set<ScenarioAttackFormState["speedOrderMode"]>(["normal", "trick-room"]);
 const movePowerModes = new Set<MovePowerMode>(["auto", "assisted", "manual"]);
 const levelInputModes = new Set<LevelInputMode>(["auto", "manual"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | typeof SHARE_SCHEMA_VERSION;
+type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeBeatUpParticipants = (
   value: unknown,
@@ -229,7 +231,12 @@ const normalizeAttack = (
   const hasDefenderStatus = isRecord(value) && "defenderStatus" in value;
   const hasSpeedTargetMode = isRecord(value) && "speedTargetMode" in value;
   const hasSpeedComparison = isRecord(value) && "speedComparison" in value;
-  const hasSpeedMoveModifier = isRecord(value) && "speedMoveModifier" in value;
+  const hasSpeedOrderMode = isRecord(value) && "speedOrderMode" in value;
+  const hasSpeedTargetStatus = isRecord(value) && "speedTargetStatus" in value;
+  const hasSpeedTargetItemMultiplier = isRecord(value) && "speedTargetItemMultiplier" in value;
+  const hasSpeedTargetAbilityMultiplier = isRecord(value) && "speedTargetAbilityMultiplier" in value;
+  const hasSpeedTargetTailwind = isRecord(value) && "speedTargetTailwind" in value;
+  const hasSpeedOpponentTailwind = isRecord(value) && "speedOpponentTailwind" in value;
   const hasSpeedItemMultiplier = isRecord(value) && "speedItemMultiplier" in value;
   const hasSpeedAbilityMultiplier = isRecord(value) && "speedAbilityMultiplier" in value;
   const hasMovePowerMode = isRecord(value) && "movePowerMode" in value;
@@ -315,7 +322,26 @@ const normalizeAttack = (
     canonicalMoveName,
     gameType,
   );
-  return {
+  const legacySpeedMoveModifier = isRecord(value) ? value.speedMoveModifier : undefined;
+  const hasValidLegacySpeedMoveModifier = typeof legacySpeedMoveModifier === "string"
+    && speedMoveModifiers.has(legacySpeedMoveModifier as LegacySpeedMoveModifier);
+  const legacySpeedModifier = hasValidLegacySpeedMoveModifier
+    ? legacySpeedMoveModifier as LegacySpeedMoveModifier
+    : undefined;
+  const speedOrderMode = sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+    ? hasSpeedOrderMode
+      && typeof input.speedOrderMode === "string"
+      && speedOrderModes.has(input.speedOrderMode as ScenarioAttackFormState["speedOrderMode"])
+      ? input.speedOrderMode as ScenarioAttackFormState["speedOrderMode"]
+      : defaults.speedOrderMode
+    : legacySpeedModifier === "trick-room" ? "trick-room" : "normal";
+  const speedOpponentTailwind = sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+    ? hasSpeedOpponentTailwind && typeof input.speedOpponentTailwind === "boolean"
+      ? input.speedOpponentTailwind
+      : defaults.speedOpponentTailwind
+    : legacySpeedModifier === "tailwind"
+      || (!legacySpeedModifier && input.tailwind === true);
+  const normalized = {
     ...defaults,
     ...input,
     id: attackId,
@@ -331,11 +357,27 @@ const normalizeAttack = (
       && speedComparisons.has(input.speedComparison as ScenarioAttackFormState["speedComparison"])
       ? input.speedComparison as ScenarioAttackFormState["speedComparison"]
       : defaults.speedComparison,
-    speedMoveModifier: hasSpeedMoveModifier
-      && typeof input.speedMoveModifier === "string"
-      && speedMoveModifiers.has(input.speedMoveModifier as ScenarioAttackFormState["speedMoveModifier"])
-      ? input.speedMoveModifier as ScenarioAttackFormState["speedMoveModifier"]
-      : input.tailwind === true ? "tailwind" : defaults.speedMoveModifier,
+    speedTargetStatus: sourceSchemaVersion >= SHARE_SCHEMA_VERSION && hasSpeedTargetStatus
+      ? normalizePokemonStatus(input.speedTargetStatus, defaults.speedTargetStatus)
+      : defaults.speedTargetStatus,
+    speedTargetItemMultiplier: sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+      && hasSpeedTargetItemMultiplier
+      && typeof input.speedTargetItemMultiplier === "string"
+      && speedManualMultipliers.has(input.speedTargetItemMultiplier as ScenarioAttackFormState["speedTargetItemMultiplier"])
+      ? input.speedTargetItemMultiplier as ScenarioAttackFormState["speedTargetItemMultiplier"]
+      : defaults.speedTargetItemMultiplier,
+    speedTargetAbilityMultiplier: sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+      && hasSpeedTargetAbilityMultiplier
+      && typeof input.speedTargetAbilityMultiplier === "string"
+      && speedManualMultipliers.has(input.speedTargetAbilityMultiplier as ScenarioAttackFormState["speedTargetAbilityMultiplier"])
+      ? input.speedTargetAbilityMultiplier as ScenarioAttackFormState["speedTargetAbilityMultiplier"]
+      : defaults.speedTargetAbilityMultiplier,
+    speedTargetTailwind: sourceSchemaVersion >= SHARE_SCHEMA_VERSION && hasSpeedTargetTailwind
+      && typeof input.speedTargetTailwind === "boolean"
+      ? input.speedTargetTailwind
+      : defaults.speedTargetTailwind,
+    speedOpponentTailwind,
+    speedOrderMode,
     speedItemMultiplier: hasSpeedItemMultiplier
       && typeof input.speedItemMultiplier === "string"
       && speedManualMultipliers.has(input.speedItemMultiplier as ScenarioAttackFormState["speedItemMultiplier"])
@@ -358,6 +400,10 @@ const normalizeAttack = (
     attackerBoosts: mergeObject(defaults.attackerBoosts, input.attackerBoosts),
     defenderBoosts: mergeObject(defaults.defenderBoosts, input.defenderBoosts),
   } as ScenarioAttackFormState;
+  // speedMoveModifier was part of schema <=10 only. Do not let an unknown
+  // legacy key leak back into the current form state after migration.
+  delete (normalized as ScenarioAttackFormState & Record<string, unknown>).speedMoveModifier;
+  return normalized;
 };
 
 const normalizeScenario = (
@@ -407,6 +453,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 10
       && parsed.schemaVersion !== 9
       && parsed.schemaVersion !== 8
       && parsed.schemaVersion !== 7

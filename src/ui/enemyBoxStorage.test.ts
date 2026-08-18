@@ -36,6 +36,14 @@ describe("enemyBoxStorage", () => {
             moveInput: "おはかまいり",
             movePowerMode: "manual" as const,
             movePowerValue: 137,
+            speedTargetStatus: "brn" as const,
+            speedTargetItemMultiplier: "2" as const,
+            speedTargetAbilityMultiplier: "0.5" as const,
+            speedTargetTailwind: true,
+            speedOpponentTailwind: true,
+            speedOrderMode: "trick-room" as const,
+            speedItemMultiplier: "1.5" as const,
+            speedAbilityMultiplier: "0.5" as const,
           }
         : attack),
     }));
@@ -64,7 +72,57 @@ describe("enemyBoxStorage", () => {
       moveInput: "おはかまいり",
       movePowerMode: "manual",
       movePowerValue: 137,
+      speedTargetStatus: "brn",
+      speedTargetItemMultiplier: "2",
+      speedTargetAbilityMultiplier: "0.5",
+      speedTargetTailwind: true,
+      speedOpponentTailwind: true,
+      speedOrderMode: "trick-room",
+      speedItemMultiplier: "1.5",
+      speedAbilityMultiplier: "0.5",
     });
+  });
+
+  it("migrates legacy speed fields through the enemy-box storage parser", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map(({
+        speedTargetStatus: _speedTargetStatus,
+        speedTargetItemMultiplier: _speedTargetItemMultiplier,
+        speedTargetAbilityMultiplier: _speedTargetAbilityMultiplier,
+        speedTargetTailwind: _speedTargetTailwind,
+        speedOpponentTailwind: _speedOpponentTailwind,
+        speedOrderMode: _speedOrderMode,
+        ...attack
+      }) => ({
+        ...attack,
+        speedMoveModifier: "trick-room",
+      })),
+    }));
+    const [entry] = parseEnemyBoxStorageDocument(JSON.stringify({
+      schemaVersion: ENEMY_BOX_STORAGE_SCHEMA_VERSION,
+      entries: [{
+        id: "legacy-speed-enemy",
+        name: "旧素早さ仮想敵",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+        payload: {
+          schemaVersion: 10,
+          scenarios,
+        },
+      }],
+    }));
+
+    expect(entry.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(entry.payload.scenarios[0].attacks[0]).toMatchObject({
+      speedTargetStatus: "none",
+      speedTargetItemMultiplier: "auto",
+      speedTargetAbilityMultiplier: "auto",
+      speedTargetTailwind: false,
+      speedOpponentTailwind: false,
+      speedOrderMode: "trick-room",
+    });
+    expect(entry.payload.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
   });
 
   it("migrates schema v7 enemy-box attacks without move-power fields", () => {

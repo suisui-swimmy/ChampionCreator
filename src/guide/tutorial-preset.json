@@ -13,7 +13,7 @@
         "statPointSummary": "H0 / A0 / B0 / C0 / D0 / S0"
       },
       "payload": {
-  "schemaVersion": 10,
+        "schemaVersion": 11,
         "target": {
           "pokemonInput": "メガマフォクシー",
           "natureInput": "おくびょう",
@@ -105,9 +105,14 @@
                 "speedComparison": "outspeed",
                 "speedRequiredOffset": 1,
                 "speedTargetValue": 0,
+                "speedTargetStatus": "none",
+                "speedTargetItemMultiplier": "auto",
+                "speedTargetAbilityMultiplier": "auto",
+                "speedTargetTailwind": false,
+                "speedOpponentTailwind": false,
+                "speedOrderMode": "normal",
                 "speedItemMultiplier": "auto",
                 "speedAbilityMultiplier": "auto",
-                "speedMoveModifier": "none",
                 "tailwind": false
               }
             ]
@@ -176,9 +181,14 @@
                 "speedComparison": "outspeed",
                 "speedRequiredOffset": 1,
                 "speedTargetValue": 0,
+                "speedTargetStatus": "none",
+                "speedTargetItemMultiplier": "auto",
+                "speedTargetAbilityMultiplier": "auto",
+                "speedTargetTailwind": false,
+                "speedOpponentTailwind": false,
+                "speedOrderMode": "normal",
                 "speedItemMultiplier": "auto",
                 "speedAbilityMultiplier": "auto",
-                "speedMoveModifier": "none",
                 "tailwind": false
               }
             ]
@@ -247,9 +257,14 @@
                 "speedComparison": "outspeed",
                 "speedRequiredOffset": 1,
                 "speedTargetValue": 0,
+                "speedTargetStatus": "none",
+                "speedTargetItemMultiplier": "auto",
+                "speedTargetAbilityMultiplier": "auto",
+                "speedTargetTailwind": false,
+                "speedOpponentTailwind": false,
+                "speedOrderMode": "normal",
                 "speedItemMultiplier": "auto",
                 "speedAbilityMultiplier": "auto",
-                "speedMoveModifier": "none",
                 "tailwind": false
               }
             ]

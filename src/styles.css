@@ -3130,6 +3130,17 @@ textarea {
   gap: 6px;
 }
 
+.speed-condition-section {
+  gap: 5px;
+}
+
+.speed-multiplier-help {
+  margin: 0 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .speed-condition-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -4995,6 +5006,14 @@ textarea {
 
   .mobile-scenario-summary.speed {
     border-color: rgba(0, 216, 240, 0.44);
+  }
+
+  .mobile-scenario-flow-row.trick-room .mobile-scenario-summary.speed {
+    border-color: rgba(181, 108, 255, 0.64);
+    background:
+      linear-gradient(180deg, rgba(181, 108, 255, 0.13), rgba(181, 108, 255, 0.035)),
+      var(--surface);
+    box-shadow: inset 0 0 0 1px rgba(181, 108, 255, 0.16);
   }
 
   .mobile-scenario-summary.disabled {
