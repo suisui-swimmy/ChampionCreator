@@ -104,7 +104,11 @@ import {
   type MovePowerAssistRule,
 } from "./calc/movePowerRules";
 import type { MaximizeRemainingBulkResult } from "./search/maximizeRemainingBulk";
-import type { SpeedAdjustmentResult, SpeedManualMultiplier } from "./search/speedAdjustment";
+import {
+  getAutomaticSpeedModifierSources,
+  type SpeedAdjustmentResult,
+  type SpeedManualMultiplier,
+} from "./search/speedAdjustment";
 import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStatReference";
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import { getPublicAssetUrl } from "./ui/publicAssetUrl";
@@ -360,7 +364,7 @@ const terrainOptions: Array<{ value: Terrain; label: string }> = [
 ];
 
 const speedMultiplierOptions: Array<{ value: SpeedManualMultiplier; label: string }> = [
-  { value: "auto", label: "なし" },
+  { value: "auto", label: "自動" },
   { value: "2", label: "2倍" },
   { value: "1.5", label: "1.5倍" },
   { value: "0.5", label: "0.5倍" },
@@ -6088,6 +6092,53 @@ function MovePowerField({
   );
 }
 
+type SpeedMultiplierControlProps = {
+  label: string;
+  ariaLabel: string;
+  value: SpeedManualMultiplier;
+  automaticSource?: string;
+  onChange: (value: SpeedManualMultiplier) => void;
+};
+
+const getSpeedMultiplierOptionLabel = (value: SpeedManualMultiplier): string => (
+  speedMultiplierOptions.find((option) => option.value === value)?.label ?? value
+);
+
+function SpeedMultiplierControl({
+  label,
+  ariaLabel,
+  value,
+  automaticSource,
+  onChange,
+}: SpeedMultiplierControlProps) {
+  const isManual = value !== "auto";
+  const manualLabel = getSpeedMultiplierOptionLabel(value);
+
+  return (
+    <div className={`speed-multiplier-control${isManual ? " is-manual" : ""}${isManual && automaticSource ? " has-source" : ""}`}>
+      <SelectField
+        label={label}
+        ariaLabel={ariaLabel}
+        value={value}
+        options={speedMultiplierOptions}
+        onChange={onChange}
+      />
+      {isManual ? (
+        <div className="speed-manual-state">
+          <span className="speed-manual-badge">手動</span>
+          {automaticSource ? (
+            <small className="speed-override-summary">
+              <del>自動: {automaticSource}</del>
+              <span aria-hidden="true">→</span>
+              <strong>手動: {manualLabel}</strong>
+            </small>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AttackCard({
   attack,
   attackIndex,
@@ -6191,6 +6242,47 @@ function AttackCard({
       return undefined;
     }
   }, [adjustmentType, attack, targetForm]);
+  const speedModifierSources = useMemo(() => {
+    if (!isSpeedAdjustment) {
+      return {
+        target: { item: undefined, ability: undefined },
+        opponent: { item: undefined, ability: undefined },
+      };
+    }
+
+    const field = {
+      gameType: attack.gameType,
+      weather: attack.weather,
+      terrain: attack.terrain,
+    };
+    let target = { item: undefined as string | undefined, ability: undefined as string | undefined };
+    let opponent = { item: undefined as string | undefined, ability: undefined as string | undefined };
+
+    try {
+      const targetBuild = buildTargetBuildFromUi(targetForm, "speed-target-source");
+      const sources = getAutomaticSpeedModifierSources({
+        ...targetBuild,
+        ...(attack.speedTargetStatus !== "none" ? { status: attack.speedTargetStatus } : {}),
+      }, field);
+      target = { item: sources.item, ability: sources.ability };
+    } catch {
+      // Keep the target source empty until its localized inputs resolve.
+    }
+
+    if (!isManualSpeedTarget) {
+      try {
+        const sources = getAutomaticSpeedModifierSources(
+          buildScenarioAttackBuildFromUi(attack, "speed-opponent-source"),
+          field,
+        );
+        opponent = { item: sources.item, ability: sources.ability };
+      } catch {
+        // Keep the opponent source empty until its localized inputs resolve.
+      }
+    }
+
+    return { target, opponent };
+  }, [attack, isManualSpeedTarget, isSpeedAdjustment, targetForm]);
   const speedOpponentStatSection = (
     <section className="attack-stat-section attack-setting-section-body speed-opponent-stat-section" aria-label={`${attackLabel} 相手S能力`}>
       <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
@@ -6509,18 +6601,18 @@ function AttackCard({
                   options={statusOptions}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
                 />
-                <SelectField
+                <SpeedMultiplierControl
                   label="道具倍率"
                   ariaLabel={`${attackLabel} 相手S条件 道具倍率`}
                   value={attack.speedItemMultiplier}
-                  options={speedMultiplierOptions}
+                  automaticSource={speedModifierSources.opponent.item}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
                 />
-                <SelectField
+                <SpeedMultiplierControl
                   label="特性倍率"
                   ariaLabel={`${attackLabel} 相手S条件 特性倍率`}
                   value={attack.speedAbilityMultiplier}
-                  options={speedMultiplierOptions}
+                  automaticSource={speedModifierSources.opponent.ability}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
                 />
                 <SelectField
@@ -6547,18 +6639,18 @@ function AttackCard({
                 options={statusOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetStatus", value)}
               />
-              <SelectField
+              <SpeedMultiplierControl
                 label="道具倍率"
                 ariaLabel={`${attackLabel} 調整対象S条件 道具倍率`}
                 value={attack.speedTargetItemMultiplier}
-                options={speedMultiplierOptions}
+                automaticSource={speedModifierSources.target.item}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetItemMultiplier", value)}
               />
-              <SelectField
+              <SpeedMultiplierControl
                 label="特性倍率"
                 ariaLabel={`${attackLabel} 調整対象S条件 特性倍率`}
                 value={attack.speedTargetAbilityMultiplier}
-                options={speedMultiplierOptions}
+                automaticSource={speedModifierSources.target.ability}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetAbilityMultiplier", value)}
               />
               <SelectField
@@ -6569,9 +6661,6 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetTailwind", value === "on")}
               />
             </div>
-            <p className="speed-multiplier-help" role="note">
-              両側の手動倍率は、選択中の持ち物・特性による自動補正を置き換えます。
-            </p>
           </section>
         </>
       ) : isOffenseAdjustment ? (

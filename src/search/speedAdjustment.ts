@@ -181,6 +181,60 @@ const getTargetSpeed = (input: SpeedAdjustmentInput): number => {
   );
 };
 
+export interface AutomaticSpeedModifierSources {
+  item?: string;
+  ability?: string;
+}
+
+/**
+ * Returns the currently selected item's and ability's automatic speed
+ * modifier descriptions for the given build and field.
+ *
+ * Manual speed multipliers intentionally do not belong here: this helper is
+ * only the source description that the speed-condition UI can show before a
+ * manual override is selected.
+ */
+export const getAutomaticSpeedModifierSources = (
+  build: Build | undefined,
+  field: FieldState,
+): AutomaticSpeedModifierSources => {
+  if (!build) {
+    return {};
+  }
+
+  const ability = build.ability?.canonicalName;
+  const item = build.item?.canonicalName;
+  let abilitySource: string | undefined;
+  let itemSource: string | undefined;
+
+  if (ability === "Chlorophyll" && field.weather === "sun") {
+    abilitySource = "ようりょくそ 晴れ 2倍";
+  } else if (ability === "Swift Swim" && field.weather === "rain") {
+    abilitySource = "すいすい 雨 2倍";
+  } else if (ability === "Sand Rush" && field.weather === "sand") {
+    abilitySource = "すなかき 砂 2倍";
+  } else if (ability === "Slush Rush" && field.weather === "snow") {
+    abilitySource = "ゆきかき 雪 2倍";
+  } else if (ability === "Surge Surfer" && field.terrain === "electric") {
+    abilitySource = "サーフテール エレキ 2倍";
+  } else if (ability === "Quick Feet" && build.status) {
+    abilitySource = "はやあし 状態異常 1.5倍";
+  }
+
+  if (item === "Choice Scarf") {
+    itemSource = "こだわりスカーフ 1.5倍";
+  } else if (item === "Iron Ball") {
+    itemSource = "くろいてっきゅう 0.5倍";
+  } else if (item === "Quick Powder" && build.pokemon.canonicalName === "Ditto") {
+    itemSource = "スピードパウダー メタモン 2倍";
+  }
+
+  return {
+    ...(itemSource ? { item: itemSource } : {}),
+    ...(abilitySource ? { ability: abilitySource } : {}),
+  };
+};
+
 const getAutoSpeedNotes = (
   build: Build | undefined,
   field: FieldState,
@@ -195,10 +249,10 @@ const getAutoSpeedNotes = (
     return [];
   }
 
-  const ability = build.ability?.canonicalName;
-  const item = build.item?.canonicalName;
   const itemMultiplier = getManualMultiplier(options.itemMultiplier);
   const abilityMultiplier = getManualMultiplier(options.abilityMultiplier);
+  const ability = build.ability?.canonicalName;
+  const modifierSources = getAutomaticSpeedModifierSources(build, field);
   const notes: string[] = [];
   if (boosts.spe && boosts.spe !== 0) {
     notes.push(`Sランク ${boosts.spe > 0 ? "+" : ""}${boosts.spe}`);
@@ -206,32 +260,11 @@ const getAutoSpeedNotes = (
   if (side.tailwind) {
     notes.push("おいかぜ 2倍");
   }
-  if (abilityMultiplier === "auto" && ability === "Chlorophyll" && field.weather === "sun") {
-    notes.push("ようりょくそ 晴れ 2倍");
+  if (abilityMultiplier === "auto" && modifierSources.ability) {
+    notes.push(modifierSources.ability);
   }
-  if (abilityMultiplier === "auto" && ability === "Swift Swim" && field.weather === "rain") {
-    notes.push("すいすい 雨 2倍");
-  }
-  if (abilityMultiplier === "auto" && ability === "Sand Rush" && field.weather === "sand") {
-    notes.push("すなかき 砂 2倍");
-  }
-  if (abilityMultiplier === "auto" && ability === "Slush Rush" && field.weather === "snow") {
-    notes.push("ゆきかき 雪 2倍");
-  }
-  if (abilityMultiplier === "auto" && ability === "Surge Surfer" && field.terrain === "electric") {
-    notes.push("サーフテール エレキ 2倍");
-  }
-  if (abilityMultiplier === "auto" && ability === "Quick Feet" && build.status) {
-    notes.push("はやあし 状態異常 1.5倍");
-  }
-  if (itemMultiplier === "auto" && item === "Choice Scarf") {
-    notes.push("こだわりスカーフ 1.5倍");
-  }
-  if (itemMultiplier === "auto" && item === "Iron Ball") {
-    notes.push("くろいてっきゅう 0.5倍");
-  }
-  if (itemMultiplier === "auto" && item === "Quick Powder" && build.pokemon.canonicalName === "Ditto") {
-    notes.push("スピードパウダー メタモン 2倍");
+  if (itemMultiplier === "auto" && modifierSources.item) {
+    notes.push(modifierSources.item);
   }
   if (build.status === "par" && (abilityMultiplier !== "auto" || ability !== "Quick Feet")) {
     notes.push("まひ 0.5倍");

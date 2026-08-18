@@ -12,7 +12,11 @@ import type {
 } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
-import { calculateSpeedAdjustment, type SpeedAdjustmentInput } from "./speedAdjustment";
+import {
+  calculateSpeedAdjustment,
+  getAutomaticSpeedModifierSources,
+  type SpeedAdjustmentInput,
+} from "./speedAdjustment";
 
 const mustResolve = <K extends EntityKind>(kind: K, input: string): EntityRef<K> => {
   const ref = toEntityRef(resolveEntity(kind, input), kind);
@@ -95,6 +99,87 @@ const makeInput = (options: Partial<SpeedAdjustmentInput> = {}): SpeedAdjustment
   opponentAbilityMultiplier: "auto",
   boostedNature: mustResolve("nature", "おくびょう"),
   ...options,
+});
+
+describe("getAutomaticSpeedModifierSources", () => {
+  it("reports the active item modifier source and only reports Quick Powder for Ditto", () => {
+    expect(getAutomaticSpeedModifierSources(
+      makeBuild("choice-scarf", "ピカチュウ", "", zeroStatPoints, {
+        item: mustResolve("item", "こだわりスカーフ"),
+      }),
+      emptyField,
+    )).toEqual({ item: "こだわりスカーフ 1.5倍" });
+
+    expect(getAutomaticSpeedModifierSources(
+      makeBuild("iron-ball", "ピカチュウ", "", zeroStatPoints, {
+        item: mustResolve("item", "くろいてっきゅう"),
+      }),
+      emptyField,
+    )).toEqual({ item: "くろいてっきゅう 0.5倍" });
+
+    expect(getAutomaticSpeedModifierSources(
+      makeBuild("quick-powder", "メタモン", "", zeroStatPoints, {
+        item: mustResolve("item", "スピードパウダー"),
+      }),
+      emptyField,
+    )).toEqual({ item: "スピードパウダー メタモン 2倍" });
+
+    expect(getAutomaticSpeedModifierSources(
+      makeBuild("quick-powder-other", "ピカチュウ", "", zeroStatPoints, {
+        item: mustResolve("item", "スピードパウダー"),
+      }),
+      emptyField,
+    )).toEqual({});
+  });
+
+  it.each([
+    ["ようりょくそ", "sun", "ようりょくそ 晴れ 2倍"],
+    ["すいすい", "rain", "すいすい 雨 2倍"],
+    ["すなかき", "sand", "すなかき 砂 2倍"],
+    ["ゆきかき", "snow", "ゆきかき 雪 2倍"],
+  ] as const)("reports the weather ability source for %s", (abilityInput, weather, expected) => {
+    expect(getAutomaticSpeedModifierSources(
+      makeBuild("weather-ability", "ピカチュウ", "", zeroStatPoints, {
+        ability: mustResolve("ability", abilityInput),
+      }),
+      { ...emptyField, weather },
+    )).toEqual({ ability: expected });
+  });
+
+  it("reports Surge Surfer only on Electric Terrain", () => {
+    const build = makeBuild("surge-surfer", "ピカチュウ", "", zeroStatPoints, {
+      ability: mustResolve("ability", "サーフテール"),
+    });
+
+    expect(getAutomaticSpeedModifierSources(build, {
+      ...emptyField,
+      terrain: "electric",
+    })).toEqual({ ability: "サーフテール エレキ 2倍" });
+    expect(getAutomaticSpeedModifierSources(build, emptyField)).toEqual({});
+  });
+
+  it("reports Quick Feet only while a status condition is present", () => {
+    const build = makeBuild("quick-feet", "ピカチュウ", "", zeroStatPoints, {
+      ability: mustResolve("ability", "はやあし"),
+      status: "brn",
+    });
+
+    expect(getAutomaticSpeedModifierSources(build, emptyField)).toEqual({
+      ability: "はやあし 状態異常 1.5倍",
+    });
+    expect(getAutomaticSpeedModifierSources({ ...build, status: undefined }, emptyField)).toEqual({});
+  });
+
+  it("returns no sources when no automatic item or ability modifier is active", () => {
+    expect(getAutomaticSpeedModifierSources(makeBuild("none", "ピカチュウ"), emptyField)).toEqual({});
+    expect(getAutomaticSpeedModifierSources(undefined, emptyField)).toEqual({});
+    expect(getAutomaticSpeedModifierSources(
+      makeBuild("wrong-weather", "ピカチュウ", "", zeroStatPoints, {
+        ability: mustResolve("ability", "ようりょくそ"),
+      }),
+      { ...emptyField, weather: "rain" },
+    )).toEqual({});
+  });
 });
 
 describe("calculateSpeedAdjustment", () => {
