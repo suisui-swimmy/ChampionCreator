@@ -15,6 +15,7 @@ import {
   compareResultCandidates,
   createScenario,
   getAttackSuggestionRankingOwners,
+  getDraftSaveStatusLabel,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   formatLocalizedDamageDescription,
@@ -62,6 +63,17 @@ const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => (
 });
 
 describe("App", () => {
+  it("distinguishes draft saves from committed target-box saves", () => {
+    expect(getDraftSaveStatusLabel({ status: "saving" })).toBe("下書きを保存中…");
+    expect(getDraftSaveStatusLabel({ status: "saved" })).toBe("この端末に下書き保存済み");
+    expect(getDraftSaveStatusLabel({ status: "box-saved" })).toBe("ボックスに保存済み");
+    expect(getDraftSaveStatusLabel({
+      status: "error",
+      operation: "commit",
+      message: "failed",
+    })).toBe("下書き削除エラー");
+  });
+
   it("uses the intended Pokemon as each suggestion ranking owner", () => {
     expect(getAttackSuggestionRankingOwners("defence", "Target", "Attacker")).toEqual({
       move: "Attacker",
@@ -1387,6 +1399,10 @@ describe("App", () => {
     }
     expect(readme).toContain("約0.75秒後");
     expect(guide).toContain("約0.75秒後");
+    expect(readme).toContain("ボックスに保存済み");
+    expect(readme).toContain("次回起動時に下書きの復元確認を表示しません");
+    expect(guide).toContain("ボックスに保存済み");
+    expect(guide).toContain("次回起動時に下書きの復元確認を表示しません");
     expect(readme).not.toContain("Googleでログイン");
     expect(guide).not.toContain("Googleでログイン");
   });

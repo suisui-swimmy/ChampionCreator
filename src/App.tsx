@@ -146,6 +146,7 @@ import {
   scheduleDraftAutosave,
   type DraftLoadResult,
 } from "./ui/draftStorage";
+import { persistCurrentWorkToBoxAndDiscardDraft } from "./ui/currentWorkPersistence";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
 import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
@@ -1021,8 +1022,25 @@ type DraftRecoveryState =
   | (Extract<DraftLoadResult, { status: "error" }> & { canRetryDiscard?: boolean });
 
 type DraftSaveUiState =
-  | { status: "idle" | "saving" | "saved" }
-  | { status: "error"; operation: "save" | "discard"; message: string };
+  | { status: "idle" | "saving" | "saved" | "box-saved" }
+  | { status: "error"; operation: "save" | "discard" | "commit"; message: string };
+
+type DraftBaselineKind = "draft" | "box" | null;
+
+export const getDraftSaveStatusLabel = (state: DraftSaveUiState): string => {
+  switch (state.status) {
+    case "idle":
+      return "";
+    case "saving":
+      return "下書きを保存中…";
+    case "saved":
+      return "この端末に下書き保存済み";
+    case "box-saved":
+      return "ボックスに保存済み";
+    case "error":
+      return state.operation === "save" ? "下書き保存エラー" : "下書き削除エラー";
+  }
+};
 
 const formatDraftSavedAt = (savedAt: string): string => new Intl.DateTimeFormat("ja-JP", {
   dateStyle: "medium",
@@ -1216,7 +1234,9 @@ export function App({
     return result.status === "empty" ? null : result;
   });
   const [draftSaveState, setDraftSaveState] = useState<DraftSaveUiState>({ status: "idle" });
-  const hasPersistedDraftRef = useRef(draftRecovery?.status === "success");
+  const draftBaselineKindRef = useRef<DraftBaselineKind>(
+    draftRecovery?.status === "success" ? "draft" : null,
+  );
   const previousVariantRef = useRef(variant);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
@@ -1226,6 +1246,8 @@ export function App({
   const mobileScenarioPanelRef = useRef<HTMLElement | null>(null);
   const cancelDraftSaveRef = useRef<(() => void) | null>(null);
   const lastDraftFingerprintRef = useRef<string | null>(null);
+  const boxBaselineFingerprintRef = useRef<string | null>(null);
+  const pendingBoxCommitFingerprintRef = useRef<string | null>(null);
   if (lastDraftFingerprintRef.current === null) {
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
   }
@@ -1308,11 +1330,34 @@ export function App({
     }
 
     const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
+    if (fingerprint === boxBaselineFingerprintRef.current) {
+      const result = discardDraftFromBrowser();
+      if (result.status === "success") {
+        lastDraftFingerprintRef.current = fingerprint;
+        draftBaselineKindRef.current = "box";
+        pendingBoxCommitFingerprintRef.current = null;
+        setDraftSaveState({ status: "box-saved" });
+      } else {
+        pendingBoxCommitFingerprintRef.current = fingerprint;
+        setDraftSaveState({
+          status: "error",
+          operation: "commit",
+          message: `ボックスへ保存済みの内容ですが、${result.message}`,
+        });
+      }
+      return undefined;
+    }
     if (fingerprint === lastDraftFingerprintRef.current) {
       setDraftSaveState((current) => (
         current.status === "saving"
         || (current.status === "error" && current.operation === "save")
-          ? { status: hasPersistedDraftRef.current ? "saved" : "idle" }
+          ? {
+              status: draftBaselineKindRef.current === "draft"
+                ? "saved"
+                : draftBaselineKindRef.current === "box"
+                  ? "box-saved"
+                  : "idle",
+            }
           : current
       ));
       return undefined;
@@ -1324,7 +1369,8 @@ export function App({
       const result = saveDraftToBrowser(targetForm, scenarioForms);
       if (result.status === "success") {
         lastDraftFingerprintRef.current = fingerprint;
-        hasPersistedDraftRef.current = true;
+        draftBaselineKindRef.current = "draft";
+        pendingBoxCommitFingerprintRef.current = null;
         setDraftSaveState({ status: "saved" });
         return;
       }
@@ -1349,14 +1395,16 @@ export function App({
 
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
     setDraftSaveState({ status: "idle" });
+    boxBaselineFingerprintRef.current = null;
+    pendingBoxCommitFingerprintRef.current = null;
     if (variant === "tutorial") {
-      hasPersistedDraftRef.current = false;
+      draftBaselineKindRef.current = null;
       setDraftRecovery(null);
       return;
     }
 
     const result = loadDraftFromBrowser();
-    hasPersistedDraftRef.current = result.status === "success";
+    draftBaselineKindRef.current = result.status === "success" ? "draft" : null;
     setDraftRecovery(result.status === "empty" ? null : result);
   }, [scenarioForms, targetForm, variant]);
 
@@ -1452,24 +1500,71 @@ export function App({
     cancelDraftSaveRef.current = null;
   };
 
-  const saveCurrentDraftNow = () => {
-    cancelPendingDraftSave();
-    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
-    setDraftSaveState({ status: "saving" });
-    const result = saveDraftToBrowser(targetForm, scenarioForms);
+  const applyCurrentDraftSaveResult = (
+    fingerprint: string,
+    result: ReturnType<typeof saveDraftToBrowser>,
+  ) => {
     if (result.status === "success") {
       lastDraftFingerprintRef.current = fingerprint;
-      hasPersistedDraftRef.current = true;
+      draftBaselineKindRef.current = "draft";
+      pendingBoxCommitFingerprintRef.current = null;
       setDraftSaveState({ status: "saved" });
       return;
     }
     setDraftSaveState({ status: "error", operation: "save", message: result.message });
   };
 
+  const saveCurrentDraftNow = () => {
+    cancelPendingDraftSave();
+    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
+    setDraftSaveState({ status: "saving" });
+    applyCurrentDraftSaveResult(
+      fingerprint,
+      saveDraftToBrowser(targetForm, scenarioForms),
+    );
+  };
+
+  const applyCurrentBoxCommitResult = (
+    fingerprint: string,
+    result: ReturnType<typeof discardDraftFromBrowser>,
+  ) => {
+    boxBaselineFingerprintRef.current = fingerprint;
+    if (result.status === "success") {
+      pendingBoxCommitFingerprintRef.current = null;
+      const currentFingerprint = createDraftFingerprint(targetForm, scenarioForms);
+      if (currentFingerprint === fingerprint) {
+        lastDraftFingerprintRef.current = fingerprint;
+        draftBaselineKindRef.current = "box";
+        setDraftSaveState({ status: "box-saved" });
+      } else {
+        saveCurrentDraftNow();
+      }
+      return;
+    }
+    pendingBoxCommitFingerprintRef.current = fingerprint;
+    setDraftSaveState({
+      status: "error",
+      operation: "commit",
+      message: `ボックスへ保存しましたが、${result.message}`,
+    });
+  };
+
+  const retryCommitDraftCleanup = () => {
+    const fingerprint = pendingBoxCommitFingerprintRef.current;
+    if (fingerprint === null) {
+      return;
+    }
+    cancelPendingDraftSave();
+    applyCurrentBoxCommitResult(
+      fingerprint,
+      discardDraftFromBrowser(),
+    );
+  };
+
   const retryDiscardCurrentDraft = () => {
     const result = discardDraftFromBrowser();
     if (result.status === "success") {
-      hasPersistedDraftRef.current = false;
+      draftBaselineKindRef.current = null;
       setDraftSaveState({ status: "idle" });
       return;
     }
@@ -1491,7 +1586,7 @@ export function App({
     resetActiveSearch();
     setTargetForm(target);
     setScenarioForms(scenarios);
-    hasPersistedDraftRef.current = true;
+    draftBaselineKindRef.current = "draft";
     setDraftRecovery(null);
     setDraftSaveState({ status: "saved" });
   };
@@ -1510,7 +1605,7 @@ export function App({
 
     cancelPendingDraftSave();
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
-    hasPersistedDraftRef.current = false;
+    draftBaselineKindRef.current = null;
     setDraftRecovery(null);
     setDraftSaveState({ status: "idle" });
   };
@@ -1796,6 +1891,28 @@ export function App({
     activeRequestRef.current = null;
   };
 
+  const reconcileBoxBaselineAfterEntriesChange = (nextEntries: BoxEntry[]) => {
+    const baselineFingerprint = boxBaselineFingerprintRef.current;
+    if (baselineFingerprint === null) {
+      return;
+    }
+    const baselineStillSaved = nextEntries.some((entry) => (
+      createDraftFingerprint(entry.payload.target, entry.payload.scenarios) === baselineFingerprint
+    ));
+    if (baselineStillSaved) {
+      return;
+    }
+
+    boxBaselineFingerprintRef.current = null;
+    pendingBoxCommitFingerprintRef.current = null;
+    if (
+      draftBaselineKindRef.current === "box"
+      && createDraftFingerprint(targetForm, scenarioForms) === baselineFingerprint
+    ) {
+      saveCurrentDraftNow();
+    }
+  };
+
   const persistBoxEntries = (nextEntries: BoxEntry[], message: string): boolean => {
     const error = saveBoxEntriesToBrowser(nextEntries);
     if (error) {
@@ -1805,6 +1922,24 @@ export function App({
 
     setBoxEntries(nextEntries);
     setBoxMessage(message);
+    reconcileBoxBaselineAfterEntriesChange(nextEntries);
+    return true;
+  };
+
+  const persistCurrentBoxEntries = (nextEntries: BoxEntry[], message: string): boolean => {
+    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
+    const result = persistCurrentWorkToBoxAndDiscardDraft(
+      nextEntries,
+    );
+    if (result.status === "box-error") {
+      setBoxMessage(result.message);
+      return false;
+    }
+
+    cancelPendingDraftSave();
+    setBoxEntries(nextEntries);
+    setBoxMessage(message);
+    applyCurrentBoxCommitResult(fingerprint, result.discardResult);
     return true;
   };
 
@@ -1819,7 +1954,7 @@ export function App({
 
   const handleSaveCurrentBox = () => {
     const entry = createBoxEntryFromState(targetForm, scenarioForms);
-    if (persistBoxEntries([entry, ...boxEntries], "今の条件を保存しました")) {
+    if (persistCurrentBoxEntries([entry, ...boxEntries], "今の条件を保存しました")) {
       setSelectedBoxEntryId(entry.id);
     }
   };
@@ -1832,7 +1967,7 @@ export function App({
       lastDraftFingerprintRef.current = createDraftFingerprint(blankTarget, blankScenarios);
       const discardResult = discardDraftFromBrowser();
       if (discardResult.status === "success") {
-        hasPersistedDraftRef.current = false;
+        draftBaselineKindRef.current = null;
         setDraftSaveState({ status: "idle" });
       } else {
         setDraftSaveState({
@@ -1882,7 +2017,7 @@ export function App({
     const nextEntries = boxEntries.map((candidate) => (
       candidate.id === entryId ? updatedEntry : candidate
     ));
-    if (persistBoxEntries(nextEntries, "選択中の保存を上書きしました")) {
+    if (persistCurrentBoxEntries(nextEntries, "選択中の保存を上書きしました")) {
       setSelectedBoxEntryId(entryId);
     }
   };
@@ -2000,6 +2135,7 @@ export function App({
       }
 
       setBoxEntries(result.entries);
+      reconcileBoxBaselineAfterEntriesChange(result.entries);
       setSelectedBoxEntryId(result.entries[0]?.id ?? BLANK_BOX_SLOT_ID);
       setBoxMessage(
         result.warnings.length > 0
@@ -2326,14 +2462,10 @@ export function App({
               <p
                 className={`draft-save-status ${draftSaveState.status}`}
                 data-draft-status={draftSaveState.status}
-                role="status"
-                aria-live="polite"
-              >
-                {draftSaveState.status === "saving"
-                  ? "下書きを保存中…"
-                  : draftSaveState.status === "saved"
-                    ? "この端末に下書き保存済み"
-                    : "下書き保存エラー"}
+              role="status"
+              aria-live="polite"
+            >
+                {getDraftSaveStatusLabel(draftSaveState)}
               </p>
             </div>
           ) : null}
@@ -2358,7 +2490,9 @@ export function App({
             size="small"
             onClick={draftSaveState.operation === "discard"
               ? retryDiscardCurrentDraft
-              : saveCurrentDraftNow}
+              : draftSaveState.operation === "commit"
+                ? retryCommitDraftCleanup
+                : saveCurrentDraftNow}
           >
             再試行
           </Button>
