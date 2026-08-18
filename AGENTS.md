@@ -7,7 +7,7 @@ ChampionCreator は M0〜M9 の初期開発マイルストーンを完了し、�
 この文書は、過去の実装手順を再現するロードマップではなく、今後の変更でも守る設計境界と作業ルールを定義する。
 
 - 現在の実装状況は、対象コード、対象テスト、`README.md`、`package.json` を確認して判断する
-- 作業履歴と直近の引き継ぎは `PROGRESS.md` を参照する
+- 現在地と直近の引き継ぎは `PROGRESS.md`、過去の詳細履歴は必要な場合だけ `PROGRESS.archive/` を参照する
 - 完了済みマイルストーンを未着手タスクとして再開しない
 - 将来候補は、ユーザーが依頼した範囲または明示された課題だけを扱う
 - この文書と現行実装が矛盾する場合は、勝手に片方へ寄せず、実装経路と影響を確認してから修正する
@@ -35,7 +35,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 毎回リポジトリ全体を読む必要はない。次の順で、依頼に関係する範囲だけ確認する。
 
 1. `AGENTS.md`
-2. `PROGRESS.md` の直近項目と、依頼に関係する過去項目
+2. `PROGRESS.md` の `Current Snapshot` と最新数件。過去項目が必要な場合だけ `PROGRESS.archive/` を検索する
 3. 対象の実装ファイルと対応テスト
 4. コマンド、依存、バージョンに関係する場合は `package.json`
 5. ユーザー向け仕様に関係する場合は `README.md` と `guide/`
@@ -53,7 +53,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 
 > **TEMPORARY**: この章は、Google アカウントを使ったボックス同期と下書き保存を完成させるまでの一時的な実装手順。
 > `SYNC-M7` の完了時に、この見出しから次の `## 最重要の設計境界` の直前までを同じ変更内で削除する。
-> 完了済みマイルストーン表へ本ロードマップを転載せず、履歴は `PROGRESS.md` に残す。
+> 完了済みマイルストーン表へ本ロードマップを転載せず、現在地は `PROGRESS.md`、詳細履歴は `PROGRESS.archive/` に残す。
 
 現在の開始地点は `SYNC-M1`（`SYNC-M0` は 2026-08-17 完了）。各マイルストーンは `Done` を満たし、検証結果を `PROGRESS.md` へ記録してから次へ進む。後続マイルストーンの実装を先取りしない。
 
@@ -598,19 +598,23 @@ skipInAppBrowserCheck: false
 
 ## `PROGRESS.md` 運用
 
-個人用の汎用 skill `progress-update` を使い、意味のある作業単位ごとに `PROGRESS.md` へ1件追記する。
+個人用の汎用 skill `progress-update` を使い、意味のある作業単位ごとに primary agent が `PROGRESS.md` の `Recent Updates` へ原則1件だけ記録する。subagent は直接更新せず、primary agent が結果を集約する。
 
-- `PROGRESS.md` は git 追跡対象外のローカル進捗メモとして扱う
-- 既存形式を維持し、末尾へ時系列順に追記する
-- `No.N` はファイル全体の最大値に1を足す
-- 変更内容、変更ファイル、検証、残課題、次の一手を書く
-- repo 相対パスだけを使い、ローカル絶対パスや実ユーザー名を書かない
-- micro-step や単なる調査メモは記録しない
+- `PROGRESS.md` と `PROGRESS.archive/` は `.git/info/exclude` で git 追跡対象外にするローカル進捗メモ
+- `PROGRESS.md` は `Format: 2`、`Current Snapshot`、最新5〜10件程度の `Recent Updates` に保つ
+- 通常の作業開始時は `Current Snapshot` と最新数件だけを読み、ファイルや archive の全件を読み込まない
+- 過去履歴が必要な場合だけ `rg` で `PROGRESS.archive/` を検索し、該当する1〜3件だけを読む
+- 10件を超えた古い `done` エントリは `PROGRESS.archive/YYYY-MM.md` へ原文のまま移し、`in_progress` / `blocked` は解決まで active 側へ残す
+- `No.N` は active と archive を通した連番とし、移動時に再採番しない。次番号は見出しだけを機械的に走査し、最大値1件だけを出力して決める
+- `Current Snapshot` の最新番号、現在の goal / status、最後の検証、blocker、次の一手を、最新エントリと矛盾させない
+- 1エントリは `Status`、`Outcome`、`Verification`、`Remaining / Next` を中心に簡潔にし、必要な場合だけ key files を repo 相対パスで書く
+- micro-step、subagentごとの結果、解決済みの一時エラー、単なる調査メモ、最終報告の長い転載は記録しない
+- repo の現行仕様は対象コード、テスト、`README.md`、`AGENTS.md` を正とし、進捗ログだけで判断しない
 - ユーザーが「PROGRESS 更新いらない」と指定した場合は更新しない
 
 ## 完了済みマイルストーン
 
-以下は完了済みの開発履歴。詳細、検証、後続修正は `PROGRESS.md` を参照する。
+以下は完了済みの開発履歴。現在地は `PROGRESS.md`、詳細・検証・後続修正は必要な場合だけ `PROGRESS.archive/` を参照する。
 
 | Milestone | 完了内容 |
 | --- | --- |

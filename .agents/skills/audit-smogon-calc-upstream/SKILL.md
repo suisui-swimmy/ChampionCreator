@@ -22,7 +22,8 @@ Audit first; do not update the dependency unless the user also asks for implemen
 
 Read repository instructions first, then inspect the smallest relevant file set:
 
-- `AGENTS.md`, `README.md`, `package.json`, `package-lock.json`, and `PROGRESS.md`
+- `AGENTS.md`, `README.md`, `package.json`, `package-lock.json`, and the `PROGRESS.md` snapshot / recent entries
+- `PROGRESS.archive/` only when a targeted history search is needed to resolve missing or conflicting pin evidence
 - the `@smogon/calc` adapter and parity tests
 - generator scripts and generated metadata that record an upstream commit
 - domain, UI, persistence, worker, or search code that carries fields changed upstream
@@ -33,7 +34,7 @@ Record:
 - dependency form: registry version, git dependency, or vendor tarball
 - installed package version and resolved artifact
 - actual generation or ruleset used at runtime
-- upstream commit recorded by the vendor filename, generator, generated JSON, README, or progress history
+- upstream commit recorded by the vendor filename, generator, generated JSON, README, or bounded progress records
 - local API fields passed to `Pokemon`, `Move`, `Field`, and `Side`
 
 Resolve the pinned commit using corroborating evidence. Prefer, in order:
@@ -41,7 +42,7 @@ Resolve the pinned commit using corroborating evidence. Prefer, in order:
 1. generated-data `source.upstreamCommit` or an explicit generator constant
 2. vendor artifact name or build metadata
 3. dependency declaration and lockfile resolution
-4. README or progress history
+4. README or a targeted search of `PROGRESS.md` and, only when needed, `PROGRESS.archive/`
 
 If these disagree, report the mismatch and verify the artifact contents; do not guess a base commit.
 
@@ -137,7 +138,7 @@ When the user later requests implementation, perform a coordinated update:
 5. Expose the upstream revision in app metadata when package semver is unchanged.
 6. Add regression tests for both active and inactive states, automatic behavior, and adjacent unaffected mechanics.
 7. Run repository-specific validation in order: typecheck, data validators, targeted tests, full tests, build, then Browser-visible proof for UI changes.
-8. Apply the repository's app-version rule and update `PROGRESS.md` when the change is user-visible or otherwise meaningful.
+8. Apply the repository's app-version rule and update the current snapshot / recent entry in `PROGRESS.md` when the change is user-visible or otherwise meaningful; rotate older detail through the repository's progress policy.
 
 ## Failure handling
 
