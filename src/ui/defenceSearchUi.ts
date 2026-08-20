@@ -60,6 +60,7 @@ import {
 import { getMoveDefenderStatKeys } from "../domain/moveStatReference";
 import {
   calculateSpeedAdjustment,
+  getAutomaticSpeedModifierSources,
   type SpeedAdjustmentInput,
   type SpeedAdjustmentResult,
   type SpeedComparisonMode,
@@ -1353,6 +1354,58 @@ export const calculateSpeedAdjustmentFromUi = (
       message,
     );
   }
+};
+
+export interface TargetSpeedOverrideCounts {
+  item: number;
+  ability: number;
+}
+
+/**
+ * Counts the active speed modifiers on the target build that are hidden by a
+ * manual speed-condition multiplier.
+ *
+ * This is intentionally a UI-facing projection of the same automatic source
+ * helper used by the speed calculator. It does not inspect the opponent, so a
+ * missing opponent input cannot hide the target-side decoration.
+ */
+export const getTargetSpeedOverrideCounts = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): TargetSpeedOverrideCounts => {
+  let targetBuild: Build;
+  try {
+    targetBuild = buildTargetBuildFromUi(targetForm, "speed-target-override");
+  } catch {
+    return { item: 0, ability: 0 };
+  }
+
+  let item = 0;
+  let ability = 0;
+  for (const scenario of scenarioForms) {
+    if (!scenario.enabled || scenario.adjustmentType !== "speed") {
+      continue;
+    }
+
+    for (const attack of scenario.attacks) {
+      const targetBuildForAttack = attack.speedTargetStatus === "none"
+        ? targetBuild
+        : { ...targetBuild, status: attack.speedTargetStatus };
+      const automaticSources = getAutomaticSpeedModifierSources(
+        targetBuildForAttack,
+        toFieldState(attack),
+      );
+
+      if (attack.speedTargetItemMultiplier !== "auto" && automaticSources.item) {
+        item += 1;
+      }
+      if (attack.speedTargetAbilityMultiplier !== "auto" && automaticSources.ability) {
+        ability += 1;
+      }
+    }
+  }
+
+  return { item, ability };
 };
 
 export const calculateSpeedAdjustmentsFromScenarios = (

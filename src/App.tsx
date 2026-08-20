@@ -75,6 +75,7 @@ import {
   createInitialBulkMaximizeUiState,
   createInitialSearchUiState,
   formatScenarioAttackLabel,
+  getTargetSpeedOverrideCounts,
   searchUiReducer,
   startDefenceSearchFromUi,
   startMaximizeRemainingBulkFromUi,
@@ -90,6 +91,7 @@ import {
   type SearchStatus,
   type SpeedScenarioResult,
   type TargetFormState,
+  type TargetSpeedOverrideCounts,
 } from "./ui/defenceSearchUi";
 import {
   BEAT_UP_CANONICAL_NAME,
@@ -1302,6 +1304,10 @@ export function App({
   );
   const speedResults = useMemo(
     () => calculateSpeedAdjustmentsForCandidateRanking(targetForm, scenarioForms),
+    [targetForm, scenarioForms],
+  );
+  const targetSpeedOverrideCounts = useMemo(
+    () => getTargetSpeedOverrideCounts(targetForm, scenarioForms),
     [targetForm, scenarioForms],
   );
 
@@ -2649,6 +2655,7 @@ export function App({
           artwork={targetArtwork}
           actualStats={actualStats}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
+          speedOverrideCounts={targetSpeedOverrideCounts}
           bulkMaximizeState={bulkMaximizeState}
           allowBulkNatureChange={allowBulkNatureChange}
           bulkMaximizeApplied={appliedAdjustmentId === "bulk-maximize"}
@@ -2817,6 +2824,7 @@ type EntityTextFieldProps = {
   label: string;
   value: string;
   className?: string;
+  description?: string;
   options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectValue?: (value: string) => void;
@@ -2835,6 +2843,7 @@ function EntityTextField({
   label,
   value,
   className,
+  description,
   options: suggestedOptions,
   onChange,
   onSelectValue,
@@ -2863,6 +2872,7 @@ function EntityTextField({
         value={value}
         kind={kind}
         options={getDropdownEntityOptions(kind, value, suggestedOptions)}
+        description={description}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -2879,6 +2889,7 @@ function EntityTextField({
         placeholder={label}
         list={datalistId}
         autoComplete="off"
+        title={description}
         onFocus={selectInputValueOnFocus}
         onChange={onChange}
       />
@@ -3052,6 +3063,7 @@ type DropdownTextFieldProps = {
   value: string;
   options: EntityInputOption[];
   className?: string;
+  description?: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectValue: (value: string) => void;
 };
@@ -3062,11 +3074,13 @@ function DropdownTextField({
   value,
   options,
   className,
+  description,
   onChange,
   onSelectValue,
 }: DropdownTextFieldProps) {
   const listboxId = `dropdown-options-${useId()}`;
   const labelId = useId();
+  const descriptionId = useId();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -3099,6 +3113,7 @@ function DropdownTextField({
   return (
     <div
       className={fieldClassName}
+      title={description}
       ref={fieldRef}
       onBlur={(event) => {
         const nextTarget = event.relatedTarget as Node | null;
@@ -3108,6 +3123,7 @@ function DropdownTextField({
       }}
     >
       <span className="visually-hidden" id={labelId}>{label}</span>
+      {description ? <span className="visually-hidden" id={descriptionId}>{description}</span> : null}
       <div className="dropdown-input-row">
         <input
           ref={inputRef}
@@ -3116,6 +3132,7 @@ function DropdownTextField({
           autoComplete="off"
           role="combobox"
           aria-labelledby={labelId}
+          aria-describedby={description ? descriptionId : undefined}
           aria-autocomplete="list"
           aria-expanded={listOpen}
           aria-controls={listOpen ? listboxId : undefined}
@@ -3173,6 +3190,7 @@ type AbilityTextFieldProps = {
   label: string;
   value: string;
   className?: string;
+  description?: string;
   pokemonAbilityOptions?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectAbility: (value: string) => void;
@@ -3182,6 +3200,7 @@ function AbilityTextField({
   label,
   value,
   className,
+  description,
   pokemonAbilityOptions = [],
   onChange,
   onSelectAbility,
@@ -3200,6 +3219,7 @@ function AbilityTextField({
       label={label}
       value={value}
       options={options}
+      description={description}
       onChange={onChange}
       onSelectValue={onSelectAbility}
     />
@@ -3587,6 +3607,7 @@ type TargetPanelProps = {
   artwork: PokemonArtworkMatch | null;
   actualStats: StatTable | null;
   totalStatPoints: number;
+  speedOverrideCounts: TargetSpeedOverrideCounts;
   bulkMaximizeState: BulkMaximizeUiState;
   allowBulkNatureChange: boolean;
   bulkMaximizeApplied: boolean;
@@ -4494,6 +4515,7 @@ function TargetPanel({
   artwork,
   actualStats,
   totalStatPoints,
+  speedOverrideCounts,
   bulkMaximizeState,
   allowBulkNatureChange,
   bulkMaximizeApplied,
@@ -4522,6 +4544,12 @@ function TargetPanel({
     rankingOwnerPokemon,
     pokemonAbilityOptions ?? getEntityInputOptions("ability"),
   );
+  const itemSpeedOverrideDescription = speedOverrideCounts.item > 0
+    ? `${speedOverrideCounts.item}件の素早さ条件で持ち物のS補正を手動倍率に上書き中`
+    : undefined;
+  const abilitySpeedOverrideDescription = speedOverrideCounts.ability > 0
+    ? `${speedOverrideCounts.ability}件の素早さ条件で特性のS補正を手動倍率に上書き中`
+    : undefined;
 
   return (
     <section className="target-panel" aria-labelledby="target-title">
@@ -4570,6 +4598,8 @@ function TargetPanel({
             <EntityTextField
               kind="item"
               label="持ち物"
+              className={itemSpeedOverrideDescription ? "speed-source-overridden" : undefined}
+              description={itemSpeedOverrideDescription}
               value={targetForm.itemInput}
               options={itemOptions}
               onChange={(event) => onUpdateField("itemInput", event.target.value)}
@@ -4577,6 +4607,8 @@ function TargetPanel({
             />
             <AbilityTextField
               label="特性"
+              className={abilitySpeedOverrideDescription ? "speed-source-overridden" : undefined}
+              description={abilitySpeedOverrideDescription}
               value={targetForm.abilityInput}
               pokemonAbilityOptions={abilityOptions}
               onChange={(event) => onUpdateField("abilityInput", event.target.value)}
@@ -6096,45 +6128,27 @@ type SpeedMultiplierControlProps = {
   label: string;
   ariaLabel: string;
   value: SpeedManualMultiplier;
-  automaticSource?: string;
   onChange: (value: SpeedManualMultiplier) => void;
 };
-
-const getSpeedMultiplierOptionLabel = (value: SpeedManualMultiplier): string => (
-  speedMultiplierOptions.find((option) => option.value === value)?.label ?? value
-);
 
 function SpeedMultiplierControl({
   label,
   ariaLabel,
   value,
-  automaticSource,
   onChange,
 }: SpeedMultiplierControlProps) {
   const isManual = value !== "auto";
-  const manualLabel = getSpeedMultiplierOptionLabel(value);
 
   return (
-    <div className={`speed-multiplier-control${isManual ? " is-manual" : ""}${isManual && automaticSource ? " has-source" : ""}`}>
+    <div className={`speed-multiplier-control${isManual ? " is-manual" : ""}`}>
       <SelectField
         label={label}
-        ariaLabel={ariaLabel}
+        ariaLabel={isManual ? `${ariaLabel} 手動` : ariaLabel}
         value={value}
         options={speedMultiplierOptions}
         onChange={onChange}
+        valueBadge={isManual ? <span className="speed-manual-badge">手動</span> : undefined}
       />
-      {isManual ? (
-        <div className="speed-manual-state">
-          <span className="speed-manual-badge">手動</span>
-          {automaticSource ? (
-            <small className="speed-override-summary">
-              <del>自動: {automaticSource}</del>
-              <span aria-hidden="true">→</span>
-              <strong>手動: {manualLabel}</strong>
-            </small>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -6242,47 +6256,37 @@ function AttackCard({
       return undefined;
     }
   }, [adjustmentType, attack, targetForm]);
-  const speedModifierSources = useMemo(() => {
-    if (!isSpeedAdjustment) {
-      return {
-        target: { item: undefined, ability: undefined },
-        opponent: { item: undefined, ability: undefined },
-      };
+  const opponentSpeedModifierSources = useMemo(() => {
+    if (!isSpeedAdjustment || isManualSpeedTarget) {
+      return { item: undefined, ability: undefined };
     }
-
-    const field = {
-      gameType: attack.gameType,
-      weather: attack.weather,
-      terrain: attack.terrain,
-    };
-    let target = { item: undefined as string | undefined, ability: undefined as string | undefined };
-    let opponent = { item: undefined as string | undefined, ability: undefined as string | undefined };
 
     try {
-      const targetBuild = buildTargetBuildFromUi(targetForm, "speed-target-source");
-      const sources = getAutomaticSpeedModifierSources({
-        ...targetBuild,
-        ...(attack.speedTargetStatus !== "none" ? { status: attack.speedTargetStatus } : {}),
-      }, field);
-      target = { item: sources.item, ability: sources.ability };
+      const sources = getAutomaticSpeedModifierSources(
+        buildScenarioAttackBuildFromUi(attack, "speed-opponent-source"),
+        {
+          gameType: attack.gameType,
+          weather: attack.weather,
+          terrain: attack.terrain,
+        },
+      );
+      return { item: sources.item, ability: sources.ability };
     } catch {
-      // Keep the target source empty until its localized inputs resolve.
+      return { item: undefined, ability: undefined };
     }
-
-    if (!isManualSpeedTarget) {
-      try {
-        const sources = getAutomaticSpeedModifierSources(
-          buildScenarioAttackBuildFromUi(attack, "speed-opponent-source"),
-          field,
-        );
-        opponent = { item: sources.item, ability: sources.ability };
-      } catch {
-        // Keep the opponent source empty until its localized inputs resolve.
-      }
-    }
-
-    return { target, opponent };
-  }, [attack, isManualSpeedTarget, isSpeedAdjustment, targetForm]);
+  }, [attack, isManualSpeedTarget, isSpeedAdjustment]);
+  const opponentItemSpeedOverridden = isSpeedAdjustment
+    && attack.speedItemMultiplier !== "auto"
+    && Boolean(opponentSpeedModifierSources.item);
+  const opponentAbilitySpeedOverridden = isSpeedAdjustment
+    && attack.speedAbilityMultiplier !== "auto"
+    && Boolean(opponentSpeedModifierSources.ability);
+  const opponentItemSpeedOverrideDescription = opponentItemSpeedOverridden
+    ? "この素早さ条件では持ち物のS補正を手動倍率に上書き中"
+    : undefined;
+  const opponentAbilitySpeedOverrideDescription = opponentAbilitySpeedOverridden
+    ? "この素早さ条件では特性のS補正を手動倍率に上書き中"
+    : undefined;
   const speedOpponentStatSection = (
     <section className="attack-stat-section attack-setting-section-body speed-opponent-stat-section" aria-label={`${attackLabel} 相手S能力`}>
       <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
@@ -6446,8 +6450,9 @@ function AttackCard({
             />
           ) : null}
           <AbilityTextField
-            className="scenario-cell"
+            className={`scenario-cell${opponentAbilitySpeedOverridden ? " speed-source-overridden" : ""}`}
             label="特性"
+            description={opponentAbilitySpeedOverrideDescription}
             value={attack.attackerAbilityInput}
             pokemonAbilityOptions={attackerAbilityOptions}
             onChange={onInput("attackerAbilityInput")}
@@ -6460,6 +6465,8 @@ function AttackCard({
               kind="item"
               label="持ち物"
               showLabel
+              className={opponentItemSpeedOverridden ? "speed-source-overridden" : undefined}
+              description={opponentItemSpeedOverrideDescription}
               value={attack.attackerItemInput}
               placeholder="任意"
               options={attackerItemOptions}
@@ -6605,14 +6612,12 @@ function AttackCard({
                   label="道具倍率"
                   ariaLabel={`${attackLabel} 相手S条件 道具倍率`}
                   value={attack.speedItemMultiplier}
-                  automaticSource={speedModifierSources.opponent.item}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
                 />
                 <SpeedMultiplierControl
                   label="特性倍率"
                   ariaLabel={`${attackLabel} 相手S条件 特性倍率`}
                   value={attack.speedAbilityMultiplier}
-                  automaticSource={speedModifierSources.opponent.ability}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
                 />
                 <SelectField
@@ -6643,14 +6648,12 @@ function AttackCard({
                 label="道具倍率"
                 ariaLabel={`${attackLabel} 調整対象S条件 道具倍率`}
                 value={attack.speedTargetItemMultiplier}
-                automaticSource={speedModifierSources.target.item}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetItemMultiplier", value)}
               />
               <SpeedMultiplierControl
                 label="特性倍率"
                 ariaLabel={`${attackLabel} 調整対象S条件 特性倍率`}
                 value={attack.speedTargetAbilityMultiplier}
-                automaticSource={speedModifierSources.target.ability}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetAbilityMultiplier", value)}
               />
               <SelectField
@@ -6959,6 +6962,8 @@ type ScenarioTextFieldProps = {
   label: string;
   showLabel: boolean;
   value: string;
+  className?: string;
+  description?: string;
   placeholder?: string;
   options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -6970,17 +6975,20 @@ function ScenarioTextField({
   label,
   showLabel,
   value,
+  className,
+  description,
   placeholder,
   options: suggestedOptions,
   onChange,
   onSelectValue,
 }: ScenarioTextFieldProps) {
   const datalistId = `entity-options-${kind ?? "text"}-${useId()}`;
+  const scenarioFieldClassName = ["scenario-cell", className].filter(Boolean).join(" ");
 
   if (kind === "pokemon" && onSelectValue) {
     return (
       <PokemonAutocompleteField
-        className="scenario-cell"
+        className={scenarioFieldClassName}
         label={label}
         value={value}
         invalid={isUnresolvedEntityInput("pokemon", value)}
@@ -6994,10 +7002,11 @@ function ScenarioTextField({
     return (
       <DropdownTextField
         kind={kind}
-        className="scenario-cell"
+        className={scenarioFieldClassName}
         label={label}
         value={value}
         options={suggestedOptions ?? getMatchingEntityInputOptions(kind, value)}
+        description={description}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -7007,13 +7016,14 @@ function ScenarioTextField({
   const options = kind ? suggestedOptions ?? getMatchingEntityInputOptions(kind, value) : [];
 
   return (
-    <label className={`scenario-cell placeholder-field${kind && isUnresolvedEntityInput(kind, value) ? " is-invalid" : ""}`}>
+    <label className={`${scenarioFieldClassName} placeholder-field${kind && isUnresolvedEntityInput(kind, value) ? " is-invalid" : ""}`} title={description}>
       <input
         value={value}
         placeholder={showLabel ? label : placeholder}
         list={kind ? datalistId : undefined}
         autoComplete={kind ? "off" : undefined}
         aria-label={label}
+        aria-description={description}
         onFocus={selectInputValueOnFocus}
         onChange={onChange}
       />

@@ -324,8 +324,9 @@ describe("App", () => {
     expect(guideHtml).toContain("指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。");
     expect(guideHtml).toContain("相手ポケモンや任意の実数値を基準に、確定抜き・+〇などのSラインを計算します。条件は、全体へ適用する「共通S条件」、相手側へ適用する「相手S条件」、調整対象側へ適用する「調整対象S条件」に分かれています。");
     expect(guideHtml).toContain("トリックルームと、おいかぜ（両側）は同時に指定できます。");
-    expect(guideHtml).toContain("金色の「手動」表示へ切り替わります。");
-    expect(guideHtml).toContain("「自動 → 手動」の置換内容も表示します。");
+    expect(guideHtml).toContain("倍率欄が金色になり、欄内へ「手動」を表示します。");
+    expect(guideHtml).toContain("元入力を暗色＋金枠で示します。");
+    expect(guideHtml).not.toContain("「自動 → 手動」の置換内容");
     expect(guideHtml).not.toContain("確定抜き・同速などのSライン");
     expect(guideHtml).toContain("追加した効果は発動する前提で計算し、入力条件と一致しない場合は警告が表示されます。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。");
     expect(guideHtml).not.toContain("警告を表示しますが、自動削除はしません");
@@ -594,13 +595,17 @@ describe("App", () => {
     expect(html).not.toContain("両側の手動倍率は、選択中の持ち物・特性による自動補正を置き換えます。");
     expect(html).not.toContain("speed-manual-badge");
     expect(html).not.toContain("speed-override-summary");
+    expect(html).not.toContain("speed-source-overridden");
     expect(html.match(/>自動<\/span>/g)?.length).toBeGreaterThanOrEqual(4);
     expect(html).toContain('aria-label="素早さ調整A 共通S条件 行動順"');
     expect(html).toContain('aria-label="素早さ調整A 相手S条件 状態異常"');
     expect(html).toContain('aria-label="素早さ調整A 調整対象S条件 状態異常"');
     expect(html).toContain('aria-label="素早さ調整A 任意S値"');
     expect(css).toMatch(/\.speed-multiplier-control\.is-manual \.select-trigger\s*\{[^}]*border-color:\s*var\(--gold-line\);/s);
-    expect(css).toMatch(/\.speed-multiplier-control\.has-source\s*\{[^}]*grid-column:\s*1 \/ -1;/s);
+    expect(css).toMatch(/\.select-trigger-has-badge\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto 14px;/s);
+    expect(css).toMatch(/\.speed-source-overridden:not\(\.is-invalid\) \.dropdown-input-row input\s*\{[^}]*border-color:\s*var\(--gold-line\);/s);
+    expect(css).toMatch(/\.speed-source-overridden:not\(\.is-invalid\) \.dropdown-input-row input\s*\{[^}]*color:\s*#7f8987;/s);
+    expect(css).not.toContain(".speed-source-overridden:not(.is-invalid) .dropdown-input-row::before");
     expect(css).toMatch(/\.mobile-scenario-flow-row\.trick-room \.mobile-scenario-summary\.speed\s*\{[^}]*border-color:\s*rgba\(181, 108, 255, 0\.64\);/s);
     expect(html).not.toContain(">技補正</span>");
     expect(html).not.toContain("speed-tailwind-toggle");
@@ -665,7 +670,7 @@ describe("App", () => {
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('id="results-title"'));
   });
 
-  it("shows manual speed overrides with the automatic source they replace", () => {
+  it("shows manual badges inside S fields and decorates the overridden source inputs", () => {
     const target = {
       ...createDefaultTargetForm(),
       itemInput: "こだわりスカーフ",
@@ -690,13 +695,16 @@ describe("App", () => {
       <App initialTargetForm={target} initialScenarioForms={scenarios} />,
     );
 
-    expect(html.match(/class="speed-multiplier-control is-manual has-source"/g)).toHaveLength(4);
+    expect(html.match(/class="speed-multiplier-control is-manual"/g)).toHaveLength(4);
+    expect(html.match(/class="select-trigger-value-badge"/g)).toHaveLength(4);
     expect(html.match(/class="speed-manual-badge"/g)).toHaveLength(4);
-    expect(html.match(/自動: こだわりスカーフ 1.5倍/g)).toHaveLength(2);
-    expect(html.match(/自動: すいすい 雨 2倍/g)).toHaveLength(2);
-    expect(html).toContain("手動: 2倍");
-    expect(html).toContain("手動: 1.5倍");
-    expect(html.match(/手動: 0.5倍/g)).toHaveLength(2);
+    expect(html.match(/speed-source-overridden/g)).toHaveLength(4);
+    expect(html).toContain("1件の素早さ条件で持ち物のS補正を手動倍率に上書き中");
+    expect(html).toContain("1件の素早さ条件で特性のS補正を手動倍率に上書き中");
+    expect(html).toContain("この素早さ条件では持ち物のS補正を手動倍率に上書き中");
+    expect(html).toContain("この素早さ条件では特性のS補正を手動倍率に上書き中");
+    expect(html).not.toContain("speed-override-summary");
+    expect(html).not.toContain("<del>");
     expect(html).not.toContain("両側の手動倍率は");
   });
 
@@ -713,8 +721,10 @@ describe("App", () => {
     const html = renderToStaticMarkup(<App initialScenarioForms={scenarios} />);
 
     expect(html.match(/class="speed-multiplier-control is-manual"/g)).toHaveLength(1);
+    expect(html.match(/class="select-trigger-value-badge"/g)).toHaveLength(1);
     expect(html.match(/class="speed-manual-badge"/g)).toHaveLength(1);
     expect(html).not.toContain("speed-override-summary");
+    expect(html).not.toContain("speed-source-overridden");
   });
 
   it("keeps target override sources visible while the opponent is unresolved", () => {
@@ -736,8 +746,9 @@ describe("App", () => {
       <App initialTargetForm={target} initialScenarioForms={scenarios} />,
     );
 
-    expect(html).toContain("自動: こだわりスカーフ 1.5倍");
-    expect(html).toContain("手動: 0.5倍");
+    expect(html).toContain("speed-source-overridden");
+    expect(html).toContain("1件の素早さ条件で持ち物のS補正を手動倍率に上書き中");
+    expect(html).not.toContain("speed-override-summary");
   });
 
   it("keeps common and target speed conditions visible for a manual S target", () => {

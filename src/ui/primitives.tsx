@@ -52,6 +52,7 @@ type SelectFieldProps<TValue extends string> = {
   disabled?: boolean;
   placeholderLabel?: boolean;
   placeholderValue?: TValue;
+  valueBadge?: ReactNode;
 };
 
 export function SelectField<TValue extends string>({
@@ -65,6 +66,7 @@ export function SelectField<TValue extends string>({
   disabled = false,
   placeholderLabel = false,
   placeholderValue,
+  valueBadge,
 }: SelectFieldProps<TValue>) {
   const labelId = useId();
   const selectedOption = options.find((option) => option.value === value);
@@ -77,11 +79,16 @@ export function SelectField<TValue extends string>({
       {placeholderLabel ? null : <span className="select-field-label" id={labelId}>{label}</span>}
       <Select.Root value={value} onValueChange={(nextValue) => onChange(nextValue as TValue)} disabled={disabled}>
         <Select.Trigger
-          className={joinClassNames("select-trigger", showPlaceholderLabel && "select-trigger-placeholder")}
+          className={joinClassNames(
+            "select-trigger",
+            showPlaceholderLabel && "select-trigger-placeholder",
+            Boolean(valueBadge) && "select-trigger-has-badge",
+          )}
           aria-label={ariaLabel ?? (placeholderLabel ? `${label}: ${selectedLabel}` : undefined)}
           aria-labelledby={ariaLabel || placeholderLabel ? undefined : labelId}
         >
           <Select.Value>{displayLabel}</Select.Value>
+          {valueBadge ? <span className="select-trigger-value-badge" aria-hidden="true">{valueBadge}</span> : null}
           <Select.Icon className="select-trigger-icon">
             <ChevronRightIcon className="disclosure-chevron" />
           </Select.Icon>

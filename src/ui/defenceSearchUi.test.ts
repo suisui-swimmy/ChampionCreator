@@ -30,6 +30,7 @@ import {
   calculateSpeedAdjustmentFromUi,
   calculateSpeedAdjustmentsForCandidateRanking,
   calculateSpeedAdjustmentsFromScenarios,
+  getTargetSpeedOverrideCounts,
   createOffenseAdjustmentFormFromScenarioAttack,
   createDefaultOffenseAdjustmentForm,
   createDefaultScenarioForms,
@@ -1434,6 +1435,104 @@ describe("buildSpeedAdjustmentInput", () => {
       attackLabel: "素早さ調整A",
     });
     expect(rankingResults).toHaveLength(1);
+  });
+});
+
+describe("getTargetSpeedOverrideCounts", () => {
+  it("counts target item and ability overrides only when the automatic sources are active", () => {
+    const [, , speedScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      itemInput: "こだわりスカーフ",
+      abilityInput: "はやあし",
+    };
+    const attack = {
+      ...speedScenario.attacks[0],
+      speedTargetStatus: "brn" as const,
+      speedTargetItemMultiplier: "0.5" as const,
+      speedTargetAbilityMultiplier: "1.5" as const,
+    };
+
+    expect(getTargetSpeedOverrideCounts(target, [{ ...speedScenario, attacks: [attack] }])).toEqual({
+      item: 1,
+      ability: 1,
+    });
+  });
+
+  it("does not count auto multipliers, inactive conditions, or disabled scenarios", () => {
+    const [, , speedScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      abilityInput: "すいすい",
+    };
+    const attack = {
+      ...speedScenario.attacks[0],
+      weather: "none" as const,
+      speedTargetItemMultiplier: "auto" as const,
+      speedTargetAbilityMultiplier: "2" as const,
+      speedTargetStatus: "none" as const,
+    };
+
+    expect(getTargetSpeedOverrideCounts(target, [{ ...speedScenario, attacks: [attack] }])).toEqual({
+      item: 0,
+      ability: 0,
+    });
+    expect(getTargetSpeedOverrideCounts(target, [{
+      ...speedScenario,
+      enabled: false,
+      attacks: [
+        {
+          ...attack,
+          weather: "rain" as const,
+          speedTargetStatus: "brn" as const,
+          speedTargetItemMultiplier: "0.5" as const,
+        },
+      ],
+    }])).toEqual({ item: 0, ability: 0 });
+  });
+
+  it("counts each active speed attack independently and ignores other adjustment types", () => {
+    const [defenceScenario, , speedScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      itemInput: "こだわりスカーフ",
+    };
+    const attack = {
+      ...speedScenario.attacks[0],
+      speedTargetItemMultiplier: "0.5" as const,
+    };
+    const speedScenarioWithTwoAttacks = {
+      ...speedScenario,
+      attacks: [attack, { ...attack, id: "attack-b" }],
+    };
+
+    expect(getTargetSpeedOverrideCounts(target, [defenceScenario, speedScenarioWithTwoAttacks])).toEqual({
+      item: 2,
+      ability: 0,
+    });
+  });
+
+  it("uses target status and stays independent from unresolved opponent input", () => {
+    const [, , speedScenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      abilityInput: "はやあし",
+    };
+    const attack = {
+      ...speedScenario.attacks[0],
+      attackerPokemonInput: "存在しないポケモン",
+      speedTargetAbilityMultiplier: "1.5" as const,
+      speedTargetStatus: "brn" as const,
+    };
+
+    expect(getTargetSpeedOverrideCounts(target, [{ ...speedScenario, attacks: [attack] }])).toEqual({
+      item: 0,
+      ability: 1,
+    });
+    expect(getTargetSpeedOverrideCounts(
+      { ...target, pokemonInput: "存在しないポケモン" },
+      [{ ...speedScenario, attacks: [attack] }],
+    )).toEqual({ item: 0, ability: 0 });
   });
 });
 
