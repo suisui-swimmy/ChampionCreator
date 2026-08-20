@@ -4,5 +4,12 @@ node_modules/
 dist/
 coverage/
 .vite/
+.firebase/
 *.tsbuildinfo
+.env
+.env.*
+!.env.example
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 public/data/champions-usage-current.json

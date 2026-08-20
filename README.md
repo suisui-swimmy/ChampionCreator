@@ -222,6 +222,12 @@ npm run validate:artwork-assets
 npm run typecheck
 ```
 
+### Firebase 同期基盤（SYNC-M1）
+
+Firebase Web SDK、Google provider の認証 session owner、Auth / Firestore Emulator、Firestore Security Rules、App Check の初期化境界を `src/sync/` に分離しています。Firebase の必須 Web config がない環境では SDK を初期化せず、従来どおり guest / local-first で動作します。
+
+この段階ではログイン操作、ボックスや下書きのクラウド保存、既存 localStorage の移行、同期状態 UI はまだ提供しません。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、Rules の検証手順は [`FIREBASE_SETUP.md`](FIREBASE_SETUP.md) を参照してください。
+
 ## ライセンス・権利表記
 
 このリポジトリは MIT License の下で公開されています。

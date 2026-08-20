@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/syncRecords/{documentId} {
+      function isAuthenticatedOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function hasValidSyncRecordShape() {
+        return request.resource.data.keys().hasOnly([
+            'ownerUid',
+            'kind',
+            'schemaVersion',
+            'payload'
+          ])
+          && request.resource.data.keys().hasAll([
+            'ownerUid',
+            'kind',
+            'schemaVersion',
+            'payload'
+          ])
+          && request.resource.data.ownerUid is string
+          && request.resource.data.ownerUid == uid
+          && request.resource.data.kind is string
+          && request.resource.data.kind in ['target-box', 'enemy-box']
+          && request.resource.data.schemaVersion is int
+          && request.resource.data.schemaVersion == 1
+          && request.resource.data.payload is string
+          && request.resource.data.payload.size() <= 200000;
+      }
+
+      allow create: if isAuthenticatedOwner() && hasValidSyncRecordShape();
+      // The collection path is already scoped by uid. Keeping reads path-only
+      // allows normal collection queries without duplicating ownerUid filters.
+      allow read: if isAuthenticatedOwner();
+      allow update: if isAuthenticatedOwner()
+        && resource.data.ownerUid == uid
+        && hasValidSyncRecordShape();
+      allow delete: if false;
+    }
+  }
+}
