@@ -1,5 +1,6 @@
 others/
-docs/
+docs/*
+!docs/FIREBASE_SETUP.md
 node_modules/
 dist/
 coverage/

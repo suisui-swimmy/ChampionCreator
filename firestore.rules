@@ -12,13 +12,25 @@ service cloud.firestore {
             'ownerUid',
             'kind',
             'schemaVersion',
-            'payload'
+            'entryId',
+            'payload',
+            'revision',
+            'baseRevision',
+            'mutationId',
+            'updatedAt',
+            'deletedAt'
           ])
           && request.resource.data.keys().hasAll([
             'ownerUid',
             'kind',
             'schemaVersion',
-            'payload'
+            'entryId',
+            'payload',
+            'revision',
+            'baseRevision',
+            'mutationId',
+            'updatedAt',
+            'deletedAt'
           ])
           && request.resource.data.ownerUid is string
           && request.resource.data.ownerUid == uid
@@ -26,17 +38,46 @@ service cloud.firestore {
           && request.resource.data.kind in ['target-box', 'enemy-box']
           && request.resource.data.schemaVersion is int
           && request.resource.data.schemaVersion == 1
+          && request.resource.data.entryId is string
+          && request.resource.data.entryId.toUtf8().size() >= 1
+          && request.resource.data.entryId.toUtf8().size() <= 4096
+          && documentId == hashing.sha256(
+            (request.resource.data.kind + ':' + request.resource.data.entryId).toUtf8()
+          ).toHexString().lower()
           && request.resource.data.payload is string
-          && request.resource.data.payload.size() <= 200000;
+          && request.resource.data.payload.toUtf8().size() <= 200000
+          && request.resource.data.revision is int
+          && request.resource.data.revision >= 0
+          && request.resource.data.baseRevision is int
+          && request.resource.data.baseRevision >= 0
+          && request.resource.data.mutationId is string
+          && request.resource.data.mutationId.toUtf8().size() >= 1
+          && request.resource.data.mutationId.toUtf8().size() <= 128
+          && request.resource.data.updatedAt is timestamp
+          && (request.resource.data.deletedAt == null
+            || request.resource.data.deletedAt is timestamp);
       }
 
-      allow create: if isAuthenticatedOwner() && hasValidSyncRecordShape();
+      allow create: if isAuthenticatedOwner()
+        && hasValidSyncRecordShape()
+        && request.resource.data.revision == 1
+        && request.resource.data.baseRevision == 0
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.deletedAt == null;
       // The collection path is already scoped by uid. Keeping reads path-only
       // allows normal collection queries without duplicating ownerUid filters.
       allow read: if isAuthenticatedOwner();
       allow update: if isAuthenticatedOwner()
         && resource.data.ownerUid == uid
-        && hasValidSyncRecordShape();
+        && hasValidSyncRecordShape()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.kind == resource.data.kind
+        && request.resource.data.entryId == resource.data.entryId
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.baseRevision == resource.data.revision
+        && request.resource.data.updatedAt == request.time
+        && (request.resource.data.deletedAt == null
+          || request.resource.data.deletedAt == request.time);
       allow delete: if false;
     }
   }
