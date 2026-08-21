@@ -1,7 +1,10 @@
 import {
+  createContext,
   type ReactNode,
   useCallback,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -28,6 +31,59 @@ export interface SyncMigrationGateProps {
   readonly controllerFactory?: SyncMigrationControllerFactory;
 }
 
+export type SyncMigrationReadinessStatus =
+  | "guest"
+  | "checking"
+  | "review"
+  | "ready"
+  | "deferred"
+  | "error";
+
+export interface SyncMigrationReadiness {
+  readonly status: SyncMigrationReadinessStatus;
+  readonly ownerUid: string | null;
+}
+
+const guestReadiness: SyncMigrationReadiness = Object.freeze({
+  status: "guest",
+  ownerUid: null,
+});
+
+/**
+ * The migration gate's small, app-owned readiness contract. Keeping this
+ * separate from the dialog state lets the workbench consume migration state
+ * without depending on the dialog's focus or presentation lifecycle.
+ */
+export const SyncMigrationReadinessContext = createContext<SyncMigrationReadiness>(
+  guestReadiness,
+);
+
+export function useSyncMigrationReadiness(): SyncMigrationReadiness {
+  return useContext(SyncMigrationReadinessContext);
+}
+
+/**
+ * Convert a completed migration inspection/decision into the stable status
+ * exposed to children. A review requirement wins over a result error because
+ * source-claimed and source-changed results still need the existing review
+ * dialog. Only the controller's completed status can become ready.
+ */
+export const getSyncMigrationReadiness = (
+  ownerUid: string,
+  result: LocalStorageMigrationResult,
+): SyncMigrationReadiness => {
+  if (result.status === "completed") {
+    return { status: "ready", ownerUid };
+  }
+  if (result.requiresDecision || result.status === "needs-review") {
+    return { status: "review", ownerUid };
+  }
+  if (result.error) {
+    return { status: "error", ownerUid };
+  }
+  return { status: "checking", ownerUid };
+};
+
 type DialogState = {
   readonly mode: "checking" | "review" | "error";
   readonly result?: LocalStorageMigrationResult;
@@ -52,9 +108,10 @@ const defaultFactory: SyncMigrationControllerFactory = (ownerUid) => {
 };
 
 /**
- * Runtime-only M3 bridge. The existing App box handlers remain on the legacy
- * localStorage keys until M4; this gate only owns the one-time account import.
- * GuideTutorial never mounts this component.
+ * Runtime M3 bridge and M4 readiness owner. This gate owns only the one-time
+ * account import; SyncBoxProvider consumes the completed readiness state and
+ * keeps normal pull/push work from racing migration. GuideTutorial never
+ * mounts either runtime component.
  */
 export function SyncMigrationGate({
   children,
@@ -67,8 +124,15 @@ export function SyncMigrationGate({
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [busy, setBusy] = useState(false);
   const [dismissedOwner, setDismissedOwner] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<SyncMigrationReadiness>(() => (
+    authState.availability === "available"
+      && authState.status === "signed-in"
+      && authState.user
+      ? { status: "checking", ownerUid: authState.user.uid }
+      : guestReadiness
+  ));
 
-  const presentResult = useCallback((result: LocalStorageMigrationResult) => {
+  const presentResult = useCallback((ownerUid: string, result: LocalStorageMigrationResult) => {
     const mode = getSyncMigrationMode(result);
     setDialog(mode === null
       ? null
@@ -77,6 +141,7 @@ export function SyncMigrationGate({
           result,
           errorMessage: result.error?.message,
         });
+    setReadiness(getSyncMigrationReadiness(ownerUid, result));
   }, []);
 
   const createController = useCallback(async (ownerUid: string): Promise<SyncMigrationControllerLike> => {
@@ -89,6 +154,7 @@ export function SyncMigrationGate({
 
   const inspect = useCallback(async (ownerUid: string) => {
     const operation = ++operationRef.current;
+    setReadiness({ status: "checking", ownerUid });
     setBusy(true);
     // A Firestore server read can be slow while offline. Keep the existing
     // local-first App interactive until an actual decision or error exists.
@@ -97,7 +163,7 @@ export function SyncMigrationGate({
       const controller = await createController(ownerUid);
       const result = await controller.inspect();
       if (operation === operationRef.current) {
-        presentResult(result);
+        presentResult(ownerUid, result);
       }
     } catch (error) {
       if (operation === operationRef.current) {
@@ -105,6 +171,7 @@ export function SyncMigrationGate({
           ? error.message
           : "保存データの移行を確認できませんでした";
         setDialog({ mode: "error", errorMessage: message });
+        setReadiness({ status: "error", ownerUid });
       }
     } finally {
       if (operation === operationRef.current) {
@@ -115,13 +182,14 @@ export function SyncMigrationGate({
 
   useEffect(() => {
     const ownerUid = authState.user?.uid ?? null;
-    if (!ownerUid) {
+    if (!ownerUid || authState.availability !== "available") {
       operationRef.current += 1;
       controllerRef.current = null;
       ownerRef.current = null;
       setDialog(null);
       setBusy(false);
       setDismissedOwner(null);
+      setReadiness(guestReadiness);
       return;
     }
     // Keep an existing migration surface while sign-out is pending or failed
@@ -152,9 +220,10 @@ export function SyncMigrationGate({
         // marker cannot be saved. The legacy keys remain untouched either way.
         setDismissedOwner(ownerUid);
         setDialog(null);
+        setReadiness({ status: "deferred", ownerUid });
         return;
       }
-      presentResult(result);
+      presentResult(ownerUid, result);
     } catch (error) {
       if (operation === operationRef.current) {
         setDialog({
@@ -163,6 +232,7 @@ export function SyncMigrationGate({
             ? error.message
             : "保存データの移行を完了できませんでした",
         });
+        setReadiness({ status: "error", ownerUid });
       }
     } finally {
       if (operation === operationRef.current) setBusy(false);
@@ -186,9 +256,13 @@ export function SyncMigrationGate({
     conflictCount: 0,
   };
 
+  const readinessValue = useMemo(() => readiness, [readiness]);
+
   return (
     <>
-      {children}
+      <SyncMigrationReadinessContext.Provider value={readinessValue}>
+        {children}
+      </SyncMigrationReadinessContext.Provider>
       {dialog ? (
         <SyncMigrationDialog
           mode={dialog.mode}

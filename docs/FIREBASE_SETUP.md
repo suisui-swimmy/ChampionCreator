@@ -1,8 +1,8 @@
-# Firebase 同期基盤セットアップ
+# Firebase 同期基盤セットアップ（SYNC-M1〜M4）
 
-この文書は `SYNC-M1`〜`SYNC-M3` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、既存 localStorage の one-time migration controller、Firestore Security Rules までです。
+この文書は `SYNC-M1`〜`SYNC-M4` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、既存 localStorage の one-time migration controller、M4の調整対象・仮想敵ボックス接続、Firestore Security Rules までです。
 
-これらは後続UIから利用するための内部境界であり、通常の既存ボックス操作にはまだ接続していません。`SYNC-M3` の controller は既存データを一度だけ移行するための状態・選択肢・UID境界を扱いますが、常設のログイン・同期状態・アカウント管理 UI は提供しません。通常の実ボックス操作のクラウド保存は `SYNC-M4`、cloud draft は `SYNC-M5`、常設UIは `SYNC-M6` の範囲です。Firebase config がない公開・開発環境でも、既存の guest / local-first 機能はそのまま利用できます。
+`SYNC-M3` の controller は既存データを一度だけ移行するための状態・選択肢・UID境界を扱い、`SYNC-M4` の runtime owner はM3の移行が完了した復元済み認証 session にだけ通常のbox操作を接続します。ゲスト・未認証、移行保留中、移行失敗時は従来どおり browser storage / local-first です。常設のログイン・同期状態・アカウント管理 UI は提供せず、cloud draft は `SYNC-M5`、常設UIは `SYNC-M6` の範囲です。Firebase config がない公開・開発環境でも、既存の guest / local-first 機能はそのまま利用できます。
 
 ## 現在の状態
 
@@ -11,15 +11,19 @@
 | Firebase Web SDK と `src/sync/` の境界 | 実装済み |
 | 認証 session の restore / sign-in / sign-out / error 単体テスト | 実装済み |
 | Auth / Firestore Emulator 設定 | 実装済み |
-| local / Firestore repository、outbox、同期 coordinator | 実装済み（既存ボックスUIへは未接続） |
-| Firestore Security Rules と Emulator test | M2 source / test 実装済み |
+| local / Firestore repository、outbox、同期 coordinator | 実装済み（M2） |
+| Firestore Security Rules と Emulator test | 実装済み（M2） |
 | Firebase project / Web app の作成 | 2026-08-21 確認済み |
 | Google provider / authorized domains の設定 | 2026-08-21 確認済み |
 | Cloud Firestore の作成 | 2026-08-21 確認済み |
 | M2 Rules / indexes の本番反映 | 2026-08-21 完了 |
 | App Check の登録と monitor | 2026-08-21 確認済み（enforcement は未実施） |
-| SYNC-M3 one-time migration controller / UID別 marker / 初回統合dialog | 認証済みsessionのruntime gateへ接続済み（通常box操作へは未接続） |
-| 実ログイン UI と通常の実ボックス同期 | 後続マイルストーン（M4〜M6） |
+| SYNC-M3 one-time migration controller / UID別 marker / 初回統合dialog | 認証済みsessionのruntime gateへ接続済み |
+| SYNC-M4 UID別local / outbox / Firestoreによるtarget・enemy box操作 | M3完了後の復元済み認証sessionへ接続済み |
+| SYNC-M4 tombstone、競合保持、破損remote分離 | 実装済み（対象repository / coordinator経路） |
+| SYNC-M4 backup importの`統合` / `全端末を置き換え`と件数preview | 実装済み |
+| SYNC-M5 cloud draft | 未実装 |
+| SYNC-M6 常設ログイン・同期状態・アカウント管理 UI | 未実装 |
 
 ## 秘密情報の境界
 
@@ -62,6 +66,15 @@ npm run test:rules
 
 通常の unit test は `npm test`、Rules を含む全体確認は `npm run check` です。`.firebaserc` は実 project へ接続しない `demo-championcreator` 専用です。
 
+M4のbox同期とバックアップ取り込みを変更した場合は、次の対象テストを先に実行します。
+
+```powershell
+npm test -- --run src/sync/syncBoxRepository.test.ts src/sync/SyncBoxProvider.test.tsx src/ui/boxBackupImport.test.ts src/ui/BackupImportDialog.test.tsx src/App.test.tsx
+npm run typecheck
+```
+
+その後、Emulator上でM3を `completed` にしたテスト用UIDの復元済みsessionを使い、調整対象・仮想敵の作成、上書き、名前変更、複製、削除、読み込み、バックアップ書き出し・読み込みを確認します。保存操作ではローカル保存とoutboxが先に成功し、Firestoreのnetwork / permission failure後も画面のentryとJSONバックアップが残ること、起動・focus・online復帰・ボックス操作後の再試行でoutboxが再送されることを確認します。削除後のtombstone、同一slotの更新競合・更新対削除、1件だけ壊れたremote、バックアップの件数preview（追加 / 更新 / 削除 / 変更なし）、`統合`、アカウント時の`全端末を置き換え`、削除済みentryのバックアップ復元も確認対象です。ゲスト・未認証、M3の移行保留・失敗、`variant="tutorial"` では従来のlocal-first動作を確認し、cloud draftと常設ログイン・同期状態・アカウント管理UIを期待しません。
+
 ## Web config
 
 `.env.example` を `.env.local` へコピーした状態は Emulator 用です。本番用には次の GitHub repository variables を `Settings > Secrets and variables > Actions > Variables` へ登録します。workflow は値がそろっていない場合も build を成功させ、その build では Firebase を初期化しません。
@@ -83,7 +96,7 @@ Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATO
 
 ## Firebase Console と本番反映
 
-次の項目は repository から自動実行しません。1〜7は2026-08-21に確認済みです。`SYNC-M3` の one-time migration controller は既存の Web config、Rules、indexes、`target-box` / `enemy-box` の保存契約を再利用するため、新しい Firebase Console 設定は追加しません。Rules / indexes を変更した場合だけ7を改めて実施し、project ID や credential そのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
+次の項目は repository から自動実行しません。1〜7は2026-08-21に確認済みです。`SYNC-M3` の one-time migration controller と `SYNC-M4` のbox runtime ownerは既存の Web config、Rules、indexes、`target-box` / `enemy-box` の保存契約を再利用するため、新しい Firebase Console 設定は追加しません。Rules / indexes を変更した場合だけ7を改めて実施し、project ID や credential そのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
 
 1. Firebase project と Web app を作成し、Web config を取得する。
 2. Authentication で Google provider を有効にする。追加 scope は要求しない。
@@ -106,7 +119,7 @@ GitHub Pages / custom domain では `GoogleAuthProvider` と `signInWithPopup` �
 
 session restore は `onAuthStateChanged`、logout は Firebase Auth の `signOut` を owner 経由で扱います。Firebase の `User`、credential、access token は `App` の state や保存 payload に渡しません。
 
-## Firestore repository / Rules の M2 契約
+## Firestore repository / Rules の M2〜M4 契約
 
 許可する path は `/users/{uid}/syncRecords/{documentId}` だけです。
 
@@ -138,4 +151,30 @@ session restore は `onAuthStateChanged`、logout は Firebase Auth の `signOut
 - 未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しい端末で復活させない
 - 移行対象は調整対象・仮想敵ボックスの保存済み入力条件だけで、計算結果、候補一覧、Worker state、チュートリアル state、cloud draft は含めない
 
-この controller は後続のアカウント導線から利用する内部境界であり、`SYNC-M4` の通常box UI同期、`SYNC-M5` のcloud draft、`SYNC-M6` の常設ログイン・同期状態・アカウント管理 UIを先取りしません。M3のproduction確認では実Google popupと移行のread / writeを検証しますが、Firebase Consoleで新しいprovider、scope、collection、indexを追加する作業はありません。
+この controller は `SYNC-M4` のbox runtime ownerが利用する内部境界です。M3のproduction確認では実Google popupと移行のread / writeを検証しますが、Firebase Consoleで新しいprovider、scope、collection、indexを追加する作業はありません。`SYNC-M5` のcloud draft、`SYNC-M6` の常設ログイン・同期状態・アカウント管理 UIは先取りしません。
+
+## SYNC-M4: 調整対象・仮想敵ボックス同期
+
+M4のruntime ownerは、次の条件をすべて満たす場合だけ有効になります。
+
+- Firebase Authから復元された認証済みsessionである
+- sessionのUIDとM3のmigration markerのUIDが一致する
+- M3のone-time migration stateが `completed` である
+
+条件を満たさないゲスト・未認証、移行中、`needs-review`、移行エラー、別UIDのsessionは、従来のbrowser storage / local-first経路を使います。M4はログインボタンや常設の同期状態・アカウント管理画面を追加するものではありません。
+
+M4でUID別のlocal repositoryへ保存する対象は、調整対象ボックスと仮想敵ボックスの各保存slotです。作成、上書き、名前変更、複製、削除、読み込み、バックアップ書き出し、バックアップ読み込みを同じkind境界で扱い、調整対象と仮想敵のpayloadを混ぜません。計算結果、候補一覧、Worker state、作業中のdraft、チュートリアルstateは同期しません。
+
+保存操作はlocal repositoryの成功を先に確定し、同じUID namespaceの順序付きoutboxへmutationを残してからFirestoreへpushします。同期はlaunch、window focus、online復帰、box操作後のretryで行います。network、permission、quota、invalid payload、future schemaは別状態として扱い、同期に失敗してもlocalのentryとJSON backupを失いません。
+
+削除はpayloadを保持するtombstoneとしてFirestoreへ残します。同じslotの同時更新、更新対削除、復帰端末からの古いmutationはLast Write Winsで消さず、local / remoteの両方を競合として保持して要確認にします。remoteの1件が破損・未知schemaでも、その1件を問題として隔離し、正常なremote一覧を空にしません。
+
+バックアップ読み込みは既存のbox parserとkind検証を通し、コミット前に追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示します。認証済みsessionでは `統合` と `全端末を置き換え`、ゲスト・未認証では `統合` と `この端末を置き換え` を選べます。`統合` は同一ID・同一payloadを重複排除し、同一ID・異なるpayloadを競合コピーとして残します。読み込めないentryがある場合は警告を表示して置き換えを無効にし、validなentryの`統合`だけを許可します。保存0件の正常な空backupは、現在の全slotを削除する警告を表示したうえで置き換えを許可します。バックアップに残ったentryを統合すれば、tombstoneになった削除済みentryも明示的に復元できます。
+
+### M4の確認項目
+
+1. `npm run emulators` と `npm run test:rules` がpassし、Rulesが未認証・別UIDを拒否することを確認する。
+2. M3 `completed` のテストUIDで、local保存成功後にoutboxが増え、Firestore failure時も保存済みentryとbackupが残ることを確認する。
+3. launch、focus、online、box操作後のretryでoutboxが順番どおり送信され、同じmutationの再送が二重適用されないことを確認する。
+4. tombstone、更新競合・更新対削除、壊れたremoteの分離、`統合` / `全端末を置き換え` の件数preview、削除済みentryのbackup復元を対象テストで確認する。
+5. guest、M3移行保留・失敗、`variant="tutorial"` が永続化・同期されず、cloud draftとM6の常設UIを先取りしていないことを確認する。

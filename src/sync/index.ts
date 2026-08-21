@@ -51,6 +51,8 @@ export {
   type SyncWriteResult,
 } from "./firestoreSyncRepository";
 export * from "./syncCoordinator";
+export * from "./syncBoxRepository";
+export * from "./SyncBoxProvider";
 export * from "./migrationStorage";
 export {
   buildMigrationPlan,
@@ -66,5 +68,15 @@ export {
 } from "./migrationPlan";
 export * from "./localStorageMigration";
 export * from "./SyncMigrationDialog";
-export * from "./SyncMigrationGate";
+export {
+  SyncMigrationGate,
+  SyncMigrationReadinessContext,
+  getSyncMigrationReadiness,
+  useSyncMigrationReadiness,
+  type SyncMigrationControllerLike,
+  type SyncMigrationControllerFactory,
+  type SyncMigrationGateProps,
+  type SyncMigrationReadiness,
+  type SyncMigrationReadinessStatus,
+} from "./SyncMigrationGate";
 export * from "./syncMigrationView";

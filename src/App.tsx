@@ -144,6 +144,11 @@ import {
   stringifyEnemyBoxBackupDocument,
   type EnemyBoxEntry,
 } from "./ui/enemyBoxStorage";
+import { BackupImportDialog, type BackupImportDecision } from "./ui/BackupImportDialog";
+import {
+  planBoxBackupImport,
+  planEnemyBoxBackupImport,
+} from "./ui/boxBackupImport";
 import {
   createDraftFingerprint,
   discardDraftFromBrowser,
@@ -153,6 +158,7 @@ import {
   type DraftLoadResult,
 } from "./ui/draftStorage";
 import { persistCurrentWorkToBoxAndDiscardDraft } from "./ui/currentWorkPersistence";
+import { useOptionalSyncBox } from "./sync/SyncBoxProvider";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
 import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
@@ -941,6 +947,12 @@ export const createScenario = (index: number, gameType: GameType = "singles"): S
 const BLANK_BOX_SLOT_ID = "blank-box-slot";
 const BLANK_ENEMY_BOX_SLOT_ID = "blank-enemy-box-slot";
 
+export const isBoxStorageSourceReady = (
+  renderedSourceKey: string,
+  activeSourceKey: string,
+  isAvailable: boolean,
+): boolean => isAvailable && renderedSourceKey === activeSourceKey;
+
 type SuggestionUsageContextValue = {
   data: ChampionsUsageData | null;
   format: SuggestionFormat;
@@ -1042,6 +1054,20 @@ type DraftSaveUiState =
   | { status: "error"; operation: "save" | "discard" | "commit"; message: string };
 
 type DraftBaselineKind = "draft" | "box" | null;
+
+type PendingBackupImport =
+  | {
+      kind: "target";
+      importedEntries: readonly BoxEntry[];
+      warnings: readonly string[];
+      warningsBlockReplace: boolean;
+    }
+  | {
+      kind: "enemy";
+      importedEntries: readonly EnemyBoxEntry[];
+      warnings: readonly string[];
+      warningsBlockReplace: boolean;
+    };
 
 export const getDraftSaveStatusLabel = (state: DraftSaveUiState): string => {
   switch (state.status) {
@@ -1199,6 +1225,7 @@ export function App({
   onSearchStatusChange,
   onCandidateApplied,
 }: AppProps = {}) {
+  const syncBox = useOptionalSyncBox();
   const [savedSuggestionFormat, setSavedSuggestionFormat] = useState<SuggestionFormat>(
     () => variant === "tutorial" ? "Singles" : loadSuggestionFormat(),
   );
@@ -1242,6 +1269,7 @@ export function App({
   );
   const [selectedEnemyBoxEntryId, setSelectedEnemyBoxEntryId] = useState<string | null>(null);
   const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
+  const [pendingBackupImport, setPendingBackupImport] = useState<PendingBackupImport | null>(null);
   const [draftRecovery, setDraftRecovery] = useState<DraftRecoveryState | null>(() => {
     if (variant !== "default") {
       return null;
@@ -1264,6 +1292,7 @@ export function App({
   const lastDraftFingerprintRef = useRef<string | null>(null);
   const boxBaselineFingerprintRef = useRef<string | null>(null);
   const pendingBoxCommitFingerprintRef = useRef<string | null>(null);
+  const boxSourceKeyRef = useRef("device");
   if (lastDraftFingerprintRef.current === null) {
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
   }
@@ -1933,8 +1962,97 @@ export function App({
     }
   };
 
+  const activeBoxSourceKey = syncBox?.sourceKey ?? "device";
+  const isBoxSourceReady = isBoxStorageSourceReady(
+    boxSourceKeyRef.current,
+    activeBoxSourceKey,
+    syncBox?.isAvailable ?? true,
+  );
+  const boxSourceUnavailableMessage = syncBox?.lastSyncError
+    ?? "保存先を切り替えています。少し待ってからもう一度操作してください";
+
+  const saveTargetBoxEntries = (nextEntries: BoxEntry[]): string | null => {
+    if (!isBoxSourceReady) return boxSourceUnavailableMessage;
+    return syncBox?.mode === "account"
+      ? syncBox.saveTargetEntries(nextEntries, boxEntries)
+      : saveBoxEntriesToBrowser(nextEntries);
+  };
+
+  const saveEnemyEntries = (nextEntries: EnemyBoxEntry[]): string | null => {
+    if (!isBoxSourceReady) return boxSourceUnavailableMessage;
+    return syncBox?.mode === "account"
+      ? syncBox.saveEnemyEntries(nextEntries, enemyBoxEntries)
+      : saveEnemyBoxEntriesToBrowser(nextEntries);
+  };
+
+  useEffect(() => {
+    if (variant !== "default") return;
+
+    const sourceKey = syncBox?.sourceKey ?? "device";
+    const sourceChanged = boxSourceKeyRef.current !== sourceKey;
+    if (!syncBox && !sourceChanged) return;
+    if (syncBox && !syncBox.isAvailable) {
+      setPendingBackupImport(null);
+      setBoxOpen(false);
+      setEnemyBoxOpen(false);
+      setBoxMessage(syncBox.lastSyncError ?? "アカウントの保存一覧を読み込めません");
+      setEnemyBoxMessage(syncBox.lastSyncError ?? "アカウントの保存一覧を読み込めません");
+      return;
+    }
+
+    const nextTargetEntries = syncBox
+      ? [...syncBox.snapshot.targetEntries]
+      : loadBoxEntriesFromBrowser();
+    const nextEnemyEntries = syncBox
+      ? [...syncBox.snapshot.enemyEntries]
+      : loadEnemyBoxEntriesFromBrowser();
+    boxSourceKeyRef.current = sourceKey;
+    setBoxEntries(nextTargetEntries);
+    setEnemyBoxEntries(nextEnemyEntries);
+    setSelectedBoxEntryId((current) => (
+      current && nextTargetEntries.some((entry) => entry.id === current)
+        ? current
+        : nextTargetEntries[0]?.id ?? BLANK_BOX_SLOT_ID
+    ));
+    setSelectedEnemyBoxEntryId((current) => (
+      current && nextEnemyEntries.some((entry) => entry.id === current)
+        ? current
+        : nextEnemyEntries[0]?.id ?? BLANK_ENEMY_BOX_SLOT_ID
+    ));
+    if (sourceChanged) {
+      boxBaselineFingerprintRef.current = null;
+      pendingBoxCommitFingerprintRef.current = null;
+      if (draftBaselineKindRef.current === "box") {
+        draftBaselineKindRef.current = null;
+      }
+      setPendingBackupImport(null);
+      setBoxOpen(false);
+      setEnemyBoxOpen(false);
+      setBoxMessage(null);
+      setEnemyBoxMessage(null);
+    } else {
+      reconcileBoxBaselineAfterEntriesChange(nextTargetEntries);
+    }
+  }, [
+    syncBox?.isAvailable,
+    syncBox?.lastSyncError,
+    syncBox?.sourceKey,
+    syncBox?.snapshot,
+    variant,
+  ]);
+
+  const ensureBoxSourceReady = (kind: "target" | "enemy"): boolean => {
+    if (isBoxSourceReady) return true;
+    if (kind === "target") {
+      setBoxMessage(boxSourceUnavailableMessage);
+    } else {
+      setEnemyBoxMessage(boxSourceUnavailableMessage);
+    }
+    return false;
+  };
+
   const persistBoxEntries = (nextEntries: BoxEntry[], message: string): boolean => {
-    const error = saveBoxEntriesToBrowser(nextEntries);
+    const error = saveTargetBoxEntries(nextEntries);
     if (error) {
       setBoxMessage(error);
       return false;
@@ -1950,6 +2068,7 @@ export function App({
     const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
     const result = persistCurrentWorkToBoxAndDiscardDraft(
       nextEntries,
+      { saveBoxEntries: saveTargetBoxEntries },
     );
     if (result.status === "box-error") {
       setBoxMessage(result.message);
@@ -1964,6 +2083,11 @@ export function App({
   };
 
   const toggleBoxPanel = () => {
+    if (!ensureBoxSourceReady("target")) {
+      setEnemyBoxOpen(false);
+      setBoxOpen(true);
+      return;
+    }
     if (!boxOpen && !selectedBoxEntryId) {
       setSelectedBoxEntryId(BLANK_BOX_SLOT_ID);
     }
@@ -1980,6 +2104,7 @@ export function App({
   };
 
   const handleLoadBoxEntry = (entryId: string) => {
+    if (!ensureBoxSourceReady("target")) return;
     if (entryId === BLANK_BOX_SLOT_ID) {
       const blankTarget = createBlankTargetForm();
       const blankScenarios = [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))];
@@ -2053,7 +2178,7 @@ export function App({
         ? { ...entry, name, updatedAt: now }
         : entry
     ));
-    const error = saveBoxEntriesToBrowser(nextEntries);
+    const error = saveTargetBoxEntries(nextEntries);
     if (error) {
       setBoxMessage(error);
       return;
@@ -2081,6 +2206,7 @@ export function App({
   };
 
   const handleDeleteBoxEntry = (entryId: string) => {
+    if (!ensureBoxSourceReady("target")) return;
     if (entryId === BLANK_BOX_SLOT_ID) {
       setBoxMessage("空スロットは削除できません");
       return;
@@ -2102,6 +2228,7 @@ export function App({
   };
 
   const handleExportBoxBackup = () => {
+    if (!ensureBoxSourceReady("target")) return;
     if (boxEntries.length === 0) {
       setBoxMessage("書き出せる保存がありません");
       return;
@@ -2122,6 +2249,7 @@ export function App({
   };
 
   const handleRequestImportBoxBackup = () => {
+    if (!ensureBoxSourceReady("target")) return;
     boxImportInputRef.current?.click();
   };
 
@@ -2129,6 +2257,10 @@ export function App({
     const input = event.currentTarget;
     const file = input.files?.[0];
     if (!file) {
+      return;
+    }
+    if (!ensureBoxSourceReady("target")) {
+      input.value = "";
       return;
     }
 
@@ -2139,29 +2271,12 @@ export function App({
         return;
       }
 
-      const warningText = result.warnings.length > 0 ? `\n${result.warnings.join("\n")}` : "";
-      const shouldImport = boxEntries.length === 0
-        || (typeof window !== "undefined" && window.confirm(
-          `現在の保存${boxEntries.length}件を、バックアップ${result.entries.length}件で置き換えますか？${warningText}`,
-        ));
-      if (!shouldImport) {
-        return;
-      }
-
-      const error = saveBoxEntriesToBrowser(result.entries);
-      if (error) {
-        setBoxMessage(error);
-        return;
-      }
-
-      setBoxEntries(result.entries);
-      reconcileBoxBaselineAfterEntriesChange(result.entries);
-      setSelectedBoxEntryId(result.entries[0]?.id ?? BLANK_BOX_SLOT_ID);
-      setBoxMessage(
-        result.warnings.length > 0
-          ? `バックアップを読み込みました（${result.entries.length}件 / ${result.warnings.join("、")}）`
-          : `バックアップを読み込みました（${result.entries.length}件）`,
-      );
+      setPendingBackupImport({
+        kind: "target",
+        importedEntries: result.entries,
+        warnings: result.warnings,
+        warningsBlockReplace: result.skippedCount > 0,
+      });
     } catch {
       setBoxMessage("バックアップの読み込みに失敗しました");
     } finally {
@@ -2173,7 +2288,7 @@ export function App({
     nextEntries: EnemyBoxEntry[],
     message: string,
   ): boolean => {
-    const error = saveEnemyBoxEntriesToBrowser(nextEntries);
+    const error = saveEnemyEntries(nextEntries);
     if (error) {
       setEnemyBoxMessage(error);
       return false;
@@ -2185,6 +2300,11 @@ export function App({
   };
 
   const toggleEnemyBoxPanel = () => {
+    if (!ensureBoxSourceReady("enemy")) {
+      setBoxOpen(false);
+      setEnemyBoxOpen(true);
+      return;
+    }
     if (!enemyBoxOpen && !selectedEnemyBoxEntryId) {
       setSelectedEnemyBoxEntryId(BLANK_ENEMY_BOX_SLOT_ID);
     }
@@ -2201,6 +2321,7 @@ export function App({
   };
 
   const handleLoadEnemyBoxEntry = (entryId: string) => {
+    if (!ensureBoxSourceReady("enemy")) return;
     if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
       resetActiveSearch();
       setScenarioForms([createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]);
@@ -2257,7 +2378,7 @@ export function App({
         ? { ...entry, name, updatedAt: now }
         : entry
     ));
-    const error = saveEnemyBoxEntriesToBrowser(nextEntries);
+    const error = saveEnemyEntries(nextEntries);
     if (error) {
       setEnemyBoxMessage(error);
       return;
@@ -2285,6 +2406,7 @@ export function App({
   };
 
   const handleDeleteEnemyBoxEntry = (entryId: string) => {
+    if (!ensureBoxSourceReady("enemy")) return;
     if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
       setEnemyBoxMessage("空スロットは削除できません");
       return;
@@ -2306,6 +2428,7 @@ export function App({
   };
 
   const handleExportEnemyBoxBackup = () => {
+    if (!ensureBoxSourceReady("enemy")) return;
     if (enemyBoxEntries.length === 0) {
       setEnemyBoxMessage("書き出せる仮想敵がありません");
       return;
@@ -2326,6 +2449,7 @@ export function App({
   };
 
   const handleRequestImportEnemyBoxBackup = () => {
+    if (!ensureBoxSourceReady("enemy")) return;
     enemyBoxImportInputRef.current?.click();
   };
 
@@ -2333,6 +2457,10 @@ export function App({
     const input = event.currentTarget;
     const file = input.files?.[0];
     if (!file) {
+      return;
+    }
+    if (!ensureBoxSourceReady("enemy")) {
+      input.value = "";
       return;
     }
 
@@ -2343,33 +2471,72 @@ export function App({
         return;
       }
 
-      const warningText = result.warnings.length > 0 ? `\n${result.warnings.join("\n")}` : "";
-      const shouldImport = enemyBoxEntries.length === 0
-        || (typeof window !== "undefined" && window.confirm(
-          `現在の仮想敵${enemyBoxEntries.length}件を、バックアップ${result.entries.length}件で置き換えますか？${warningText}`,
-        ));
-      if (!shouldImport) {
-        return;
-      }
-
-      const error = saveEnemyBoxEntriesToBrowser(result.entries);
-      if (error) {
-        setEnemyBoxMessage(error);
-        return;
-      }
-
-      setEnemyBoxEntries(result.entries);
-      setSelectedEnemyBoxEntryId(result.entries[0]?.id ?? BLANK_ENEMY_BOX_SLOT_ID);
-      setEnemyBoxMessage(
-        result.warnings.length > 0
-          ? `仮想敵バックアップを読み込みました（${result.entries.length}件 / ${result.warnings.join("、")}）`
-          : `仮想敵バックアップを読み込みました（${result.entries.length}件）`,
-      );
+      setPendingBackupImport({
+        kind: "enemy",
+        importedEntries: result.entries,
+        warnings: result.warnings,
+        warningsBlockReplace: result.skippedCount > 0,
+      });
     } catch {
       setEnemyBoxMessage("仮想敵バックアップの読み込みに失敗しました");
     } finally {
       input.value = "";
     }
+  };
+
+  const restoreBackupImportButtonFocus = (kind: PendingBackupImport["kind"]) => {
+    if (typeof window === "undefined") return;
+    window.setTimeout(() => {
+      const panelId = kind === "target" ? "target-box-title" : "enemy-box-title";
+      const panel = document.getElementById(panelId)?.closest<HTMLElement>(".box-window");
+      panel?.querySelector<HTMLButtonElement>('[aria-label="バックアップを読み込む"]')?.focus();
+    }, 0);
+  };
+
+  const closePendingBackupImport = () => {
+    const kind = pendingBackupImport?.kind;
+    setPendingBackupImport(null);
+    if (kind) restoreBackupImportButtonFocus(kind);
+  };
+
+  const handleApplyBackupImport = (decision: BackupImportDecision) => {
+    if (!pendingBackupImport) return;
+    const plans = pendingBackupImport.kind === "target"
+      ? planBoxBackupImport(boxEntries, pendingBackupImport.importedEntries)
+      : planEnemyBoxBackupImport(enemyBoxEntries, pendingBackupImport.importedEntries);
+    const plan = plans[decision];
+    const { added, updated, removed, unchanged } = plan.impact;
+    const actionLabel = decision === "merge" ? "統合" : "置き換え";
+    const detail = [
+      `追加${added}件`,
+      `更新${updated}件`,
+      `削除${removed}件`,
+      `変更なし${unchanged}件`,
+      plan.conflictCopyCount > 0 ? `競合コピー${plan.conflictCopyCount}件` : null,
+      plan.deduplicatedCount > 0 ? `重複除外${plan.deduplicatedCount}件` : null,
+      ...pendingBackupImport.warnings,
+    ].filter(Boolean).join(" / ");
+    const message = `バックアップを${actionLabel}しました（${detail}）`;
+
+    if (pendingBackupImport.kind === "target") {
+      const nextEntries = [...plan.entries] as BoxEntry[];
+      if (!persistBoxEntries(nextEntries, message)) {
+        closePendingBackupImport();
+        return;
+      }
+      setSelectedBoxEntryId(nextEntries[0]?.id ?? BLANK_BOX_SLOT_ID);
+    } else {
+      const nextEntries = [...plan.entries] as EnemyBoxEntry[];
+      if (!persistEnemyBoxEntries(nextEntries, message)) {
+        closePendingBackupImport();
+        return;
+      }
+      setSelectedEnemyBoxEntryId(nextEntries[0]?.id ?? BLANK_ENEMY_BOX_SLOT_ID);
+    }
+
+    const kind = pendingBackupImport.kind;
+    setPendingBackupImport(null);
+    restoreBackupImportButtonFocus(kind);
   };
 
   const handleSelectCandidate = (id: string) => {
@@ -2426,6 +2593,30 @@ export function App({
     setMobileFocusedAttackId(attackId ?? scenario?.attacks[0]?.id ?? null);
     setMobileSheet("scenarios");
   };
+
+  const boxStorageLabel = syncBox?.mode === "account"
+    ? "この端末に保存・クラウド同期"
+    : "ブラウザに保存";
+  const targetConflictCount = syncBox?.snapshot.targetConflictCount ?? 0;
+  const enemyConflictCount = syncBox?.snapshot.enemyConflictCount ?? 0;
+  const getSyncNotice = (conflictCount: number): string | null => {
+    if (!syncBox) return null;
+    if (conflictCount > 0) {
+      return `同期競合を${conflictCount}件保持しています。対象の保存は上書き・削除せず残しています`;
+    }
+    if (syncBox.lastSyncError) {
+      return syncBox.snapshot.outboxCount > 0
+        ? `この端末には保存済みです。クラウド同期はあとで再試行します（${syncBox.lastSyncError}）`
+        : syncBox.lastSyncError;
+    }
+    return null;
+  };
+  const combineBoxMessages = (message: string | null, notice: string | null): string | null => (
+    [...new Set([message, notice].filter((value): value is string => Boolean(value)))].join(" / ") || null
+  );
+  const visibleBoxEntries = isBoxSourceReady ? boxEntries : [];
+  const visibleEnemyBoxEntries = isBoxSourceReady ? enemyBoxEntries : [];
+  const unavailableBoxMessage = "保存一覧を読み込めないため、操作を停止しています";
 
   return (
     <SuggestionUsageContext.Provider value={{
@@ -2519,19 +2710,37 @@ export function App({
         </div>
       ) : null}
 
+      {variant === "default" && pendingBackupImport ? (
+        <BackupImportDialog
+          kind={pendingBackupImport.kind}
+          plans={pendingBackupImport.kind === "target"
+            ? planBoxBackupImport(boxEntries, pendingBackupImport.importedEntries)
+            : planEnemyBoxBackupImport(enemyBoxEntries, pendingBackupImport.importedEntries)}
+          scope={syncBox?.mode === "account" ? "account" : "device"}
+          warnings={pendingBackupImport.warnings}
+          warningsBlockReplace={pendingBackupImport.warningsBlockReplace}
+          onDecision={handleApplyBackupImport}
+          onCancel={closePendingBackupImport}
+        />
+      ) : null}
+
       {variant === "default" && boxOpen ? (
         <BoxPanel
           title="調整対象ボックス"
+          storageLabel={boxStorageLabel}
           dialogId="target-box-title"
           blankSlotId={BLANK_BOX_SLOT_ID}
           currentLabel="編集中の調整条件"
           currentRowAriaLabel="編集中の調整条件"
           gridAriaLabel="保存済み調整対象ボックス"
-          emptyMessage="今の調整条件を保存するとここに表示されます"
-          entries={boxEntries}
-          selectedEntryId={selectedBoxEntryId}
+          emptyMessage={isBoxSourceReady
+            ? "今の調整条件を保存するとここに表示されます"
+            : unavailableBoxMessage}
+          entries={visibleBoxEntries}
+          selectedEntryId={isBoxSourceReady ? selectedBoxEntryId : null}
           currentSummary={currentBoxSummary}
-          message={boxMessage}
+          message={combineBoxMessages(boxMessage, getSyncNotice(targetConflictCount))}
+          disabled={!isBoxSourceReady}
           onClose={() => setBoxOpen(false)}
           onSaveCurrent={handleSaveCurrentBox}
           onSelectEntry={setSelectedBoxEntryId}
@@ -2547,16 +2756,20 @@ export function App({
       {variant === "default" && enemyBoxOpen ? (
         <BoxPanel
           title="仮想敵ボックス"
+          storageLabel={boxStorageLabel}
           dialogId="enemy-box-title"
           blankSlotId={BLANK_ENEMY_BOX_SLOT_ID}
           currentLabel="編集中の仮想敵"
           currentRowAriaLabel="編集中の仮想敵"
           gridAriaLabel="保存済み仮想敵ボックス"
-          emptyMessage="今の仮想敵シナリオを保存するとここに表示されます"
-          entries={enemyBoxEntries}
-          selectedEntryId={selectedEnemyBoxEntryId}
+          emptyMessage={isBoxSourceReady
+            ? "今の仮想敵シナリオを保存するとここに表示されます"
+            : unavailableBoxMessage}
+          entries={visibleEnemyBoxEntries}
+          selectedEntryId={isBoxSourceReady ? selectedEnemyBoxEntryId : null}
           currentSummary={currentEnemyBoxSummary}
-          message={enemyBoxMessage}
+          message={combineBoxMessages(enemyBoxMessage, getSyncNotice(enemyConflictCount))}
+          disabled={!isBoxSourceReady}
           onClose={() => setEnemyBoxOpen(false)}
           onSaveCurrent={handleSaveCurrentEnemyBox}
           onSelectEntry={setSelectedEnemyBoxEntryId}
@@ -4318,6 +4531,7 @@ type BoxPanelEntry = {
 
 type BoxPanelProps = {
   title: string;
+  storageLabel: string;
   dialogId: string;
   blankSlotId: string;
   currentLabel: string;
@@ -4328,6 +4542,7 @@ type BoxPanelProps = {
   selectedEntryId: string | null;
   currentSummary: BoxEntrySummary;
   message: string | null;
+  disabled?: boolean;
   onClose: () => void;
   onSaveCurrent: () => void;
   onSelectEntry: (entryId: string) => void;
@@ -4365,6 +4580,7 @@ function BoxSlotArtwork({ entry }: { entry: BoxPanelEntry }) {
 
 function BoxPanel({
   title,
+  storageLabel,
   dialogId,
   blankSlotId,
   currentLabel,
@@ -4375,6 +4591,7 @@ function BoxPanel({
   selectedEntryId,
   currentSummary,
   message,
+  disabled = false,
   onClose,
   onSaveCurrent,
   onSelectEntry,
@@ -4397,14 +4614,14 @@ function BoxPanel({
         <header className="box-window-header">
           <div>
             <h2 id={dialogId}>{title}</h2>
-            <span>ブラウザに保存</span>
+            <span>{storageLabel}</span>
           </div>
           <div className="box-window-actions">
-            <Button variant="ghost" size="small" aria-label="バックアップを書き出す" onClick={onExportEntries}>
+            <Button variant="ghost" size="small" aria-label="バックアップを書き出す" disabled={disabled} onClick={onExportEntries}>
               <span className="box-action-label-full">バックアップを書き出す</span>
               <span className="box-action-label-short" aria-hidden="true">書き出す</span>
             </Button>
-            <Button variant="ghost" size="small" aria-label="バックアップを読み込む" onClick={onRequestImport}>
+            <Button variant="ghost" size="small" aria-label="バックアップを読み込む" disabled={disabled} onClick={onRequestImport}>
               <span className="box-action-label-full">バックアップを読み込む</span>
               <span className="box-action-label-short" aria-hidden="true">読み込む</span>
             </Button>
@@ -4420,7 +4637,7 @@ function BoxPanel({
             <strong>{currentSummary.pokemonName}</strong>
           </div>
           <small>{currentSummary.conditionSummary}</small>
-          <Button variant="primary" size="small" onClick={onSaveCurrent}>
+          <Button variant="primary" size="small" disabled={disabled} onClick={onSaveCurrent}>
             保存
           </Button>
         </div>
@@ -4429,6 +4646,7 @@ function BoxPanel({
           <button
             className={`box-slot blank${isBlankSlotSelected ? " selected" : ""}`}
             type="button"
+            disabled={disabled}
             aria-pressed={isBlankSlotSelected}
             onClick={() => onSelectEntry(blankSlotId)}
           >
@@ -4444,6 +4662,7 @@ function BoxPanel({
               <button
                 className={`box-slot${selected ? " selected" : ""}`}
                 type="button"
+                disabled={disabled}
                 aria-pressed={selected}
                 key={entry.id}
                 onClick={() => onSelectEntry(entry.id)}
@@ -4473,6 +4692,7 @@ function BoxPanel({
                     value={selectedEntry.name}
                     placeholder={selectedEntry.summary.pokemonName}
                     aria-label="保存名"
+                    disabled={disabled}
                     onChange={(event) => onRenameEntry(selectedEntry.id, event.target.value)}
                   />
                 ) : (
@@ -4480,18 +4700,18 @@ function BoxPanel({
                 )}
               </div>
               <div className="box-action-buttons">
-                <Button variant="primary" size="small" onClick={() => onLoadEntry(selectedEntry?.id ?? blankSlotId)}>
+                <Button variant="primary" size="small" disabled={disabled} onClick={() => onLoadEntry(selectedEntry?.id ?? blankSlotId)}>
                   読込
                 </Button>
                 {selectedEntry ? (
                   <>
-                    <Button variant="ghost" size="small" onClick={() => onOverwriteEntry(selectedEntry.id)}>
+                    <Button variant="ghost" size="small" disabled={disabled} onClick={() => onOverwriteEntry(selectedEntry.id)}>
                       上書き
                     </Button>
-                    <Button variant="ghost" size="small" onClick={() => onDuplicateEntry(selectedEntry.id)}>
+                    <Button variant="ghost" size="small" disabled={disabled} onClick={() => onDuplicateEntry(selectedEntry.id)}>
                       複製
                     </Button>
-                    <Button variant="danger" size="small" onClick={() => onDeleteEntry(selectedEntry.id)}>
+                    <Button variant="danger" size="small" disabled={disabled} onClick={() => onDeleteEntry(selectedEntry.id)}>
                       削除
                     </Button>
                   </>

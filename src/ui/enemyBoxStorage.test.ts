@@ -279,6 +279,35 @@ describe("enemyBoxStorage", () => {
     });
   });
 
+  it("skips entries with missing stable identity fields deterministically", () => {
+    const entry = createEnemyBoxEntryFromScenarios(createDefaultScenarioForms(), {
+      id: "enemy-stable",
+      now: "2026-07-29T00:00:00.000Z",
+    });
+    const { id: _missingId, ...withoutId } = entry;
+    const { createdAt: _missingCreatedAt, ...withoutCreatedAt } = entry;
+    const raw = JSON.stringify({
+      schemaVersion: ENEMY_BOX_STORAGE_SCHEMA_VERSION,
+      entries: [
+        entry,
+        withoutId,
+        { ...entry, id: "" },
+        withoutCreatedAt,
+        { ...entry, createdAt: "not-a-date" },
+      ],
+    });
+
+    const first = parseEnemyBoxBackupDocument(raw);
+    const second = parseEnemyBoxBackupDocument(raw);
+    expect(first).toMatchObject({
+      status: "success",
+      entries: [entry],
+      skippedCount: 4,
+      warnings: ["4件の仮想敵スロットを読み込めませんでした"],
+    });
+    expect(second).toEqual(first);
+  });
+
   it("reports malformed backups and creates stable filenames", () => {
     expect(parseEnemyBoxBackupDocument("not-json")).toMatchObject({
       status: "error",

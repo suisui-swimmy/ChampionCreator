@@ -56,6 +56,10 @@ type EnemyBoxBrowserStorage = Pick<Storage, "getItem" | "setItem">;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isValidEnemyBoxTimestamp = (value: unknown): value is string => (
+  typeof value === "string" && Number.isFinite(Date.parse(value))
+);
+
 const createEnemyBoxEntryId = (): string => {
   if (globalThis.crypto && "randomUUID" in globalThis.crypto) {
     return globalThis.crypto.randomUUID();
@@ -122,7 +126,14 @@ export const createEnemyBoxEntryFromScenarios = (
 };
 
 const normalizeEnemyBoxEntry = (value: unknown): EnemyBoxEntry | null => {
-  if (!isRecord(value) || !isRecord(value.payload)) {
+  if (
+    !isRecord(value)
+    || !isRecord(value.payload)
+    || typeof value.id !== "string"
+    || value.id.length === 0
+    || !isValidEnemyBoxTimestamp(value.createdAt)
+    || !isValidEnemyBoxTimestamp(value.updatedAt)
+  ) {
     return null;
   }
 
@@ -148,10 +159,10 @@ const normalizeEnemyBoxEntry = (value: unknown): EnemyBoxEntry | null => {
       : fallbackSummary;
 
     return {
-      id: typeof value.id === "string" && value.id ? value.id : createEnemyBoxEntryId(),
+      id: value.id,
       name: typeof value.name === "string" && value.name ? value.name : summary.pokemonName,
-      createdAt: typeof value.createdAt === "string" ? value.createdAt : new Date().toISOString(),
-      updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : new Date().toISOString(),
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
       summary,
       payload: {
         schemaVersion: SHARE_SCHEMA_VERSION,

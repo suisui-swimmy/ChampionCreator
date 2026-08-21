@@ -754,6 +754,65 @@ textarea:focus-visible,
   grid-template-columns: minmax(0, 1fr);
 }
 
+.backup-import-window {
+  width: min(760px, calc(100vw - 36px));
+}
+
+.backup-import-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.backup-import-plan {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-inset);
+  padding: 10px;
+}
+
+.backup-import-plan > h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.backup-import-counts {
+  gap: 4px;
+}
+
+.backup-import-plan-note {
+  margin: 8px 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.backup-import-warning {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.backup-import-warning ul,
+.backup-import-warning p {
+  margin: 0;
+}
+
+.backup-import-warning ul {
+  padding-left: 18px;
+}
+
+.backup-import-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .section-heading {
   justify-content: space-between;
   margin-bottom: 10px;
@@ -6441,6 +6500,14 @@ textarea {
     padding: 18px;
   }
 
+  .backup-import-plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-import-actions {
+    grid-template-columns: 1fr;
+  }
+
   /* iOS zooms focused text controls below 16px and can trap users inside mobile sheets. */
   .mobile-target-open input:not([type="checkbox"]):not([type="radio"]),
   .mobile-target-open select,
@@ -6522,6 +6589,24 @@ textarea {
 
   .sync-migration-comparison {
     grid-template-columns: 1fr;
+  }
+
+  .box-window-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .box-window-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .box-window-actions .ui-button-small,
+  .box-close-button {
+    width: 100%;
+    min-width: 0;
+    white-space: nowrap;
   }
 
   .mobile-symmetric-board {

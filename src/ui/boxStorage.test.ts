@@ -431,6 +431,35 @@ describe("boxStorage", () => {
     });
   });
 
+  it("skips entries with missing stable identity fields instead of generating random values", () => {
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "box-stable",
+      now: "2026-06-11T00:00:00.000Z",
+    });
+    const { id: _missingId, ...withoutId } = entry;
+    const { updatedAt: _missingUpdatedAt, ...withoutUpdatedAt } = entry;
+    const raw = JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [
+        entry,
+        withoutId,
+        { ...entry, id: "" },
+        withoutUpdatedAt,
+        { ...entry, updatedAt: "not-a-date" },
+      ],
+    });
+
+    const first = parseBoxBackupDocument(raw);
+    const second = parseBoxBackupDocument(raw);
+    expect(first).toMatchObject({
+      status: "success",
+      entries: [entry],
+      skippedCount: 4,
+      warnings: ["4件の保存スロットを読み込めませんでした"],
+    });
+    expect(second).toEqual(first);
+  });
+
   it("creates stable backup filenames from dates", () => {
     expect(createBoxBackupFileName(new Date("2026-06-12T09:30:00.000Z"))).toBe(
       "championcreator-box-backup-2026-06-12.json",

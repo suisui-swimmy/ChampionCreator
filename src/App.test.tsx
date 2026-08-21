@@ -29,6 +29,7 @@ import {
   getNatureUsageOverlayOpacity,
   getScenarioPanelVisibleScenarios,
   isAbilitySupportCard,
+  isBoxStorageSourceReady,
   isUnresolvedEntityInput,
   formatMovePowerEvaluation,
   normalizeNumericInputText,
@@ -72,6 +73,14 @@ describe("App", () => {
       operation: "commit",
       message: "failed",
     })).toBe("下書き削除エラー");
+  });
+
+  it("blocks box operations until the rendered list matches the active storage namespace", () => {
+    expect(isBoxStorageSourceReady("device", "device", true)).toBe(true);
+    expect(isBoxStorageSourceReady("device", "account:a", true)).toBe(false);
+    expect(isBoxStorageSourceReady("account:a", "device", true)).toBe(false);
+    expect(isBoxStorageSourceReady("account:a", "account:a", false)).toBe(false);
+    expect(isBoxStorageSourceReady("account:a", "account:a", true)).toBe(true);
   });
 
   it("uses the intended Pokemon as each suggestion ranking owner", () => {
@@ -337,7 +346,7 @@ describe("App", () => {
     expect(guideHtml).toContain("必要生存率・KO確率、A/C/Sの固定SPが厳しすぎないかを確認してください。");
     expect(guideHtml).not.toContain("A/C/Sの固定SPが重すぎないか");
     expect(guideHtml).toContain('class="guide-notes-list"');
-    expect(guideHtml).toContain("保存データはブラウザ内保存なので、バックアップ用途としては完全ではありません。");
+    expect(guideHtml).toContain("ゲスト・未認証の保存データはブラウザ内保存なので、バックアップ用途としては完全ではありません。");
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
@@ -1537,6 +1546,24 @@ describe("App", () => {
     expect(readme).toContain("次回起動時に下書きの復元確認を表示しません");
     expect(guide).toContain("ボックスに保存済み");
     expect(guide).toContain("次回起動時に下書きの復元確認を表示しません");
+    for (const document of [readme, guide]) {
+      expect(document).toContain("SYNC-M4");
+      expect(document).toContain("ゲスト・未認証");
+      expect(document).toContain("UID別");
+      expect(document).toContain("Firestore");
+      expect(document).toContain("outbox");
+      expect(document).toContain("tombstone");
+      expect(document).toContain("Last Write Wins");
+      expect(document).toContain("追加・更新・削除・変更なし");
+      expect(document).toContain("競合コピー");
+      expect(document).toContain("重複除外");
+      expect(document).toContain("置き換えを無効");
+      expect(document).toContain("保存0件");
+      expect(document).toContain("全端末を置き換え");
+      expect(document).toContain("削除済み");
+      expect(document).toContain("SYNC-M5");
+      expect(document).toContain("SYNC-M6");
+    }
     expect(readme).not.toContain("Googleでログイン");
     expect(guide).not.toContain("Googleでログイン");
   });
