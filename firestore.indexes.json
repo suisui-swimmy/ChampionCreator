@@ -5,6 +5,11 @@
       "collectionGroup": "syncRecords",
       "fieldPath": "payload",
       "indexes": []
+    },
+    {
+      "collectionGroup": "drafts",
+      "fieldPath": "payload",
+      "indexes": []
     }
   ]
 }

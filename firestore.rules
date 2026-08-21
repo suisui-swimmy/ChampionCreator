@@ -80,5 +80,85 @@ service cloud.firestore {
           || request.resource.data.deletedAt == request.time);
       allow delete: if false;
     }
+
+    match /users/{uid}/drafts/{deviceId} {
+      function isAuthenticatedOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function hasValidDraftShape() {
+        return request.resource.data.keys().hasOnly([
+            'ownerUid',
+            'deviceId',
+            'deviceLabel',
+            'schemaVersion',
+            'payload',
+            'revision',
+            'baseRevision',
+            'mutationId',
+            'updatedAt',
+            'expiresAt',
+            'deletedAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'ownerUid',
+            'deviceId',
+            'deviceLabel',
+            'schemaVersion',
+            'payload',
+            'revision',
+            'baseRevision',
+            'mutationId',
+            'updatedAt',
+            'expiresAt',
+            'deletedAt'
+          ])
+          && request.resource.data.ownerUid is string
+          && request.resource.data.ownerUid == uid
+          && request.resource.data.deviceId is string
+          && request.resource.data.deviceId == deviceId
+          && request.resource.data.deviceId.toUtf8().size() >= 1
+          && request.resource.data.deviceId.toUtf8().size() <= 128
+          && request.resource.data.deviceLabel is string
+          && request.resource.data.deviceLabel.toUtf8().size() >= 1
+          && request.resource.data.deviceLabel.toUtf8().size() <= 200
+          && request.resource.data.schemaVersion is int
+          && request.resource.data.schemaVersion == 1
+          && request.resource.data.payload is string
+          && request.resource.data.payload.toUtf8().size() <= 200000
+          && request.resource.data.revision is int
+          && request.resource.data.revision >= 0
+          && request.resource.data.baseRevision is int
+          && request.resource.data.baseRevision >= 0
+          && request.resource.data.mutationId is string
+          && request.resource.data.mutationId.toUtf8().size() >= 1
+          && request.resource.data.mutationId.toUtf8().size() <= 128
+          && request.resource.data.updatedAt is timestamp
+          && request.resource.data.expiresAt is timestamp
+          && request.resource.data.expiresAt > request.time
+          && request.resource.data.expiresAt <= request.time + duration.value(30, 'd')
+          && (request.resource.data.deletedAt == null
+            || request.resource.data.deletedAt is timestamp);
+      }
+
+      allow create: if isAuthenticatedOwner()
+        && hasValidDraftShape()
+        && request.resource.data.revision == 1
+        && request.resource.data.baseRevision == 0
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.deletedAt == null;
+      allow read: if isAuthenticatedOwner();
+      allow update: if isAuthenticatedOwner()
+        && resource.data.ownerUid == uid
+        && hasValidDraftShape()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.deviceId == resource.data.deviceId
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.baseRevision == resource.data.revision
+        && request.resource.data.updatedAt == request.time
+        && (request.resource.data.deletedAt == null
+          || request.resource.data.deletedAt == request.time);
+      allow delete: if false;
+    }
   }
 }

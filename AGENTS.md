@@ -55,7 +55,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 > `SYNC-M7` の完了時に、この見出しから次の `## 最重要の設計境界` の直前までを同じ変更内で削除する。
 > 完了済みマイルストーン表へ本ロードマップを転載せず、現在地は `PROGRESS.md`、詳細履歴は `PROGRESS.archive/` に残す。
 
-現在の開始地点は `SYNC-M1`（`SYNC-M0` は 2026-08-17 完了）。各マイルストーンは `Done` を満たし、検証結果を `PROGRESS.md` へ記録してから次へ進む。後続マイルストーンの実装を先取りしない。
+現在の開始地点は `SYNC-M6`（`SYNC-M0`〜`SYNC-M5` は完了）。各マイルストーンは `Done` を満たし、検証結果を `PROGRESS.md` へ記録してから次へ進む。後続マイルストーンの実装を先取りしない。
 
 このロードマップ中だけ、Firebase Authentication / Cloud Firestore / App Check を、ユーザーが明示承認した managed backend / DB の例外として扱う。GitHub Pages の静的フロントは維持し、Firebase 以外の runtime backend、Google Drive 保存、自前 OAuth サーバー、Realtime 共同編集へ暗黙に拡張しない。
 

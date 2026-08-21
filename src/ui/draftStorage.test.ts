@@ -8,6 +8,7 @@ import {
   DRAFT_AUTOSAVE_DELAY_MS,
   DRAFT_STORAGE_KEY,
   DRAFT_STORAGE_SCHEMA_VERSION,
+  makeAccountDraftStorageKey,
   createDraftFingerprint,
   discardDraftFromBrowser,
   loadDraftFromBrowser,
@@ -204,6 +205,28 @@ describe("draftStorage", () => {
 
     expect(discardDraftFromBrowser(memory.storage)).toEqual({ status: "success" });
     expect(loadDraftFromBrowser(memory.storage)).toEqual({ status: "empty" });
+  });
+
+  it("supports an account/device key without changing the guest key", () => {
+    const memory = createMemoryStorage();
+    const accountKey = makeAccountDraftStorageKey("uid/日本語", "device / 1");
+    const target = createDefaultTargetForm();
+    const scenarios = createDefaultScenarioForms();
+
+    expect(accountKey).toContain(encodeURIComponent("uid/日本語"));
+    expect(accountKey).toContain(encodeURIComponent("device / 1"));
+    expect(accountKey).not.toBe(DRAFT_STORAGE_KEY);
+
+    expect(saveDraftToBrowser(target, scenarios, {
+      storage: memory.storage,
+      storageKey: accountKey,
+    })).toMatchObject({ status: "success" });
+    expect(loadDraftFromBrowser({ storage: memory.storage, storageKey: accountKey }))
+      .toMatchObject({ status: "success" });
+    expect(loadDraftFromBrowser(memory.storage)).toEqual({ status: "empty" });
+    expect(discardDraftFromBrowser({ storage: memory.storage, storageKey: accountKey }))
+      .toEqual({ status: "success" });
+    expect(memory.values.has(accountKey)).toBe(false);
   });
 
   it("waits 750ms before autosaving and cancels stale scheduled saves", () => {

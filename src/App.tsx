@@ -150,15 +150,25 @@ import {
   planEnemyBoxBackupImport,
 } from "./ui/boxBackupImport";
 import {
+  DRAFT_STORAGE_KEY,
   createDraftFingerprint,
   discardDraftFromBrowser,
   loadDraftFromBrowser,
+  parseDraftStorageDocument,
   saveDraftToBrowser,
   scheduleDraftAutosave,
   type DraftLoadResult,
+  type DraftStorageDocument,
 } from "./ui/draftStorage";
 import { persistCurrentWorkToBoxAndDiscardDraft } from "./ui/currentWorkPersistence";
 import { useOptionalSyncBox } from "./sync/SyncBoxProvider";
+import { CloudDraftDialog } from "./sync/CloudDraftDialog";
+import {
+  useOptionalCloudDraft,
+  type CloudDraftContextValue,
+  type CloudDraftRuntimeStatus,
+} from "./sync/CloudDraftProvider";
+import type { CloudDraftRecord } from "./sync/cloudDraftTypes";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
 import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
 import {
@@ -681,6 +691,37 @@ export const formatMovePowerEvaluation = (
   return `威力 ${appliedPower}`;
 };
 
+export const resolveDraftStorageScope = (
+  cloudDraft: Pick<CloudDraftContextValue, "sourceKey" | "localDraftStorageKey"> | null,
+): { readonly sourceKey: string; readonly storageKey: string | null } => cloudDraft
+  ? { sourceKey: cloudDraft.sourceKey, storageKey: cloudDraft.localDraftStorageKey }
+  : { sourceKey: "device", storageKey: DRAFT_STORAGE_KEY };
+
+export type DraftAutosaveDecision = "skip" | "discard-box" | "unchanged" | "save";
+
+export const getDraftAutosaveDecision = (input: {
+  readonly variant: "default" | "tutorial";
+  readonly hasRecovery: boolean;
+  readonly sourceMatches: boolean;
+  readonly fingerprint: string;
+  readonly boxBaselineFingerprint: string | null;
+  readonly lastDraftFingerprint: string | null;
+}): DraftAutosaveDecision => {
+  if (input.variant !== "default" || input.hasRecovery || !input.sourceMatches) return "skip";
+  if (input.fingerprint === input.boxBaselineFingerprint) return "discard-box";
+  if (input.fingerprint === input.lastDraftFingerprint) return "unchanged";
+  return "save";
+};
+
+export const attemptCloudDraftQueue = (
+  draft: DraftStorageDocument,
+  cloudDraft: Pick<CloudDraftContextValue, "queueCurrentDraft"> | null,
+): { readonly status: "success" } | { readonly status: "error"; readonly message: string } => {
+  if (!cloudDraft) return { status: "success" };
+  const message = cloudDraft.queueCurrentDraft(draft);
+  return message ? { status: "error", message } : { status: "success" };
+};
+
 const formatLocalizedDamageResult = (resultText: string): string =>
   resultText
     .replace(/\s+-\s+/g, "-")
@@ -1051,7 +1092,7 @@ type DraftRecoveryState =
 
 type DraftSaveUiState =
   | { status: "idle" | "saving" | "saved" | "box-saved" }
-  | { status: "error"; operation: "save" | "discard" | "commit"; message: string };
+  | { status: "error"; operation: "save" | "cloud-save" | "discard" | "commit"; message: string };
 
 type DraftBaselineKind = "draft" | "box" | null;
 
@@ -1069,18 +1110,39 @@ type PendingBackupImport =
       warningsBlockReplace: boolean;
     };
 
-export const getDraftSaveStatusLabel = (state: DraftSaveUiState): string => {
+export const getDraftSaveStatusLabel = (
+  state: DraftSaveUiState,
+  cloudStatus?: CloudDraftRuntimeStatus | null,
+): string => {
   switch (state.status) {
     case "idle":
       return "";
     case "saving":
       return "下書きを保存中…";
     case "saved":
-      return "この端末に下書き保存済み";
+      switch (cloudStatus) {
+        case "queued":
+        case "idle":
+          return "端末保存済み";
+        case "syncing":
+          return "クラウドへ保存中…";
+        case "synced":
+          return "クラウド保存済み";
+        case "offline":
+          return "オフライン（端末保存済み）";
+        case "error":
+          return "同期エラー（端末保存済み）";
+        default:
+          return "この端末に下書き保存済み";
+      }
     case "box-saved":
       return "ボックスに保存済み";
     case "error":
-      return state.operation === "save" ? "下書き保存エラー" : "下書き削除エラー";
+      if (state.operation === "save") return "下書き保存エラー";
+      if (state.operation === "cloud-save") return "同期エラー（端末保存済み）";
+      return state.operation === "commit"
+        ? "ボックス保存後の下書き削除エラー"
+        : "下書き削除エラー";
   }
 };
 
@@ -1226,6 +1288,19 @@ export function App({
   onCandidateApplied,
 }: AppProps = {}) {
   const syncBox = useOptionalSyncBox();
+  const cloudDraft = useOptionalCloudDraft();
+  const draftStorageScope = resolveDraftStorageScope(cloudDraft);
+  const activeDraftStorageKey = draftStorageScope.storageKey;
+  const activeDraftSourceKey = draftStorageScope.sourceKey;
+  const unavailableDraftStorageMessage = cloudDraft?.lastError
+    ?? "アカウントの下書き保存を利用できません";
+  const loadActiveDraftFromBrowser = (): DraftLoadResult => activeDraftStorageKey
+    ? loadDraftFromBrowser({ storageKey: activeDraftStorageKey })
+    : {
+        status: "error",
+        reason: "unavailable",
+        message: unavailableDraftStorageMessage,
+      };
   const [savedSuggestionFormat, setSavedSuggestionFormat] = useState<SuggestionFormat>(
     () => variant === "tutorial" ? "Singles" : loadSuggestionFormat(),
   );
@@ -1270,11 +1345,12 @@ export function App({
   const [selectedEnemyBoxEntryId, setSelectedEnemyBoxEntryId] = useState<string | null>(null);
   const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
   const [pendingBackupImport, setPendingBackupImport] = useState<PendingBackupImport | null>(null);
+  const [cloudDraftOpen, setCloudDraftOpen] = useState(false);
   const [draftRecovery, setDraftRecovery] = useState<DraftRecoveryState | null>(() => {
     if (variant !== "default") {
       return null;
     }
-    const result = loadDraftFromBrowser();
+    const result = loadActiveDraftFromBrowser();
     return result.status === "empty" ? null : result;
   });
   const [draftSaveState, setDraftSaveState] = useState<DraftSaveUiState>({ status: "idle" });
@@ -1292,7 +1368,15 @@ export function App({
   const lastDraftFingerprintRef = useRef<string | null>(null);
   const boxBaselineFingerprintRef = useRef<string | null>(null);
   const pendingBoxCommitFingerprintRef = useRef<string | null>(null);
+  const pendingCloudDraftRef = useRef<{
+    readonly sourceKey: string;
+    readonly fingerprint: string;
+    readonly draft: DraftStorageDocument;
+  } | null>(null);
   const boxSourceKeyRef = useRef("device");
+  const draftSourceKeyRef = useRef(activeDraftSourceKey);
+  const cloudDraftRef = useRef(cloudDraft);
+  cloudDraftRef.current = cloudDraft;
   if (lastDraftFingerprintRef.current === null) {
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
   }
@@ -1374,13 +1458,30 @@ export function App({
   }, [usageData, variant]);
 
   useEffect(() => {
-    if (variant !== "default" || draftRecovery !== null) {
+    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
+    const decision = getDraftAutosaveDecision({
+      variant,
+      hasRecovery: draftRecovery !== null,
+      sourceMatches: draftSourceKeyRef.current === activeDraftSourceKey,
+      fingerprint,
+      boxBaselineFingerprint: boxBaselineFingerprintRef.current,
+      lastDraftFingerprint: lastDraftFingerprintRef.current,
+    });
+    if (decision === "skip") {
       return undefined;
     }
 
-    const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
-    if (fingerprint === boxBaselineFingerprintRef.current) {
-      const result = discardDraftFromBrowser();
+    if (!activeDraftStorageKey) {
+      setDraftSaveState({
+        status: "error",
+        operation: "save",
+        message: unavailableDraftStorageMessage,
+      });
+      return undefined;
+    }
+
+    if (decision === "discard-box") {
+      const result = discardCurrentDraftFromActiveStorage();
       if (result.status === "success") {
         lastDraftFingerprintRef.current = fingerprint;
         draftBaselineKindRef.current = "box";
@@ -1396,7 +1497,7 @@ export function App({
       }
       return undefined;
     }
-    if (fingerprint === lastDraftFingerprintRef.current) {
+    if (decision === "unchanged") {
       setDraftSaveState((current) => (
         current.status === "saving"
         || (current.status === "error" && current.operation === "save")
@@ -1415,15 +1516,10 @@ export function App({
     setDraftSaveState({ status: "saving" });
     const cancelScheduledSave = scheduleDraftAutosave(() => {
       cancelDraftSaveRef.current = null;
-      const result = saveDraftToBrowser(targetForm, scenarioForms);
-      if (result.status === "success") {
-        lastDraftFingerprintRef.current = fingerprint;
-        draftBaselineKindRef.current = "draft";
-        pendingBoxCommitFingerprintRef.current = null;
-        setDraftSaveState({ status: "saved" });
-        return;
-      }
-      setDraftSaveState({ status: "error", operation: "save", message: result.message });
+      const result = saveDraftToBrowser(targetForm, scenarioForms, {
+        storageKey: activeDraftStorageKey,
+      });
+      applyCurrentDraftSaveResult(fingerprint, result);
     });
     cancelDraftSaveRef.current = cancelScheduledSave;
 
@@ -1433,7 +1529,28 @@ export function App({
         cancelDraftSaveRef.current = null;
       }
     };
-  }, [draftRecovery, scenarioForms, targetForm, variant]);
+  }, [activeDraftSourceKey, activeDraftStorageKey, draftRecovery, scenarioForms, targetForm, variant]);
+
+  useEffect(() => {
+    if (variant !== "default" || draftSourceKeyRef.current === activeDraftSourceKey) {
+      return;
+    }
+    cancelDraftSaveRef.current?.();
+    cancelDraftSaveRef.current = null;
+    draftSourceKeyRef.current = activeDraftSourceKey;
+    // Treat the already-visible form as an uncommitted transition baseline.
+    // It must not be copied automatically from the previous UID/guest slot;
+    // only a later explicit edit or restore may save it into this namespace.
+    lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
+    pendingCloudDraftRef.current = null;
+    draftBaselineKindRef.current = null;
+    pendingBoxCommitFingerprintRef.current = null;
+    setCloudDraftOpen(false);
+    setDraftSaveState({ status: "idle" });
+    const result = loadActiveDraftFromBrowser();
+    draftBaselineKindRef.current = result.status === "success" ? "draft" : null;
+    setDraftRecovery(result.status === "empty" ? null : result);
+  }, [activeDraftSourceKey, activeDraftStorageKey, scenarioForms, targetForm, variant]);
 
   useEffect(() => {
     const previousVariant = previousVariantRef.current;
@@ -1443,6 +1560,7 @@ export function App({
     }
 
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
+    pendingCloudDraftRef.current = null;
     setDraftSaveState({ status: "idle" });
     boxBaselineFingerprintRef.current = null;
     pendingBoxCommitFingerprintRef.current = null;
@@ -1452,10 +1570,10 @@ export function App({
       return;
     }
 
-    const result = loadDraftFromBrowser();
+    const result = loadActiveDraftFromBrowser();
     draftBaselineKindRef.current = result.status === "success" ? "draft" : null;
     setDraftRecovery(result.status === "empty" ? null : result);
-  }, [scenarioForms, targetForm, variant]);
+  }, [activeDraftStorageKey, scenarioForms, targetForm, variant]);
 
   useEffect(() => {
     return () => {
@@ -1549,6 +1667,32 @@ export function App({
     cancelDraftSaveRef.current = null;
   };
 
+  const discardCurrentDraftFromActiveStorage = () => {
+    if (!activeDraftStorageKey) {
+      return {
+        status: "error" as const,
+        reason: "unavailable" as const,
+        message: unavailableDraftStorageMessage,
+      };
+    }
+    const result = discardDraftFromBrowser({ storageKey: activeDraftStorageKey });
+    if (result.status === "success") {
+      const currentDeviceId = cloudDraftRef.current?.deviceId;
+      if (currentDeviceId) {
+        const cloudError = cloudDraftRef.current?.deleteDraft(currentDeviceId);
+        if (cloudError) {
+          return {
+            status: "error" as const,
+            reason: "unavailable" as const,
+            message: `クラウド下書きを削除待ちにできませんでした: ${cloudError}`,
+          };
+        }
+      }
+      pendingCloudDraftRef.current = null;
+    }
+    return result;
+  };
+
   const applyCurrentDraftSaveResult = (
     fingerprint: string,
     result: ReturnType<typeof saveDraftToBrowser>,
@@ -1557,19 +1701,78 @@ export function App({
       lastDraftFingerprintRef.current = fingerprint;
       draftBaselineKindRef.current = "draft";
       pendingBoxCommitFingerprintRef.current = null;
+      if (result.draft) {
+        const cloudAttempt = attemptCloudDraftQueue(result.draft, cloudDraftRef.current);
+        if (cloudAttempt.status === "error") {
+          pendingCloudDraftRef.current = {
+            sourceKey: cloudDraftRef.current?.sourceKey ?? activeDraftSourceKey,
+            fingerprint,
+            draft: result.draft,
+          };
+          setDraftSaveState({
+            status: "error",
+            operation: "cloud-save",
+            message: `この端末には保存済みですが、クラウド送信を準備できませんでした: ${cloudAttempt.message}`,
+          });
+          return;
+        }
+      }
+      pendingCloudDraftRef.current = null;
       setDraftSaveState({ status: "saved" });
       return;
     }
     setDraftSaveState({ status: "error", operation: "save", message: result.message });
   };
 
+  const retryCloudDraftQueue = () => {
+    const pending = pendingCloudDraftRef.current;
+    if (!pending) {
+      saveCurrentDraftNow();
+      return;
+    }
+    if (
+      pending.sourceKey !== activeDraftSourceKey
+      || cloudDraftRef.current?.sourceKey !== pending.sourceKey
+    ) {
+      pendingCloudDraftRef.current = null;
+      setDraftSaveState({
+        status: "error",
+        operation: "cloud-save",
+        message: "下書きの保存先が切り替わりました。現在の入力を変更してから保存し直してください",
+      });
+      return;
+    }
+    const cloudAttempt = attemptCloudDraftQueue(pending.draft, cloudDraftRef.current);
+    if (cloudAttempt.status === "error") {
+      setDraftSaveState({
+        status: "error",
+        operation: "cloud-save",
+        message: `この端末には保存済みですが、クラウド送信を準備できませんでした: ${cloudAttempt.message}`,
+      });
+      return;
+    }
+    lastDraftFingerprintRef.current = pending.fingerprint;
+    pendingCloudDraftRef.current = null;
+    setDraftSaveState({ status: "saved" });
+  };
+
   const saveCurrentDraftNow = () => {
     cancelPendingDraftSave();
+    if (!activeDraftStorageKey) {
+      setDraftSaveState({
+        status: "error",
+        operation: "save",
+        message: unavailableDraftStorageMessage,
+      });
+      return;
+    }
     const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
     setDraftSaveState({ status: "saving" });
     applyCurrentDraftSaveResult(
       fingerprint,
-      saveDraftToBrowser(targetForm, scenarioForms),
+      saveDraftToBrowser(targetForm, scenarioForms, {
+        storageKey: activeDraftStorageKey,
+      }),
     );
   };
 
@@ -1606,12 +1809,12 @@ export function App({
     cancelPendingDraftSave();
     applyCurrentBoxCommitResult(
       fingerprint,
-      discardDraftFromBrowser(),
+      discardCurrentDraftFromActiveStorage(),
     );
   };
 
   const retryDiscardCurrentDraft = () => {
-    const result = discardDraftFromBrowser();
+    const result = discardCurrentDraftFromActiveStorage();
     if (result.status === "success") {
       draftBaselineKindRef.current = null;
       setDraftSaveState({ status: "idle" });
@@ -1631,17 +1834,19 @@ export function App({
 
     cancelPendingDraftSave();
     const { target, scenarios } = draftRecovery.draft.payload;
-    lastDraftFingerprintRef.current = createDraftFingerprint(target, scenarios);
+    const fingerprint = createDraftFingerprint(target, scenarios);
     resetActiveSearch();
     setTargetForm(target);
     setScenarioForms(scenarios);
-    draftBaselineKindRef.current = "draft";
+    applyCurrentDraftSaveResult(fingerprint, {
+      status: "success",
+      draft: draftRecovery.draft,
+    });
     setDraftRecovery(null);
-    setDraftSaveState({ status: "saved" });
   };
 
   const handleDiscardDraft = () => {
-    const result = discardDraftFromBrowser();
+    const result = discardCurrentDraftFromActiveStorage();
     if (result.status === "error") {
       setDraftRecovery({
         status: "error",
@@ -1662,6 +1867,61 @@ export function App({
   const handleDismissUnavailableDraft = () => {
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
     setDraftRecovery(null);
+  };
+
+  const handleRestoreCloudDraft = (record: CloudDraftRecord) => {
+    let draft;
+    try {
+      draft = parseDraftStorageDocument(record.payload);
+    } catch (error) {
+      setDraftSaveState({
+        status: "error",
+        operation: "save",
+        message: error instanceof Error
+          ? `クラウド下書きを復元できませんでした: ${error.message}`
+          : "クラウド下書きを復元できませんでした",
+      });
+      return;
+    }
+    if (!activeDraftStorageKey) {
+      setDraftSaveState({
+        status: "error",
+        operation: "save",
+        message: unavailableDraftStorageMessage,
+      });
+      return;
+    }
+    cancelPendingDraftSave();
+    const { target, scenarios } = draft.payload;
+    const fingerprint = createDraftFingerprint(target, scenarios);
+    const saveResult = saveDraftToBrowser(target, scenarios, {
+      storageKey: activeDraftStorageKey,
+    });
+    if (saveResult.status === "error") {
+      setDraftSaveState({ status: "error", operation: "save", message: saveResult.message });
+      return;
+    }
+    resetActiveSearch();
+    setTargetForm(target);
+    setScenarioForms(scenarios);
+    applyCurrentDraftSaveResult(fingerprint, saveResult);
+    setDraftRecovery(null);
+    setCloudDraftOpen(false);
+  };
+
+  const handleDeleteCloudDraft = (record: CloudDraftRecord) => {
+    if (!cloudDraftRef.current) return;
+    if (record.deviceId === cloudDraftRef.current.deviceId) {
+      const result = discardCurrentDraftFromActiveStorage();
+      if (result.status === "error") {
+        setDraftSaveState({ status: "error", operation: "discard", message: result.message });
+        return;
+      }
+      draftBaselineKindRef.current = null;
+      setDraftSaveState({ status: "idle" });
+      return;
+    }
+    cloudDraftRef.current.deleteDraft(record.deviceId);
   };
 
   const handleSuggestionFormatChange = (format: SuggestionFormat) => {
@@ -2068,7 +2328,10 @@ export function App({
     const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
     const result = persistCurrentWorkToBoxAndDiscardDraft(
       nextEntries,
-      { saveBoxEntries: saveTargetBoxEntries },
+      {
+        saveBoxEntries: saveTargetBoxEntries,
+        discardDraft: discardCurrentDraftFromActiveStorage,
+      },
     );
     if (result.status === "box-error") {
       setBoxMessage(result.message);
@@ -2110,7 +2373,7 @@ export function App({
       const blankScenarios = [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))];
       cancelPendingDraftSave();
       lastDraftFingerprintRef.current = createDraftFingerprint(blankTarget, blankScenarios);
-      const discardResult = discardDraftFromBrowser();
+      const discardResult = discardCurrentDraftFromActiveStorage();
       if (discardResult.status === "success") {
         draftBaselineKindRef.current = null;
         setDraftSaveState({ status: "idle" });
@@ -2617,6 +2880,32 @@ export function App({
   const visibleBoxEntries = isBoxSourceReady ? boxEntries : [];
   const visibleEnemyBoxEntries = isBoxSourceReady ? enemyBoxEntries : [];
   const unavailableBoxMessage = "保存一覧を読み込めないため、操作を停止しています";
+  const displayedCloudDraftStatus = draftSaveState.status === "saved"
+    ? cloudDraft?.status ?? null
+    : null;
+  const draftStatusClass = displayedCloudDraftStatus === "offline"
+    || displayedCloudDraftStatus === "error"
+    || displayedCloudDraftStatus === "syncing"
+    || displayedCloudDraftStatus === "queued"
+    || displayedCloudDraftStatus === "synced"
+    ? displayedCloudDraftStatus
+    : draftSaveState.status;
+  const cloudDraftStatusMessage = (() => {
+    switch (cloudDraft?.status) {
+      case "queued":
+        return "端末保存済み。クラウド送信を待っています。";
+      case "syncing":
+        return "クラウドへ保存中…";
+      case "synced":
+        return "クラウド保存済み";
+      case "offline":
+        return "オフラインです。未送信の下書きは端末に保持しています。";
+      case "error":
+        return "同期エラー。未送信の下書きは端末に保持しています。";
+      default:
+        return null;
+    }
+  })();
 
   return (
     <SuggestionUsageContext.Provider value={{
@@ -2653,6 +2942,19 @@ export function App({
               value={activeSuggestionFormat}
               onChange={handleSuggestionFormatChange}
             />
+            {cloudDraft ? (
+              <button
+                type="button"
+                className={`cloud-draft-trigger ${cloudDraft.status}`}
+                aria-label={`下書きと同期（他端末${cloudDraft.snapshot.otherDrafts.length}件）`}
+                aria-haspopup="dialog"
+                aria-expanded={cloudDraftOpen}
+                onClick={() => setCloudDraftOpen(true)}
+              >
+                <span>下書き</span>
+                <strong>{cloudDraft.snapshot.otherDrafts.length}</strong>
+              </button>
+            ) : null}
             <a
               className="readme-link"
               href="/guide/"
@@ -2671,12 +2973,12 @@ export function App({
           {draftSaveState.status !== "idle" ? (
             <div className="topbar-draft-row">
               <p
-                className={`draft-save-status ${draftSaveState.status}`}
-                data-draft-status={draftSaveState.status}
+                className={`draft-save-status ${draftStatusClass}`}
+                data-draft-status={draftStatusClass}
               role="status"
               aria-live="polite"
             >
-                {getDraftSaveStatusLabel(draftSaveState)}
+                {getDraftSaveStatusLabel(draftSaveState, displayedCloudDraftStatus)}
               </p>
             </div>
           ) : null}
@@ -2693,6 +2995,22 @@ export function App({
         />
       ) : null}
 
+      {variant === "default" && cloudDraftOpen && cloudDraft ? (
+        <CloudDraftDialog
+          records={cloudDraft.snapshot.records}
+          currentDeviceId={cloudDraft.deviceId ?? ""}
+          busy={cloudDraft.status === "syncing"}
+          statusMessage={cloudDraftStatusMessage}
+          errorMessage={cloudDraft.lastError}
+          canRestore={cloudDraft.isAvailable}
+          canDelete={cloudDraft.isAvailable}
+          onRefresh={() => void cloudDraft.synchronize("manual")}
+          onRestore={handleRestoreCloudDraft}
+          onDelete={handleDeleteCloudDraft}
+          onClose={() => setCloudDraftOpen(false)}
+        />
+      ) : null}
+
       {variant === "default" && draftSaveState.status === "error" ? (
         <div className="draft-save-error" role="alert">
           <span>{draftSaveState.message}</span>
@@ -2703,7 +3021,9 @@ export function App({
               ? retryDiscardCurrentDraft
               : draftSaveState.operation === "commit"
                 ? retryCommitDraftCleanup
-                : saveCurrentDraftNow}
+                : draftSaveState.operation === "cloud-save"
+                  ? retryCloudDraftQueue
+                  : saveCurrentDraftNow}
           >
             再試行
           </Button>

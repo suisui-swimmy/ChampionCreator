@@ -53,6 +53,68 @@ export {
 export * from "./syncCoordinator";
 export * from "./syncBoxRepository";
 export * from "./SyncBoxProvider";
+export * from "./cloudDraftTypes";
+export * from "./deviceIdentity";
+export {
+  CLOUD_DRAFT_LOCAL_STORAGE_KEY_PREFIX,
+  createBrowserCloudDraftLocalRepository,
+  createBrowserLocalCloudDraftRepository,
+  createCloudDraftLocalRepository,
+  createCloudDraftStorageKey,
+  createEmptyCloudDraftState,
+  createInMemoryCloudDraftLocalRepository,
+  createLocalCloudDraftRepository,
+  createMemoryCloudDraftLocalRepository,
+  getCloudDraftStorageKey,
+  isCloudDraftLocalState,
+  makeCloudDraftLocalStorageKey,
+  makeCloudDraftStorageKey,
+  parseCloudDraftEnvelope,
+  parseCloudDraftLocalState,
+  parseCloudDraftMutation,
+  parseCloudDraftRecord,
+  serializeCloudDraftLocalState,
+  stringifyCloudDraftLocalState,
+  CloudDraftRepositoryError as LocalCloudDraftRepositoryError,
+  type CloudDraftLocalRepository,
+  type CloudDraftLocalRepositoryOptions,
+  type CloudDraftRepositoryErrorCode as LocalCloudDraftRepositoryErrorCode,
+  type CloudDraftRepositoryLoadResult as LocalCloudDraftRepositoryLoadResult,
+  type CloudDraftRepositorySaveResult as LocalCloudDraftRepositorySaveResult,
+  type CloudDraftStorageLike,
+  type LocalCloudDraftRepository,
+  type MemoryCloudDraftLocalRepository,
+} from "./cloudDraftLocalRepository";
+export {
+  CLOUD_DRAFT_DEVICE_ID_MAX_BYTES,
+  CLOUD_DRAFT_DEVICE_LABEL_MAX_BYTES,
+  CLOUD_DRAFT_MUTATION_ID_MAX_BYTES,
+  CLOUD_DRAFT_PAYLOAD_MAX_BYTES,
+  FirestoreCloudDraftRepository,
+  classifyFirestoreCloudDraftError,
+  createCloudDraftRepository,
+  createFirestoreCloudDraftRepository,
+  createFirestoreDraftRepository,
+  getCloudDraftCollectionPath,
+  getFirestoreCloudDraftCollectionPath,
+  sanitizeFirestoreCloudDraftError,
+  type CloudDraftReadResult,
+  type CloudDraftRecordInput,
+  type CloudDraftRepository as RemoteCloudDraftRepository,
+  type CloudDraftRepositoryError as RemoteCloudDraftRepositoryError,
+  type CloudDraftRepositoryErrorKind as RemoteCloudDraftRepositoryErrorKind,
+  type CloudDraftRepositoryIssue,
+  type CloudDraftRepositoryIssueCode,
+  type CloudDraftWriteInput,
+  type CloudDraftWriteResult,
+  type CreateFirestoreCloudDraftRepositoryOptions,
+  type FirestoreCloudDraftDependencies,
+  type FirestoreCloudDraftGateway,
+  type FirestoreCloudDraftTransactionLike,
+} from "./firestoreCloudDraftRepository";
+export * from "./cloudDraftCoordinator";
+export * from "./CloudDraftProvider";
+export * from "./CloudDraftDialog";
 export * from "./migrationStorage";
 export {
   buildMigrationPlan,

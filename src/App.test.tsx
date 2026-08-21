@@ -14,10 +14,13 @@ import {
   clampTargetStatPointChange,
   compareResultCandidates,
   createScenario,
+  attemptCloudDraftQueue,
   getAttackSuggestionRankingOwners,
   getDraftSaveStatusLabel,
+  getDraftAutosaveDecision,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
+  resolveDraftStorageScope,
   formatLocalizedDamageDescription,
   formatNatureModifierLabel,
   formatNatureUsageAriaLabel,
@@ -64,15 +67,75 @@ const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => (
 });
 
 describe("App", () => {
+  it("never falls an unavailable account draft namespace back to the guest key", () => {
+    expect(resolveDraftStorageScope(null)).toEqual({
+      sourceKey: "device",
+      storageKey: "championcreator.draft.v1",
+    });
+    expect(resolveDraftStorageScope({
+      sourceKey: "account:alice:draft:unavailable",
+      localDraftStorageKey: null,
+    })).toEqual({
+      sourceKey: "account:alice:draft:unavailable",
+      storageKey: null,
+    });
+  });
+
+  it("does not autosave the previous namespace during an account or guest source transition", () => {
+    const fingerprint = "current-visible-work";
+    expect(getDraftAutosaveDecision({
+      variant: "default",
+      hasRecovery: false,
+      sourceMatches: false,
+      fingerprint,
+      boxBaselineFingerprint: null,
+      lastDraftFingerprint: "previous-source",
+    })).toBe("skip");
+    expect(getDraftAutosaveDecision({
+      variant: "default",
+      hasRecovery: false,
+      sourceMatches: true,
+      fingerprint,
+      boxBaselineFingerprint: null,
+      lastDraftFingerprint: fingerprint,
+    })).toBe("unchanged");
+  });
+
+  it("keeps a failed cloud queue retryable after the device draft succeeds", () => {
+    const draft = createDraftStorageDocument(
+      createDefaultTargetForm(),
+      createDefaultScenarioForms(),
+    );
+    const queueCurrentDraft = vi.fn()
+      .mockReturnValueOnce("同期用ローカル保存の容量がありません")
+      .mockReturnValueOnce(null);
+    expect(attemptCloudDraftQueue(draft, { queueCurrentDraft })).toEqual({
+      status: "error",
+      message: "同期用ローカル保存の容量がありません",
+    });
+    expect(attemptCloudDraftQueue(draft, { queueCurrentDraft })).toEqual({ status: "success" });
+    expect(queueCurrentDraft).toHaveBeenCalledTimes(2);
+  });
+
   it("distinguishes draft saves from committed target-box saves", () => {
     expect(getDraftSaveStatusLabel({ status: "saving" })).toBe("下書きを保存中…");
     expect(getDraftSaveStatusLabel({ status: "saved" })).toBe("この端末に下書き保存済み");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "queued")).toBe("端末保存済み");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "syncing")).toBe("クラウドへ保存中…");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "synced")).toBe("クラウド保存済み");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "offline")).toBe("オフライン（端末保存済み）");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "error")).toBe("同期エラー（端末保存済み）");
+    expect(getDraftSaveStatusLabel({
+      status: "error",
+      operation: "cloud-save",
+      message: "failed",
+    })).toBe("同期エラー（端末保存済み）");
     expect(getDraftSaveStatusLabel({ status: "box-saved" })).toBe("ボックスに保存済み");
     expect(getDraftSaveStatusLabel({
       status: "error",
       operation: "commit",
       message: "failed",
-    })).toBe("下書き削除エラー");
+    })).toBe("ボックス保存後の下書き削除エラー");
   });
 
   it("blocks box operations until the rendered list matches the active storage namespace", () => {

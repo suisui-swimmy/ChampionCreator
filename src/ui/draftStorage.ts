@@ -32,7 +32,29 @@ export type DraftMutationResult =
       message: string;
     };
 
-type DraftBrowserStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+export type DraftBrowserStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+export interface DraftStorageOptions {
+  readonly storage?: DraftBrowserStorage | null;
+  readonly storageKey?: string;
+}
+
+export type DraftStorageTarget = DraftBrowserStorage | DraftStorageOptions;
+
+/**
+ * Keep the guest draft at the historical key while giving each authenticated
+ * account/device pair an isolated local slot. UID and device ID are escaped
+ * but otherwise left untouched so their identity is never silently changed.
+ */
+export const makeAccountDraftStorageKey = (
+  ownerUid: string,
+  deviceId: string,
+): string => (
+  `${DRAFT_STORAGE_KEY}.${encodeURIComponent(ownerUid)}.${encodeURIComponent(deviceId)}`
+);
+
+export const createAccountDraftStorageKey = makeAccountDraftStorageKey;
+export const getAccountDraftStorageKey = makeAccountDraftStorageKey;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -54,6 +76,28 @@ const resolveBrowserStorage = (
   } catch {
     return { status: "error" };
   }
+};
+
+const isDraftBrowserStorage = (value: unknown): value is DraftBrowserStorage => (
+  isRecord(value)
+  && typeof value.getItem === "function"
+  && typeof value.setItem === "function"
+  && typeof value.removeItem === "function"
+);
+
+const resolveDraftStorageOptions = (
+  target?: DraftStorageTarget | null,
+): DraftStorageOptions => {
+  if (target === null || target === undefined) {
+    return { storageKey: DRAFT_STORAGE_KEY };
+  }
+  if (isDraftBrowserStorage(target)) {
+    return { storage: target, storageKey: DRAFT_STORAGE_KEY };
+  }
+  return {
+    ...target,
+    storageKey: target.storageKey ?? DRAFT_STORAGE_KEY,
+  };
 };
 
 const isQuotaExceededError = (error: unknown): boolean => {
@@ -112,9 +156,10 @@ export const scheduleDraftAutosave = (save: () => void): (() => void) => {
 };
 
 export const loadDraftFromBrowser = (
-  storage?: DraftBrowserStorage,
+  target?: DraftStorageTarget | null,
 ): DraftLoadResult => {
-  const resolved = resolveBrowserStorage(storage);
+  const options = resolveDraftStorageOptions(target);
+  const resolved = resolveBrowserStorage(options.storage ?? undefined);
   if (resolved.status === "empty") {
     return { status: "empty" };
   }
@@ -128,7 +173,7 @@ export const loadDraftFromBrowser = (
 
   let stored: string | null;
   try {
-    stored = resolved.storage.getItem(DRAFT_STORAGE_KEY);
+    stored = resolved.storage.getItem(options.storageKey ?? DRAFT_STORAGE_KEY);
   } catch {
     return {
       status: "error",
@@ -156,9 +201,9 @@ export const loadDraftFromBrowser = (
 export const saveDraftToBrowser = (
   target: TargetFormState,
   scenarios: ScenarioFormState[],
-  options: { storage?: DraftBrowserStorage; now?: Date } = {},
+  options: DraftStorageOptions & { now?: Date } = {},
 ): DraftMutationResult => {
-  const resolved = resolveBrowserStorage(options.storage);
+  const resolved = resolveBrowserStorage(options.storage ?? undefined);
   if (resolved.status !== "success") {
     return {
       status: "error",
@@ -169,7 +214,10 @@ export const saveDraftToBrowser = (
 
   const draft = createDraftStorageDocument(target, scenarios, options.now);
   try {
-    resolved.storage.setItem(DRAFT_STORAGE_KEY, stringifyDraftStorageDocument(draft));
+    resolved.storage.setItem(
+      options.storageKey ?? DRAFT_STORAGE_KEY,
+      stringifyDraftStorageDocument(draft),
+    );
     return { status: "success", draft };
   } catch (error) {
     return isQuotaExceededError(error)
@@ -187,9 +235,10 @@ export const saveDraftToBrowser = (
 };
 
 export const discardDraftFromBrowser = (
-  storage?: DraftBrowserStorage,
+  target?: DraftStorageTarget | null,
 ): DraftMutationResult => {
-  const resolved = resolveBrowserStorage(storage);
+  const options = resolveDraftStorageOptions(target);
+  const resolved = resolveBrowserStorage(options.storage ?? undefined);
   if (resolved.status === "empty") {
     return { status: "success" };
   }
@@ -202,7 +251,7 @@ export const discardDraftFromBrowser = (
   }
 
   try {
-    resolved.storage.removeItem(DRAFT_STORAGE_KEY);
+    resolved.storage.removeItem(options.storageKey ?? DRAFT_STORAGE_KEY);
     return { status: "success" };
   } catch {
     return {

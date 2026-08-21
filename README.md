@@ -34,7 +34,7 @@ Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 - Frontend: React 19 + TypeScript + Vite
 - Test runner: Vitest
 - Hosting: GitHub Pages を想定した静的配信
-- Browser storage: ゲスト・未認証、または `SYNC-M3` の移行が完了していない状態では、従来どおり browser storage / local-first で動作します。`SYNC-M3` の one-time migration が完了した復元済み認証 session では、`SYNC-M4` の調整対象・仮想敵ボックスだけを UID 別のローカル保存（outbox を含む）と Firestore へ同期します
+- Browser storage: ゲスト・未認証、または `SYNC-M3` の移行が完了していない状態では、従来どおり browser storage / local-first で動作します。`SYNC-M3` の one-time migration が完了した復元済み認証 session では、`SYNC-M4` の調整対象・仮想敵ボックスと、`SYNC-M5` の作業中下書きを UID 別に保存します。ボックスはローカル保存（outboxを含む）とFirestoreへ、下書きは UID + deviceId ごとのローカル保存（outboxを含む）と Firestore の `drafts` collection へ同期します
 - PWA: Web App Manifest に対応。Service Worker によるオフラインキャッシュは未実装
 
 ### Damage calculation boundary
@@ -167,7 +167,7 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 
 調整対象ボックスへ現在の条件を保存または上書きした場合は、Wordなどの「名前を付けて保存」と同じ確定操作として作業中の下書きを削除し、次に入力を変更するまで`ボックスに保存済み`と表示します。確定保存後は、次回起動時に下書きの復元確認を表示しません。保存内容は調整対象ボックスから明示的に読み込めます。調整対象ボックスから保存を読み込むと、その入力条件が次の下書きとして自動保存されます。調整対象ボックスの空スロットを読み込んだ場合は、作業中の下書きも明示的に破棄します。バックアップの読み込みだけでは作業中の入力条件や下書きを変更せず、バックアップ内の保存を選んで読み込んだ時点で反映します。ブラウザの保存容量不足などで自動保存できない場合は、画面にエラーと再試行操作を表示します。
 
-ゲスト・未認証、またはM3の移行が完了していない状態の通常保存データは同じブラウザ内の保存領域を使います。別端末、別ブラウザ、ブラウザデータ削除後には自動で引き継がれません。M3の移行 controller は、この通常動作を常時クラウド同期へ切り替えるものではありません。復元した認証済みsessionでM3のone-time migrationが完了した場合だけ、M4のボックス同期が有効になります。
+ゲスト・未認証、またはM3の移行が完了していない状態の通常保存データは同じブラウザ内の保存領域を使います。別端末、別ブラウザ、ブラウザデータ削除後には自動で引き継がれません。M3の移行 controller は、この通常動作を常時クラウド同期へ切り替えるものではありません。復元した認証済みsessionでM3のone-time migrationが完了した場合だけ、M4のボックス同期とM5のcloud draftが有効になります。常設のログイン・同期状態・アカウント管理UIはM6の範囲です。
 
 `SYNC-M3` では、既存の `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1` を読み取る one-time migration controller と、アカウントの UID ごとに分離した migration marker を用意しています。ローカル領域とクラウド側の両方に保存がある場合に扱う選択肢は、`統合`、`クラウドを使用`、`この端末を使用`、`あとで決める` です。`統合`では同一 ID・同一 payload を1件にまとめ、同一 ID・異なる payload は競合コピーとして両方を保持します。移行が完了するまでは旧 localStorage key を削除せず、移行に失敗した場合も既存データを残します。JSONバックアップも別の退避手段として保持します。未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しい端末で勝手に復活させません。
 
@@ -175,7 +175,11 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 
 `SYNC-M4` では、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけが、調整対象ボックスと仮想敵ボックスの作成・上書き・名前変更・複製・削除・読み込み・バックアップ書き出し・バックアップ読み込みを、UID別のローカル保存とFirestoreで扱います。保存操作はまずこの端末のローカルへ確定し、成功した変更を順序付きoutboxへ積みます。クラウドへのpull / pushは起動時、画面focus時、online復帰時、ボックス操作後（失敗時の再試行を含む）に行い、クラウド失敗中もこの端末の保存とJSONバックアップは利用できます。削除はpayloadを保持したtombstoneとして同期し、同一slotの更新競合や更新対削除はLast Write Winsで消さず、local / remoteの両方を要確認状態として保持します。remoteの1件が破損・未対応でも、正常な保存一覧を空にせず、読めるデータを残して問題を通知します。
 
-認証済みsessionのバックアップ読み込みでは、取り込み前に追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示し、`統合` または `全端末を置き換え` を選べます。読み込めない保存が含まれる場合は警告を表示し、既存データを失う可能性がある置き換えを無効にして`統合`だけを許可します。保存0件の正常な空バックアップは、現在の全保存が削除される警告を表示したうえで、明示的な置き換えを選べます。バックアップに残っているentryを統合すれば、端末やクラウドで削除済みになったentryも明示的に復元できます。ゲスト・未認証のバックアップ読み込みは従来どおりこの端末だけを対象にします。`SYNC-M5` のcloud draftと、`SYNC-M6` の常設ログイン・同期状態・アカウント管理UIはこのM4の範囲に含みません。
+認証済みsessionのバックアップ読み込みでは、取り込み前に追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示し、`統合` または `全端末を置き換え` を選べます。読み込めない保存が含まれる場合は警告を表示し、既存データを失う可能性がある置き換えを無効にして`統合`だけを許可します。保存0件の正常な空バックアップは、現在の全保存が削除される警告を表示したうえで、明示的な置き換えを選べます。バックアップに残っているentryを統合すれば、端末やクラウドで削除済みになったentryも明示的に復元できます。ゲスト・未認証のバックアップ読み込みは従来どおりこの端末だけを対象にします。
+
+`SYNC-M5` では、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけが、作業中の下書きを端末ごとに保存・同期できます。入力変更後の端末内保存は従来どおり約0.75秒後、cloud deliveryは操作停止後2秒でqueueします。下書きは `userId + deviceId` のローカル／クラウドnamespaceへ分け、同じアカウントでも端末同士で上書きしません。アカウントあたり有効な下書きは最大10件、保持期間は30日です。期限切れの下書きは起動時、画面focus時、online復帰時、手動操作時にcleanupします。
+
+他端末の下書きは更新日時、端末ラベル、入力概要を確認してから、ユーザーが選んだものだけを現在の作業画面へ復元できます。下書きの削除も明示操作で行い、復元時にボックスデータを変更しません。`pagehide` / `visibilitychange` では同期完了を装わず、未送信mutationをoutboxへ残します。cloud draftはrealtime listenerを使わず、ログイン・同期状態・アカウント管理UIはM6で扱います。計算結果、候補一覧、Worker state、チュートリアルの入力・保存・同期は対象外です。
 
 各ボックス画面の `バックアップを書き出す` / `バックアップを読み込む` から、保存済みボックスを JSON ファイルとして退避・復元できます。調整対象ボックスと仮想敵ボックスのバックアップは別ファイルとして扱い、読み込み時は同じ種類の保存へ `統合` するか、バックアップ内容で置き換えるかを選びます。
 
@@ -200,6 +204,7 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 - 素早さ調整の手動倍率は、選択中の持ち物・特性による自動補正を置き換える最終Sへの数値上書きです。特性の発動条件や丸め順まで完全に再現するものではなく、発動状態を直接指定する専用UIは未対応です
 - 条件が複雑なほど探索に時間がかかります
 - 重要な調整は実機でも確認してください
+- cloud draftはM3移行済みの認証sessionでのみ利用でき、1アカウント10件まで・30日保持です。復元と削除は明示操作で行い、リアルタイム共同編集、常設ログイン・同期状態・アカウント管理UI、チュートリアルの永続化は対象外です
 
 ## 開発
 
@@ -230,11 +235,11 @@ npm run validate:artwork-assets
 npm run typecheck
 ```
 
-### Firebase 同期基盤（SYNC-M1〜M4）
+### Firebase 同期基盤（SYNC-M1〜M5）
 
 Firebase Web SDK、Google provider の認証 session owner、Auth / Firestore Emulator、Firestore Security Rules、App Check の初期化境界を `src/sync/` に分離しています。Firebase の必須 Web config がない環境では SDK を初期化せず、従来どおり guest / local-first で動作します。
 
-SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `この端末を使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。`SYNC-M4` では、M3完了後の復元済み認証sessionへだけ、調整対象・仮想敵ボックスの作成からバックアップ入出力までをUID別local / outbox / Firestore経路で接続しています。local成功を先に確定し、起動・focus・online・ボックス操作後に同期し、tombstone、競合保持、破損remoteの分離を維持します。cloud draftは`SYNC-M5`、常設のログイン・同期状態・アカウント管理UIは`SYNC-M6`の範囲です。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、RulesとM4の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
+SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `この端末を使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。`SYNC-M4` では、M3完了後の復元済み認証sessionへだけ、調整対象・仮想敵ボックスの作成からバックアップ入出力までをUID別local / outbox / Firestore経路で接続しています。local成功を先に確定し、起動・focus・online・ボックス操作後に同期し、tombstone、競合保持、破損remoteの分離を維持します。`SYNC-M5` では、作業中下書きを `users/{uid}/drafts/{deviceId}` へ端末別に保存し、2秒後のcloud queue、revision / baseRevision / mutationId、outbox、tombstone、30日保持、10件上限、期限切れcleanupを扱います。常設のログイン・同期状態・アカウント管理UIは`SYNC-M6`の範囲です。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、RulesとM5の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
 
 ## ライセンス・権利表記
 
