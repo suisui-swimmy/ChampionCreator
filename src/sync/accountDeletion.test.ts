@@ -165,6 +165,44 @@ describe("account deletion service", () => {
     expect(cloud.docs.get("users/user-123/syncRecords")).toEqual([]);
   });
 
+  it("stops after maxDeletePasses and reports a destructive cloud-not-empty error", async () => {
+    const events: string[] = [];
+    const auth = createAuth(events);
+    const cloud = createFakeCloud();
+    const readPaths: string[] = [];
+    const neverEmptyDependencies: AccountDeletionFirestoreDependencies = {
+      ...cloud.dependencies,
+      getDocsFromServer: async (collection) => {
+        readPaths.push((collection as { path: string }).path);
+        return { docs: [{ id: "stuck-record" }] };
+      },
+      writeBatch: () => ({
+        delete: () => undefined,
+        commit: async () => undefined,
+      }),
+    };
+
+    await expect(deleteAccount({
+      uid,
+      auth,
+      firestore: {},
+      dependencies: neverEmptyDependencies,
+      storage: null,
+      maxDeletePasses: 2,
+      resumeAccountOperations: () => events.push("resume"),
+    })).rejects.toMatchObject({
+      code: "cloud-not-empty",
+      destructive: true,
+    } satisfies Partial<AccountDeletionError>);
+
+    expect(readPaths).toEqual([
+      "users/user-123/syncRecords",
+      "users/user-123/syncRecords",
+    ]);
+    expect(auth.deleteAccount).not.toHaveBeenCalled();
+    expect(events).not.toContain("resume");
+  });
+
   it("never calls deleteUser or resumes mutations after physical cloud deletion starts", async () => {
     const events: string[] = [];
     const auth = createAuth(events);
@@ -366,6 +404,31 @@ describe("account deletion service", () => {
       storage,
     })).rejects.toMatchObject({ code: "uid-changed", destructive: true });
     expect(deleteCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it("does not apply a successful Auth deletion after another UID takes over", async () => {
+    let currentUid: string | null = uid;
+    const auth: AccountDeletionAuthGateway = {
+      getCurrentUserUid: () => currentUid,
+      reauthenticateWithGoogle: vi.fn(async () => ({
+        uid,
+        displayName: null,
+        email: null,
+        photoURL: null,
+      })),
+      deleteAccount: vi.fn(async () => {
+        currentUid = "other-user";
+      }),
+    };
+    const cloud = createFakeCloud();
+
+    await expect(deleteAccount({
+      uid,
+      auth,
+      firestore: {},
+      dependencies: cloud.dependencies,
+      storage: null,
+    })).rejects.toMatchObject({ code: "uid-changed", destructive: true });
   });
 
   it("aborts on a UID switch after reauthentication before touching cloud data", async () => {

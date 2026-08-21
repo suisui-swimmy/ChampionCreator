@@ -754,6 +754,18 @@ export const attemptCloudDraftQueue = (
   return message ? { status: "error", message } : { status: "success" };
 };
 
+export const isCurrentAccountOperation = (
+  operation: number,
+  currentOperation: number,
+  expectedUid: string | null,
+  currentUid: string | null,
+): boolean => operation === currentOperation && expectedUid === currentUid;
+
+export const shouldInvalidateAccountOperationOnUidChange = (
+  expectedUid: string | null | undefined,
+  nextUid: string | null,
+): boolean => expectedUid === undefined || expectedUid !== nextUid;
+
 const formatLocalizedDamageResult = (resultText: string): string =>
   resultText
     .replace(/\s+-\s+/g, "-")
@@ -1418,6 +1430,9 @@ export function App({
     readonly draft: DraftStorageDocument;
   } | null>(null);
   const accountOperationRef = useRef(0);
+  const accountAuthUid = authSession?.state.user?.uid ?? null;
+  const previousAccountAuthUidRef = useRef(accountAuthUid);
+  const accountExpectedAuthUidRef = useRef<string | null | undefined>(undefined);
   const accountDeletionLockedRef = useRef(false);
   const suspendDraftPersistenceRef = useRef(false);
   const boxSourceKeyRef = useRef("device");
@@ -1427,6 +1442,26 @@ export function App({
   if (lastDraftFingerprintRef.current === null) {
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
   }
+
+  useEffect(() => {
+    if (previousAccountAuthUidRef.current === accountAuthUid) return;
+    previousAccountAuthUidRef.current = accountAuthUid;
+    const expectedUid = accountExpectedAuthUidRef.current;
+    accountExpectedAuthUidRef.current = undefined;
+    // The provider callback is the account namespace authority. Invalidate
+    // every older UI operation so its eventual Promise cannot annotate the
+    // newly signed-in, signed-out, or switched account.
+    if (shouldInvalidateAccountOperationOnUidChange(expectedUid, accountAuthUid)) {
+      accountOperationRef.current += 1;
+    }
+    setAccountBusy(false);
+    setAccountError(null);
+    setAccountMessage(null);
+    setLogoutPending(false);
+    accountDeletionLockedRef.current = false;
+    setAccountDeletion({ stage: "idle" });
+    setAccountOpen(false);
+  }, [accountAuthUid]);
 
   const previewInput = useMemo(() => {
     try {
@@ -2002,22 +2037,39 @@ export function App({
 
   const handleAccountSignIn = async () => {
     if (!authSession) return;
+    const operation = ++accountOperationRef.current;
+    const startingUid = authSession.getCurrentUserUid();
     setAccountBusy(true);
     setAccountError(null);
     setAccountMessage(null);
     try {
-      await authSession.signInWithGoogle();
-      setAccountOpen(false);
+      const user = await authSession.signInWithGoogle();
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountOpen(false);
+      }
     } catch (error) {
-      setAccountError(error instanceof Error ? error.message : "Google ログインに失敗しました");
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        startingUid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountError(error instanceof Error ? error.message : "Google ログインに失敗しました");
+      }
     } finally {
-      setAccountBusy(false);
+      if (operation === accountOperationRef.current) setAccountBusy(false);
     }
   };
 
   const handleAccountSignOut = async () => {
     if (!authSession) return;
     const operation = ++accountOperationRef.current;
+    const startingUid = authSession.getCurrentUserUid();
     setLogoutPending(false);
     setAccountBusy(true);
     setAccountError(null);
@@ -2028,13 +2080,31 @@ export function App({
         syncBox?.prepareAccountDeletion() ?? Promise.resolve(),
         cloudDraft?.prepareAccountDeletion() ?? Promise.resolve(),
       ]);
-      await authSession.signOut();
-      if (operation === accountOperationRef.current) {
+      accountExpectedAuthUidRef.current = null;
+      try {
+        await authSession.signOut();
+      } catch (error) {
+        if (accountExpectedAuthUidRef.current === null) {
+          accountExpectedAuthUidRef.current = undefined;
+        }
+        throw error;
+      }
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        null,
+        authSession.getCurrentUserUid(),
+      )) {
         setAccountMessage("ログアウトしました。ブラウザのみの保存領域へ切り替えました");
         setAccountOpen(false);
       }
     } catch (error) {
-      if (operation === accountOperationRef.current) {
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        startingUid,
+        authSession.getCurrentUserUid(),
+      )) {
         suspendDraftPersistenceRef.current = false;
         syncBox?.resumeAccountOperations();
         cloudDraft?.resumeAccountOperations();
@@ -2061,6 +2131,12 @@ export function App({
       setAccountOpen(false);
       return;
     }
+    const user = authSession?.state.user;
+    if (!authSession || !user) {
+      setAccountError("同期するアカウントを確認できません");
+      return;
+    }
+    const operation = ++accountOperationRef.current;
     setAccountBusy(true);
     setAccountError(null);
     setAccountMessage(null);
@@ -2081,11 +2157,25 @@ export function App({
                 : "オフラインのため同期できません")
               : null;
       if (syncError) throw new Error(syncError);
-      setAccountMessage("同期状態を更新しました");
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountMessage("同期状態を更新しました");
+      }
     } catch (error) {
-      setAccountError(error instanceof Error ? error.message : "同期状態を更新できませんでした");
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountError(error instanceof Error ? error.message : "同期状態を更新できませんでした");
+      }
     } finally {
-      setAccountBusy(false);
+      if (operation === accountOperationRef.current) setAccountBusy(false);
     }
   };
 
@@ -2157,7 +2247,14 @@ export function App({
         ? "未同期または確認が必要なデータを明記して書き出しました"
         : "アカウントデータを書き出しました");
     } catch (error) {
-      setAccountError(error instanceof Error ? error.message : "アカウントデータを書き出せませんでした");
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountError(error instanceof Error ? error.message : "アカウントデータを書き出せませんでした");
+      }
     } finally {
       if (providersSuspended && operation === accountOperationRef.current) {
         syncBox?.resumeAccountOperations();
@@ -2203,9 +2300,17 @@ export function App({
           reauthenticateWithGoogle: async (expectedUid) => (
             authSession.session.reauthenticateWithGoogle(expectedUid)
           ),
-          deleteAccount: async (expectedUid) => (
-            authSession.session.deleteAccount(expectedUid)
-          ),
+          deleteAccount: async (expectedUid) => {
+            accountExpectedAuthUidRef.current = null;
+            try {
+              await authSession.session.deleteAccount(expectedUid);
+            } catch (error) {
+              if (accountExpectedAuthUidRef.current === null) {
+                accountExpectedAuthUidRef.current = undefined;
+              }
+              throw error;
+            }
+          },
           getCurrentUserUid: authSession.getCurrentUserUid,
         },
         firestore: client.firestore,
@@ -2237,7 +2342,11 @@ export function App({
       setAccountMessage("アカウントとクラウドデータを削除しました");
       setAccountOpen(false);
     } catch (error) {
-      if (operation === accountOperationRef.current) {
+      const currentUid = authSession.getCurrentUserUid();
+      if (
+        operation === accountOperationRef.current
+        && (currentUid === user.uid || currentUid === null)
+      ) {
         const destructive = error instanceof AccountDeletionError && error.destructive;
         const keepLocked = accountDeletionLockedRef.current || destructive;
         accountDeletionLockedRef.current = keepLocked;

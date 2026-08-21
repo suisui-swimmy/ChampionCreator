@@ -318,6 +318,10 @@ class AuthSessionController implements AuthSession {
       this.gatewayUnsubscribe?.();
       this.gatewayUnsubscribe = null;
       this.started = false;
+      // Invalidate a sign-in/sign-out/reauth/delete Promise that was already
+      // in flight when the session owner unmounted. It may still resolve, but
+      // it must not publish state into a stopped (or later restarted) session.
+      this.operationId += 1;
     };
   }
 

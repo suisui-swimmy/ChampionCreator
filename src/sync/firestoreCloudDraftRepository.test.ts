@@ -58,7 +58,7 @@ const makeMutation = (
 
 const createFakeDependencies = (
   database: FakeDatabase,
-  options: { readonly readError?: unknown } = {},
+  options: { readonly readError?: unknown; readonly writeError?: unknown } = {},
 ): FirestoreCloudDraftDependencies => ({
   collection: (_firestore, path) => ({ path }),
   doc: (_collection, id) => ({ id }),
@@ -76,6 +76,9 @@ const createFakeDependencies = (
     };
   },
   runTransaction: async (_firestore, updateFunction) => {
+    if (options.writeError !== undefined) {
+      throw options.writeError;
+    }
     const writes: Array<{ readonly id: string; readonly data: Record<string, unknown> }> = [];
     const result = await updateFunction({
       get: async (reference) => {
@@ -103,7 +106,7 @@ const createFakeDependencies = (
 
 const createRepository = (
   database: FakeDatabase,
-  options: { readonly readError?: unknown } = {},
+  options: { readonly readError?: unknown; readonly writeError?: unknown } = {},
 ) => createFirestoreCloudDraftRepository({
   firestore: database,
   uid: "uid-a",
@@ -273,5 +276,23 @@ describe("FirestoreCloudDraftRepository", () => {
     expect(result.status).toBe("error");
     expect(result.error?.kind).toBe("permission-denied");
     expect(result.error?.message).not.toContain("secret backend details");
+  });
+
+  it.each([
+    ["permission-denied", "permission-denied"],
+    ["resource-exhausted", "quota"],
+    ["unavailable", "unavailable"],
+  ] as const)("classifies transaction %s failures and hides raw details", async (code, expectedKind) => {
+    const database: FakeDatabase = { documents: new Map() };
+    const result = await createRepository(database, {
+      writeError: { code, message: "secret transaction details" },
+    }).write(makeMutation(`transaction-${code}`));
+
+    expect(result).toMatchObject({
+      status: "error",
+      error: { kind: expectedKind },
+    });
+    expect(result.error?.message).not.toContain("secret transaction details");
+    expect(database.documents).toHaveLength(0);
   });
 });

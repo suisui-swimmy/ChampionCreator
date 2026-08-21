@@ -180,6 +180,27 @@ const assertCurrent = (
   }
 };
 
+const assertDeletionCompletionCurrent = (options: AccountDeletionOptions): void => {
+  if (options.isCurrent && !options.isCurrent()) {
+    throw new AccountDeletionError(
+      "uid-changed",
+      "アカウント操作の対象が変わったため、削除結果を適用しませんでした",
+      { retryable: false },
+    );
+  }
+  const currentUid = getCurrentUid(options.auth);
+  // A successful Firebase Auth deletion normally exposes null immediately.
+  // Some gateways can lag briefly and still report the deleted UID, so only
+  // a different non-null UID is evidence that another account took over.
+  if (currentUid !== undefined && currentUid !== null && currentUid !== options.uid) {
+    throw new AccountDeletionError(
+      "uid-changed",
+      "アカウント削除中に別のアカウントへ切り替わったため、削除結果を適用しませんでした",
+      { retryable: false },
+    );
+  }
+};
+
 const asAccountError = (
   error: unknown,
   fallbackCode: AccountDeletionErrorCode,
@@ -416,6 +437,7 @@ export async function deleteAccount(options: AccountDeletionOptions): Promise<Ac
         "アカウントを削除できませんでした。もう一度お試しください",
       );
     }
+    assertDeletionCompletionCurrent(options);
     operationSucceeded = true;
     return {
       uid,

@@ -8,6 +8,7 @@ ChampionCreator は M0〜M9 の初期開発マイルストーンを完了し、�
 
 - 現在の実装状況は、対象コード、対象テスト、`README.md`、`package.json` を確認して判断する
 - 現在地と直近の引き継ぎは `PROGRESS.md`、過去の詳細履歴は必要な場合だけ `PROGRESS.archive/` を参照する
+- 完了した Firebase 同期の実装・実施記録は、月別履歴とは別の `PROGRESS.archive/SYNC-MILESTONES.md` を参照する
 - 完了済みマイルストーンを未着手タスクとして再開しない
 - 将来候補は、ユーザーが依頼した範囲または明示された課題だけを扱う
 - この文書と現行実装が矛盾する場合は、勝手に片方へ寄せず、実装経路と影響を確認してから修正する
@@ -25,6 +26,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 - `A / C / S` の固定 SP を含めた合法な能力ポイント配分の評価
 - 全合格候補のページネーション、並び替え、候補適用
 - 調整対象ボックス、仮想敵ボックス、バックアップ入出力
+- Google 認証を使う任意のボックス同期、ブラウザ別クラウド下書き、アカウント管理
 - デスクトップとモバイルに対応した作業画面
 - 公開ガイドと静的ホスティング
 
@@ -48,237 +50,6 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 - 初期仕様の意図を確認しないと現行コードだけでは判断できない
 
 本体は `others/` なしで動く状態を維持し、runtime import しない。
-
-## 一時ロードマップ: Firebase アカウント同期（完了後に章ごと削除）
-
-> **TEMPORARY**: この章は、Google アカウントを使ったボックス同期と下書き保存を完成させるまでの一時的な実装手順。
-> `SYNC-M7` の完了時に、この見出しから次の `## 最重要の設計境界` の直前までを同じ変更内で削除する。
-> 完了済みマイルストーン表へ本ロードマップを転載せず、現在地は `PROGRESS.md`、詳細履歴は `PROGRESS.archive/` に残す。
-
-現在の開始地点は `SYNC-M7`（`SYNC-M0`〜`SYNC-M6` は完了）。各マイルストーンは `Done` を満たし、検証結果を `PROGRESS.md` へ記録してから次へ進む。後続マイルストーンの実装を先取りしない。
-
-このロードマップ中だけ、Firebase Authentication / Cloud Firestore / App Check を、ユーザーが明示承認した managed backend / DB の例外として扱う。GitHub Pages の静的フロントは維持し、Firebase 以外の runtime backend、Google Drive 保存、自前 OAuth サーバー、Realtime 共同編集へ暗黙に拡張しない。
-
-全マイルストーン共通の境界:
-
-- 未ログインでも従来どおり利用できる guest / local-first を維持する
-- 調整対象ボックス、仮想敵ボックス、作業中の下書きを別データとして扱う
-- 既存の `BoxEntry` / `EnemyBoxEntry` と `ShareStateDocument` の validation / migration を再利用する
-- クラウドから受け取った payload も必ず既存 parser で正規化し、不正値や未来 schema を空データとして扱わない
-- 計算結果、候補一覧、Worker state、使用率データ、チュートリアル state は同期しない
-- JSON バックアップの書き出し・読み込みを、同期後も独立した退避手段として維持する
-- Google アカウントは本人確認だけに使い、Drive / 連絡先など追加 scope を要求しない
-- Firebase Admin credential、service account key、Google client secret を browser bundle、repository、Pages artifact へ含めない
-- 既存の app version、保存互換、desktop / mobile / narrow-width、in-app Browser の検証ルールを各マイルストーンでも守る
-
-### SYNC-M0: 端末内の作業中下書き
-
-Goal:
-
-- ログインや通信なしでも、編集中の入力条件を同じ端末で安全に復元できるようにする
-
-Scope:
-
-- ボックスとは別の versioned draft schema / storage key を追加する
-- `targetForm` と `scenarioForms` を既存 `ShareStateDocument` 経路で保存し、計算結果や候補は保存しない
-- 入力変更後 `500..1000ms` の debounce で端末へ保存する
-- 起動時に下書きがある場合は、現在の白紙状態へ黙って適用せず `復元` / `破棄` を選べるようにする
-- box / backup 読み込み、白紙化、schema 不正、storage quota error、`variant="tutorial"` の扱いを定義する
-
-Done:
-
-- 下書きの save / load / discard / migration / corrupt data の対象テストがある
-- 初回の白紙状態と、ユーザーが削除した既定サンプルを復活させない既存挙動が維持される
-- desktop、代表スマホ幅、320px 前後で復元 UI、focus、keyboard、横 overflow、console を確認している
-- ユーザー向けの保存挙動変更として version、README、guide が同期されている
-
-Stop line:
-
-- Firebase SDK、ログイン、クラウド保存、同期状態 UI へ進まない
-
-### SYNC-M1: Firebase 基盤・Google 認証・Security Rules
-
-Goal:
-
-- GitHub Pages を維持したまま、Firebase を安全に呼べる最小基盤とユーザー境界を作る
-
-Scope:
-
-- Firebase project / Web app、Google provider、Cloud Firestore、Auth emulator / Firestore emulator の設定手順を確定する
-- Firebase client 初期化と auth session owner を `src/sync/` 配下へ追加し、`App` へ provider 固有処理を散らさない
-- 本番 custom domain と localhost を authorized domain に分け、GitHub Pages で壊れる未対策の `signInWithRedirect` を採用しない
-- Firestore Security Rules で未認証拒否、`request.auth.uid` と document owner の一致、許可 field、kind、schema、payload size を検証する
-- App Check は monitor から開始し、正規利用を確認してから enforcement する
-- Firebase Web config と秘密情報の境界、開発 / 本番環境の切替を定義する
-
-Done:
-
-- 認証 session の restore / sign-in / sign-out / error を mock または emulator で検証できる
-- Security Rules test で unauthenticated と別 UID の read / write が拒否され、自 UID の許可操作だけ通る
-- production bundle に Admin / service account / client secret が含まれないことを確認している
-- Firebase console で必要な手作業と未実施項目が `PROGRESS.md` に区別して記録されている
-
-Stop line:
-
-- 既存 localStorage の移行や実ボックス同期へ進まない
-
-### SYNC-M2: local / cloud repository と同期 coordinator
-
-Goal:
-
-- UI から保存先を分離し、ローカル即時保存と競合を失わないクラウド同期の共通経路を作る
-
-Scope:
-
-- `src/sync/` に auth、types、local repository、Firestore repository、coordinator、outbox / metadata の owner を分ける
-- クラウドは全件 blob ではなく、調整対象 / 仮想敵の1保存スロットを1 document として扱う
-- `entryId` は UUID に限定せず既存 ID を保持し、sync schema と payload schema を分離する
-- server timestamp、`revision`、`baseRevision`、`mutationId`、`deletedAt` tombstone を持たせる
-- 保存操作は local 成功を先に確定して outbox へ積み、起動、focus、`online`、手動操作で pull / push する
-- remote empty、network error、permission error、quota error、invalid payload、unknown future schema を別状態にする
-- 同じ entry / revision の競合は Last Write Wins で消さず、元データを保持した競合コピーまたは要確認状態にする
-
-Done:
-
-- repository / coordinator を Firebase mock または emulator で独立テストできる
-- 別スロット同士は自動統合され、同一 ID の同時更新、更新対削除、再送 mutation がデータ消失や二重適用を起こさない
-- offline 中の変更が local に残り、復帰後に順序どおり送られる
-- 1件の破損 remote document が一覧全体を空にしない
-
-Stop line:
-
-- 既存ユーザーデータの one-time migration や実 UI への全面接続へ進まない
-
-### SYNC-M3: 既存 localStorage の one-time migration
-
-Goal:
-
-- 既存端末と既存クラウドのどちらも失わず、アカウント単位の保存領域へ一度だけ統合する
-
-Scope:
-
-- `championcreator.box.v1`、`championcreator.enemy-box.v1`、既定サンプル marker を読み取る migration state を追加する
-- `not-started` / `in-progress` / `needs-review` / `completed` を区別し、完了までは旧 localStorage を削除しない
-- cloud empty なら local upload、両方にデータがあれば `統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める` を提示する
-- default は union とし、同一 ID・同一 payload は1件、同一 ID・異なる payload は両方残す
-- guest と UID ごとの local namespace を分け、ログアウトや別アカウント login で前ユーザーのデータを混ぜない
-- 未変更の既定サンプルと削除済み marker を特別扱いし、同期開始や新端末で勝手に復活・重複させない
-
-Done:
-
-- local only、cloud only、双方空、双方同一、双方競合、中断再開、アカウント切替の migration test がある
-- migration 失敗時も旧データと既存 JSON backup が利用できる
-- migration 完了 marker は remote write と local 保存が成功した後だけ確定する
-- 初回統合 UI を desktop / mobile / narrow-width で確認している
-
-Stop line:
-
-- 通常利用中の全ボックス操作をクラウド同期へ切り替えない
-
-### SYNC-M4: 調整対象・仮想敵ボックスの同期
-
-Goal:
-
-- 両ボックスの保存、上書き、名前変更、複製、削除、読み込みを端末間で同期する
-
-Scope:
-
-- `App` の直接 `save*ToBrowser()` 呼び出しを repository / coordinator 境界へ段階的に移す
-- 調整対象と仮想敵の kind、payload、backup、表示文言を混ぜない
-- 読み込み時は進行中 Worker と stale request を既存経路で破棄する
-- 削除は tombstone として同期し、オフライン端末からの古い更新で復活させない
-- backup import は同期中も validation を通し、`統合` と `クラウド全体を置き換え` の影響件数を事前表示する
-- Realtime listener は必須にせず、まず launch / focus / online / manual sync を正にする
-
-Done:
-
-- create / overwrite / rename / duplicate / delete / restore / import / export の両ボックス回帰テストがある
-- 2端末で別スロット更新、同一スロット競合、削除対更新、offline 復帰を再現し、無言のデータ消失がない
-- sync error 中も local 操作と JSON backup が利用できる
-- 既存の20件ページング、計算、候補、box load 後の state reset に回帰がない
-
-Stop line:
-
-- 作業中下書きのクラウド同期や最終アカウント UI へ進まない
-
-### SYNC-M5: ブラウザ別クラウド下書き
-
-Goal:
-
-- SYNC-M0 の下書きを、別端末から明示的に選んで復元できるようにする
-
-Scope:
-
-- `userId + deviceId` 単位で draft document を分け、同時入力端末が同じ draft を上書きしないようにする
-- local draft は `500..1000ms`、cloud draft は操作停止後 `1500..3000ms` を目安に queue する
-- `pagehide` / `visibilitychange` では同期完了を装わず、未送信 mutation を outbox に残す
-- 他のブラウザの下書きは更新日時、ブラウザラベル、入力概要を表示し、ユーザーが選んだ時だけ現在 state へ復元する
-- draft の上限、保持期間、手動削除、期限切れ cleanup を定義し、課金必須の仕組みへ暗黙に依存しない
-
-Done:
-
-- 同一ブラウザ復元、他ブラウザ復元、同時編集、offline、期限切れ、破損 draft のテストがある
-- draft 復元時に進行中 Worker / stale result が破棄され、box data は変更されない
-- 保存中、ブラウザ保存済み、クラウド保存済み、offline、error の表示が実状態と一致する
-- desktop / mobile / narrow-width で下書き一覧と復元確認を検証している
-
-Stop line:
-
-- Google 以外の provider、端末間リアルタイム共同編集、共有ボックスへ拡張しない
-
-### SYNC-M6: アカウント・同期状態 UI とライフサイクル
-
-Goal:
-
-- login から同期、logout、データ export、アカウント削除までをユーザーが安全に完結できるようにする
-
-Scope:
-
-- desktop header と既存 mobile sheet / box panel を再利用し、常設 UI を増やしすぎない
-- exact status を `このブラウザのみ` / `未同期` / `同期中…` / `同期済み` / `オフライン` / `競合あり` / `同期エラー` として区別する
-- `Googleでログイン`、初回統合、今すぐ同期、再試行、競合解決、logout を到達可能にする
-- logout 時は未同期 mutation を明示し、guest namespace と user namespace を混ぜない
-- account deletion は再認証後に cloud data を削除し、途中失敗時に auth user だけを先に消さない
-- Google アカウントは本人確認だけに使い Drive / 連絡先へアクセスしない旨を表示する
-- privacy policy、データ利用・保存・削除説明、Google OAuth production branding / authorized domain を整える
-
-Done:
-
-- keyboard / focus / screen reader label、popup error、cancel、session restore、別アカウント login をテストしている
-- account export / delete と削除失敗時の retry を確認している
-- desktop、代表スマホ幅、320px 前後で login / sync / conflict / logout / delete UI に切れや横 overflow がない
-- tutorial variant に account / sync UI や永続化が混入しない
-
-Stop line:
-
-- 公開完了と誤認せず、SYNC-M7 の全体検証と本番 smoke test を残す
-
-### SYNC-M7: 全体検証・公開・一時ロードマップ削除
-
-Goal:
-
-- セキュリティ、保存互換、2端末動作、公開版を検証し、同期機能を完成扱いにする
-
-Scope:
-
-- 対象 unit / integration / emulator tests、`npm run typecheck`、`npm test`、`npm run build`、`npm run check` を実行する
-- unauthenticated、別 UID、payload size / schema、App Check、quota / network error を検証する
-- desktop、代表スマホ幅、320px 前後で local draft、Google login、migration、両ボックス同期、cloud draft、競合、logout、account delete を確認する
-- 2つの独立 browser context または実端末で、同一アカウント同期と別アカウント分離を確認する
-- README、guide、privacy、公開仕様、制限、version、backup 手順を実装と同期する
-- Pages 公開後に custom domain で Google login、Firestore read / write、再読み込み、別ブラウザ反映、console を smoke test する
-
-Done:
-
-- 上記検証が pass し、未確認範囲と運用上の残課題が `PROGRESS.md` に明記されている
-- production の rules / indexes / App Check / authorized domains が source と一致する
-- 同期失敗でも local data と JSON backup から復旧できる
-- この `## 一時ロードマップ: Firebase アカウント同期（完了後に章ごと削除）` 章を、次の `## 最重要の設計境界` の直前まで同じ変更内で削除している
-- 完了後の現行実装に必要な恒久ルールだけを既存セクションへ最小限反映し、本ロードマップや実装手順を転載していない
-
-Stop line:
-
-- Realtime 共同編集、共有、Google 以外の provider、有料機能は別依頼として扱う
 
 ## 最重要の設計境界
 
@@ -407,14 +178,19 @@ SP 制約:
 
 ### 7. 保存データは互換性と失敗経路を持つ
 
-ChampionCreator は静的 Web アプリとして完結し、通常の保存は browser storage、外部保存は明示的なバックアップ入出力で扱う。
+ChampionCreator は GitHub Pages の静的フロントを維持し、guest / local-first の browser storage と JSON backup を常に利用できるようにする。Google ログインを選んだ場合だけ、承認済みの Firebase Authentication / Cloud Firestore / App Check 境界でアカウント同期を行う。
 
 - 保存形式には `schemaVersion` を持たせる
 - schema 変更では migration または明確な非対応エラーを用意する
 - 必須項目欠落、unknown schema、破損 JSON、resolver 未解決、SP 超過を区別する
 - 読み込めない値を黙って正常値へ置き換えない
 - 保存対象は入力条件を正とし、古い計算結果を唯一の正にしない
-- 調整対象ボックスと仮想敵ボックスの責務を混ぜない
+- 調整対象ボックス、仮想敵ボックス、作業中下書きを別の保存・同期領域として扱い、計算結果、候補一覧、Worker state、使用率データ、チュートリアル state は保存・同期しない
+- local / cloud / backup の payload は既存 parser で validation / migration し、invalid / unknown future schema を空データとして扱わない。1件の破損 remote record で他の保存内容を空にしない
+- guest / local-first、offline 中の local 操作、JSON backup を同期障害でも維持し、logout / account switch で guest namespace と UID namespace を混在させない
+- 同期の競合・削除でデータを黙って失わず、削除の tombstone と未送信変更を保持し、競合は解決可能な状態またはコピーとして残す
+- Google 認証は本人確認に限定し、Drive / 連絡先などの追加権限を要求しない。Firebase Admin credential、service account key、Google OAuth client secret を browser bundle、repository、Pages artifact に含めない
+- 同期データの owner UID、kind、schema、許可 field、payload size は Security Rules でも検証し、未認証・別 UID の read / write を拒否する
 - 白紙初期状態と、削除できるサンプルの one-time seed を壊さない
 - ユーザーが削除したサンプルを起動時に復活させない
 - 読み込み時は進行中 Worker と表示中結果を安全に破棄する
@@ -424,6 +200,7 @@ ChampionCreator は静的 Web アプリとして完結し、通常の保存は b
 - `src/ui/shareState.ts`
 - `src/ui/boxStorage.ts`
 - `src/ui/enemyBoxStorage.ts`
+- `src/sync/`
 
 似た serialization 形式を増やす前に、既存 share / box schema を再利用できるか確認する。
 
@@ -572,7 +349,7 @@ skipInAppBrowserCheck: false
 
 ## 長期保守ルール
 
-- 基本は静的 Web アプリとして完結させ、runtime backend / DB / scraping に依存しない
+- 計算・通常編集・バックアップは guest / local-first の静的 Web アプリとして利用できる状態を保ち、同期だけを承認済みの Firebase Authentication / Cloud Firestore / App Check に限定する。それ以外の runtime backend / DB / scraping に依存しない
 - GitHub Pages など静的ホスティングで継続運用できる構成を優先する
 - 依存追加は必要性を説明できるものに絞り、package churn を最小化する
 - lockfile と vendor provenance を保ち、再現可能な install / build を優先する
@@ -604,6 +381,7 @@ skipInAppBrowserCheck: false
 - `PROGRESS.md` は `Format: 2`、`Current Snapshot`、最新5〜10件程度の `Recent Updates` に保つ
 - 通常の作業開始時は `Current Snapshot` と最新数件だけを読み、ファイルや archive の全件を読み込まない
 - 過去履歴が必要な場合だけ `rg` で `PROGRESS.archive/` を検索し、該当する1〜3件だけを読む
+- `SYNC-M0`〜`SYNC-M7` の実装・実施・検証記録は、月別 archive とは別の `PROGRESS.archive/SYNC-MILESTONES.md` に残し、通常の `No.N` 移動・採番の対象にしない
 - 10件を超えた古い `done` エントリは `PROGRESS.archive/YYYY-MM.md` へ原文のまま移し、`in_progress` / `blocked` は解決まで active 側へ残す
 - `No.N` は active と archive を通した連番とし、移動時に再採番しない。次番号は見出しだけを機械的に走査し、最大値1件だけを出力して決める
 - `Current Snapshot` の最新番号、現在の goal / status、最後の検証、blocker、次の一手を、最新エントリと矛盾させない

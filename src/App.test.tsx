@@ -18,6 +18,8 @@ import {
   getAttackSuggestionRankingOwners,
   getDraftSaveStatusLabel,
   getDraftAutosaveDecision,
+  isCurrentAccountOperation,
+  shouldInvalidateAccountOperationOnUidChange,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
   resolveDraftStorageScope,
@@ -67,6 +69,20 @@ const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => (
 });
 
 describe("App", () => {
+  it("rejects stale account operation results after a newer operation or UID switch", () => {
+    expect(isCurrentAccountOperation(4, 4, "alice", "alice")).toBe(true);
+    expect(isCurrentAccountOperation(4, 5, "alice", "alice")).toBe(false);
+    expect(isCurrentAccountOperation(4, 4, "alice", "bob")).toBe(false);
+    expect(isCurrentAccountOperation(4, 4, null, null)).toBe(true);
+  });
+
+  it("allows only an explicitly expected Auth UID transition to keep an operation current", () => {
+    expect(shouldInvalidateAccountOperationOnUidChange(null, null)).toBe(false);
+    expect(shouldInvalidateAccountOperationOnUidChange("alice", "alice")).toBe(false);
+    expect(shouldInvalidateAccountOperationOnUidChange(undefined, "alice")).toBe(true);
+    expect(shouldInvalidateAccountOperationOnUidChange(null, "bob")).toBe(true);
+  });
+
   it("never falls an unavailable account draft namespace back to the guest key", () => {
     expect(resolveDraftStorageScope(null)).toEqual({
       sourceKey: "device",

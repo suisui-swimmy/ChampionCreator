@@ -136,6 +136,48 @@ describe("SyncCoordinator", () => {
     expect(cloud.writeCalls.map((record) => record.mutationId)).toEqual(["fifo-a", "fifo-a", "fifo-b"]);
   });
 
+  it.each([
+    ["permission-denied", "permission-denied"],
+    ["quota", "quota"],
+    ["unavailable", "unavailable"],
+  ] as const)("retains the outbox for a %s write error and retries the same mutation", async (kind, expectedCode) => {
+    let fail = true;
+    const cloud = createCloud({
+      write: async (record) => {
+        if (fail) {
+          return {
+            status: "error" as const,
+            issues: [],
+            error: { kind, message: "backend details" },
+          };
+        }
+        return { status: "written" as const, record, issues: [] };
+      },
+    });
+    const local = createMemorySyncRepository(OWNER);
+    const coordinator = createSyncCoordinator({ local, cloud, now: at(2) });
+    expect(coordinator.queueUpsert({
+      kind: "target-box",
+      entry: entry(`retry-${kind}`),
+      mutationId: `retry-${kind}`,
+    }).status).toBe("success");
+
+    const failed = await coordinator.synchronize("manual");
+    expect(failed.status).toBe("error");
+    expect(failed.error?.code).toBe(expectedCode);
+    expect(failed.outbox).toHaveLength(1);
+    expect(cloud.writeCalls.map((record) => record.mutationId)).toEqual([`retry-${kind}`]);
+
+    fail = false;
+    const retried = await coordinator.synchronize("manual");
+    expect(retried.status).toBe("success");
+    expect(retried.outbox).toEqual([]);
+    expect(cloud.writeCalls.map((record) => record.mutationId)).toEqual([
+      `retry-${kind}`,
+      `retry-${kind}`,
+    ]);
+  });
+
   it("unions distinct target and enemy slots and never erases local data on remote empty", async () => {
     const localOnly = queue("local-slot");
     const remoteOnly = queue("remote-slot");

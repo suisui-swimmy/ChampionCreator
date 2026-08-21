@@ -1,8 +1,8 @@
-# Firebase 同期基盤セットアップ（SYNC-M1〜M6）
+# Firebase 同期基盤セットアップ（SYNC-M1〜M7）
 
-この文書は `SYNC-M1`〜`SYNC-M6` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、既存 localStorage の one-time migration controller、M4の調整対象・仮想敵ボックス接続、M5のブラウザ別cloud draft、M6の常設ログイン・同期状態・アカウント管理 UI、Firestore Security Rules までです。
+この文書は `SYNC-M1`〜`SYNC-M7` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、既存 localStorage の one-time migration controller、M4の調整対象・仮想敵ボックス接続、M5のブラウザ別cloud draft、M6の常設ログイン・同期状態・アカウント管理 UI、Firestore Security Rules、M7の公開設定検証までです。
 
-`SYNC-M3` の controller は既存データを一度だけ移行するための状態・選択肢・UID境界を扱い、`SYNC-M4` の runtime owner はM3の移行が完了した復元済み認証 session にだけ通常のbox操作を接続します。`SYNC-M5` の runtime owner は同じ認証・UID境界で、`userId + deviceId` ごとのcloud draftを別collectionへ接続します。`SYNC-M6` は Google popup login、7種類の同期状態、ログアウト、アカウントデータの書き出し、再認証付きアカウント削除を接続します。ゲスト・未認証、移行保留中、移行失敗時は従来どおり browser storage / local-first です。Firebase config がない公開・開発環境でも、既存の guest / local-first 機能はそのまま利用できます。
+`SYNC-M3` の controller は既存データを一度だけ移行するための状態・選択肢・UID境界を扱い、`SYNC-M4` の runtime owner はM3の移行が完了した復元済み認証 session にだけ通常のbox操作を接続します。`SYNC-M5` の runtime owner は同じ認証・UID境界で、`userId + deviceId` ごとのcloud draftを別collectionへ接続します。`SYNC-M6` は未ログインでも到達できるGoogle popup loginと、M3完了後の7種類の同期状態、ログアウト、アカウントデータの書き出し、再認証付きアカウント削除を接続します。ゲスト・未認証、移行保留中、移行失敗時は従来どおり browser storage / local-first です。Firebase config がないローカル開発環境でも、既存の guest / local-first 機能はそのまま利用できます。本番Pages workflowは同期機能なしの誤公開を防ぐため、Firebase必須設定の欠落時に停止します。
 
 ## 現在の状態
 
@@ -17,13 +17,14 @@
 | Google provider / authorized domains の設定 | 2026-08-21 確認済み |
 | Cloud Firestore の作成 | 2026-08-21 確認済み |
 | M2 Rules / indexes の本番反映 | 2026-08-21 完了 |
+| M5 / M6 Rules / indexes の本番反映 | 2026-08-21 完了（M7でsource一致を再確認） |
 | App Check の登録と monitor | 2026-08-21 確認済み（enforcement は未実施） |
 | SYNC-M3 one-time migration controller / UID別 marker / 初回統合dialog | 認証済みsessionのruntime gateへ接続済み |
 | SYNC-M4 UID別local / outbox / Firestoreによるtarget・enemy box操作 | M3完了後の復元済み認証sessionへ接続済み |
 | SYNC-M4 tombstone、競合保持、破損remote分離 | 実装済み（対象repository / coordinator経路） |
 | SYNC-M4 backup importの`統合` / `クラウド全体を置き換え`と件数preview | 実装済み |
 | SYNC-M5 cloud draft | UID + deviceId別local / outbox / Firestoreへ接続済み（2秒queue、10件上限、30日保持、期限切れcleanup） |
-| SYNC-M6 常設ログイン・同期状態・アカウント管理 UI | 実装済み（M7の全体検証・本番smoke testは残り） |
+| SYNC-M6 常設ログイン・同期状態・アカウント管理 UI | 実装済み（ログイン導線は未ログインでも表示） |
 | SYNC-M6 アカウント export / delete と失敗時 retry | 実装済み（UID専用削除、Auth削除は最後） |
 | SYNC-M6 account operation gate / provider disposal | 実装済み（export / delete / logout中の保存・同期を停止） |
 
@@ -81,26 +82,26 @@ M5のcloud draftは、同じテストUIDの複数deviceIdで、ブラウザ内0.
 
 ## Web config
 
-`.env.example` を `.env.local` へコピーした状態は Emulator 用です。本番用には次の GitHub repository variables を `Settings > Secrets and variables > Actions > Variables` へ登録します。workflow は値がそろっていない場合も build を成功させ、その build では Firebase を初期化しません。
+`.env.example` を `.env.local` へコピーした状態は Emulator 用です。本番用には次の GitHub repository variables を `Settings > Secrets and variables > Actions > Variables` へ登録します。本番Pages workflowは、基本Web config 4件とApp Check site keyのいずれかが欠けている場合、guest-only buildを公開せずエラーで停止します。
 
-必須:
+本番Pagesで必須:
 
 - `VITE_FIREBASE_API_KEY`
 - `VITE_FIREBASE_AUTH_DOMAIN`
 - `VITE_FIREBASE_PROJECT_ID`
 - `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_APP_CHECK_SITE_KEY`
 
 任意:
 
 - `VITE_FIREBASE_STORAGE_BUCKET`
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
-- `VITE_FIREBASE_APP_CHECK_SITE_KEY`
 
 Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATORS` に `true` または `false` の明示が必須です。通常の開発では `true` を使います。production build はこの値に関係なく localhost の Emulator へ接続しません。
 
 ## Firebase Console と本番反映
 
-次の項目は repository から自動実行しません。1〜6は2026-08-21に確認済みです。7はM2分を2026-08-21に完了していますが、M5 / M6のRules変更後に再実施が必要です。`SYNC-M3` と `SYNC-M4` は既存のbox保存契約を再利用し、`SYNC-M5` はFirestoreの `/users/{uid}/drafts/{deviceId}` へ保存するため、Firebase Console上で新しいproject、provider、scope、authorized domain、GitHub variable、手動collection作成は不要です。M6のアカウント削除で必要な変更は既存Rulesへのowner delete許可だけで、Admin SDKやFunctionsを追加しません。project IDやcredentialそのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
+次の項目は repository から自動実行しません。1〜6は2026-08-21に確認済みです。7はM2〜M6のsourceを2026-08-21に本番へ反映し、M7でRules release / indexesとrepositoryの一致を再確認しました。`SYNC-M3` と `SYNC-M4` は既存のbox保存契約を再利用し、`SYNC-M5` はFirestoreの `/users/{uid}/drafts/{deviceId}` へ保存するため、Firebase Console上で新しいproject、provider、scope、authorized domain、GitHub variable、手動collection作成は不要です。M6のアカウント削除で必要な変更は既存Rulesへのowner delete許可だけで、Admin SDKやFunctionsを追加しません。project IDやcredentialそのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
 
 1. Firebase project と Web app を作成し、Web config を取得する。
 2. Authentication で Google provider を有効にする。追加 scope（Driveのファイル、連絡先、Gmailのメール本文などへアクセスする権限）は要求しない。
@@ -108,13 +109,13 @@ Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATO
 4. Cloud Firestore を production mode で作成し、利用地域を確定する。
 5. Web app を App Check の reCAPTCHA Enterprise provider に登録し、site key を設定する。最初は enforcement を有効にせず、verified / outdated / unknown / invalid request の metrics を monitor する。
 6. GitHub repository variables を登録し、Pages build が Firebase Web config と App Check site key を受け取れるようにする。
-7. Emulator test が pass した同じ Rules と indexes を、明示した production project へ deployする。M2分は2026-08-21完了済みですが、M5 / M6のRules / indexes変更後に再実施が必要です。
+7. Emulator test が pass した同じ Rules と indexes を、明示した production project へ deployする。M2〜M6分は2026-08-21完了済みです。今後Rulesを変更した場合も同じ手順で再反映します。
 
 ```powershell
 npx firebase-tools login
-# M2〜M5の初回反映
+# Rules / indexesの本番反映
 npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <firebase-project-id>
-# M6のowner物理delete変更はRulesだけ再反映
+# indexes変更がないRulesだけの更新
 npx firebase-tools deploy --only firestore:rules --project <firebase-project-id>
 ```
 
@@ -207,7 +208,7 @@ Firestoreの保存先は `/users/{uid}/drafts/{deviceId}` です。1ブラウザ
 
 ## SYNC-M6: アカウント・同期状態 UI とライフサイクル
 
-M6は、M3のmigration stateが `completed` になった認証済みsessionにだけ、常設のアカウント操作を表示します。Google popupでログイン・再認証し、UID、表示名、メールアドレス、プロフィール画像を受け取ります。Google Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加 scope は要求しません。FirebaseのUser object、credential、access tokenはUI state、localStorage、バックアップへ保存しません。
+M6は、未ログインでもヘッダーにアカウント画面とGoogleログイン導線を表示します。ログイン後、M3のmigration stateが `completed` になった認証済みsessionにだけ、通常同期、cloud draft、export、deleteなどのアカウント保存操作を接続します。Google popupでログイン・再認証し、UID、表示名、メールアドレス、プロフィール画像を受け取ります。Google Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加 scope は要求しません。FirebaseのUser object、credential、access tokenはUI state、localStorage、バックアップへ保存しません。
 
 ### 同期状態の表示契約
 

@@ -98,6 +98,23 @@ describe("AuthSession", () => {
     expect(session.getState()).toMatchObject({ status: "signed-in", user: newerUser });
   });
 
+  it("does not let a pending sign-in publish state after the session stops", async () => {
+    const fakes = makeGateway();
+    let resolveSignIn: ((value: AuthUser) => void) | undefined;
+    fakes.signInWithGoogle.mockImplementation(() => new Promise<AuthUser>((resolve) => {
+      resolveSignIn = resolve;
+    }));
+    const session = createAuthSession(fakes.gateway);
+    const stop = session.start();
+    const pending = session.signInWithGoogle();
+
+    stop();
+    resolveSignIn?.(user);
+    await pending;
+
+    expect(session.getState()).toMatchObject({ status: "signing-in", user: null });
+  });
+
   it("uses the gateway current UID for destructive-operation checks", () => {
     const fakes = makeGateway();
     let actualUid = user.uid;

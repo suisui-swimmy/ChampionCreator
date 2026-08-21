@@ -68,7 +68,7 @@ const toRaw = (record: SyncRecord): Record<string, unknown> => ({
 
 const createFakeDependencies = (
   database: FakeDatabase,
-  options: { readonly readError?: unknown } = {},
+  options: { readonly readError?: unknown; readonly writeError?: unknown } = {},
 ): FirestoreSyncDependencies => ({
   collection: (_firestore, path) => ({ path }),
   doc: (_collection, id) => ({ id }),
@@ -86,6 +86,9 @@ const createFakeDependencies = (
     };
   },
   runTransaction: async (_firestore, updateFunction) => {
+    if (options.writeError !== undefined) {
+      throw options.writeError;
+    }
     const writes: Array<{ readonly id: string; readonly data: Record<string, unknown> }> = [];
     const result = await updateFunction({
       get: async (reference) => {
@@ -115,7 +118,7 @@ const createFakeDependencies = (
 
 const createRepository = (
   database: FakeDatabase,
-  options: { readonly readError?: unknown } = {},
+  options: { readonly readError?: unknown; readonly writeError?: unknown } = {},
 ) => createFirestoreSyncRepository({
   firestore: database,
   uid: "uid-a",
@@ -292,5 +295,23 @@ describe("FirestoreSyncRepository", () => {
       status: "error",
       error: { kind: expectedKind },
     });
+  });
+
+  it.each([
+    ["permission-denied", "permission-denied"],
+    ["resource-exhausted", "quota"],
+    ["unavailable", "unavailable"],
+  ] as const)("classifies transaction %s failures and hides raw details", async (code, expectedKind) => {
+    const database: FakeDatabase = { documents: new Map() };
+    const result = await createRepository(database, {
+      writeError: { code, message: "secret transaction details" },
+    }).write(makeRecord(`transaction-${code}`));
+
+    expect(result).toMatchObject({
+      status: "error",
+      error: { kind: expectedKind },
+    });
+    expect(result.error?.message).not.toContain("secret transaction details");
+    expect(database.documents).toHaveLength(0);
   });
 });

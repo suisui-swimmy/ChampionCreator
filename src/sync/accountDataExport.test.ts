@@ -173,6 +173,63 @@ describe("accountDataExport", () => {
     ]);
   });
 
+  it("marks draft repository issues partial while retaining valid draft records", async () => {
+    const syncRepository: CloudSyncRepository = {
+      readAll: async () => syncRead([syncRecord()]),
+      write: async () => ({ status: "error", issues: [], error: { kind: "unknown", message: "unused" } }),
+    };
+    const draftRepository: CloudDraftRepository = {
+      readAll: async () => ({
+        ...draftRead([draftRecord()]),
+        issues: [{
+          code: "invalid-document" as const,
+          reason: "invalid-document" as const,
+          type: "invalid-document" as const,
+          message: "broken draft",
+        }],
+      }),
+      write: async () => ({ status: "error", issues: [], error: { kind: "unknown", message: "unused" } }),
+    };
+
+    const result = await exportAccountData({
+      uid: UID,
+      syncRepository,
+      draftRepository,
+      exportedAt: NOW,
+    });
+
+    expect(result.status).toBe("partial");
+    if (result.status === "error") return;
+    expect(result.document.draftRecords).toHaveLength(1);
+    expect(result.document.warnings.map(({ code }) => code)).toEqual(["draft-issues"]);
+  });
+
+  it.each([
+    ["throws", async () => {
+      throw new Error("network details");
+    }],
+    ["returns error", async () => ({
+      status: "error" as const,
+      error: { message: "同期エラー" },
+    })],
+  ] as const)("returns synchronization-failed when synchronize %s", async (_label, synchronize) => {
+    const result = await exportAccountData({
+      uid: UID,
+      syncRepository: {
+        readAll: async () => syncRead(),
+      },
+      draftRepository: {
+        readAll: async () => draftRead(),
+      },
+      synchronize,
+    });
+
+    expect(result.status).toBe("error");
+    if (result.status === "error") {
+      expect(result.error.code).toBe("synchronization-failed");
+    }
+  });
+
   it("does not produce a document when either server read fails", async () => {
     const draftRepository: CloudDraftRepository = {
       readAll: async () => draftRead(),
@@ -193,6 +250,30 @@ describe("accountDataExport", () => {
     expect(result.status).toBe("error");
     if (result.status !== "error") return;
     expect(result.error.code).toBe("sync-read-failed");
+  });
+
+  it.each([
+    ["rejects", async () => {
+      throw new Error("draft backend details");
+    }],
+    ["returns error", async () => ({
+      status: "error" as const,
+      drafts: [],
+      records: [],
+      issues: [],
+      error: { kind: "permission-denied" as const, message: "権限なし" },
+    })],
+  ] as const)("does not produce a document when draft server read %s", async (_label, readAll) => {
+    const result = await exportAccountData({
+      uid: UID,
+      syncRepository: { readAll: async () => syncRead([syncRecord()]) },
+      draftRepository: { readAll },
+    });
+
+    expect(result.status).toBe("error");
+    if (result.status === "error") {
+      expect(result.error.code).toBe("draft-read-failed");
+    }
   });
 
   it("retains tombstones by default and can omit them explicitly", () => {

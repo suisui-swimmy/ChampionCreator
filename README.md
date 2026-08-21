@@ -36,7 +36,7 @@ Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 - Frontend: React 19 + TypeScript + Vite
 - Test runner: Vitest
 - Hosting: GitHub Pages を想定した静的配信
-- Browser storage: ゲスト・未認証、または `SYNC-M3` の移行が完了していない状態では、従来どおり browser storage / local-first で動作します。`SYNC-M3` の one-time migration が完了した復元済み認証 session では、`SYNC-M4` の調整対象・仮想敵ボックスと、`SYNC-M5` の作業中下書きを UID 別に保存します。ボックスはローカル保存（outboxを含む）とFirestoreへ、下書きは UID + deviceId ごとのローカル保存（outboxを含む）と Firestore の `drafts` collection へ同期します。`SYNC-M6` では Google ログイン、同期状態、アカウントデータの書き出し・削除を常設 UI から操作できます。Googleログインで受け取るのは表示名、メールアドレス、プロフィール画像、UIDです。Google Driveのファイル、連絡先、Gmailのメール本文を見る権限は要求しません
+- Browser storage: ゲスト・未認証、または `SYNC-M3` の移行が完了していない状態では、従来どおり browser storage / local-first で動作します。ヘッダーのログイン導線は未ログインでも利用でき、Google ログイン後に `SYNC-M3` の one-time migration を完了すると、`SYNC-M4` の調整対象・仮想敵ボックスと `SYNC-M5` の作業中下書きを UID 別に同期できます。ボックスはローカル保存（outboxを含む）とFirestoreへ、下書きは UID + deviceId ごとのローカル保存（outboxを含む）と Firestore の `drafts` collection へ同期します。同期状態、アカウントデータの書き出し・削除も常設 UI から操作できます。Googleログインで受け取るのは表示名、メールアドレス、プロフィール画像、UIDです。Google Driveのファイル、連絡先、Gmailのメール本文を見る権限は要求しません
 - PWA: Web App Manifest に対応。Service Worker によるオフラインキャッシュは未実装
 
 ### Damage calculation boundary
@@ -185,9 +185,9 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 
 各ボックス画面の `バックアップを書き出す` / `バックアップを読み込む` から、保存済みボックスを JSON ファイルとして退避・復元できます。調整対象ボックスと仮想敵ボックスのバックアップは別ファイルとして扱い、読み込み時は同じ種類の保存へ `統合` するか、バックアップ内容で置き換えるかを選びます。
 
-## アカウント・同期管理（SYNC-M6）
+## アカウント・同期管理
 
-`SYNC-M3` の one-time migration が `completed` になった認証済み session では、ヘッダーから `Googleでログイン`、同期状態の確認、ログアウト、アカウントデータの書き出し、アカウント削除を操作できます。Google の「scope」は、アプリがどの情報や機能を使えるかを示すアクセス権の種類です。ChampionCreator が Google ログインで受け取るのは、表示名、メールアドレス、プロフィール画像、アカウント識別子です。Google Drive のファイル、連絡先、Gmail のメール本文を見る追加権限は要求しません。Firebase の User、credential、access token は画面の保存データやバックアップへ渡しません。
+ヘッダーのアカウント画面と `Googleでログイン` は未ログインでも利用できます。ログイン後に `SYNC-M3` の one-time migration が `completed` になると、同期状態の確認、今すぐ同期、cloud draft、ログアウト、アカウントデータの書き出し、アカウント削除を操作できます。Google の「scope」は、アプリがどの情報や機能を使えるかを示すアクセス権の種類です。ChampionCreator が Google ログインで受け取るのは、表示名、メールアドレス、プロフィール画像、アカウント識別子です。Google Drive のファイル、連絡先、Gmail のメール本文を見る追加権限は要求しません。Firebase の User、credential、access token は画面の保存データやバックアップへ渡しません。
 
 同期状態として表示する文言は、次の7つに固定しています。
 
