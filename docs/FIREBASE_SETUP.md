@@ -18,7 +18,7 @@
 | Cloud Firestore の作成 | 2026-08-21 確認済み |
 | M2 Rules / indexes の本番反映 | 2026-08-21 完了 |
 | M5 / M6 Rules / indexes の本番反映 | 2026-08-21 完了（M7でsource一致を再確認） |
-| App Check の登録と monitor | 2026-08-21 確認済み（enforcement は未実施） |
+| App Check の登録・metrics・enforcement | 2026-08-21 完了（Firestore / Authenticationともverified 100%、unverified 0%を確認後に適用） |
 | SYNC-M3 one-time migration controller / UID別 marker / 初回統合dialog | 認証済みsessionのruntime gateへ接続済み |
 | SYNC-M4 UID別local / outbox / Firestoreによるtarget・enemy box操作 | M3完了後の復元済み認証sessionへ接続済み |
 | SYNC-M4 tombstone、競合保持、破損remote分離 | 実装済み（対象repository / coordinator経路） |
@@ -27,6 +27,7 @@
 | SYNC-M6 常設ログイン・同期状態・アカウント管理 UI | 実装済み（ログイン導線は未ログインでも表示） |
 | SYNC-M6 アカウント export / delete と失敗時 retry | 実装済み（UID専用削除、Auth削除は最後） |
 | SYNC-M6 account operation gate / provider disposal | 実装済み（export / delete / logout中の保存・同期を停止） |
+| SYNC-M7 全体検証・Pages公開・custom domain smoke | 2026-08-21 完了（version `0.21.2`） |
 
 ## 秘密情報の境界
 
@@ -107,7 +108,7 @@ Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATO
 2. Authentication で Google provider を有効にする。追加 scope（Driveのファイル、連絡先、Gmailのメール本文などへアクセスする権限）は要求しない。
 3. Authentication の authorized domains に `championcreator.suisui-swimmy.com`、`localhost`、`127.0.0.1` を用途別に登録する。
 4. Cloud Firestore を production mode で作成し、利用地域を確定する。
-5. Web app を App Check の reCAPTCHA Enterprise provider に登録し、site key を設定する。最初は enforcement を有効にせず、verified / outdated / unknown / invalid request の metrics を monitor する。
+5. Web app を App Check の reCAPTCHA Enterprise provider に登録し、site key を設定する。最初は enforcement を有効にせず、verified / outdated / unknown / invalid request の metrics を monitor する。M7ではCloud Firestore 173/173件、Authentication 17/17件がverified、unverified 0件であることを確認してから両APIを適用済みにした。
 6. GitHub repository variables を登録し、Pages build が Firebase Web config と App Check site key を受け取れるようにする。
 7. Emulator test が pass した同じ Rules と indexes を、明示した production project へ deployする。M2〜M6分は2026-08-21完了済みです。今後Rulesを変更した場合も同じ手順で再反映します。
 
@@ -259,4 +260,4 @@ legacyの `championcreator.box.v1` / `championcreator.enemy-box.v1`、既定サ�
 4. Rules Emulatorでownerの物理deleteだけを許可し、未認証・別UIDを拒否する。通常のtombstone、更新、復元の契約を回帰確認する。
 5. desktop、代表スマホ幅、320px前後でlogin、sync status、migration、export、delete、retry、logoutを確認し、console errorと横overflowがないことを確認する。
 
-M6の完了は、`SYNC-M7` の全体検証・公開・一時ロードマップ削除を意味しません。M7では `npm run typecheck`、`npm test`、`npm run test:rules`、`npm run build`、本番 Rules / App Check / authorized domains、custom domainのlogin・Firestore read / write・再読み込み・別ブラウザ反映・console smoke testを確認します。
+`SYNC-M7` は2026-08-21に完了しました。`npm run check`、production Rules / indexes、authorized domains、Google provider、Pages run、custom domainのGoogle login・Firestore read / write・再読み込み、2つの独立ブラウザでのbox / cloud draft作成・削除同期、desktop / 393px / 320px、consoleを確認しています。App CheckはCloud Firestore / Authenticationともverified 100%・unverified 0%を確認してenforcementを有効にし、反映後のlogin・manual syncを再確認しました。実アカウント削除はユーザーデータを破壊するため本番アカウントでは実施せず、再認証から失敗時retryまでをmock / Rules Emulator / UI QAで検証しています。

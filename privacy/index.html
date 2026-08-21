@@ -148,7 +148,7 @@
             <li>静的PagesからFirebase client SDKを呼ぶ構成で、ChampionCreator独自のAdminサーバーやGoogle Drive保存はありません。</li>
             <li>共有ボックス、リアルタイム共同編集、Google以外のログインproviderは提供していません。</li>
           </ul>
-          <p>このページは公開仕様を説明するもので、`SYNC-M7`の全体検証・本番smoke testの完了を意味しません。本番公開時はcustom domain、Rules、App Check、ログイン、Firestore read / write、再読み込み、別ブラウザ反映を確認します。</p>
+          <p>2026年8月21日の公開検証では、custom domain、Security Rules、Googleログイン、Firestore read / write、再読み込み、別ブラウザへのbox・cloud draft反映と削除同期を確認しました。App CheckはCloud FirestoreとAuthenticationで検証済みリクエスト100%・未検証0%を確認したうえで適用しています。</p>
         </section>
       </main>
     </div>
