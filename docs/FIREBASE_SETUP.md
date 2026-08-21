@@ -1,8 +1,8 @@
 # Firebase 同期基盤セットアップ
 
-この文書は `SYNC-M1`〜`SYNC-M2` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、Firestore Security Rules までです。
+この文書は `SYNC-M1`〜`SYNC-M3` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、既存 localStorage の one-time migration controller、Firestore Security Rules までです。
 
-これらは後続UIから利用するための内部境界であり、既存ボックス操作にはまだ接続していません。ログイン操作、既存 localStorage の移行、実ボックスのクラウド保存、競合解決 UI、下書き同期、同期状態 UI は後続マイルストーンの範囲です。Firebase config がない公開・開発環境でも、既存の guest / local-first 機能はそのまま利用できます。
+これらは後続UIから利用するための内部境界であり、通常の既存ボックス操作にはまだ接続していません。`SYNC-M3` の controller は既存データを一度だけ移行するための状態・選択肢・UID境界を扱いますが、常設のログイン・同期状態・アカウント管理 UI は提供しません。通常の実ボックス操作のクラウド保存は `SYNC-M4`、cloud draft は `SYNC-M5`、常設UIは `SYNC-M6` の範囲です。Firebase config がない公開・開発環境でも、既存の guest / local-first 機能はそのまま利用できます。
 
 ## 現在の状態
 
@@ -16,9 +16,10 @@
 | Firebase project / Web app の作成 | 2026-08-21 確認済み |
 | Google provider / authorized domains の設定 | 2026-08-21 確認済み |
 | Cloud Firestore の作成 | 2026-08-21 確認済み |
-| M2 Rules / indexes の本番反映 | 未実施 |
+| M2 Rules / indexes の本番反映 | 2026-08-21 完了 |
 | App Check の登録と monitor | 2026-08-21 確認済み（enforcement は未実施） |
-| 実ログイン UI と実ボックス同期 | 後続マイルストーン |
+| SYNC-M3 one-time migration controller / UID別 marker / 初回統合dialog | 認証済みsessionのruntime gateへ接続済み（通常box操作へは未接続） |
+| 実ログイン UI と通常の実ボックス同期 | 後続マイルストーン（M4〜M6） |
 
 ## 秘密情報の境界
 
@@ -82,7 +83,7 @@ Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATO
 
 ## Firebase Console と本番反映
 
-次の項目は repository から自動実行しません。1〜6は2026-08-21に確認済みです。Rules / indexes を変更した場合は7を改めて実施し、project ID や credential そのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
+次の項目は repository から自動実行しません。1〜7は2026-08-21に確認済みです。`SYNC-M3` の one-time migration controller は既存の Web config、Rules、indexes、`target-box` / `enemy-box` の保存契約を再利用するため、新しい Firebase Console 設定は追加しません。Rules / indexes を変更した場合だけ7を改めて実施し、project ID や credential そのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
 
 1. Firebase project と Web app を作成し、Web config を取得する。
 2. Authentication で Google provider を有効にする。追加 scope は要求しない。
@@ -90,7 +91,7 @@ Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATO
 4. Cloud Firestore を production mode で作成し、利用地域を確定する。
 5. Web app を App Check の reCAPTCHA Enterprise provider に登録し、site key を設定する。最初は enforcement を有効にせず、verified / outdated / unknown / invalid request の metrics を monitor する。
 6. GitHub repository variables を登録し、Pages build が Firebase Web config と App Check site key を受け取れるようにする。
-7. Emulator test が pass した同じ Rules を、明示した production project へ deploy する。
+7. Emulator test が pass した同じ Rules と indexes を、明示した production project へ deploy する（2026-08-21完了）。
 
 ```powershell
 npx firebase-tools login
@@ -125,4 +126,16 @@ session restore は `onAuthStateChanged`、logout は Firebase Auth の `signOut
 - remote empty、network、permission、quota、invalid payload、future schemaを別状態として扱い、1件の破損documentで正常な一覧を空にしない
 - 同一slotの同時更新や更新対削除はLast Write Winsにせず、local / remoteを要確認状態へ保持する
 
-`SYNC-M2`ではrepository / coordinatorを既存ボックスUIへ接続しません。`championcreator.box.v1` / `championcreator.enemy-box.v1` のone-time migrationは`SYNC-M3`、通常の実ボックス同期は`SYNC-M4`、cloud draftは`SYNC-M5`の範囲です。
+## SYNC-M3: 既存 localStorage の one-time migration
+
+`SYNC-M3` は、既存端末の保存をアカウント単位の保存領域へ一度だけ移行する controller の内部境界です。通常のボックス操作を常時クラウドへ切り替える機能ではありません。
+
+- `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1` を移行元として扱う
+- migration state は `not-started` / `in-progress` / `needs-review` / `completed` を区別し、UIDごとの marker として保存する。ゲスト領域とUID領域は分離し、logoutや別アカウントへの切り替えで混在させない
+- local only / cloud only / 双方空 / 双方同一 / 双方競合を区別する。双方にデータがある場合の選択肢は `統合` / `クラウドを使用` / `この端末を使用` / `あとで決める`
+- `統合`では同一ID・同一payloadを1件にまとめ、同一ID・異なるpayloadは競合コピーとして両方を保持する
+- 移行完了が確認できるまで legacy localStorage key を削除しない。移行失敗時も旧データと既存のJSONバックアップを復旧手段として残す
+- 未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しい端末で復活させない
+- 移行対象は調整対象・仮想敵ボックスの保存済み入力条件だけで、計算結果、候補一覧、Worker state、チュートリアル state、cloud draft は含めない
+
+この controller は後続のアカウント導線から利用する内部境界であり、`SYNC-M4` の通常box UI同期、`SYNC-M5` のcloud draft、`SYNC-M6` の常設ログイン・同期状態・アカウント管理 UIを先取りしません。M3のproduction確認では実Google popupと移行のread / writeを検証しますが、Firebase Consoleで新しいprovider、scope、collection、indexを追加する作業はありません。

@@ -229,6 +229,45 @@ describe("boxStorage", () => {
     }))).toEqual([]);
   });
 
+  it("does not overwrite corrupt browser data while checking the default example", () => {
+    const values = new Map<string, string>([[BOX_STORAGE_KEY, "not-json"]]);
+    const writes: Array<[string, string]> = [];
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        writes.push([key, value]);
+        values.set(key, value);
+      },
+    };
+
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual([]);
+    expect(values.get(BOX_STORAGE_KEY)).toBe("not-json");
+    expect(values.has(BOX_DEFAULT_EXAMPLE_SEEDED_KEY)).toBe(false);
+    expect(writes).toEqual([]);
+  });
+
+  it("does not erase invalid entries from a partially readable browser document", () => {
+    const valid = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "valid-box",
+      now: "2026-08-21T00:00:00.000Z",
+    });
+    const raw = JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [valid, { id: "future-box", payload: { schemaVersion: 999 } }],
+    });
+    const values = new Map<string, string>([[BOX_STORAGE_KEY, raw]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual([valid]);
+    expect(values.get(BOX_STORAGE_KEY)).toBe(raw);
+    expect(values.has(BOX_DEFAULT_EXAMPLE_SEEDED_KEY)).toBe(false);
+  });
+
   it("seeds the default example once while preserving saved browser entries", () => {
     const values = new Map<string, string>();
     const storage = {

@@ -51,3 +51,20 @@ export {
   type SyncWriteResult,
 } from "./firestoreSyncRepository";
 export * from "./syncCoordinator";
+export * from "./migrationStorage";
+export {
+  buildMigrationPlan,
+  createMigrationPlan,
+  planLocalMigration,
+  type MigrationDecision as MigrationPlanDecision,
+  type MigrationDefaultExampleState,
+  type MigrationPlanCounts,
+  type MigrationPlanInput,
+  type MigrationPlanResult,
+  type MigrationPlanSnapshot,
+  type MigrationPlanSummary,
+} from "./migrationPlan";
+export * from "./localStorageMigration";
+export * from "./SyncMigrationDialog";
+export * from "./SyncMigrationGate";
+export * from "./syncMigrationView";

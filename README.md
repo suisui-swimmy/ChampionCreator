@@ -34,7 +34,7 @@ Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 - Frontend: React 19 + TypeScript + Vite
 - Test runner: Vitest
 - Hosting: GitHub Pages を想定した静的配信
-- Browser storage: ボックス機能は localStorage ベース
+- Browser storage: 通常のボックス機能は localStorage / local-first ベース。`SYNC-M3` では、既存データをアカウント保存領域へ一度だけ移行する内部境界を追加しています
 - PWA: Web App Manifest に対応。Service Worker によるオフラインキャッシュは未実装
 
 ### Damage calculation boundary
@@ -167,7 +167,11 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 
 調整対象ボックスへ現在の条件を保存または上書きした場合は、Wordなどの「名前を付けて保存」と同じ確定操作として作業中の下書きを削除し、次に入力を変更するまで`ボックスに保存済み`と表示します。確定保存後は、次回起動時に下書きの復元確認を表示しません。保存内容は調整対象ボックスから明示的に読み込めます。調整対象ボックスから保存を読み込むと、その入力条件が次の下書きとして自動保存されます。調整対象ボックスの空スロットを読み込んだ場合は、作業中の下書きも明示的に破棄します。バックアップの読み込みだけでは作業中の入力条件や下書きを変更せず、バックアップ内の保存を選んで読み込んだ時点で反映します。ブラウザの保存容量不足などで自動保存できない場合は、画面にエラーと再試行操作を表示します。
 
-保存データは同じブラウザ内の保存領域を使います。別端末、別ブラウザ、ブラウザデータ削除後には引き継がれません。
+通常の保存データは同じブラウザ内の保存領域を使います。別端末、別ブラウザ、ブラウザデータ削除後には自動で引き継がれません。M3の移行 controller はこの通常動作を常時クラウド同期へ切り替えるものではありません。
+
+`SYNC-M3` では、既存の `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1` を読み取る one-time migration controller と、アカウントの UID ごとに分離した migration marker を用意しています。ローカル領域とクラウド側の両方に保存がある場合に扱う選択肢は、`統合`、`クラウドを使用`、`この端末を使用`、`あとで決める` です。`統合`では同一 ID・同一 payload を1件にまとめ、同一 ID・異なる payload は競合コピーとして両方を保持します。移行が完了するまでは旧 localStorage key を削除せず、移行に失敗した場合も既存データを残します。JSONバックアップも別の退避手段として保持します。未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しい端末で勝手に復活させません。
+
+この controller と初回統合ダイアログは、復元できた認証済みsessionでだけ動くruntime gateへ接続しています。通常のボックス操作のクラウド同期は `SYNC-M4`、下書きのクラウド保存は `SYNC-M5`、常設のログイン・同期状態・アカウント管理 UI は `SYNC-M6` の範囲であり、`SYNC-M3` だけで提供済みになるものではありません。移行対象も保存済みの入力条件に限り、計算結果、候補一覧、Worker state、チュートリアル state、cloud draft は移行しません。
 
 各ボックス画面の `バックアップを書き出す` / `バックアップを読み込む` から、保存済みボックスを JSON ファイルとして退避・復元できます。調整対象ボックスと仮想敵ボックスのバックアップは別ファイルとして扱い、読み込み時は同じ種類の保存済みボックスをバックアップ内容で置き換えます。
 
@@ -222,11 +226,11 @@ npm run validate:artwork-assets
 npm run typecheck
 ```
 
-### Firebase 同期基盤（SYNC-M1〜M2）
+### Firebase 同期基盤（SYNC-M1〜M3）
 
 Firebase Web SDK、Google provider の認証 session owner、Auth / Firestore Emulator、Firestore Security Rules、App Check の初期化境界を `src/sync/` に分離しています。Firebase の必須 Web config がない環境では SDK を初期化せず、従来どおり guest / local-first で動作します。
 
-SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界までを追加しています。既存ボックスの localStorage 移行、実ボックス操作への接続、ログイン・同期状態 UI、下書きのクラウド保存はまだ提供しません。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、Rules の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
+SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `この端末を使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。通常の実ボックス操作へのクラウド同期、下書きのクラウド保存、常設のログイン・同期状態・アカウント管理 UI はまだ提供しません。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、Rules の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
 
 ## ライセンス・権利表記
 

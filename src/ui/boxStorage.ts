@@ -315,7 +315,23 @@ export const loadBoxEntriesFromBrowser = (
 
   let entries: BoxEntry[] = [];
   try {
-    entries = parseBoxStorageDocument(storage.getItem(BOX_STORAGE_KEY));
+    const stored = storage.getItem(BOX_STORAGE_KEY);
+    if (stored !== null) {
+      const parsed = parseBoxBackupDocument(stored);
+      if (parsed.status === "error") {
+        // A corrupt or future document must remain byte-for-byte recoverable.
+        // Treating it as an empty box here would overwrite it with the default
+        // example before the one-time migration can report the real problem.
+        return [];
+      }
+      entries = parsed.entries;
+      if (parsed.skippedCount > 0) {
+        // Keep partially readable documents intact as well. The migration
+        // owner can surface the skipped entries instead of silently erasing
+        // them during the normal one-time seed path.
+        return entries;
+      }
+    }
     if (storage.getItem(BOX_DEFAULT_EXAMPLE_SEEDED_KEY) === "1") {
       return entries;
     }
