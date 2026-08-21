@@ -109,7 +109,7 @@ describe("migrationPlan", () => {
     });
     expect(first.state.outbox).toHaveLength(1);
     expect(first.state.outbox[0]?.entryId).toBe(copyId);
-    expect(first.state.outbox[0]?.payload).toContain("（この端末）");
+    expect(first.state.outbox[0]?.payload).toContain("（このブラウザ）");
     expect(first.state).toEqual(second.state);
     expect(first.summary.conflictCopyCount).toBe(1);
   });

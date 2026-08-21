@@ -17,8 +17,11 @@ import { createFirestoreSyncRepository } from "./firestoreSyncRepository";
 import { createLocalSyncRepository } from "./localSyncRepository";
 import {
   createSyncBoxRepository,
+  type SyncBoxConflictDecision,
+  type SyncBoxConflictDetail,
   type SyncBoxRepository,
   type SyncBoxSnapshot,
+  type SyncBoxSynchronizeResult,
 } from "./syncBoxRepository";
 import type { SyncTrigger } from "./syncCoordinator";
 import {
@@ -35,6 +38,7 @@ export interface SyncBoxContextValue {
   readonly isSynchronizing: boolean;
   readonly lastSyncError: string | null;
   readonly issueCount: number;
+  readonly conflicts: readonly SyncBoxConflictDetail[];
   readonly saveTargetEntries: (
     entries: readonly BoxEntry[],
     baseEntries: readonly BoxEntry[],
@@ -43,7 +47,18 @@ export interface SyncBoxContextValue {
     entries: readonly EnemyBoxEntry[],
     baseEntries: readonly EnemyBoxEntry[],
   ) => string | null;
-  readonly synchronize: (trigger?: SyncTrigger) => Promise<void>;
+  readonly resolveConflict: (
+    kind: "target-box" | "enemy-box",
+    entryId: string,
+    decision: SyncBoxConflictDecision,
+  ) => string | null;
+  readonly synchronize: (trigger?: SyncTrigger) => Promise<SyncBoxSynchronizeResult | null>;
+  /** Block new saves/synchronizes and await any provider-owned sync run. */
+  readonly prepareAccountDeletion: () => Promise<void>;
+  /** Re-enable provider operations after a cancelled account operation. */
+  readonly resumeAccountOperations: () => void;
+  /** Drop retained account snapshots after physical account-data deletion. */
+  readonly discardAccountData: () => void;
 }
 
 export type SyncBoxRepositoryFactory = (ownerUid: string) => SyncBoxRepository;
@@ -62,6 +77,8 @@ const emptySnapshot = (): SyncBoxSnapshot => ({
   conflictCount: 0,
   targetConflictCount: 0,
   enemyConflictCount: 0,
+  conflicts: [],
+  conflictDetails: [],
 });
 
 const defaultRepositoryCache = new Map<string, SyncBoxRepository>();
@@ -119,7 +136,7 @@ export const isSyncBoxEntryBaseCurrent = (
   ? sameEntries(baseEntries, latest.targetEntries)
   : sameEntries(baseEntries, latest.enemyEntries);
 
-const STALE_BOX_MESSAGE = "別の端末から保存一覧が更新されました。内容を確認してもう一度操作してください";
+const STALE_BOX_MESSAGE = "別のブラウザから保存一覧が更新されました。内容を確認してもう一度操作してください";
 
 export const getSyncBoxOwnerUid = (
   authState: AuthSessionState,
@@ -146,6 +163,10 @@ export function SyncBoxProvider({
   const { state: authState } = useAuthSession();
   const migration = useSyncMigrationReadiness();
   const operationRef = useRef(0);
+  const suspendedRef = useRef(false);
+  const suspendedSourceRef = useRef<string | null>(null);
+  const pendingSynchronizationsRef = useRef(new Set<Promise<unknown>>());
+  const [repositoryGeneration, setRepositoryGeneration] = useState(0);
 
   const active = useMemo<ActiveRepository | null>(() => {
     const ownerUid = getSyncBoxOwnerUid(authState, migration);
@@ -183,7 +204,7 @@ export function SyncBoxProvider({
         errorMessage: toStableErrorMessage(error),
       };
     }
-  }, [authState.user?.uid, migration.ownerUid, migration.status, repositoryFactory]);
+  }, [authState.user?.uid, migration.ownerUid, migration.status, repositoryFactory, repositoryGeneration]);
 
   const [providerState, setProviderState] = useState<ProviderState | null>(null);
   const currentState = active
@@ -199,8 +220,9 @@ export function SyncBoxProvider({
         }
     : null;
 
-  const synchronize = useCallback(async (trigger: SyncTrigger = "manual") => {
-    if (!active?.repository) return;
+  const synchronize = useCallback((trigger: SyncTrigger = "manual"): Promise<SyncBoxSynchronizeResult | null> => {
+    if (suspendedRef.current || !active?.repository) return Promise.resolve(null);
+    const repository = active.repository;
     const operation = ++operationRef.current;
     setProviderState((current) => ({
       sourceKey: active.sourceKey,
@@ -215,49 +237,98 @@ export function SyncBoxProvider({
       issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
     }));
 
-    try {
-      const result = await active.repository.synchronize(trigger);
-      if (operation !== operationRef.current) return;
-      const issueMessage = result.issues.length > 0
-        ? "一部のクラウド保存を読み込めませんでした。元データは保持しています"
-        : null;
-      setProviderState((current) => {
-        const previous = current?.sourceKey === active.sourceKey
-          ? current
-          : {
-              sourceKey: active.sourceKey,
-              snapshot: active.snapshot,
-              isAvailable: active.isAvailable,
-              isSynchronizing: false,
-              lastSyncError: active.errorMessage,
-              issueCount: 0,
-            };
-        return {
+    const running = (async (): Promise<SyncBoxSynchronizeResult | null> => {
+      try {
+        const result = await repository.synchronize(trigger);
+        if (operation !== operationRef.current || suspendedRef.current) return result;
+        const issueMessage = result.issues.length > 0
+          ? "一部のクラウド保存を読み込めませんでした。元データは保持しています"
+          : null;
+        setProviderState((current) => {
+          const previous = current?.sourceKey === active.sourceKey
+            ? current
+            : {
+                sourceKey: active.sourceKey,
+                snapshot: active.snapshot,
+                isAvailable: active.isAvailable,
+                isSynchronizing: false,
+                lastSyncError: active.errorMessage,
+                issueCount: 0,
+              };
+          return {
+            sourceKey: active.sourceKey,
+            snapshot: result.snapshot ?? previous.snapshot,
+            isAvailable: result.status === "success" ? true : previous.isAvailable,
+            isSynchronizing: false,
+            lastSyncError: result.status === "error" ? result.error.message : issueMessage,
+            issueCount: result.issues.length,
+          };
+        });
+        return result;
+      } catch (error) {
+        if (operation !== operationRef.current || suspendedRef.current) return null;
+        setProviderState((current) => ({
           sourceKey: active.sourceKey,
-          snapshot: result.snapshot ?? previous.snapshot,
-          isAvailable: result.status === "success" ? true : previous.isAvailable,
+          snapshot: current?.sourceKey === active.sourceKey ? current.snapshot : active.snapshot,
+          isAvailable: current?.sourceKey === active.sourceKey
+            ? current.isAvailable
+            : active.isAvailable,
           isSynchronizing: false,
-          lastSyncError: result.status === "error" ? result.error.message : issueMessage,
-          issueCount: result.issues.length,
-        };
-      });
-    } catch (error) {
-      if (operation !== operationRef.current) return;
-      setProviderState((current) => ({
-        sourceKey: active.sourceKey,
-        snapshot: current?.sourceKey === active.sourceKey ? current.snapshot : active.snapshot,
-        isAvailable: current?.sourceKey === active.sourceKey
-          ? current.isAvailable
-          : active.isAvailable,
-        isSynchronizing: false,
-        lastSyncError: toStableErrorMessage(error),
-        issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
-      }));
-    }
+          lastSyncError: toStableErrorMessage(error),
+          issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
+        }));
+        return null;
+      }
+    })();
+    pendingSynchronizationsRef.current.add(running);
+    void running.finally(() => {
+      pendingSynchronizationsRef.current.delete(running);
+    }).catch(() => {
+      // The body above classifies repository failures.  Keep the lifecycle
+      // tracker rejection-safe if a test double throws outside that boundary.
+    });
+    return running;
+  }, [active]);
+
+  const prepareAccountDeletion = useCallback(async (): Promise<void> => {
+    suspendedRef.current = true;
+    suspendedSourceRef.current = active?.sourceKey ?? null;
+    operationRef.current += 1;
+    setProviderState((current) => current
+      ? { ...current, isSynchronizing: false }
+      : current);
+    const pending = [...pendingSynchronizationsRef.current];
+    await Promise.allSettled(pending);
+  }, [active?.sourceKey]);
+
+  const resumeAccountOperations = useCallback((): void => {
+    operationRef.current += 1;
+    suspendedRef.current = false;
+    suspendedSourceRef.current = null;
+  }, []);
+
+  const discardAccountData = useCallback((): void => {
+    operationRef.current += 1;
+    suspendedRef.current = true;
+    if (!active) return;
+    defaultRepositoryCache.delete(active.ownerUid);
+    setProviderState({
+      sourceKey: active.sourceKey,
+      snapshot: emptySnapshot(),
+      isAvailable: true,
+      isSynchronizing: false,
+      lastSyncError: null,
+      issueCount: 0,
+    });
+    setRepositoryGeneration((current) => current + 1);
   }, [active]);
 
   useEffect(() => {
     operationRef.current += 1;
+    if (!active || (suspendedSourceRef.current !== null && suspendedSourceRef.current !== active.sourceKey)) {
+      suspendedRef.current = false;
+      suspendedSourceRef.current = null;
+    }
     if (!active) {
       setProviderState(null);
       return undefined;
@@ -292,6 +363,7 @@ export function SyncBoxProvider({
     entries: readonly BoxEntry[],
     baseEntries: readonly BoxEntry[],
   ): string | null => {
+    if (suspendedRef.current) return "アカウントの同期処理を停止しています";
     if (!active?.repository || !currentState?.isAvailable) {
       return currentState?.lastSyncError
         ?? active?.errorMessage
@@ -338,6 +410,7 @@ export function SyncBoxProvider({
     entries: readonly EnemyBoxEntry[],
     baseEntries: readonly EnemyBoxEntry[],
   ): string | null => {
+    if (suspendedRef.current) return "アカウントの同期処理を停止しています";
     if (!active?.repository || !currentState?.isAvailable) {
       return currentState?.lastSyncError
         ?? active?.errorMessage
@@ -380,6 +453,31 @@ export function SyncBoxProvider({
     return null;
   }, [active, currentState, synchronize]);
 
+  const resolveConflict = useCallback((
+    kind: "target-box" | "enemy-box",
+    entryId: string,
+    decision: SyncBoxConflictDecision,
+  ): string | null => {
+    if (suspendedRef.current) return "アカウントの同期処理を停止しています";
+    if (!active?.repository || !currentState?.isAvailable) {
+      return currentState?.lastSyncError
+        ?? active?.errorMessage
+        ?? "アカウントのボックス同期を利用できません";
+    }
+    const result = active.repository.resolveConflict(kind, entryId, decision);
+    if (result.status === "error") return result.error.message;
+    setProviderState((current) => ({
+      sourceKey: active.sourceKey,
+      snapshot: result.snapshot,
+      isAvailable: true,
+      isSynchronizing: current?.sourceKey === active.sourceKey && current.isSynchronizing,
+      lastSyncError: current?.sourceKey === active.sourceKey ? current.lastSyncError : null,
+      issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
+    }));
+    void synchronize("manual");
+    return null;
+  }, [active, currentState, synchronize]);
+
   const value = useMemo<SyncBoxContextValue | null>(() => (
     active && currentState
       ? {
@@ -391,12 +489,27 @@ export function SyncBoxProvider({
           isSynchronizing: currentState.isSynchronizing,
           lastSyncError: currentState.lastSyncError,
           issueCount: currentState.issueCount,
+          conflicts: currentState.snapshot.conflicts,
           saveTargetEntries,
           saveEnemyEntries,
+          resolveConflict,
           synchronize,
+          prepareAccountDeletion,
+          resumeAccountOperations,
+          discardAccountData,
         }
       : null
-  ), [active, currentState, saveEnemyEntries, saveTargetEntries, synchronize]);
+  ), [
+    active,
+    currentState,
+    discardAccountData,
+    prepareAccountDeletion,
+    resolveConflict,
+    resumeAccountOperations,
+    saveEnemyEntries,
+    saveTargetEntries,
+    synchronize,
+  ]);
 
   return <SyncBoxContext.Provider value={value}>{children}</SyncBoxContext.Provider>;
 }
@@ -408,3 +521,5 @@ export function useOptionalSyncBox(): SyncBoxContextValue | null {
 export function resetSyncBoxRepositoryCacheForTests(): void {
   defaultRepositoryCache.clear();
 }
+
+export const clearSyncBoxRepositoryCache = resetSyncBoxRepositoryCacheForTests;

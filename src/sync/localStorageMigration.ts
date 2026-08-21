@@ -191,7 +191,7 @@ const parseClaim = (raw: string): MigrationSourceClaim => {
   } catch {
     throw new LocalStorageMigrationError(
       "migration-state-corrupt",
-      "この端末の移行元アカウント情報を読み込めません",
+      "このブラウザの移行元アカウント情報を読み込めません",
       false,
     );
   }
@@ -205,7 +205,7 @@ const parseClaim = (raw: string): MigrationSourceClaim => {
     || !Number.isFinite(Date.parse(parsed.claimedAt))) {
     throw new LocalStorageMigrationError(
       "migration-state-corrupt",
-      "この端末の移行元アカウント情報が不正です",
+      "このブラウザの移行元アカウント情報が不正です",
       false,
     );
   }
@@ -241,12 +241,12 @@ const issueError = (issues: readonly SyncRepositoryIssue[]): LocalStorageMigrati
 
 const localSaveError = (status: string): LocalStorageMigrationError => {
   if (status === "quota") {
-    return new LocalStorageMigrationError("local-quota", "アカウント用の端末保存容量が不足しています");
+    return new LocalStorageMigrationError("local-quota", "アカウント用のブラウザ保存容量が不足しています");
   }
   if (status === "corrupt") {
-    return new LocalStorageMigrationError("local-corrupt", "アカウント用の端末保存データが不正です", false);
+    return new LocalStorageMigrationError("local-corrupt", "アカウント用のブラウザ保存データが不正です", false);
   }
-  return new LocalStorageMigrationError("local-unavailable", "アカウント用の端末保存を利用できません");
+  return new LocalStorageMigrationError("local-unavailable", "アカウント用のブラウザ保存を利用できません");
 };
 
 const canonicalRemotePayload = (record: SyncRecord): string => {
@@ -396,7 +396,7 @@ export class LocalStorageMigrationController {
     if (current && current.ownerUid !== this.ownerUid) {
       throw new LocalStorageMigrationError(
         "source-claimed",
-        "この端末の旧保存データは別のアカウントへ移行済みです",
+        "このブラウザの旧保存データは別のアカウントへ移行済みです",
         false,
       );
     }
@@ -482,7 +482,7 @@ export class LocalStorageMigrationController {
     }
     throw new LocalStorageMigrationError(
       "local-existing-data",
-      "このアカウントの端末同期領域に未処理データがあります。上書きせず確認を待ちます",
+      "このアカウントのブラウザ同期領域に未処理データがあります。上書きせず確認を待ちます",
       false,
     );
   }
@@ -551,7 +551,7 @@ export class LocalStorageMigrationController {
     if (state.sourceFingerprint && state.sourceFingerprint !== snapshot.fingerprint) {
       const changed = new LocalStorageMigrationError(
         "source-changed",
-        "移行の確認中にこの端末の保存データが変更されました。内容を確認し直してください",
+        "移行の確認中にこのブラウザの保存データが変更されました。内容を確認し直してください",
       );
       try {
         state = this.saveState({
@@ -621,7 +621,7 @@ export class LocalStorageMigrationController {
       if (!canUseDevice) {
         const claimed = new LocalStorageMigrationError(
           "source-claimed",
-          "この端末の旧保存データは別のアカウントへ移行済みです",
+          "このブラウザの旧保存データは別のアカウントへ移行済みです",
           false,
         );
         state = this.saveState({
@@ -664,7 +664,7 @@ export class LocalStorageMigrationController {
     if (state.sourceFingerprint && state.sourceFingerprint !== snapshot.fingerprint) {
       const changed = new LocalStorageMigrationError(
         "source-changed",
-        "統合方法を選ぶ前にこの端末の保存データが変更されました。内容を確認し直してください",
+        "統合方法を選ぶ前にこのブラウザの保存データが変更されました。内容を確認し直してください",
       );
       try {
         state = this.saveState({
@@ -708,6 +708,16 @@ export class LocalStorageMigrationController {
     return this.inspect();
   }
 
+  /**
+   * Resume an interrupted migration from its persisted marker. The marker is
+   * the source of truth, so a new controller instance (or an account UI retry)
+   * can safely call this after a network/quota failure without replaying a
+   * completed migration or deleting the legacy source.
+   */
+  async resume(): Promise<LocalStorageMigrationResult> {
+    return this.inspect();
+  }
+
   private async applyDecision(
     decision: PlanDecision,
     snapshot: CapturedLegacyMigrationSnapshot,
@@ -730,7 +740,7 @@ export class LocalStorageMigrationController {
       if (currentSnapshot.fingerprint !== snapshot.fingerprint) {
         const changed = new LocalStorageMigrationError(
           "source-changed",
-          "移行の開始後にこの端末の保存データが変更されました",
+          "移行の開始後にこのブラウザの保存データが変更されました",
         );
         state = this.saveState({
           ...state,
@@ -810,7 +820,7 @@ export class LocalStorageMigrationController {
       if (completedSource.fingerprint !== currentSnapshot.fingerprint) {
         const changed = new LocalStorageMigrationError(
           "source-changed",
-          "移行中にこの端末の保存データが変更されました。クラウド反映済みの内容を保持して確認し直します",
+          "移行中にこのブラウザの保存データが変更されました。クラウド反映済みの内容を保持して確認し直します",
         );
         state = this.saveState({
           ...state,

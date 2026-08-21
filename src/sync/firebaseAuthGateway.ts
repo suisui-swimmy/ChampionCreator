@@ -4,6 +4,8 @@ import {
   UserCredential,
   Auth,
   onAuthStateChanged,
+  reauthenticateWithPopup,
+  deleteUser,
   signInWithPopup,
   signOut as firebaseSignOut,
 } from "firebase/auth";
@@ -13,6 +15,7 @@ import {
   AuthGateway,
   AuthUser,
   AuthUserListener,
+  AuthSessionError,
   createUnavailableAuthGateway,
   classifyAuthError,
 } from "./authSession";
@@ -25,6 +28,8 @@ export interface FirebaseAuthLike {
 export interface FirebaseAuthGatewayDependencies {
   readonly onAuthStateChanged: typeof onAuthStateChanged;
   readonly signInWithPopup: typeof signInWithPopup;
+  readonly reauthenticateWithPopup: typeof reauthenticateWithPopup;
+  readonly deleteUser: typeof deleteUser;
   readonly signOut: typeof firebaseSignOut;
   readonly GoogleAuthProvider: typeof GoogleAuthProvider;
 }
@@ -32,6 +37,8 @@ export interface FirebaseAuthGatewayDependencies {
 const defaultDependencies: FirebaseAuthGatewayDependencies = {
   onAuthStateChanged,
   signInWithPopup,
+  reauthenticateWithPopup,
+  deleteUser,
   signOut: firebaseSignOut,
   GoogleAuthProvider,
 };
@@ -117,6 +124,55 @@ export function createFirebaseAuthGateway(
         await dependencies.signOut(auth);
       } catch (error) {
         throw classifyAuthError(error, "sign-out");
+      }
+    },
+    getCurrentUserUid() {
+      return auth.currentUser?.uid ?? null;
+    },
+    async reauthenticateWithGoogle(expectedUid: string) {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser || currentUser.uid !== expectedUid) {
+          throw new AuthSessionError("invalid-credential", "reauthenticate", {
+            retryable: false,
+          });
+        }
+        const provider = new dependencies.GoogleAuthProvider();
+        const credential: UserCredential = await dependencies.reauthenticateWithPopup(
+          currentUser,
+          provider,
+        );
+        // Capture the UID before opening the popup and verify both the popup
+        // result and Firebase's current user after it returns. A different
+        // account must never be allowed to continue account deletion.
+        if (
+          !credential.user
+          || credential.user.uid !== expectedUid
+          || auth.currentUser?.uid !== expectedUid
+        ) {
+          throw new AuthSessionError("invalid-credential", "reauthenticate", {
+            retryable: false,
+          });
+        }
+        return toAuthUser(credential.user);
+      } catch (error) {
+        throw classifyAuthError(error, "reauthenticate");
+      }
+    },
+    async deleteAccount(expectedUid: string) {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser || currentUser.uid !== expectedUid) {
+          throw new AuthSessionError("invalid-credential", "delete-account", {
+            retryable: false,
+          });
+        }
+        // Keep the Firebase User private to this adapter. deleteUser also
+        // signs the user out when it succeeds; callers must not call
+        // signOut redundantly after this final operation.
+        await dependencies.deleteUser(currentUser);
+      } catch (error) {
+        throw classifyAuthError(error, "delete-account");
       }
     },
   };

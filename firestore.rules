@@ -78,7 +78,9 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && (request.resource.data.deletedAt == null
           || request.resource.data.deletedAt == request.time);
-      allow delete: if false;
+      // Physical deletion is reserved for the authenticated owner account
+      // deletion flow. Normal sync mutations remain tombstone updates.
+      allow delete: if isAuthenticatedOwner();
     }
 
     match /users/{uid}/drafts/{deviceId} {
@@ -158,7 +160,9 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && (request.resource.data.deletedAt == null
           || request.resource.data.deletedAt == request.time);
-      allow delete: if false;
+      // Physical deletion is reserved for the authenticated owner account
+      // deletion flow. Normal draft mutations remain tombstone updates.
+      allow delete: if isAuthenticatedOwner();
     }
   }
 }

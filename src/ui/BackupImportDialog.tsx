@@ -184,8 +184,8 @@ export function BackupImportDialog({
   }, [isBusy]);
 
   const replaceLabel = scope === "account"
-    ? "全端末を置き換え"
-    : "この端末を置き換え";
+    ? "クラウド全体を置き換え"
+    : "このブラウザの保存を置き換え";
   const replaceBlocked = warnings.length > 0 && warningsBlockReplace;
 
   return (

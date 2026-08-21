@@ -119,17 +119,17 @@ describe("App", () => {
 
   it("distinguishes draft saves from committed target-box saves", () => {
     expect(getDraftSaveStatusLabel({ status: "saving" })).toBe("下書きを保存中…");
-    expect(getDraftSaveStatusLabel({ status: "saved" })).toBe("この端末に下書き保存済み");
-    expect(getDraftSaveStatusLabel({ status: "saved" }, "queued")).toBe("端末保存済み");
+    expect(getDraftSaveStatusLabel({ status: "saved" })).toBe("このブラウザに下書き保存済み");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "queued")).toBe("ブラウザ保存済み");
     expect(getDraftSaveStatusLabel({ status: "saved" }, "syncing")).toBe("クラウドへ保存中…");
     expect(getDraftSaveStatusLabel({ status: "saved" }, "synced")).toBe("クラウド保存済み");
-    expect(getDraftSaveStatusLabel({ status: "saved" }, "offline")).toBe("オフライン（端末保存済み）");
-    expect(getDraftSaveStatusLabel({ status: "saved" }, "error")).toBe("同期エラー（端末保存済み）");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "offline")).toBe("オフライン（ブラウザ保存済み）");
+    expect(getDraftSaveStatusLabel({ status: "saved" }, "error")).toBe("同期エラー（ブラウザ保存済み）");
     expect(getDraftSaveStatusLabel({
       status: "error",
       operation: "cloud-save",
       message: "failed",
-    })).toBe("同期エラー（端末保存済み）");
+    })).toBe("同期エラー（ブラウザ保存済み）");
     expect(getDraftSaveStatusLabel({ status: "box-saved" })).toBe("ボックスに保存済み");
     expect(getDraftSaveStatusLabel({
       status: "error",
@@ -248,6 +248,20 @@ describe("App", () => {
     expect(html).toContain('class="app-footer-version"');
   });
 
+  it("keeps the M6 account status reachable in the app header but out of the tutorial", () => {
+    const html = renderToStaticMarkup(<App />);
+    const tutorial = renderToStaticMarkup(<App variant="tutorial" />);
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(html).toContain('class="account-sync-trigger local-only"');
+    expect(html).toContain('aria-label="アカウントと同期: このブラウザのみ"');
+    expect(html).toContain("このブラウザのみ");
+    expect(tutorial).not.toContain("account-sync-trigger");
+    expect(tutorial).not.toContain("Googleでログイン");
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.account-sync-trigger\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
+    expect(css).toMatch(/\.account-sync-window\s*\{[^}]*width:\s*min\(660px, calc\(100vw - 36px\)\);[^}]*overflow:\s*auto;/s);
+  });
+
   it("publishes indexable metadata and canonical XML and text sitemaps", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -300,6 +314,7 @@ describe("App", () => {
     expect(textSitemap.trim().split(/\r?\n/)).toEqual([
       "https://championcreator.suisui-swimmy.com/",
       "https://championcreator.suisui-swimmy.com/guide/",
+      "https://championcreator.suisui-swimmy.com/privacy/",
     ]);
   });
 
@@ -321,8 +336,8 @@ describe("App", () => {
       expect(footer.indexOf("お問い合わせ")).toBeLessThan(footer.indexOf("https://github.com/suisui-swimmy/ChampionCreator"));
     }
 
-    expect(appFooter.match(/ \| /g)).toHaveLength(2);
-    expect(guideFooter.match(/ \| /g)).toHaveLength(3);
+    expect(appFooter.match(/ \| /g)).toHaveLength(3);
+    expect(guideFooter.match(/ \| /g)).toHaveLength(4);
     expect(guideFooter).toContain('href="https://championsbattledata.com/"');
 
     expect(githubIcon).toContain('<svg width="98" height="96"');
@@ -1558,7 +1573,7 @@ describe("App", () => {
       expect(html).toContain('aria-labelledby="draft-recovery-title"');
       expect(html).toContain('aria-describedby="draft-recovery-description"');
       expect(html).toContain("保存した下書きがあります");
-      expect(html).toContain("前回の入力条件をこの端末から復元できます。");
+      expect(html).toContain("前回の入力条件をこのブラウザから復元できます。");
       expect(html).toContain("下書きを復元");
       expect(html).toContain("下書きを破棄");
       expect(html).toContain("オオニューラ");
@@ -1594,6 +1609,7 @@ describe("App", () => {
   it("documents local drafts separately from boxes and cross-device sync", () => {
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
     const guide = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+    const privacy = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
 
     for (const document of [readme, guide]) {
       expect(document).toContain("作業中の下書き");
@@ -1601,7 +1617,7 @@ describe("App", () => {
       expect(document).toContain("下書きを破棄");
       expect(document).toContain("計算結果");
       expect(document).toContain("候補一覧");
-      expect(document).toContain("別端末");
+      expect(document).toContain("別のブラウザ");
     }
     expect(readme).toContain("約0.75秒後");
     expect(guide).toContain("約0.75秒後");
@@ -1622,13 +1638,26 @@ describe("App", () => {
       expect(document).toContain("重複除外");
       expect(document).toContain("置き換えを無効");
       expect(document).toContain("保存0件");
-      expect(document).toContain("全端末を置き換え");
+      expect(document).toContain("クラウド全体を置き換え");
       expect(document).toContain("削除済み");
       expect(document).toContain("SYNC-M5");
-      expect(document).toContain("SYNC-M6");
     }
-    expect(readme).not.toContain("Googleでログイン");
-    expect(guide).not.toContain("Googleでログイン");
+    for (const document of [readme, guide]) {
+      expect(document).toContain("Googleでログイン");
+      expect(document).toContain("このブラウザのみ");
+      expect(document).toContain("競合あり");
+      expect(document).toContain("アカウントデータ");
+      expect(document).toContain("プライバシー");
+    }
+    for (const document of [readme, guide, privacy]) {
+      expect(document).toContain("アクセス権の種類");
+      expect(document).toContain("表示名");
+      expect(document).toContain("メールアドレス");
+      expect(document).toContain("プロフィール画像");
+      expect(document).toContain("Google Drive");
+      expect(document).toContain("Gmail");
+      expect(document).not.toContain("追加scope");
+    }
   });
 
   it("maps mobile scenario direction icons by adjustment type", () => {

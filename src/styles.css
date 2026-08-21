@@ -484,6 +484,71 @@ textarea:focus-visible,
   transform: translateY(-1px);
 }
 
+.account-sync-trigger {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  padding: 0 9px;
+  font-size: 10px;
+  font-weight: 800;
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.account-sync-trigger:hover,
+.account-sync-trigger:focus-visible {
+  border-color: var(--gold-line);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.account-sync-trigger-icon {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.account-sync-trigger strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  color: var(--text);
+  font-size: 9px;
+}
+
+.account-sync-trigger.unsynced,
+.account-sync-trigger.syncing {
+  border-color: var(--gold-line);
+  color: var(--gold);
+}
+
+.account-sync-trigger.synced {
+  color: var(--green);
+}
+
+.account-sync-trigger.offline,
+.account-sync-trigger.error {
+  border-color: rgba(230, 40, 41, 0.7);
+  color: #ff8585;
+}
+
+.account-sync-trigger.conflict {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
 .topbar .draft-save-status {
   min-width: 0;
   margin: 0;
@@ -820,6 +885,192 @@ textarea:focus-visible,
 
 .cloud-draft-delete-confirm-actions {
   justify-content: flex-end;
+}
+
+.account-sync-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--box-overlay-z) + 3);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.account-sync-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 8, 9, 0.8);
+  backdrop-filter: blur(3px);
+}
+
+.account-sync-window {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  width: min(660px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #191d1f 0%, #111415 100%);
+  padding: 20px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.56);
+  overflow: auto;
+}
+
+.account-sync-header,
+.account-sync-actions,
+.account-sync-conflict-actions,
+.account-sync-delete-actions,
+.account-sync-session-actions,
+.account-sync-logout-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-sync-header {
+  justify-content: space-between;
+}
+
+.account-sync-header > div,
+.account-sync-signed-out,
+.account-sync-account,
+.account-sync-status,
+.account-sync-migration,
+.account-sync-conflicts,
+.account-sync-danger-zone,
+.account-sync-delete-confirm {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-sync-kicker {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.account-sync-window h2,
+.account-sync-window h3,
+.account-sync-window p {
+  margin: 0;
+}
+
+.account-sync-window h2 {
+  font-size: 19px;
+}
+
+.account-sync-window h3 {
+  color: var(--gold);
+  font-size: 12px;
+}
+
+.account-sync-description,
+.account-sync-status-message,
+.account-sync-local-data-note,
+.account-sync-window section > p {
+  color: var(--muted);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.account-sync-signed-out,
+.account-sync-account,
+.account-sync-status,
+.account-sync-migration,
+.account-sync-conflicts,
+.account-sync-danger-zone,
+.account-sync-delete-confirm,
+.account-sync-session-actions {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-inset);
+  padding: 12px;
+}
+
+.account-sync-status-value {
+  width: fit-content;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text);
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.account-sync-email {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.account-sync-error {
+  border: 1px solid rgba(230, 40, 41, 0.72);
+  border-radius: 6px;
+  background: var(--red-soft);
+  color: #ffb1b1 !important;
+  padding: 9px 11px;
+}
+
+.account-sync-actions,
+.account-sync-conflict-actions,
+.account-sync-delete-actions,
+.account-sync-session-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.account-sync-conflicts {
+  border-color: var(--gold-line);
+  background: var(--gold-soft);
+}
+
+.account-sync-danger-zone,
+.account-sync-delete-confirm {
+  border-color: rgba(230, 40, 41, 0.46);
+}
+
+.account-sync-danger-zone h3,
+.account-sync-delete-confirm h3 {
+  color: #ff8585;
+}
+
+.account-sync-delete-confirm input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 10px;
+}
+
+.account-sync-delete-confirm label {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.account-sync-logout-confirm {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.account-sync-logout-confirm p {
+  flex: 1 1 260px;
+  color: #ffb1b1;
+}
+
+.account-sync-privacy-link {
+  width: fit-content;
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .sync-migration-overlay {
@@ -5211,6 +5462,32 @@ textarea {
     white-space: nowrap;
   }
 
+  .account-sync-trigger {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+
+  .account-sync-trigger-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .account-sync-trigger strong {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 14px;
+    height: 14px;
+    font-size: 8px;
+  }
+
   .app-footer-version {
     display: block;
   }
@@ -6756,6 +7033,34 @@ textarea {
     width: 100%;
     max-height: calc(100dvh - 20px);
     padding: 16px;
+  }
+
+  .account-sync-overlay {
+    padding: 10px;
+  }
+
+  .account-sync-window {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+    padding: 16px;
+  }
+
+  .account-sync-actions,
+  .account-sync-conflict-actions,
+  .account-sync-delete-actions,
+  .account-sync-session-actions {
+    align-items: stretch;
+  }
+
+  .account-sync-actions .ui-button,
+  .account-sync-conflict-actions .ui-button,
+  .account-sync-delete-actions .ui-button,
+  .account-sync-session-actions > .ui-button {
+    flex: 1 1 150px;
+  }
+
+  .account-sync-delete-confirm input {
+    font-size: 16px;
   }
 
   .cloud-draft-row {

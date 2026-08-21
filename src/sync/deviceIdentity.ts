@@ -78,7 +78,7 @@ const isSafeLabel = (value: unknown): value is string => (
 
 const safeLabel = (value: string): string => {
   const normalized = value.replace(/[\u0000-\u001f\u007f]/gu, " ").trim();
-  return normalized.slice(0, 80) || "この端末";
+  return normalized.slice(0, 80) || "このブラウザ";
 };
 
 const asText = (value: unknown): string => typeof value === "string" ? value : "";
@@ -185,7 +185,7 @@ export const generateOpaqueDeviceId = (randomUUID?: () => string): string => {
       ? globalThis.crypto.randomUUID()
       : fallbackUuid());
   if (!isOpaqueUuid(candidate)) {
-    throw new Error("端末IDの生成結果がUUIDではありません");
+    throw new Error("ブラウザIDの生成結果がUUIDではありません");
   }
   return candidate;
 };
@@ -204,13 +204,13 @@ export const parseDeviceIdentityDocument = (raw: string): DeviceIdentityStorageD
   try {
     parsed = JSON.parse(raw) as unknown;
   } catch {
-    throw corrupt("端末識別情報のJSONを読み込めません");
+    throw corrupt("ブラウザ識別情報のJSONを読み込めません");
   }
   if (!isRecord(parsed)
     || parsed.schemaVersion !== DEVICE_ID_SCHEMA_VERSION
     || !isOpaqueUuid(parsed.deviceId)
     || !isSafeLabel(parsed.deviceLabel)) {
-    throw corrupt(`対応していない端末識別情報です (schemaVersion ${DEVICE_ID_SCHEMA_VERSION} のみ対応)`);
+    throw corrupt(`対応していないブラウザ識別情報です (schemaVersion ${DEVICE_ID_SCHEMA_VERSION} のみ対応)`);
   }
   return {
     schemaVersion: DEVICE_ID_SCHEMA_VERSION,
@@ -223,7 +223,7 @@ export const stringifyDeviceIdentityDocument = (
   identity: DeviceIdentity,
 ): string => {
   if (!isOpaqueUuid(identity.deviceId) || !isSafeLabel(identity.deviceLabel)) {
-    throw corrupt("端末識別情報が不正です");
+    throw corrupt("ブラウザ識別情報が不正です");
   }
   return JSON.stringify({
     schemaVersion: DEVICE_ID_SCHEMA_VERSION,
@@ -264,7 +264,7 @@ export const loadDeviceIdentity = (
     return {
       status: "error",
       reason: "unavailable",
-      message: "端末識別情報を読み込めません。ブラウザの保存機能を利用できません",
+      message: "ブラウザ識別情報を読み込めません。ブラウザの保存機能を利用できません",
     };
   }
 
@@ -275,7 +275,7 @@ export const loadDeviceIdentity = (
     return {
       status: "error",
       reason: "unavailable",
-      message: "端末識別情報を読み込めません。ブラウザの保存機能を利用できません",
+      message: "ブラウザ識別情報を読み込めません。ブラウザの保存機能を利用できません",
     };
   }
   if (raw === null) {
@@ -292,8 +292,8 @@ export const loadDeviceIdentity = (
       status: "error",
       reason: "corrupt",
       message: error instanceof Error
-        ? `端末識別情報を読み込めません: ${error.message}`
-        : "端末識別情報を読み込めません",
+        ? `ブラウザ識別情報を読み込めません: ${error.message}`
+        : "ブラウザ識別情報を読み込めません",
     };
   }
 };
@@ -307,7 +307,7 @@ export const saveDeviceIdentity = (
     return {
       status: "error",
       reason: "unavailable",
-      message: "端末識別情報を保存できません。ブラウザの保存機能を利用できません",
+      message: "ブラウザ識別情報を保存できません。ブラウザの保存機能を利用できません",
     };
   }
 
@@ -318,7 +318,7 @@ export const saveDeviceIdentity = (
     return {
       status: "error",
       reason: "corrupt",
-      message: error instanceof Error ? error.message : "端末識別情報が不正です",
+      message: error instanceof Error ? error.message : "ブラウザ識別情報が不正です",
     };
   }
   try {
@@ -328,12 +328,12 @@ export const saveDeviceIdentity = (
       ? {
           status: "error",
           reason: "quota",
-          message: "端末識別情報を保存できません。ブラウザの保存容量が不足しています",
+          message: "ブラウザ識別情報を保存できません。ブラウザの保存容量が不足しています",
         }
       : {
           status: "error",
           reason: "unavailable",
-          message: "端末識別情報を保存できません。ブラウザの保存機能を利用できません",
+          message: "ブラウザ識別情報を保存できません。ブラウザの保存機能を利用できません",
         };
   }
   return { status: "success", identity };

@@ -30,13 +30,13 @@ describe("BackupImportDialog", () => {
     expect(html).toContain('aria-busy="false"');
     expect(html).toContain("バックアップ取り込みの影響");
     expect(html).toContain(">統合</h3>");
-    expect(html).toContain(">全端末を置き換え</h3>");
+    expect(html).toContain(">クラウド全体を置き換え</h3>");
     expect(html).toContain(">追加</dt>");
     expect(html).toContain(">更新</dt>");
     expect(html).toContain(">削除</dt>");
     expect(html).toContain(">変更なし</dt>");
     expect(html).toContain(">統合</button>");
-    expect(html).toContain(">全端末を置き換え</button>");
+    expect(html).toContain(">クラウド全体を置き換え</button>");
     expect(html).toContain(">キャンセル</button>");
     expect(html).not.toContain("保存データを処理中のため選択できません。");
   });
@@ -44,9 +44,9 @@ describe("BackupImportDialog", () => {
   it("uses the device-scoped replacement label exactly", () => {
     const html = renderDialog({ scope: "device" });
 
-    expect(html).toContain(">この端末を置き換え</h3>");
-    expect(html).toContain(">この端末を置き換え</button>");
-    expect(html).not.toContain("全端末を置き換え");
+    expect(html).toContain(">このブラウザの保存を置き換え</h3>");
+    expect(html).toContain(">このブラウザの保存を置き換え</button>");
+    expect(html).not.toContain("クラウド全体を置き換え");
   });
 
   it("shows parser warnings before commit and disables destructive replacement", () => {
@@ -69,7 +69,7 @@ describe("BackupImportDialog", () => {
     expect(html).toContain("読み込めない保存があるため、置き換えは選べません。");
     expect(html).toContain("競合コピー 1件 / 重複除外 2件");
     expect(html.match(/disabled=""/g)).toHaveLength(1);
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>全端末を置き換え<\/button>/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>クラウド全体を置き換え<\/button>/);
   });
 
   it("keeps an explicitly empty backup replaceable while warning that all saves will be removed", () => {
@@ -89,7 +89,7 @@ describe("BackupImportDialog", () => {
     expect(html).toContain("バックアップ内の保存スロットは0件です");
     expect(html).toContain("現在の保存はすべて削除されます");
     expect(html).not.toContain("バックアップの一部を読み込めませんでした");
-    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>全端末を置き換え<\/button>/);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>クラウド全体を置き換え<\/button>/);
   });
 
   it("accepts a virtual-enemy plan without rendering a target column", () => {
@@ -105,7 +105,7 @@ describe("BackupImportDialog", () => {
 
     expect(html).toContain("仮想敵バックアップの読み込み");
     expect(html).not.toContain("調整対象バックアップの読み込み");
-    expect(html).toContain(">この端末を置き換え</button>");
+    expect(html).toContain(">このブラウザの保存を置き換え</button>");
   });
 
   it("disables every decision while busy and exposes the reason", () => {

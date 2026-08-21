@@ -95,8 +95,8 @@ describe("CloudDraftDialog", () => {
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain('aria-busy="false"');
     expect(html).toContain("作業中の下書き");
-    expect(html).toContain(">この端末</h3>");
-    expect(html).toContain(">他の端末</h3>");
+    expect(html).toContain(">このブラウザ</h3>");
+    expect(html).toContain(">他のブラウザ</h3>");
     expect(html).toContain("Windows / Chrome");
     expect(html).toContain("Android / Chrome");
     expect(html).toContain(">ピカチュウ</dd>");
@@ -126,8 +126,8 @@ describe("CloudDraftDialog", () => {
 
     expect(html).not.toContain("Windows / Chrome");
     expect(html).not.toContain("削除済み端末");
-    expect(html).toContain("この端末の下書きはありません。");
-    expect(html).toContain("他の端末の下書きはありません。");
+    expect(html).toContain("このブラウザの下書きはありません。");
+    expect(html).toContain("他のブラウザの下書きはありません。");
   });
 
   it("keeps current-device actions consistently unavailable when requested", () => {

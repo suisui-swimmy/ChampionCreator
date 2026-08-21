@@ -55,7 +55,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 > `SYNC-M7` の完了時に、この見出しから次の `## 最重要の設計境界` の直前までを同じ変更内で削除する。
 > 完了済みマイルストーン表へ本ロードマップを転載せず、現在地は `PROGRESS.md`、詳細履歴は `PROGRESS.archive/` に残す。
 
-現在の開始地点は `SYNC-M6`（`SYNC-M0`〜`SYNC-M5` は完了）。各マイルストーンは `Done` を満たし、検証結果を `PROGRESS.md` へ記録してから次へ進む。後続マイルストーンの実装を先取りしない。
+現在の開始地点は `SYNC-M7`（`SYNC-M0`〜`SYNC-M6` は完了）。各マイルストーンは `Done` を満たし、検証結果を `PROGRESS.md` へ記録してから次へ進む。後続マイルストーンの実装を先取りしない。
 
 このロードマップ中だけ、Firebase Authentication / Cloud Firestore / App Check を、ユーザーが明示承認した managed backend / DB の例外として扱う。GitHub Pages の静的フロントは維持し、Firebase 以外の runtime backend、Google Drive 保存、自前 OAuth サーバー、Realtime 共同編集へ暗黙に拡張しない。
 
@@ -159,7 +159,7 @@ Scope:
 
 - `championcreator.box.v1`、`championcreator.enemy-box.v1`、既定サンプル marker を読み取る migration state を追加する
 - `not-started` / `in-progress` / `needs-review` / `completed` を区別し、完了までは旧 localStorage を削除しない
-- cloud empty なら local upload、両方にデータがあれば `統合` / `クラウドを使用` / `この端末を使用` / `あとで決める` を提示する
+- cloud empty なら local upload、両方にデータがあれば `統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める` を提示する
 - default は union とし、同一 ID・同一 payload は1件、同一 ID・異なる payload は両方残す
 - guest と UID ごとの local namespace を分け、ログアウトや別アカウント login で前ユーザーのデータを混ぜない
 - 未変更の既定サンプルと削除済み marker を特別扱いし、同期開始や新端末で勝手に復活・重複させない
@@ -187,7 +187,7 @@ Scope:
 - 調整対象と仮想敵の kind、payload、backup、表示文言を混ぜない
 - 読み込み時は進行中 Worker と stale request を既存経路で破棄する
 - 削除は tombstone として同期し、オフライン端末からの古い更新で復活させない
-- backup import は同期中も validation を通し、`統合` と `全端末を置き換え` の影響件数を事前表示する
+- backup import は同期中も validation を通し、`統合` と `クラウド全体を置き換え` の影響件数を事前表示する
 - Realtime listener は必須にせず、まず launch / focus / online / manual sync を正にする
 
 Done:
@@ -201,7 +201,7 @@ Stop line:
 
 - 作業中下書きのクラウド同期や最終アカウント UI へ進まない
 
-### SYNC-M5: 端末別クラウド下書き
+### SYNC-M5: ブラウザ別クラウド下書き
 
 Goal:
 
@@ -212,14 +212,14 @@ Scope:
 - `userId + deviceId` 単位で draft document を分け、同時入力端末が同じ draft を上書きしないようにする
 - local draft は `500..1000ms`、cloud draft は操作停止後 `1500..3000ms` を目安に queue する
 - `pagehide` / `visibilitychange` では同期完了を装わず、未送信 mutation を outbox に残す
-- 他端末の下書きは更新日時、端末ラベル、入力概要を表示し、ユーザーが選んだ時だけ現在 state へ復元する
+- 他のブラウザの下書きは更新日時、ブラウザラベル、入力概要を表示し、ユーザーが選んだ時だけ現在 state へ復元する
 - draft の上限、保持期間、手動削除、期限切れ cleanup を定義し、課金必須の仕組みへ暗黙に依存しない
 
 Done:
 
-- 同一端末復元、他端末復元、同時編集、offline、期限切れ、破損 draft のテストがある
+- 同一ブラウザ復元、他ブラウザ復元、同時編集、offline、期限切れ、破損 draft のテストがある
 - draft 復元時に進行中 Worker / stale result が破棄され、box data は変更されない
-- 保存中、端末保存済み、クラウド保存済み、offline、error の表示が実状態と一致する
+- 保存中、ブラウザ保存済み、クラウド保存済み、offline、error の表示が実状態と一致する
 - desktop / mobile / narrow-width で下書き一覧と復元確認を検証している
 
 Stop line:
@@ -235,7 +235,7 @@ Goal:
 Scope:
 
 - desktop header と既存 mobile sheet / box panel を再利用し、常設 UI を増やしすぎない
-- exact status を `この端末のみ` / `未同期` / `同期中…` / `同期済み` / `オフライン` / `競合あり` / `同期エラー` として区別する
+- exact status を `このブラウザのみ` / `未同期` / `同期中…` / `同期済み` / `オフライン` / `競合あり` / `同期エラー` として区別する
 - `Googleでログイン`、初回統合、今すぐ同期、再試行、競合解決、logout を到達可能にする
 - logout 時は未同期 mutation を明示し、guest namespace と user namespace を混ぜない
 - account deletion は再認証後に cloud data を削除し、途中失敗時に auth user だけを先に消さない
@@ -266,7 +266,7 @@ Scope:
 - desktop、代表スマホ幅、320px 前後で local draft、Google login、migration、両ボックス同期、cloud draft、競合、logout、account delete を確認する
 - 2つの独立 browser context または実端末で、同一アカウント同期と別アカウント分離を確認する
 - README、guide、privacy、公開仕様、制限、version、backup 手順を実装と同期する
-- Pages 公開後に custom domain で Google login、Firestore read / write、再読み込み、別端末反映、console を smoke test する
+- Pages 公開後に custom domain で Google login、Firestore read / write、再読み込み、別ブラウザ反映、console を smoke test する
 
 Done:
 

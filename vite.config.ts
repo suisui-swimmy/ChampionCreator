@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         app: "index.html",
         guide: "guide/index.html",
+        privacy: "privacy/index.html",
       },
     },
   },

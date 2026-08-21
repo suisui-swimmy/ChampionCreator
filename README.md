@@ -9,6 +9,8 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計
 
 使い方ガイド: <https://championcreator.suisui-swimmy.com/guide/>
 
+プライバシーとデータの取り扱い: <https://championcreator.suisui-swimmy.com/privacy/>
+
 Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 
 ## 実装機能
@@ -34,7 +36,7 @@ Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 - Frontend: React 19 + TypeScript + Vite
 - Test runner: Vitest
 - Hosting: GitHub Pages を想定した静的配信
-- Browser storage: ゲスト・未認証、または `SYNC-M3` の移行が完了していない状態では、従来どおり browser storage / local-first で動作します。`SYNC-M3` の one-time migration が完了した復元済み認証 session では、`SYNC-M4` の調整対象・仮想敵ボックスと、`SYNC-M5` の作業中下書きを UID 別に保存します。ボックスはローカル保存（outboxを含む）とFirestoreへ、下書きは UID + deviceId ごとのローカル保存（outboxを含む）と Firestore の `drafts` collection へ同期します
+- Browser storage: ゲスト・未認証、または `SYNC-M3` の移行が完了していない状態では、従来どおり browser storage / local-first で動作します。`SYNC-M3` の one-time migration が完了した復元済み認証 session では、`SYNC-M4` の調整対象・仮想敵ボックスと、`SYNC-M5` の作業中下書きを UID 別に保存します。ボックスはローカル保存（outboxを含む）とFirestoreへ、下書きは UID + deviceId ごとのローカル保存（outboxを含む）と Firestore の `drafts` collection へ同期します。`SYNC-M6` では Google ログイン、同期状態、アカウントデータの書き出し・削除を常設 UI から操作できます。Googleログインで受け取るのは表示名、メールアドレス、プロフィール画像、UIDです。Google Driveのファイル、連絡先、Gmailのメール本文を見る権限は要求しません
 - PWA: Web App Manifest に対応。Service Worker によるオフラインキャッシュは未実装
 
 ### Damage calculation boundary
@@ -167,21 +169,45 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 
 調整対象ボックスへ現在の条件を保存または上書きした場合は、Wordなどの「名前を付けて保存」と同じ確定操作として作業中の下書きを削除し、次に入力を変更するまで`ボックスに保存済み`と表示します。確定保存後は、次回起動時に下書きの復元確認を表示しません。保存内容は調整対象ボックスから明示的に読み込めます。調整対象ボックスから保存を読み込むと、その入力条件が次の下書きとして自動保存されます。調整対象ボックスの空スロットを読み込んだ場合は、作業中の下書きも明示的に破棄します。バックアップの読み込みだけでは作業中の入力条件や下書きを変更せず、バックアップ内の保存を選んで読み込んだ時点で反映します。ブラウザの保存容量不足などで自動保存できない場合は、画面にエラーと再試行操作を表示します。
 
-ゲスト・未認証、またはM3の移行が完了していない状態の通常保存データは同じブラウザ内の保存領域を使います。別端末、別ブラウザ、ブラウザデータ削除後には自動で引き継がれません。M3の移行 controller は、この通常動作を常時クラウド同期へ切り替えるものではありません。復元した認証済みsessionでM3のone-time migrationが完了した場合だけ、M4のボックス同期とM5のcloud draftが有効になります。常設のログイン・同期状態・アカウント管理UIはM6の範囲です。
+ゲスト・未認証、またはM3の移行が完了していない状態の通常保存データは同じブラウザ内の保存領域を使います。別のブラウザ（別のスマホ・PCを含む）や、ブラウザデータ削除後には自動で引き継がれません。M3の移行 controller は、この通常動作を常時クラウド同期へ切り替えるものではありません。復元した認証済みsessionでM3のone-time migrationが完了した場合だけ、M4のボックス同期とM5のcloud draftが有効になり、M6の常設アカウント・同期UIから管理できます。
 
-`SYNC-M3` では、既存の `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1` を読み取る one-time migration controller と、アカウントの UID ごとに分離した migration marker を用意しています。ローカル領域とクラウド側の両方に保存がある場合に扱う選択肢は、`統合`、`クラウドを使用`、`この端末を使用`、`あとで決める` です。`統合`では同一 ID・同一 payload を1件にまとめ、同一 ID・異なる payload は競合コピーとして両方を保持します。移行が完了するまでは旧 localStorage key を削除せず、移行に失敗した場合も既存データを残します。JSONバックアップも別の退避手段として保持します。未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しい端末で勝手に復活させません。
+`SYNC-M3` では、既存の `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1` を読み取る one-time migration controller と、アカウントの UID ごとに分離した migration marker を用意しています。ブラウザ内の保存とクラウド側の両方にデータがある場合の選択肢は、`統合`、`クラウドを使用`、`このブラウザを使用`、`あとで決める` です。`統合`では同一 ID・同一 payload を1件にまとめ、同一 ID・異なる payload は競合コピーとして両方を保持します。移行が完了するまでは旧 localStorage key を削除せず、移行に失敗した場合も既存データを残します。JSONバックアップも別の退避手段として保持します。未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しいブラウザで勝手に復活させません。
 
-この controller と初回統合ダイアログは、復元できた認証済みsessionでだけ動くruntime gateへ接続しています。移行対象も保存済みの入力条件に限り、計算結果、候補一覧、Worker state、チュートリアル state、cloud draft は移行しません。通常のボックス操作のクラウド同期は `SYNC-M4`、下書きのクラウド保存は `SYNC-M5`、常設のログイン・同期状態・アカウント管理 UI は `SYNC-M6` の範囲です。
+この controller と初回統合ダイアログは、復元できた認証済みsessionでだけ動くruntime gateへ接続しています。移行対象も保存済みの入力条件に限り、計算結果、候補一覧、Worker state、チュートリアル state、cloud draft は移行しません。通常のボックス操作のクラウド同期は `SYNC-M4`、下書きのクラウド保存は `SYNC-M5`、常設のログイン・同期状態・アカウント管理 UI は `SYNC-M6` で提供します。
 
-`SYNC-M4` では、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけが、調整対象ボックスと仮想敵ボックスの作成・上書き・名前変更・複製・削除・読み込み・バックアップ書き出し・バックアップ読み込みを、UID別のローカル保存とFirestoreで扱います。保存操作はまずこの端末のローカルへ確定し、成功した変更を順序付きoutboxへ積みます。クラウドへのpull / pushは起動時、画面focus時、online復帰時、ボックス操作後（失敗時の再試行を含む）に行い、クラウド失敗中もこの端末の保存とJSONバックアップは利用できます。削除はpayloadを保持したtombstoneとして同期し、同一slotの更新競合や更新対削除はLast Write Winsで消さず、local / remoteの両方を要確認状態として保持します。remoteの1件が破損・未対応でも、正常な保存一覧を空にせず、読めるデータを残して問題を通知します。
+`SYNC-M4` では、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけが、調整対象ボックスと仮想敵ボックスの作成・上書き・名前変更・複製・削除・読み込み・バックアップ書き出し・バックアップ読み込みを、UID別のブラウザ保存とFirestoreで扱います。保存操作はまずこのブラウザへ確定し、成功した変更を順序付きoutboxへ積みます。クラウドへのpull / pushは起動時、画面focus時、online復帰時、ボックス操作後（失敗時の再試行を含む）に行い、クラウド失敗中もこのブラウザの保存とJSONバックアップは利用できます。削除はpayloadを保持したtombstoneとして同期し、同一slotの更新競合や更新対削除はLast Write Winsで消さず、local / remoteの両方を要確認状態として保持します。remoteの1件が破損・未対応でも、正常な保存一覧を空にせず、読めるデータを残して問題を通知します。
 
-認証済みsessionのバックアップ読み込みでは、取り込み前に追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示し、`統合` または `全端末を置き換え` を選べます。読み込めない保存が含まれる場合は警告を表示し、既存データを失う可能性がある置き換えを無効にして`統合`だけを許可します。保存0件の正常な空バックアップは、現在の全保存が削除される警告を表示したうえで、明示的な置き換えを選べます。バックアップに残っているentryを統合すれば、端末やクラウドで削除済みになったentryも明示的に復元できます。ゲスト・未認証のバックアップ読み込みは従来どおりこの端末だけを対象にします。
+認証済みsessionのバックアップ読み込みでは、取り込み前に追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示し、`統合` または `クラウド全体を置き換え` を選べます。読み込めない保存が含まれる場合は警告を表示し、既存データを失う可能性がある置き換えを無効にして`統合`だけを許可します。保存0件の正常な空バックアップは、現在の全保存が削除される警告を表示したうえで、明示的な置き換えを選べます。バックアップに残っているentryを統合すれば、ブラウザやクラウドで削除済みになったentryも明示的に復元できます。ゲスト・未認証のバックアップ読み込みでは、`統合` または `このブラウザの保存を置き換え` を選べます。
 
-`SYNC-M5` では、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけが、作業中の下書きを端末ごとに保存・同期できます。入力変更後の端末内保存は従来どおり約0.75秒後、cloud deliveryは操作停止後2秒でqueueします。下書きは `userId + deviceId` のローカル／クラウドnamespaceへ分け、同じアカウントでも端末同士で上書きしません。アカウントあたり有効な下書きは最大10件、保持期間は30日です。期限切れの下書きは起動時、画面focus時、online復帰時、手動操作時にcleanupします。
+`SYNC-M5` では、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけが、作業中の下書きをブラウザごとに保存・同期できます。入力変更後のブラウザ内保存は従来どおり約0.75秒後、cloud deliveryは操作停止後2秒でqueueします。下書きは `userId + deviceId` のブラウザ／クラウドnamespaceへ分け、同じアカウントでもブラウザ同士で上書きしません。アカウントあたり有効な下書きは最大10件、保持期間は30日です。期限切れの下書きは起動時、画面focus時、online復帰時、手動操作時にcleanupします。
 
-他端末の下書きは更新日時、端末ラベル、入力概要を確認してから、ユーザーが選んだものだけを現在の作業画面へ復元できます。下書きの削除も明示操作で行い、復元時にボックスデータを変更しません。`pagehide` / `visibilitychange` では同期完了を装わず、未送信mutationをoutboxへ残します。cloud draftはrealtime listenerを使わず、ログイン・同期状態・アカウント管理UIはM6で扱います。計算結果、候補一覧、Worker state、チュートリアルの入力・保存・同期は対象外です。
+他のブラウザの下書きは更新日時、ブラウザラベル、入力概要を確認してから、ユーザーが選んだものだけを現在の作業画面へ復元できます。下書きの削除も明示操作で行い、復元時にボックスデータを変更しません。`pagehide` / `visibilitychange` では同期完了を装わず、未送信mutationをoutboxへ残します。cloud draftはrealtime listenerを使わず、ログイン・同期状態・アカウント管理UIはM6で扱います。計算結果、候補一覧、Worker state、チュートリアルの入力・保存・同期は対象外です。
 
 各ボックス画面の `バックアップを書き出す` / `バックアップを読み込む` から、保存済みボックスを JSON ファイルとして退避・復元できます。調整対象ボックスと仮想敵ボックスのバックアップは別ファイルとして扱い、読み込み時は同じ種類の保存へ `統合` するか、バックアップ内容で置き換えるかを選びます。
+
+## アカウント・同期管理（SYNC-M6）
+
+`SYNC-M3` の one-time migration が `completed` になった認証済み session では、ヘッダーから `Googleでログイン`、同期状態の確認、ログアウト、アカウントデータの書き出し、アカウント削除を操作できます。Google の「scope」は、アプリがどの情報や機能を使えるかを示すアクセス権の種類です。ChampionCreator が Google ログインで受け取るのは、表示名、メールアドレス、プロフィール画像、アカウント識別子です。Google Drive のファイル、連絡先、Gmail のメール本文を見る追加権限は要求しません。Firebase の User、credential、access token は画面の保存データやバックアップへ渡しません。
+
+同期状態として表示する文言は、次の7つに固定しています。
+
+- `このブラウザのみ`
+- `未同期`
+- `同期中…`
+- `同期済み`
+- `オフライン`
+- `競合あり`
+- `同期エラー`
+
+アカウントデータの書き出しは、手動同期を行ってから `syncRecords` と `drafts` をサーバーから読み取ります。読み取りエラー、未送信 outbox、競合が残っている場合は完全な書き出しと表示せず、警告付きの部分書き出しまたは中止として扱います。書き出す JSON には `schemaVersion`、`exportedAt`、対象 UID、サニタイズしたプロフィール、調整対象・仮想敵ボックス・cloud draft のデータだけを含め、credential、token、Firebase Web config の秘密値は含めません。ダウンロード後の Blob URL は破棄します。
+
+アカウント削除は、最近のログインが必要な場合に Google popup で再認証してから開始します。処理中は同期と保存の queue を停止し、対象 UID の `syncRecords` と `drafts` をサーバーから列挙して最大450件ずつ物理削除し、空になったことを再確認してから、UID専用のブラウザ保存領域を削除し、最後に Firebase Authentication のアカウントを削除します。通常のボックス・下書き削除は従来どおり tombstone であり、物理削除を行うのはアカウント削除の専用経路だけです。
+
+再認証、クラウド列挙・削除、空確認、UID専用ローカル削除のどこかで失敗した場合は Firebase Authentication のアカウントを削除せず、失敗理由と再試行操作を表示します。クラウドとローカルの削除後に最後の Authentication 削除だけが失敗した場合も、session を維持したまま再試行できます。成功時は Firebase Auth の状態変更からゲスト namespace へ切り替わり、通常の `signOut` は重ねて呼びません。別のブラウザから同時に書き込まれたデータを完全に原子的には止められないため、同じタブの同期を先に停止し、削除・再列挙・空確認を繰り返して再作成を抑止します。
+
+アカウント削除で消すのは、その UID に紐づく `championcreator.sync.v1.<uid>`、`championcreator.cloud-draft.v1.<uid>.<device>`、`championcreator.draft.v1.<uid>.<device>`、migration marker（`championcreator.migration.v1.<uid>`）だけです。ゲスト領域、legacy の `championcreator.box.v1` / `championcreator.enemy-box.v1`、既定サンプル marker は残します。ログイン前からこのブラウザだけに保存されていたデータはアカウントデータとは別管理なので、必要ならブラウザのサイトデータ削除や各ボックスの操作で別途削除してください。
+
+Firebase の Web config は公開値として扱い、Admin credential、service account key、Google OAuth client secret を browser bundle や Pages artifact に含めません。GitHub Pages の静的構成では Firebase client SDK から直接 Firestore と Auth を利用し、Admin SDK や自前の callable backend は追加しません。
 
 ## 制限
 
@@ -204,7 +230,7 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 - 素早さ調整の手動倍率は、選択中の持ち物・特性による自動補正を置き換える最終Sへの数値上書きです。特性の発動条件や丸め順まで完全に再現するものではなく、発動状態を直接指定する専用UIは未対応です
 - 条件が複雑なほど探索に時間がかかります
 - 重要な調整は実機でも確認してください
-- cloud draftはM3移行済みの認証sessionでのみ利用でき、1アカウント10件まで・30日保持です。復元と削除は明示操作で行い、リアルタイム共同編集、常設ログイン・同期状態・アカウント管理UI、チュートリアルの永続化は対象外です
+- cloud draftはM3移行済みの認証sessionでのみ利用でき、1アカウント10件まで・30日保持です。復元と削除は明示操作で行います。リアルタイム共同編集、共有ボックス、Google以外のprovider、チュートリアルの永続化は対象外です
 
 ## 開発
 
@@ -235,11 +261,11 @@ npm run validate:artwork-assets
 npm run typecheck
 ```
 
-### Firebase 同期基盤（SYNC-M1〜M5）
+### Firebase 同期基盤（SYNC-M1〜M6）
 
 Firebase Web SDK、Google provider の認証 session owner、Auth / Firestore Emulator、Firestore Security Rules、App Check の初期化境界を `src/sync/` に分離しています。Firebase の必須 Web config がない環境では SDK を初期化せず、従来どおり guest / local-first で動作します。
 
-SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `この端末を使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。`SYNC-M4` では、M3完了後の復元済み認証sessionへだけ、調整対象・仮想敵ボックスの作成からバックアップ入出力までをUID別local / outbox / Firestore経路で接続しています。local成功を先に確定し、起動・focus・online・ボックス操作後に同期し、tombstone、競合保持、破損remoteの分離を維持します。`SYNC-M5` では、作業中下書きを `users/{uid}/drafts/{deviceId}` へ端末別に保存し、2秒後のcloud queue、revision / baseRevision / mutationId、outbox、tombstone、30日保持、10件上限、期限切れcleanupを扱います。常設のログイン・同期状態・アカウント管理UIは`SYNC-M6`の範囲です。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、RulesとM5の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
+SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。`SYNC-M4` では、M3完了後の復元済み認証sessionへだけ、調整対象・仮想敵ボックスの作成からバックアップ入出力までをUID別local / outbox / Firestore経路で接続しています。local成功を先に確定し、起動・focus・online・ボックス操作後に同期し、tombstone、競合保持、破損remoteの分離を維持します。`SYNC-M5` では、作業中下書きを `users/{uid}/drafts/{deviceId}` へブラウザ別に保存し、2秒後のcloud queue、revision / baseRevision / mutationId、outbox、tombstone、30日保持、10件上限、期限切れcleanupを扱います。`SYNC-M6` では、Google popup login、7種類の同期状態、ログアウト、アカウントデータの完全性を確認した書き出し、再認証付きの UID 専用クラウド・ローカル削除と失敗時の再試行を提供します。`SYNC-M7` の全体検証、本番 Rules / App Check / authorized domain の最終確認、custom domain smoke test は未完了の公開前工程として残ります。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、RulesとM6の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
 
 ## ライセンス・権利表記
 
