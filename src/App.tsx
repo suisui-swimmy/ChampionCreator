@@ -1023,6 +1023,13 @@ const createBlankScenario = (index: number, gameType: GameType = "singles"): Sce
   attacks: [createBlankAttack(0, gameType)],
 });
 
+export const createAccountBoundaryForms = (
+  format: SuggestionFormat,
+): { readonly target: TargetFormState; readonly scenarios: readonly [ScenarioFormState] } => ({
+  target: createBlankTargetForm(),
+  scenarios: [createBlankScenario(0, toScenarioGameType(format))],
+});
+
 export const createScenario = (index: number, gameType: GameType = "singles"): ScenarioFormState => ({
   ...createBlankScenario(index, gameType),
   id: `scenario-${Date.now()}-${index}`,
@@ -1461,7 +1468,27 @@ export function App({
     accountDeletionLockedRef.current = false;
     setAccountDeletion({ stage: "idle" });
     setAccountOpen(false);
-  }, [accountAuthUid]);
+    activeRequestRef.current?.cancel();
+    activeRequestRef.current = null;
+    setSelectedCandidateId(null);
+    setAppliedCandidateId(null);
+    if (applyTimerRef.current !== null) {
+      window.clearTimeout(applyTimerRef.current);
+      applyTimerRef.current = null;
+    }
+    dispatchSearch({ type: "reset" });
+    dispatchBulkMaximize({ type: "reset" });
+    cancelDraftSaveRef.current?.();
+    cancelDraftSaveRef.current = null;
+    pendingCloudDraftRef.current = null;
+    boxBaselineFingerprintRef.current = null;
+    pendingBoxCommitFingerprintRef.current = null;
+    draftBaselineKindRef.current = null;
+    const blank = createAccountBoundaryForms(activeSuggestionFormat);
+    setTargetForm(blank.target);
+    setScenarioForms([...blank.scenarios]);
+    setDraftSaveState({ status: "idle" });
+  }, [accountAuthUid, activeSuggestionFormat]);
 
   const previewInput = useMemo(() => {
     try {
@@ -2335,8 +2362,9 @@ export function App({
       clearSyncMigrationControllerCache();
       accountDeletionLockedRef.current = false;
       suspendDraftPersistenceRef.current = true;
-      setTargetForm(createBlankTargetForm());
-      setScenarioForms([createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]);
+      const blank = createAccountBoundaryForms(activeSuggestionFormat);
+      setTargetForm(blank.target);
+      setScenarioForms([...blank.scenarios]);
       setDraftSaveState({ status: "idle" });
       setAccountDeletion({ stage: "complete", message: "アカウントを削除しました" });
       setAccountMessage("アカウントとクラウドデータを削除しました");

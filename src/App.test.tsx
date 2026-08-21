@@ -6,6 +6,7 @@ import {
   App,
   CandidateStatPointBars,
   CandidateStatPointSpread,
+  createAccountBoundaryForms,
   DraftRecoveryDialog,
   ResultsPanel,
   SuggestionFormatToggle,
@@ -81,6 +82,15 @@ describe("App", () => {
     expect(shouldInvalidateAccountOperationOnUidChange("alice", "alice")).toBe(false);
     expect(shouldInvalidateAccountOperationOnUidChange(undefined, "alice")).toBe(true);
     expect(shouldInvalidateAccountOperationOnUidChange(null, "bob")).toBe(true);
+  });
+
+  it("creates a blank workspace when the account namespace changes", () => {
+    const reset = createAccountBoundaryForms("Doubles");
+
+    expect(reset.target.pokemonInput).toBe("");
+    expect(reset.target.statPoints).toEqual({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
+    expect(reset.scenarios).toHaveLength(1);
+    expect(reset.scenarios[0].attacks[0].gameType).toBe("doubles");
   });
 
   it("never falls an unavailable account draft namespace back to the guest key", () => {
