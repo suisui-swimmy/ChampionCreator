@@ -261,11 +261,11 @@ npm run validate:artwork-assets
 npm run typecheck
 ```
 
-### Firebase 同期基盤（SYNC-M1〜M6）
+### Firebase 同期基盤（SYNC-M1〜M7）
 
 Firebase Web SDK、Google provider の認証 session owner、Auth / Firestore Emulator、Firestore Security Rules、App Check の初期化境界を `src/sync/` に分離しています。Firebase の必須 Web config がない環境では SDK を初期化せず、従来どおり guest / local-first で動作します。
 
-SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。`SYNC-M4` では、M3完了後の復元済み認証sessionへだけ、調整対象・仮想敵ボックスの作成からバックアップ入出力までをUID別local / outbox / Firestore経路で接続しています。local成功を先に確定し、起動・focus・online・ボックス操作後に同期し、tombstone、競合保持、破損remoteの分離を維持します。`SYNC-M5` では、作業中下書きを `users/{uid}/drafts/{deviceId}` へブラウザ別に保存し、2秒後のcloud queue、revision / baseRevision / mutationId、outbox、tombstone、30日保持、10件上限、期限切れcleanupを扱います。`SYNC-M6` では、Google popup login、7種類の同期状態、ログアウト、アカウントデータの完全性を確認した書き出し、再認証付きの UID 専用クラウド・ローカル削除と失敗時の再試行を提供します。`SYNC-M7` の全体検証、本番 Rules / App Check / authorized domain の最終確認、custom domain smoke test は未完了の公開前工程として残ります。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、RulesとM6の検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
+SYNC-M2 では、保存スロット単位の local / Firestore repository、revision と mutation ID による競合検出、tombstone、順序付き outbox を扱う同期 coordinator の内部境界を追加しています。`SYNC-M3` では、既存の localStorage box key と既定サンプル marker を UID ごとの migration marker と照合し、`統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める` を扱う one-time migration controller と、認証済みsession用の初回統合dialogを追加しています。同一 payload は重複排除し、異なる payload は競合コピーとして保持します。`SYNC-M4` では、M3完了後の復元済み認証sessionへだけ、調整対象・仮想敵ボックスの作成からバックアップ入出力までをUID別local / outbox / Firestore経路で接続しています。local成功を先に確定し、起動・focus・online・ボックス操作後に同期し、tombstone、競合保持、破損remoteの分離を維持します。`SYNC-M5` では、作業中下書きを `users/{uid}/drafts/{deviceId}` へブラウザ別に保存し、2秒後のcloud queue、revision / baseRevision / mutationId、outbox、tombstone、30日保持、10件上限、期限切れcleanupを扱います。`SYNC-M6` では、Google popup login、7種類の同期状態、ログアウト、アカウントデータの完全性を確認した書き出し、再認証付きの UID 専用クラウド・ローカル削除と失敗時の再試行を提供します。`SYNC-M7` では、全体test / Rules / Pages公開、custom domainのGoogle login・Firestore read / write・再読み込み・2ブラウザ間のbox / cloud draft作成と削除同期を確認し、Cloud FirestoreとAuthenticationのApp Check enforcementを有効にしました。ローカル Emulator、Pages の公開設定、Firebase Console の手作業、Rulesとアカウントライフサイクルの検証手順は [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) を参照してください。
 
 ## ライセンス・権利表記
 
