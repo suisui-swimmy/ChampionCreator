@@ -161,9 +161,41 @@ import {
   type DraftStorageDocument,
 } from "./ui/draftStorage";
 import { persistCurrentWorkToBoxAndDiscardDraft } from "./ui/currentWorkPersistence";
-import { useOptionalSyncBox } from "./sync/SyncBoxProvider";
+import {
+  clearSyncBoxRepositoryCache,
+  useOptionalSyncBox,
+} from "./sync/SyncBoxProvider";
 import { CloudDraftDialog } from "./sync/CloudDraftDialog";
 import {
+  AccountSyncDialog,
+  type AccountConflictAction,
+  type AccountDeletionState,
+  type AccountMigrationState,
+} from "./sync/AccountSyncDialog";
+import { useOptionalAuthSession } from "./sync/authSessionContext";
+import {
+  clearSyncMigrationControllerCache,
+  useSyncMigrationControl,
+  useSyncMigrationReadiness,
+} from "./sync/SyncMigrationGate";
+import {
+  deriveAccountSyncStatus,
+  getAccountSyncStatusLabel,
+  type AccountSyncStatus as AccountSyncStatusKey,
+} from "./sync/accountSyncStatus";
+import {
+  downloadAccountExport,
+  exportAccountData,
+} from "./sync/accountDataExport";
+import {
+  AccountDeletionError,
+  deleteAccount as deleteAccountAndCloudData,
+} from "./sync/accountDeletion";
+import { getFirebaseClient } from "./sync/firebaseClient";
+import { createFirestoreSyncRepository } from "./sync/firestoreSyncRepository";
+import { createFirestoreCloudDraftRepository } from "./sync/firestoreCloudDraftRepository";
+import {
+  clearCloudDraftRuntimeCache,
   useOptionalCloudDraft,
   type CloudDraftContextValue,
   type CloudDraftRuntimeStatus,
@@ -722,6 +754,18 @@ export const attemptCloudDraftQueue = (
   return message ? { status: "error", message } : { status: "success" };
 };
 
+export const isCurrentAccountOperation = (
+  operation: number,
+  currentOperation: number,
+  expectedUid: string | null,
+  currentUid: string | null,
+): boolean => operation === currentOperation && expectedUid === currentUid;
+
+export const shouldInvalidateAccountOperationOnUidChange = (
+  expectedUid: string | null | undefined,
+  nextUid: string | null,
+): boolean => expectedUid === undefined || expectedUid !== nextUid;
+
 const formatLocalizedDamageResult = (resultText: string): string =>
   resultText
     .replace(/\s+-\s+/g, "-")
@@ -979,6 +1023,13 @@ const createBlankScenario = (index: number, gameType: GameType = "singles"): Sce
   attacks: [createBlankAttack(0, gameType)],
 });
 
+export const createAccountBoundaryForms = (
+  format: SuggestionFormat,
+): { readonly target: TargetFormState; readonly scenarios: readonly [ScenarioFormState] } => ({
+  target: createBlankTargetForm(),
+  scenarios: [createBlankScenario(0, toScenarioGameType(format))],
+});
+
 export const createScenario = (index: number, gameType: GameType = "singles"): ScenarioFormState => ({
   ...createBlankScenario(index, gameType),
   id: `scenario-${Date.now()}-${index}`,
@@ -1123,23 +1174,23 @@ export const getDraftSaveStatusLabel = (
       switch (cloudStatus) {
         case "queued":
         case "idle":
-          return "端末保存済み";
+          return "ブラウザ保存済み";
         case "syncing":
           return "クラウドへ保存中…";
         case "synced":
           return "クラウド保存済み";
         case "offline":
-          return "オフライン（端末保存済み）";
+          return "オフライン（ブラウザ保存済み）";
         case "error":
-          return "同期エラー（端末保存済み）";
+          return "同期エラー（ブラウザ保存済み）";
         default:
-          return "この端末に下書き保存済み";
+          return "このブラウザに下書き保存済み";
       }
     case "box-saved":
       return "ボックスに保存済み";
     case "error":
       if (state.operation === "save") return "下書き保存エラー";
-      if (state.operation === "cloud-save") return "同期エラー（端末保存済み）";
+      if (state.operation === "cloud-save") return "同期エラー（ブラウザ保存済み）";
       return state.operation === "commit"
         ? "ボックス保存後の下書き削除エラー"
         : "下書き削除エラー";
@@ -1171,7 +1222,7 @@ export function DraftRecoveryDialog({
     || recovery.canRetryDiscard === true;
   const title = canRestore ? "保存した下書きがあります" : "下書きを読み込めませんでした";
   const description = canRestore
-    ? "前回の入力条件をこの端末から復元できます。"
+    ? "前回の入力条件をこのブラウザから復元できます。"
     : recovery.message;
 
   useEffect(() => {
@@ -1223,7 +1274,7 @@ export function DraftRecoveryDialog({
         tabIndex={-1}
       >
         <div className="draft-recovery-copy">
-          <span className="draft-recovery-kicker">この端末の作業中データ</span>
+          <span className="draft-recovery-kicker">このブラウザの作業中データ</span>
           <h2 id="draft-recovery-title">{title}</h2>
           <p id="draft-recovery-description">{description}</p>
           {canRestore ? (
@@ -1287,6 +1338,9 @@ export function App({
   onSearchStatusChange,
   onCandidateApplied,
 }: AppProps = {}) {
+  const authSession = useOptionalAuthSession();
+  const migrationReadiness = useSyncMigrationReadiness();
+  const migrationControl = useSyncMigrationControl();
   const syncBox = useOptionalSyncBox();
   const cloudDraft = useOptionalCloudDraft();
   const draftStorageScope = resolveDraftStorageScope(cloudDraft);
@@ -1346,6 +1400,15 @@ export function App({
   const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
   const [pendingBackupImport, setPendingBackupImport] = useState<PendingBackupImport | null>(null);
   const [cloudDraftOpen, setCloudDraftOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [accountDeletion, setAccountDeletion] = useState<AccountDeletionState>({ stage: "idle" });
+  const [isOnline, setIsOnline] = useState(() => (
+    typeof navigator === "undefined" ? true : navigator.onLine !== false
+  ));
   const [draftRecovery, setDraftRecovery] = useState<DraftRecoveryState | null>(() => {
     if (variant !== "default") {
       return null;
@@ -1373,6 +1436,12 @@ export function App({
     readonly fingerprint: string;
     readonly draft: DraftStorageDocument;
   } | null>(null);
+  const accountOperationRef = useRef(0);
+  const accountAuthUid = authSession?.state.user?.uid ?? null;
+  const previousAccountAuthUidRef = useRef(accountAuthUid);
+  const accountExpectedAuthUidRef = useRef<string | null | undefined>(undefined);
+  const accountDeletionLockedRef = useRef(false);
+  const suspendDraftPersistenceRef = useRef(false);
   const boxSourceKeyRef = useRef("device");
   const draftSourceKeyRef = useRef(activeDraftSourceKey);
   const cloudDraftRef = useRef(cloudDraft);
@@ -1380,6 +1449,46 @@ export function App({
   if (lastDraftFingerprintRef.current === null) {
     lastDraftFingerprintRef.current = createDraftFingerprint(targetForm, scenarioForms);
   }
+
+  useEffect(() => {
+    if (previousAccountAuthUidRef.current === accountAuthUid) return;
+    previousAccountAuthUidRef.current = accountAuthUid;
+    const expectedUid = accountExpectedAuthUidRef.current;
+    accountExpectedAuthUidRef.current = undefined;
+    // The provider callback is the account namespace authority. Invalidate
+    // every older UI operation so its eventual Promise cannot annotate the
+    // newly signed-in, signed-out, or switched account.
+    if (shouldInvalidateAccountOperationOnUidChange(expectedUid, accountAuthUid)) {
+      accountOperationRef.current += 1;
+    }
+    setAccountBusy(false);
+    setAccountError(null);
+    setAccountMessage(null);
+    setLogoutPending(false);
+    accountDeletionLockedRef.current = false;
+    setAccountDeletion({ stage: "idle" });
+    setAccountOpen(false);
+    activeRequestRef.current?.cancel();
+    activeRequestRef.current = null;
+    setSelectedCandidateId(null);
+    setAppliedCandidateId(null);
+    if (applyTimerRef.current !== null) {
+      window.clearTimeout(applyTimerRef.current);
+      applyTimerRef.current = null;
+    }
+    dispatchSearch({ type: "reset" });
+    dispatchBulkMaximize({ type: "reset" });
+    cancelDraftSaveRef.current?.();
+    cancelDraftSaveRef.current = null;
+    pendingCloudDraftRef.current = null;
+    boxBaselineFingerprintRef.current = null;
+    pendingBoxCommitFingerprintRef.current = null;
+    draftBaselineKindRef.current = null;
+    const blank = createAccountBoundaryForms(activeSuggestionFormat);
+    setTargetForm(blank.target);
+    setScenarioForms([...blank.scenarios]);
+    setDraftSaveState({ status: "idle" });
+  }, [accountAuthUid, activeSuggestionFormat]);
 
   const previewInput = useMemo(() => {
     try {
@@ -1458,6 +1567,21 @@ export function App({
   }, [usageData, variant]);
 
   useEffect(() => {
+    if (variant !== "default") return undefined;
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    globalThis.addEventListener?.("online", handleOnline);
+    globalThis.addEventListener?.("offline", handleOffline);
+    return () => {
+      globalThis.removeEventListener?.("online", handleOnline);
+      globalThis.removeEventListener?.("offline", handleOffline);
+    };
+  }, [variant]);
+
+  useEffect(() => {
+    if (suspendDraftPersistenceRef.current) {
+      return undefined;
+    }
     const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
     const decision = getDraftAutosaveDecision({
       variant,
@@ -1545,6 +1669,7 @@ export function App({
     pendingCloudDraftRef.current = null;
     draftBaselineKindRef.current = null;
     pendingBoxCommitFingerprintRef.current = null;
+    suspendDraftPersistenceRef.current = false;
     setCloudDraftOpen(false);
     setDraftSaveState({ status: "idle" });
     const result = loadActiveDraftFromBrowser();
@@ -1712,7 +1837,7 @@ export function App({
           setDraftSaveState({
             status: "error",
             operation: "cloud-save",
-            message: `この端末には保存済みですが、クラウド送信を準備できませんでした: ${cloudAttempt.message}`,
+            message: `このブラウザには保存済みですが、クラウド送信を準備できませんでした: ${cloudAttempt.message}`,
           });
           return;
         }
@@ -1747,7 +1872,7 @@ export function App({
       setDraftSaveState({
         status: "error",
         operation: "cloud-save",
-        message: `この端末には保存済みですが、クラウド送信を準備できませんでした: ${cloudAttempt.message}`,
+        message: `このブラウザには保存済みですが、クラウド送信を準備できませんでした: ${cloudAttempt.message}`,
       });
       return;
     }
@@ -1922,6 +2047,360 @@ export function App({
       return;
     }
     cloudDraftRef.current.deleteDraft(record.deviceId);
+  };
+
+  const prepareAccountBoundaryChange = () => {
+    suspendDraftPersistenceRef.current = true;
+    cancelPendingDraftSave();
+    pendingCloudDraftRef.current = null;
+    resetActiveSearch();
+    setDraftRecovery(null);
+    setCloudDraftOpen(false);
+    setPendingBackupImport(null);
+    setBoxOpen(false);
+    setEnemyBoxOpen(false);
+    closeMobileSheet();
+  };
+
+  const handleAccountSignIn = async () => {
+    if (!authSession) return;
+    const operation = ++accountOperationRef.current;
+    const startingUid = authSession.getCurrentUserUid();
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    try {
+      const user = await authSession.signInWithGoogle();
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountOpen(false);
+      }
+    } catch (error) {
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        startingUid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountError(error instanceof Error ? error.message : "Google ログインに失敗しました");
+      }
+    } finally {
+      if (operation === accountOperationRef.current) setAccountBusy(false);
+    }
+  };
+
+  const handleAccountSignOut = async () => {
+    if (!authSession) return;
+    const operation = ++accountOperationRef.current;
+    const startingUid = authSession.getCurrentUserUid();
+    setLogoutPending(false);
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    prepareAccountBoundaryChange();
+    try {
+      await Promise.all([
+        syncBox?.prepareAccountDeletion() ?? Promise.resolve(),
+        cloudDraft?.prepareAccountDeletion() ?? Promise.resolve(),
+      ]);
+      accountExpectedAuthUidRef.current = null;
+      try {
+        await authSession.signOut();
+      } catch (error) {
+        if (accountExpectedAuthUidRef.current === null) {
+          accountExpectedAuthUidRef.current = undefined;
+        }
+        throw error;
+      }
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        null,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountMessage("ログアウトしました。ブラウザのみの保存領域へ切り替えました");
+        setAccountOpen(false);
+      }
+    } catch (error) {
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        startingUid,
+        authSession.getCurrentUserUid(),
+      )) {
+        suspendDraftPersistenceRef.current = false;
+        syncBox?.resumeAccountOperations();
+        cloudDraft?.resumeAccountOperations();
+        setAccountError(error instanceof Error ? error.message : "ログアウトに失敗しました");
+      }
+    } finally {
+      if (operation === accountOperationRef.current) setAccountBusy(false);
+    }
+  };
+
+  const handleRequestAccountLogout = () => {
+    const pendingCount = (syncBox?.snapshot.outboxCount ?? 0)
+      + (cloudDraft?.snapshot.outboxCount ?? 0);
+    if (pendingCount > 0 || (syncBox?.snapshot.conflictCount ?? 0) > 0) {
+      setLogoutPending(true);
+      return;
+    }
+    void handleAccountSignOut();
+  };
+
+  const handleManualAccountSync = async () => {
+    if (migrationReadiness.status !== "ready") {
+      migrationControl.resumeMigration();
+      setAccountOpen(false);
+      return;
+    }
+    const user = authSession?.state.user;
+    if (!authSession || !user) {
+      setAccountError("同期するアカウントを確認できません");
+      return;
+    }
+    const operation = ++accountOperationRef.current;
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    try {
+      const [boxResult, draftResult] = await Promise.all([
+        syncBox?.synchronize("manual") ?? Promise.resolve(null),
+        cloudDraft?.synchronize("manual") ?? Promise.resolve(null),
+      ]);
+      const syncError = boxResult?.status === "error"
+        ? boxResult.error.message
+        : draftResult?.status === "error"
+          ? draftResult.error.message
+          : syncBox && boxResult === null
+            ? syncBox.lastSyncError ?? "ボックスを同期できませんでした"
+            : cloudDraft && draftResult === null
+              ? cloudDraft.lastError ?? (isOnline
+                ? "下書きを同期できませんでした"
+                : "オフラインのため同期できません")
+              : null;
+      if (syncError) throw new Error(syncError);
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountMessage("同期状態を更新しました");
+      }
+    } catch (error) {
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountError(error instanceof Error ? error.message : "同期状態を更新できませんでした");
+      }
+    } finally {
+      if (operation === accountOperationRef.current) setAccountBusy(false);
+    }
+  };
+
+  const handleAccountExport = async () => {
+    const user = authSession?.state.user;
+    const client = getFirebaseClient();
+    if (!user || client.status !== "ready") {
+      setAccountError("アカウントデータを書き出せません");
+      return;
+    }
+    const operation = ++accountOperationRef.current;
+    let providersSuspended = false;
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    try {
+      cancelPendingDraftSave();
+      saveCurrentDraftNow();
+      const [boxResult, draftResult] = await Promise.all([
+        syncBox?.synchronize("manual") ?? Promise.resolve(null),
+        cloudDraft?.synchronize("manual") ?? Promise.resolve(null),
+      ]);
+      const syncError = boxResult?.status === "error"
+        ? boxResult.error.message
+        : draftResult?.status === "error"
+          ? draftResult.error.message
+          : syncBox && boxResult === null
+            ? syncBox.lastSyncError ?? "ボックスを同期できませんでした"
+            : cloudDraft && draftResult === null
+              ? cloudDraft.lastError ?? "下書きを同期できませんでした"
+              : null;
+      if (syncError) throw new Error(syncError);
+      if (operation !== accountOperationRef.current || authSession.getCurrentUserUid() !== user.uid) {
+        throw new Error("アカウントが切り替わったため、書き出しを中止しました");
+      }
+      await Promise.all([
+        syncBox?.prepareAccountDeletion() ?? Promise.resolve(),
+        cloudDraft?.prepareAccountDeletion() ?? Promise.resolve(),
+      ]);
+      providersSuspended = true;
+      if (operation !== accountOperationRef.current || authSession.getCurrentUserUid() !== user.uid) {
+        throw new Error("アカウントが切り替わったため、書き出しを中止しました");
+      }
+      const result = await exportAccountData({
+        uid: user.uid,
+        profile: user,
+        syncRepository: createFirestoreSyncRepository({ client, uid: user.uid }),
+        draftRepository: createFirestoreCloudDraftRepository({ client, uid: user.uid }),
+        synchronize: async () => ({
+          status: "success" as const,
+          outboxCount: (boxResult?.snapshot?.outboxCount ?? syncBox?.snapshot.outboxCount ?? 0)
+            + (draftResult?.snapshot?.outboxCount ?? cloudDraft?.snapshot.outboxCount ?? 0),
+          conflictCount: boxResult?.snapshot?.conflictCount ?? syncBox?.snapshot.conflictCount ?? 0,
+          issues: [
+            ...(boxResult?.issues ?? []),
+            ...(draftResult?.issues ?? []),
+          ],
+        }),
+      });
+      if (result.status === "error") throw result.error;
+      if (operation !== accountOperationRef.current || authSession.getCurrentUserUid() !== user.uid) {
+        throw new Error("アカウントが切り替わったため、書き出しを中止しました");
+      }
+      const stamp = result.document.exportedAt.slice(0, 10).replaceAll("-", "");
+      downloadAccountExport(result, {
+        filename: `championcreator-account-export-${stamp}.json`,
+      });
+      setAccountMessage(result.status === "partial"
+        ? "未同期または確認が必要なデータを明記して書き出しました"
+        : "アカウントデータを書き出しました");
+    } catch (error) {
+      if (isCurrentAccountOperation(
+        operation,
+        accountOperationRef.current,
+        user.uid,
+        authSession.getCurrentUserUid(),
+      )) {
+        setAccountError(error instanceof Error ? error.message : "アカウントデータを書き出せませんでした");
+      }
+    } finally {
+      if (providersSuspended && operation === accountOperationRef.current) {
+        syncBox?.resumeAccountOperations();
+        cloudDraft?.resumeAccountOperations();
+      }
+      if (operation === accountOperationRef.current) setAccountBusy(false);
+    }
+  };
+
+  const handleResolveAccountConflict = (action: AccountConflictAction) => {
+    const conflict = syncBox?.conflicts[0];
+    if (!syncBox || !conflict) return;
+    const decision = action === "local"
+      ? "keep-local"
+      : action === "remote"
+        ? "keep-remote"
+        : "keep-both";
+    const error = syncBox.resolveConflict(conflict.kind, conflict.entryId, decision);
+    if (error) {
+      setAccountError(error);
+      return;
+    }
+    setAccountError(null);
+    setAccountMessage("競合を解決しました。残りの競合も順番に確認できます");
+  };
+
+  const handleDeleteAccount = async () => {
+    const user = authSession?.state.user;
+    const client = getFirebaseClient();
+    if (!authSession || !user || client.status !== "ready") {
+      setAccountError("削除するアカウントを確認できません");
+      return;
+    }
+    const operation = ++accountOperationRef.current;
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    setAccountDeletion({ stage: "deleting", busy: true });
+    try {
+      await deleteAccountAndCloudData({
+        uid: user.uid,
+        auth: {
+          reauthenticateWithGoogle: async (expectedUid) => (
+            authSession.session.reauthenticateWithGoogle(expectedUid)
+          ),
+          deleteAccount: async (expectedUid) => {
+            accountExpectedAuthUidRef.current = null;
+            try {
+              await authSession.session.deleteAccount(expectedUid);
+            } catch (error) {
+              if (accountExpectedAuthUidRef.current === null) {
+                accountExpectedAuthUidRef.current = undefined;
+              }
+              throw error;
+            }
+          },
+          getCurrentUserUid: authSession.getCurrentUserUid,
+        },
+        firestore: client.firestore,
+        deviceId: cloudDraft?.deviceId,
+        prepareAccountDeletion: async () => {
+          prepareAccountBoundaryChange();
+          await Promise.all([
+            syncBox?.prepareAccountDeletion() ?? Promise.resolve(),
+            cloudDraft?.prepareAccountDeletion() ?? Promise.resolve(),
+          ]);
+        },
+        resumeAccountOperations: () => {
+          if (accountDeletionLockedRef.current) return;
+          syncBox?.resumeAccountOperations();
+          cloudDraft?.resumeAccountOperations();
+        },
+        isCurrent: () => operation === accountOperationRef.current,
+      });
+      if (operation !== accountOperationRef.current) return;
+      clearSyncBoxRepositoryCache();
+      clearCloudDraftRuntimeCache();
+      clearSyncMigrationControllerCache();
+      accountDeletionLockedRef.current = false;
+      suspendDraftPersistenceRef.current = true;
+      const blank = createAccountBoundaryForms(activeSuggestionFormat);
+      setTargetForm(blank.target);
+      setScenarioForms([...blank.scenarios]);
+      setDraftSaveState({ status: "idle" });
+      setAccountDeletion({ stage: "complete", message: "アカウントを削除しました" });
+      setAccountMessage("アカウントとクラウドデータを削除しました");
+      setAccountOpen(false);
+    } catch (error) {
+      const currentUid = authSession.getCurrentUserUid();
+      if (
+        operation === accountOperationRef.current
+        && (currentUid === user.uid || currentUid === null)
+      ) {
+        const destructive = error instanceof AccountDeletionError && error.destructive;
+        const keepLocked = accountDeletionLockedRef.current || destructive;
+        accountDeletionLockedRef.current = keepLocked;
+        if (!keepLocked) {
+          suspendDraftPersistenceRef.current = false;
+        } else if (error instanceof AccountDeletionError && error.code === "delete-account-failed") {
+          // Cloud and UID-local data are already gone. Remove stale snapshots
+          // from the visible providers while keeping mutations suspended until
+          // the final Auth deletion is retried.
+          syncBox?.discardAccountData();
+          cloudDraft?.discardAccountData();
+          clearSyncBoxRepositoryCache();
+          clearCloudDraftRuntimeCache();
+        }
+        const message = error instanceof Error ? error.message : "アカウントを削除できませんでした";
+        setAccountError(message);
+        setAccountDeletion({
+          stage: "error",
+          message,
+          onRetry: () => void handleDeleteAccount(),
+          canCancel: !keepLocked,
+        });
+      }
+    } finally {
+      if (operation === accountOperationRef.current) setAccountBusy(false);
+    }
   };
 
   const handleSuggestionFormatChange = (format: SuggestionFormat) => {
@@ -2858,8 +3337,71 @@ export function App({
   };
 
   const boxStorageLabel = syncBox?.mode === "account"
-    ? "この端末に保存・クラウド同期"
+    ? "このブラウザに保存・クラウド同期"
     : "ブラウザに保存";
+  const authState = authSession?.state ?? null;
+  const isSignedIn = Boolean(authState?.user);
+  const accountPendingCount = (syncBox?.snapshot.outboxCount ?? 0)
+    + (cloudDraft?.snapshot.outboxCount ?? 0);
+  const accountConflictCount = syncBox?.snapshot.conflictCount ?? 0;
+  const derivedProviderStatus = deriveAccountSyncStatus({
+    authenticated: isSignedIn,
+    migrationReady: migrationReadiness.status === "ready",
+    authStatus: authState?.status,
+    migrationStatus: migrationReadiness.status,
+    online: isOnline,
+    box: syncBox ? {
+      status: syncBox.isSynchronizing
+        ? "syncing"
+        : syncBox.lastSyncError
+          ? "error"
+          : "synced",
+      outboxCount: syncBox.snapshot.outboxCount,
+      conflictCount: syncBox.snapshot.conflictCount,
+      issueCount: syncBox.issueCount,
+    } : undefined,
+    draft: cloudDraft ? {
+      status: !isOnline
+        ? "offline"
+        : cloudDraft.status === "idle"
+          ? "unsynced"
+          : cloudDraft.status,
+      outboxCount: cloudDraft.snapshot.outboxCount,
+      issueCount: cloudDraft.issueCount,
+    } : undefined,
+  });
+  const accountSyncStatus: AccountSyncStatusKey = derivedProviderStatus;
+  const accountSyncLabel = getAccountSyncStatusLabel(accountSyncStatus);
+  const firstConflict = syncBox?.conflicts[0] ?? null;
+  const firstConflictName = firstConflict
+    ? firstConflict.localEntry?.name
+      ?? firstConflict.remoteEntry?.name
+      ?? firstConflict.entryId
+    : null;
+  const accountMigration: AccountMigrationState | null = isSignedIn
+    && migrationReadiness.status !== "ready"
+    && migrationReadiness.status !== "guest"
+    ? {
+        status: migrationReadiness.status,
+        message: migrationReadiness.status === "deferred"
+          ? "初回統合は保留中です。同期を始める前に保存先を選んでください。"
+          : migrationReadiness.status === "error"
+            ? "初回統合の確認に失敗しました。元データは保持しています。"
+            : undefined,
+        onRetry: () => {
+          migrationControl.resumeMigration();
+          setAccountOpen(false);
+        },
+      }
+    : null;
+  const accountStatusMessage = accountMessage ?? (isSignedIn
+    ? `調整対象${syncBox?.snapshot.targetEntries.length ?? 0}件 / 仮想敵${syncBox?.snapshot.enemyEntries.length ?? 0}件 / 下書き${cloudDraft?.snapshot.records.length ?? 0}件 / 未送信${accountPendingCount}件`
+    : "ログインしない場合は、このブラウザだけに保存します");
+  const accountStatusError = accountError
+    ?? authState?.error?.message
+    ?? (accountSyncStatus === "error"
+      ? syncBox?.lastSyncError ?? cloudDraft?.lastError ?? "同期処理に失敗しました"
+      : null);
   const targetConflictCount = syncBox?.snapshot.targetConflictCount ?? 0;
   const enemyConflictCount = syncBox?.snapshot.enemyConflictCount ?? 0;
   const getSyncNotice = (conflictCount: number): string | null => {
@@ -2869,7 +3411,7 @@ export function App({
     }
     if (syncBox.lastSyncError) {
       return syncBox.snapshot.outboxCount > 0
-        ? `この端末には保存済みです。クラウド同期はあとで再試行します（${syncBox.lastSyncError}）`
+        ? `このブラウザには保存済みです。クラウド同期はあとで再試行します（${syncBox.lastSyncError}）`
         : syncBox.lastSyncError;
     }
     return null;
@@ -2893,15 +3435,15 @@ export function App({
   const cloudDraftStatusMessage = (() => {
     switch (cloudDraft?.status) {
       case "queued":
-        return "端末保存済み。クラウド送信を待っています。";
+        return "ブラウザ保存済み。クラウド送信を待っています。";
       case "syncing":
         return "クラウドへ保存中…";
       case "synced":
         return "クラウド保存済み";
       case "offline":
-        return "オフラインです。未送信の下書きは端末に保持しています。";
+        return "オフラインです。未送信の下書きはこのブラウザに保持しています。";
       case "error":
-        return "同期エラー。未送信の下書きは端末に保持しています。";
+        return "同期エラー。未送信の下書きはこのブラウザに保持しています。";
       default:
         return null;
     }
@@ -2942,19 +3484,23 @@ export function App({
               value={activeSuggestionFormat}
               onChange={handleSuggestionFormatChange}
             />
-            {cloudDraft ? (
-              <button
-                type="button"
-                className={`cloud-draft-trigger ${cloudDraft.status}`}
-                aria-label={`下書きと同期（他端末${cloudDraft.snapshot.otherDrafts.length}件）`}
-                aria-haspopup="dialog"
-                aria-expanded={cloudDraftOpen}
-                onClick={() => setCloudDraftOpen(true)}
-              >
-                <span>下書き</span>
-                <strong>{cloudDraft.snapshot.otherDrafts.length}</strong>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className={`account-sync-trigger ${accountSyncStatus}`}
+              aria-label={`アカウントと同期: ${accountSyncLabel}`}
+              aria-haspopup="dialog"
+              aria-expanded={accountOpen}
+              data-sync-status={accountSyncStatus}
+              onClick={() => {
+                setAccountError(null);
+                setAccountMessage(null);
+                setAccountOpen(true);
+              }}
+            >
+              <span className="account-sync-trigger-icon" aria-hidden="true" />
+              <span className="account-sync-trigger-label">{accountSyncLabel}</span>
+              {accountConflictCount > 0 ? <strong>{accountConflictCount}</strong> : null}
+            </button>
             <a
               className="readme-link"
               href="/guide/"
@@ -2984,6 +3530,57 @@ export function App({
           ) : null}
         </div>
         </header>
+      ) : null}
+
+      {variant === "default" && accountOpen ? (
+        <AccountSyncDialog
+          mode={isSignedIn ? "signed-in" : "signed-out"}
+          user={authState?.user}
+          status={accountSyncLabel}
+          statusMessage={accountStatusMessage}
+          busy={accountBusy
+            || authState?.status === "loading"
+            || authState?.status === "signing-in"
+            || authState?.status === "signing-out"}
+          errorMessage={accountStatusError}
+          migration={accountMigration}
+          draftsCount={cloudDraft?.snapshot.records.length ?? 0}
+          onOpenDrafts={cloudDraft ? () => {
+            setAccountOpen(false);
+            setCloudDraftOpen(true);
+          } : undefined}
+          onExport={isSignedIn && migrationReadiness.status === "ready"
+            ? () => void handleAccountExport()
+            : undefined}
+          onSync={isSignedIn ? () => void handleManualAccountSync() : undefined}
+          conflicts={accountConflictCount > 0 ? {
+            count: accountConflictCount,
+            message: firstConflict
+              ? `${firstConflict.kind === "target-box" ? "調整対象" : "仮想敵"}「${firstConflictName}」で、このブラウザとクラウドの変更が競合しています。`
+              : undefined,
+            onAction: handleResolveAccountConflict,
+            busy: accountBusy,
+          } : null}
+          deletion={accountDeletion}
+          onSignIn={authSession?.state.availability === "available"
+            ? () => handleAccountSignIn()
+            : undefined}
+          onRequestLogout={handleRequestAccountLogout}
+          onConfirmLogout={() => handleAccountSignOut()}
+          onCancelLogout={() => setLogoutPending(false)}
+          logoutPending={logoutPending}
+          pendingCount={accountPendingCount}
+          conflictCount={accountConflictCount}
+          onDeleteAccount={isSignedIn ? () => handleDeleteAccount() : undefined}
+          onCancelDeleteAccount={accountDeletion.canCancel === false
+            ? undefined
+            : () => setAccountDeletion({ stage: "idle" })}
+          onClose={accountDeletion.stage === "deleting" || accountDeletion.canCancel === false ? undefined : () => {
+            setAccountOpen(false);
+            setLogoutPending(false);
+            setAccountDeletion({ stage: "idle" });
+          }}
+        />
       ) : null}
 
       {variant === "default" && draftRecovery ? (
@@ -3290,6 +3887,10 @@ export function App({
           </span>
         </div>
         <div className="app-footer-links" aria-label="フッターリンク">
+          <a className="app-footer-contact" href="/privacy/">
+            プライバシー
+          </a>
+          <span aria-hidden="true"> | </span>
           <a
             className="app-footer-contact"
             href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"

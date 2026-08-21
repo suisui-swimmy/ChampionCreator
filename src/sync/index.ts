@@ -3,6 +3,7 @@ export * from "./firebaseClient";
 export * from "./firebaseAuthGateway";
 export * from "./authSession";
 export * from "./authSessionContext";
+export * from "./accountDeletion";
 export * from "./syncTypes";
 export * from "./syncPayload";
 export * from "./syncOutbox";
@@ -115,6 +116,9 @@ export {
 export * from "./cloudDraftCoordinator";
 export * from "./CloudDraftProvider";
 export * from "./CloudDraftDialog";
+export * from "./AccountSyncDialog";
+export * from "./accountSyncStatus";
+export * from "./accountDataExport";
 export * from "./migrationStorage";
 export {
   buildMigrationPlan,

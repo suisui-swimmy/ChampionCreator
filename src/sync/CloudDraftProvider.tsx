@@ -19,6 +19,7 @@ import {
   createCloudDraftSnapshot,
   type CloudDraftCoordinator,
   type CloudDraftSnapshot,
+  type CloudDraftSynchronizeResult,
   type CloudDraftSyncTrigger,
 } from "./cloudDraftCoordinator";
 import { createCloudDraftLocalRepository } from "./cloudDraftLocalRepository";
@@ -47,7 +48,7 @@ export type CloudDraftRuntimeStatus =
  * the remote write is waiting for its debounce window; it is not an error.
  */
 export const CLOUD_DRAFT_STATUS_LABELS: Readonly<Record<CloudDraftRuntimeStatus, string>> = {
-  idle: "この端末のみ",
+  idle: "このブラウザのみ",
   queued: "未同期",
   syncing: "同期中…",
   synced: "同期済み",
@@ -73,7 +74,13 @@ export interface CloudDraftContextValue {
   readonly issueCount: number;
   readonly queueCurrentDraft: (draft: DraftStorageDocument) => string | null;
   readonly deleteDraft: (deviceId: string) => string | null;
-  readonly synchronize: (trigger?: CloudDraftSyncTrigger) => Promise<void>;
+  readonly synchronize: (trigger?: CloudDraftSyncTrigger) => Promise<CloudDraftSynchronizeResult | null>;
+  /** Block queue/sync callbacks and wait for the current remote operation. */
+  readonly prepareAccountDeletion: () => Promise<void>;
+  /** Re-enable account operations after a failed/cancelled destructive flow. */
+  readonly resumeAccountOperations: () => void;
+  /** Drop retained account snapshots after physical account-data deletion. */
+  readonly discardAccountData: () => void;
 }
 
 export interface CloudDraftRuntime {
@@ -164,7 +171,11 @@ export function CloudDraftProvider({
   const migration = useSyncMigrationReadiness();
   const operationRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
-  const synchronizeRef = useRef<(trigger?: CloudDraftSyncTrigger) => Promise<void>>(async () => {});
+  const synchronizeRef = useRef<(trigger?: CloudDraftSyncTrigger) => Promise<CloudDraftSynchronizeResult | null>>(async () => null);
+  const suspendedRef = useRef(false);
+  const suspendedSourceRef = useRef<string | null>(null);
+  const inFlightSynchronizeRef = useRef<Promise<unknown> | null>(null);
+  const [runtimeGeneration, setRuntimeGeneration] = useState(0);
 
   const active = useMemo<ActiveRuntime | null>(() => {
     const ownerUid = getCloudDraftOwnerUid(authState, migration);
@@ -198,7 +209,7 @@ export function CloudDraftProvider({
         errorMessage: stableErrorMessage(error),
       };
     }
-  }, [authState.user?.uid, migration.ownerUid, migration.status, runtimeFactory]);
+  }, [authState.user?.uid, migration.ownerUid, migration.status, runtimeFactory, runtimeGeneration]);
 
   const [providerState, setProviderState] = useState<ProviderState | null>(null);
   const currentState: ProviderState | null = active
@@ -232,8 +243,8 @@ export function CloudDraftProvider({
     }, delay);
   }, [clearTimer]);
 
-  const synchronize = useCallback(async (trigger: CloudDraftSyncTrigger = "manual") => {
-    if (!active?.runtime) return;
+  const synchronize = useCallback(async (trigger: CloudDraftSyncTrigger = "manual"): Promise<CloudDraftSynchronizeResult | null> => {
+    if (suspendedRef.current || !active?.runtime) return null;
     if (isOffline()) {
       clearTimer();
       setProviderState((current) => ({
@@ -244,7 +255,7 @@ export function CloudDraftProvider({
         lastError: "オフラインのため、クラウド下書きはあとで再送します",
         issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
       }));
-      return;
+      return null;
     }
     clearTimer();
     const operation = ++operationRef.current;
@@ -256,9 +267,11 @@ export function CloudDraftProvider({
       lastError: null,
       issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
     }));
+    const remoteOperation = active.runtime.coordinator.synchronize(trigger);
+    inFlightSynchronizeRef.current = remoteOperation;
     try {
-      const result = await active.runtime.coordinator.synchronize(trigger);
-      if (operation !== operationRef.current) return;
+      const result = await remoteOperation;
+      if (operation !== operationRef.current) return result;
       const snapshot = result.snapshot ?? active.snapshot;
       const issueMessage = result.issues.length > 0
         ? "一部のクラウド下書きを読み込めませんでした。正常な下書きは保持しています"
@@ -276,8 +289,9 @@ export function CloudDraftProvider({
         issueCount: result.issues.length,
       });
       if (status === "queued") scheduleSnapshot(snapshot);
+      return result;
     } catch (error) {
-      if (operation !== operationRef.current) return;
+      if (operation !== operationRef.current) return null;
       setProviderState((current) => ({
         sourceKey: active.sourceKey,
         snapshot: current?.sourceKey === active.sourceKey ? current.snapshot : active.snapshot,
@@ -286,13 +300,60 @@ export function CloudDraftProvider({
         lastError: stableErrorMessage(error),
         issueCount: current?.sourceKey === active.sourceKey ? current.issueCount : 0,
       }));
+      return null;
+    } finally {
+      if (inFlightSynchronizeRef.current === remoteOperation) {
+        inFlightSynchronizeRef.current = null;
+      }
     }
   }, [active, clearTimer, scheduleSnapshot]);
   synchronizeRef.current = synchronize;
 
+  const prepareAccountDeletion = useCallback(async (): Promise<void> => {
+    suspendedRef.current = true;
+    suspendedSourceRef.current = active?.sourceKey ?? null;
+    operationRef.current += 1;
+    clearTimer();
+    const inFlight = inFlightSynchronizeRef.current;
+    if (inFlight) {
+      // The provider's generation has already been advanced, so a late result
+      // cannot update React state. Waiting here is still required: the
+      // coordinator may be in its push loop and must receive its server ack
+      // before account documents are physically deleted.
+      await inFlight;
+    }
+  }, [active?.sourceKey, clearTimer]);
+
+  const resumeAccountOperations = useCallback(() => {
+    operationRef.current += 1;
+    suspendedRef.current = false;
+    suspendedSourceRef.current = null;
+  }, []);
+
+  const discardAccountData = useCallback(() => {
+    operationRef.current += 1;
+    clearTimer();
+    suspendedRef.current = true;
+    if (!active) return;
+    defaultRuntimeCache.delete(active.ownerUid);
+    setProviderState({
+      sourceKey: active.sourceKey,
+      snapshot: emptySnapshot(active.ownerUid, active.runtime?.identity.deviceId),
+      isAvailable: true,
+      status: "idle",
+      lastError: null,
+      issueCount: 0,
+    });
+    setRuntimeGeneration((current) => current + 1);
+  }, [active, clearTimer]);
+
   useEffect(() => {
     operationRef.current += 1;
     clearTimer();
+    if (!active || (suspendedSourceRef.current !== null && suspendedSourceRef.current !== active.sourceKey)) {
+      suspendedRef.current = false;
+      suspendedSourceRef.current = null;
+    }
     if (!active) {
       setProviderState(null);
       return undefined;
@@ -357,6 +418,9 @@ export function CloudDraftProvider({
   const applyLocalMutation = useCallback((
     mutate: (coordinator: CloudDraftCoordinator) => ReturnType<CloudDraftCoordinator["queueDelete"]>,
   ): string | null => {
+    if (suspendedRef.current) {
+      return "アカウント操作中のため、クラウド下書きを変更できません";
+    }
     if (!active?.runtime || !currentState?.isAvailable) {
       return currentState?.lastError ?? active?.errorMessage ?? "クラウド下書きを利用できません";
     }
@@ -414,8 +478,20 @@ export function CloudDraftProvider({
       queueCurrentDraft,
       deleteDraft,
       synchronize,
+      prepareAccountDeletion,
+      resumeAccountOperations,
+      discardAccountData,
     };
-  }, [active, currentState, deleteDraft, queueCurrentDraft, synchronize]);
+  }, [
+    active,
+    currentState,
+    deleteDraft,
+    discardAccountData,
+    prepareAccountDeletion,
+    queueCurrentDraft,
+    resumeAccountOperations,
+    synchronize,
+  ]);
 
   return <CloudDraftContext.Provider value={value}>{children}</CloudDraftContext.Provider>;
 }
@@ -427,3 +503,5 @@ export function useOptionalCloudDraft(): CloudDraftContextValue | null {
 export function resetCloudDraftRuntimeCacheForTests(): void {
   defaultRuntimeCache.clear();
 }
+
+export const clearCloudDraftRuntimeCache = resetCloudDraftRuntimeCacheForTests;

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="championcreator-app-base" content="../" />
+    <title>ChampionCreator | プライバシーとデータの取り扱い</title>
+    <meta
+      name="description"
+      content="ChampionCreatorが扱うFirebaseアカウント、ブラウザ保存、Google Analytics、フォント、エクスポート、アカウント削除の説明です。"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#090d0e" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:site_name" content="ChampionCreator" />
+    <meta property="og:title" content="ChampionCreator | プライバシーとデータの取り扱い" />
+    <meta
+      property="og:description"
+      content="ChampionCreatorが扱うFirebaseアカウント、ブラウザ保存、Google Analytics、フォント、エクスポート、アカウント削除の説明です。"
+    />
+    <meta property="og:url" content="https://championcreator.suisui-swimmy.com/privacy/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="ChampionCreator | プライバシーとデータの取り扱い" />
+    <meta
+      name="twitter:description"
+      content="ChampionCreatorが扱うFirebaseアカウント、ブラウザ保存、Google Analytics、フォント、エクスポート、アカウント削除の説明です。"
+    />
+    <link rel="canonical" href="https://championcreator.suisui-swimmy.com/privacy/" />
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@100;400;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VCGTV67QC2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-VCGTV67QC2');
+    </script>
+  </head>
+  <body class="guide-page">
+    <header class="guide-header">
+      <a class="guide-brand" href="/" aria-label="ChampionCreatorを開く">
+        <img src="/assets/brand/championcreator-title.svg" alt="ChampionCreator" />
+        <span>プライバシー</span>
+      </a>
+      <div class="guide-header-actions">
+        <a class="guide-header-action" href="/">アプリを開く</a>
+        <button
+          class="guide-menu-toggle"
+          type="button"
+          aria-controls="privacy-toc-panel"
+          aria-expanded="false"
+          aria-label="プライバシーメニューを開く"
+        >
+          <img src="/assets/ui/menu.svg" alt="" aria-hidden="true" />
+        </button>
+      </div>
+    </header>
+
+    <div class="guide-layout">
+      <aside class="guide-toc" id="privacy-toc-panel" aria-label="プライバシー目次">
+        <p class="guide-toc-label">このページの項目</p>
+        <nav>
+          <a class="active" href="#overview" aria-current="location">概要</a>
+          <a href="#local-storage">ブラウザ保存</a>
+          <a href="#firebase">Firebase</a>
+          <a href="#analytics-fonts">Analyticsとフォント</a>
+          <a href="#export">書き出し</a>
+          <a href="#delete">削除・再試行</a>
+          <a href="#retention">保持と安全性</a>
+        </nav>
+      </aside>
+
+      <main class="guide-content">
+        <section class="guide-intro" id="overview">
+          <p class="guide-breadcrumb"><a href="/">ChampionCreator</a><span>/</span>プライバシー</p>
+          <p class="guide-eyebrow">PRIVACY &amp; DATA</p>
+          <h1>プライバシーと<br />データの取り扱い</h1>
+          <p class="guide-lead">
+            ChampionCreatorは、入力した調整条件を計算する静的Webアプリです。このページでは、ブラウザ、Firebase、Google Analytics、外部フォントへ何が渡るか、またアカウントデータを書き出す・削除する方法を説明します。
+          </p>
+          <div class="guide-tip">
+            <div class="guide-tip-heading"><strong>更新日</strong></div>
+            <p>2026年8月21日</p>
+            <p>運営者: suisui-swimmy。お問い合わせは<a href="https://x.com/peixe0307" target="_blank" rel="noreferrer">X（@peixe0307）</a>またはアプリ内の不具合報告窓口からお願いします。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="local-storage">
+          <p class="guide-section-kicker">BROWSER STORAGE</p>
+          <h2>ブラウザに保存されるデータ</h2>
+          <p>ゲスト・未認証、またはM3の移行が完了していない状態では、入力条件、調整対象ボックス、仮想敵ボックス、作業中の下書き、候補形式の設定をブラウザのlocalStorageへ保存します。これはブラウザごとの保存であり、運営者のサーバーへ自動送信されません。</p>
+          <p>M3完了後の認証済みsessionでも、同期のためにUID別のlocal repository、未送信outbox、cloud draft、migration markerを同じブラウザへ保持します。計算結果、候補一覧、Worker state、チュートリアルの入力・保存・同期は対象外です。</p>
+          <p>主な保存キーは次のとおりです。UIDやdeviceIdの部分は値に応じて変わります。</p>
+          <ul class="guide-notes-list">
+            <li>ゲスト・legacy: <code>championcreator.box.v1</code>、<code>championcreator.enemy-box.v1</code>、<code>championcreator.box.default-example.v1</code></li>
+            <li>UID別: <code>championcreator.sync.v1.&lt;uid&gt;</code>、<code>championcreator.cloud-draft.v1.&lt;uid&gt;.&lt;device&gt;</code>、<code>championcreator.draft.v1.&lt;uid&gt;.&lt;device&gt;</code>、migration marker（<code>championcreator.migration.v1.&lt;uid&gt;</code>）</li>
+          </ul>
+          <p>ブラウザデータを削除すると、サインイン状態とは別にブラウザ内データが消えることがあります。JSONバックアップを書き出し、ブラウザのプロファイルや利用するスマホ・PCを変更する前に保管してください。</p>
+        </section>
+
+        <section class="guide-section" id="firebase">
+          <p class="guide-section-kicker">FIREBASE</p>
+          <h2>Firebaseで扱うデータ</h2>
+          <p>Googleの「scope」は、アプリがどの情報や機能を使えるかを示すアクセス権の種類です。Googleでログインすると、Firebase Authenticationがアカウント識別子（UID）、表示名、メールアドレス、プロフィール画像、session状態を扱います。ChampionCreatorはGoogleのcredentialやaccess tokenをアプリの保存データやexportへ含めません。Google Driveのファイル、連絡先、Gmailのメール本文を見る追加権限は要求しません。</p>
+          <p>M3完了後の同期では、FirestoreのアカウントUID配下に調整対象・仮想敵ボックスの保存slot（<code>syncRecords</code>）と、ブラウザ別の作業中cloud draft（<code>drafts</code>）を保存します。保存されるのは入力条件と同期メタデータで、計算結果、候補一覧、Worker state、チュートリアルstateではありません。</p>
+          <p>通常のbox・draft削除は、競合確認と復元のためpayloadを保持したtombstoneとして同期します。アカウント削除を選んだ場合だけ、対象UIDの両collectionを物理削除して空になったことを確認し、最後にFirebase Authenticationのアカウントを削除します。</p>
+          <p>Firebase Web configはWebアプリ用の公開設定だけを使います。Firebase Admin credential、service account key、Google OAuth client secretなどの秘密情報はbrowser bundle、repository、Pages artifactへ含めません。</p>
+        </section>
+
+        <section class="guide-section" id="analytics-fonts">
+          <p class="guide-section-kicker">THIRD-PARTY REQUESTS</p>
+          <h2>Google Analyticsとフォント</h2>
+          <p>アプリ、ガイド、このページではGoogle Analytics 4（測定ID <code>G-VCGTV67QC2</code>）を読み込み、ページ表示などの標準的な利用状況を計測します。ChampionCreatorは、調整条件、ボックス内容、cloud draft、UID、credential、tokenをAnalyticsイベントへ意図的に送信しません。Google側のCookie、ログ、保持期間、地域処理は<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Googleのプライバシーポリシー</a>に従います。ブラウザの設定や拡張機能で外部計測を制限できます。</p>
+          <p>画面の日本語フォントにはGoogle Fontsの <code>LINE Seed JP</code> を使います。フォントを読み込むと、ブラウザからGoogle Fontsへ通常のHTTPリクエストが送られます。フォント提供元へChampionCreatorの入力条件やアカウントデータを送る処理はありません。</p>
+          <p>Firebase SDKとApp Checkを有効にした公開環境では、FirebaseのAuth・Firestore・App Check用リクエストも発生します。Firebaseのサービス提供・ログ・保持は<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noreferrer">Firebaseのプライバシー情報</a>に従います。</p>
+        </section>
+
+        <section class="guide-section" id="export">
+          <p class="guide-section-kicker">EXPORT</p>
+          <h2>アカウントデータの書き出し</h2>
+          <p>ヘッダーのアカウント管理から書き出しを開始すると、まず手動同期を行い、Firestoreの <code>syncRecords</code> と <code>drafts</code> をserver readします。読み取りエラー、未送信outbox、競合、破損・未対応payloadが残っているときは、完全な書き出しと表示せず、警告付きの部分書き出しまたは中止になります。</p>
+          <p>JSONには <code>schemaVersion</code>、<code>exportedAt</code>、UID、サニタイズしたプロフィール、調整対象・仮想敵ボックス・cloud draftを含めます。credential、access token、秘密鍵、ゲストnamespaceは含めません。ダウンロード用Blob URLは処理後に破棄します。</p>
+          <p>このブラウザだけにあるguest / legacyデータはcloud exportの対象ではありません。必要な場合は各ボックスのバックアップ機能を使って別に退避してください。</p>
+        </section>
+
+        <section class="guide-section" id="delete">
+          <p class="guide-section-kicker">DELETE &amp; RETRY</p>
+          <h2>アカウント削除と失敗時の再試行</h2>
+          <p>アカウント削除を始めると、Google popupで最近のログインを再認証し、popup後にUIDが変わっていないことを確認します。その後、同じタブの同期・保存queueを停止して進行中の処理を待ってから、対象UIDのFirestore recordsを列挙し、450件以下のbatchで削除し、空になったことを再確認します。続いてUID専用localStorageを削除し、Firebase Authenticationのdeleteを最後に呼びます。</p>
+          <p>再認証、popup、Firestoreの列挙・batch削除、空確認、UID専用local cleanupのどこかで失敗した場合はAuthenticationを削除せず、失敗理由を表示して再試行できます。最後のAuthentication削除だけが失敗した場合も、sessionは維持され、クラウド・UID専用localの削除済み状態から再試行できます。成功後はAuth listenerの状態変更でゲストnamespaceへ切り替わり、重複したsign outは行いません。</p>
+          <p>アカウント削除で消すのはUID専用の保存だけです。legacyの <code>championcreator.box.v1</code> / <code>championcreator.enemy-box.v1</code>、既定サンプルmarker、guestデータは残ります。これはログイン前からこのブラウザだけにあるデータを、別アカウントの削除で巻き込まないためです。ブラウザだけのデータを消す場合は、ブラウザのサイトデータ削除や通常のbox操作を使ってください。</p>
+        </section>
+
+        <section class="guide-section" id="retention">
+          <p class="guide-section-kicker">RETENTION &amp; SECURITY</p>
+          <h2>保持期間と安全性</h2>
+          <ul class="guide-notes-list">
+            <li>cloud draftはアカウントあたり最大10件、保持期間は30日です。期限切れのdraftは起動、focus、online復帰、手動cleanupで削除します。</li>
+            <li>ボックスと同期メタデータは、ユーザーが削除するまでUID境界のFirestoreとブラウザへ保持します。通常の削除ではtombstoneを使い、アカウント削除で物理削除します。</li>
+            <li>静的PagesからFirebase client SDKを呼ぶ構成で、ChampionCreator独自のAdminサーバーやGoogle Drive保存はありません。</li>
+            <li>共有ボックス、リアルタイム共同編集、Google以外のログインproviderは提供していません。</li>
+          </ul>
+          <p>このページは公開仕様を説明するもので、`SYNC-M7`の全体検証・本番smoke testの完了を意味しません。本番公開時はcustom domain、Rules、App Check、ログイン、Firestore read / write、再読み込み、別ブラウザ反映を確認します。</p>
+        </section>
+      </main>
+    </div>
+
+    <footer class="app-footer" aria-label="権利表記">
+      <div class="app-footer-copy">
+        <span>© 2026 suisui-swimmy</span>
+        <span>本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します</span>
+      </div>
+      <div class="app-footer-links" aria-label="フッターリンク">
+        <a class="app-footer-contact" href="/">アプリ</a>
+        <span aria-hidden="true"> | </span>
+        <a class="app-footer-contact" href="/guide/">使い方ガイド</a>
+        <span aria-hidden="true"> | </span>
+        <a class="app-footer-contact" href="https://x.com/peixe0307" target="_blank" rel="noreferrer">お問い合わせ</a>
+      </div>
+    </footer>
+    <script type="module" src="/src/privacy/main.ts"></script>
+  </body>
+</html>

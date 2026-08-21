@@ -20,6 +20,8 @@ export interface SyncMigrationControllerLike {
   inspect(): Promise<LocalStorageMigrationResult>;
   decide(decision: LocalStorageMigrationDecision): Promise<LocalStorageMigrationResult>;
   retry(): Promise<LocalStorageMigrationResult>;
+  /** Optional newer spelling; retry remains supported for injected M3 mocks. */
+  resume?(): Promise<LocalStorageMigrationResult>;
 }
 
 export type SyncMigrationControllerFactory = (
@@ -58,8 +60,20 @@ export const SyncMigrationReadinessContext = createContext<SyncMigrationReadines
   guestReadiness,
 );
 
+export interface SyncMigrationControl {
+  readonly resumeMigration: () => void;
+}
+
+export const SyncMigrationControlContext = createContext<SyncMigrationControl>({
+  resumeMigration: () => undefined,
+});
+
 export function useSyncMigrationReadiness(): SyncMigrationReadiness {
   return useContext(SyncMigrationReadinessContext);
+}
+
+export function useSyncMigrationControl(): SyncMigrationControl {
+  return useContext(SyncMigrationControlContext);
 }
 
 /**
@@ -91,6 +105,10 @@ type DialogState = {
 };
 
 const defaultControllerCache = new Map<string, Promise<SyncMigrationControllerLike>>();
+
+export function clearSyncMigrationControllerCache(): void {
+  defaultControllerCache.clear();
+}
 
 const defaultFactory: SyncMigrationControllerFactory = (ownerUid) => {
   const cached = defaultControllerCache.get(ownerUid);
@@ -247,6 +265,16 @@ export function SyncMigrationGate({
     void inspect(ownerUid);
   }, [authState.user?.uid, inspect]);
 
+  const resumeMigration = useCallback(() => {
+    const ownerUid = authState.user?.uid;
+    if (!ownerUid || authState.status !== "signed-in") return;
+    if (dismissedOwner === ownerUid) {
+      setDismissedOwner(null);
+      return;
+    }
+    handleRetry();
+  }, [authState.status, authState.user?.uid, dismissedOwner, handleRetry]);
+
   const summary = dialog?.result?.summary ?? {
     deviceTargetCount: 0,
     deviceEnemyCount: 0,
@@ -257,12 +285,18 @@ export function SyncMigrationGate({
   };
 
   const readinessValue = useMemo(() => readiness, [readiness]);
+  const controlValue = useMemo<SyncMigrationControl>(
+    () => ({ resumeMigration }),
+    [resumeMigration],
+  );
 
   return (
     <>
-      <SyncMigrationReadinessContext.Provider value={readinessValue}>
-        {children}
-      </SyncMigrationReadinessContext.Provider>
+      <SyncMigrationControlContext.Provider value={controlValue}>
+        <SyncMigrationReadinessContext.Provider value={readinessValue}>
+          {children}
+        </SyncMigrationReadinessContext.Provider>
+      </SyncMigrationControlContext.Provider>
       {dialog ? (
         <SyncMigrationDialog
           mode={dialog.mode}

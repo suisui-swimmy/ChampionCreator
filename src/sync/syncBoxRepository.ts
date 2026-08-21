@@ -6,6 +6,7 @@ import {
 } from "../ui/enemyBoxStorage";
 import {
   type CloudSyncRepository,
+  sha256Hex,
   type SyncRepositoryIssue,
 } from "./firestoreSyncRepository";
 import {
@@ -33,6 +34,7 @@ import {
   type LocalSyncState,
   type SyncEntryForKind,
   type SyncKind,
+  type SyncConflict,
   type SyncRecord,
 } from "./syncTypes";
 
@@ -48,6 +50,36 @@ export interface SyncBoxSnapshot {
   readonly conflictCount: number;
   readonly targetConflictCount: number;
   readonly enemyConflictCount: number;
+  /**
+   * Decoded conflict views for the UI.  The raw sync records remain available
+   * on each item so resolving a tombstone or a malformed hand-built fixture
+   * never requires the box UI to know the local-storage schema.
+   */
+  readonly conflicts: readonly SyncBoxConflictDetail[];
+  /** Descriptive alias for callers that do not want to confuse this with the
+   * integer conflictCount field. */
+  readonly conflictDetails: readonly SyncBoxConflictDetail[];
+}
+
+export type SyncBoxConflictDecision = "keep-both" | "keep-local" | "keep-remote";
+
+export interface SyncBoxConflictDetail {
+  readonly recordKey: string;
+  readonly kind: SyncKind;
+  readonly entryId: string;
+  readonly detectedAt: string;
+  readonly reason?: string;
+  readonly localRecord: SyncRecord;
+  readonly remoteRecord?: SyncRecord;
+  readonly localEntry: SyncEntryForKind<SyncKind> | null;
+  readonly remoteEntry: SyncEntryForKind<SyncKind> | null;
+  /** Short aliases for view code that treats the detail as two branches. */
+  readonly local: SyncEntryForKind<SyncKind> | null;
+  readonly remote: SyncEntryForKind<SyncKind> | null;
+  readonly localTombstone: boolean;
+  readonly remoteTombstone: boolean;
+  /** The original coordinator object is kept for diagnostics and decisions. */
+  readonly conflict: SyncConflict;
 }
 
 export type SyncBoxRepositoryErrorCode =
@@ -246,6 +278,43 @@ const sortEntries = <K extends SyncKind>(
 
 const cloneState = (state: LocalSyncState): LocalSyncState => cloneLocalSyncState(state);
 
+const decodeRecordEntry = (
+  record: SyncRecord | undefined,
+): SyncEntryForKind<SyncKind> | null => {
+  if (!record || record.tombstone) return null;
+  const decoded = decodeSyncPayload(record.kind, record.payload, record.entryId);
+  return decoded.status === "success"
+    ? decoded.entry as SyncEntryForKind<SyncKind>
+    : null;
+};
+
+const conflictDetailsForState = (
+  state: LocalSyncState,
+): readonly SyncBoxConflictDetail[] => Object.values(state.conflicts)
+  .sort((left, right) => (
+    left.recordKey < right.recordKey ? -1 : left.recordKey > right.recordKey ? 1 : 0
+  ))
+  .map((conflict) => {
+    const localEntry = decodeRecordEntry(conflict.local);
+    const remoteEntry = decodeRecordEntry(conflict.remote);
+    return {
+      recordKey: conflict.recordKey,
+      kind: conflict.kind,
+      entryId: conflict.entryId,
+      detectedAt: conflict.detectedAt,
+      ...(conflict.reason === undefined ? {} : { reason: conflict.reason }),
+      localRecord: conflict.local,
+      remoteRecord: conflict.remote,
+      localEntry,
+      remoteEntry,
+      local: localEntry,
+      remote: remoteEntry,
+      localTombstone: conflict.local.tombstone,
+      remoteTombstone: conflict.remote?.tombstone ?? false,
+      conflict,
+    };
+  });
+
 /** Compare normalized payloads so formatting differences do not create a mutation. */
 const canonicalPayloadForRecord = (record: SyncRecord): string | null => {
   const decoded = decodeSyncPayload(record.kind, record.payload, record.entryId);
@@ -327,6 +396,7 @@ const snapshotFromState = (
   if (targets.status === "error") return targets;
   const enemies = activeEntriesForKind(state, "enemy-box");
   if (enemies.status === "error") return enemies;
+  const conflicts = conflictDetailsForState(state);
   return {
     status: "success",
     snapshot: {
@@ -338,6 +408,8 @@ const snapshotFromState = (
         .filter((conflict) => conflict.kind === "target-box").length,
       enemyConflictCount: Object.values(state.conflicts)
         .filter((conflict) => conflict.kind === "enemy-box").length,
+      conflicts,
+      conflictDetails: conflicts,
     },
   };
 };
@@ -407,6 +479,65 @@ const syncResultExtras = (result: SyncCoordinatorResult) => ({
   issues: [...result.issues],
 });
 
+const isConflictDecision = (value: unknown): value is SyncBoxConflictDecision => (
+  value === "keep-both" || value === "keep-local" || value === "keep-remote"
+);
+
+const CONFLICT_COPY_PREFIX = "m6-local-";
+const CONFLICT_COPY_SUFFIX = "（このブラウザ）";
+
+/**
+ * The copy id is derived only from the slot and local payload.  A retry after
+ * a lost response therefore addresses the same copy instead of creating a
+ * second visible entry.  A collision salt is used only when an independently
+ * edited entry already occupies the deterministic id.
+ */
+const makeConflictCopyId = (
+  kind: SyncKind,
+  entryId: string,
+  payload: string,
+  collisionSalt = "",
+): string => `${CONFLICT_COPY_PREFIX}${sha256Hex([
+  kind,
+  entryId,
+  payload,
+  collisionSalt,
+].join("\u001f"))}`;
+
+const copyConflictEntry = (
+  kind: SyncKind,
+  entry: SyncEntryForKind<SyncKind>,
+  id: string,
+): { readonly status: "success"; readonly value: NormalizedEntry<SyncKind> }
+  | { readonly status: "error"; readonly error: SyncBoxRepositoryError } => normalizeEntry(
+    kind,
+    {
+      ...entry,
+      id,
+      name: `${entry.name || "保存スロット"}${CONFLICT_COPY_SUFFIX}`,
+    } as SyncEntryForKind<SyncKind>,
+  );
+
+const removeConflict = (state: LocalSyncState, recordKey: string): LocalSyncState => {
+  const { [recordKey]: _removed, ...remainingConflicts } = state.conflicts;
+  return {
+    ...state,
+    conflicts: remainingConflicts,
+    outbox: state.outbox.filter((mutation) => mutation.recordKey !== recordKey),
+  };
+};
+
+const replaceRecord = (
+  state: LocalSyncState,
+  recordKey: string,
+  record: SyncRecord | undefined,
+): LocalSyncState => {
+  const records = { ...state.records };
+  if (record) records[recordKey] = record;
+  else delete records[recordKey];
+  return { ...state, records };
+};
+
 export class SyncBoxRepository {
   readonly local: LocalSyncRepository;
   readonly cloud: CloudSyncRepository;
@@ -455,6 +586,228 @@ export class SyncBoxRepository {
 
   saveEnemyEntries(entries: readonly EnemyBoxEntry[]): SyncBoxRepositoryResult {
     return this.saveEntries("enemy-box", entries);
+  }
+
+  /**
+   * Return the currently retained review objects without exposing the local
+   * state container.  `loadSnapshot().snapshot.conflicts` is normally enough
+   * for UI code; this method is useful for callers that need an explicit
+   * conflict-list operation and keeps that call site independent of snapshot
+   * naming.
+   */
+  loadConflicts():
+    | { readonly status: "success"; readonly conflicts: readonly SyncBoxConflictDetail[] }
+    | { readonly status: "error"; readonly error: SyncBoxRepositoryError } {
+    const loaded = this.coordinator.loadState();
+    if (loaded.status === "error") {
+      return { status: "error", error: fromCoordinatorError(loaded.error) };
+    }
+    return {
+      status: "success",
+      conflicts: conflictDetailsForState(loaded.state),
+    };
+  }
+
+  /** Resolve one retained same-slot conflict and persist the whole decision
+   * with one local repository save.  Cloud reconciliation is intentionally
+   * separate: callers should invoke synchronize after this local-first step.
+   */
+  resolveConflict(
+    kind: SyncKind,
+    entryId: string,
+    decision: SyncBoxConflictDecision,
+  ): SyncBoxRepositoryResult;
+  resolveConflict(
+    recordKey: string,
+    decision: SyncBoxConflictDecision,
+  ): SyncBoxRepositoryResult;
+  resolveConflict(request: {
+    readonly kind: SyncKind;
+    readonly entryId: string;
+    readonly decision: SyncBoxConflictDecision;
+  }): SyncBoxRepositoryResult;
+  resolveConflict(
+    first: SyncKind | string | {
+      readonly kind: SyncKind;
+      readonly entryId: string;
+      readonly decision: SyncBoxConflictDecision;
+    },
+    second?: string | SyncBoxConflictDecision,
+    third?: SyncBoxConflictDecision,
+  ): SyncBoxRepositoryResult {
+    const parsed = (() => {
+      if (typeof first === "object") {
+        return {
+          kind: first.kind,
+          entryId: first.entryId,
+          decision: first.decision,
+        };
+      }
+      if (third !== undefined) {
+        return { kind: first as SyncKind, entryId: second as string, decision: third };
+      }
+      if (isConflictDecision(second)) {
+        const separator = first.indexOf(":");
+        if (separator > 0) {
+          return {
+            kind: first.slice(0, separator) as SyncKind,
+            entryId: first.slice(separator + 1),
+            decision: second,
+          };
+        }
+      }
+      return null;
+    })();
+
+    const loaded = this.coordinator.loadState();
+    if (loaded.status === "error") return failureFromState(fromCoordinatorError(loaded.error));
+    const initial = loaded.state;
+    if (
+      !parsed
+      || (parsed.kind !== "target-box" && parsed.kind !== "enemy-box")
+      || !nonEmptyId(parsed.entryId)
+      || !isConflictDecision(parsed.decision)
+    ) {
+      return failureFromState(makeError("invalid"), initial);
+    }
+
+    const recordKey = makeSyncRecordKey(parsed.kind, parsed.entryId);
+    const conflict = initial.conflicts[recordKey];
+    if (!conflict || conflict.kind !== parsed.kind || conflict.entryId !== parsed.entryId) {
+      return failureFromState(makeError("conflict"), initial);
+    }
+
+    let nextState = removeConflict(initial, recordKey);
+    // The remote branch is the only safe base for a new local mutation.  This
+    // turns keep-local into a CAS write against the remote revision instead of
+    // retrying the stale local revision that caused the conflict.
+    nextState = replaceRecord(nextState, recordKey, conflict.remote);
+    let changedCount = 1;
+    let queuedCount = 0;
+
+    if (parsed.decision === "keep-remote") {
+      return this.persistResolution(nextState, changedCount, queuedCount, initial);
+    }
+
+    const localEntry = decodeRecordEntry(conflict.local);
+    if (parsed.decision === "keep-both" && conflict.remote && localEntry) {
+      let collisionSalt = "";
+      let copy: NormalizedEntry<SyncKind> | undefined;
+      let reusedExistingCopy = false;
+      for (let attempt = 0; attempt < 32; attempt += 1) {
+        const copyId = makeConflictCopyId(
+          parsed.kind,
+          parsed.entryId,
+          conflict.local.payload,
+          collisionSalt,
+        );
+        const normalized = copyConflictEntry(parsed.kind, localEntry, copyId);
+        if (normalized.status === "error") {
+          return failureFromState(normalized.error, initial);
+        }
+        const copyKey = makeSyncRecordKey(parsed.kind, normalized.value.id);
+        const existing = nextState.records[copyKey];
+        if (!existing) {
+          copy = normalized.value;
+          break;
+        }
+        const existingPayload = canonicalPayloadForRecord(existing);
+        if (!existing.tombstone && existingPayload === normalized.value.payload) {
+          // A previous invocation may have persisted the deterministic copy
+          // before the caller lost its response.  Keep it and avoid queuing a
+          // duplicate mutation.
+          reusedExistingCopy = true;
+          break;
+        }
+        collisionSalt = sha256Hex([
+          collisionSalt,
+          existing.payload,
+          existing.mutationId,
+          String(existing.revision),
+        ].join("\u001f"));
+      }
+      if (!copy && !reusedExistingCopy) {
+        return failureFromState(makeError("invalid"), initial);
+      }
+      if (copy) {
+        const copyResult = enqueueSyncMutation(nextState, {
+          kind: parsed.kind,
+          entry: copy.entry,
+          now: this.now,
+          mutationId: this.resolveMutationId({
+            kind: parsed.kind,
+            entryId: copy.id,
+            operation: "upsert",
+            index: 0,
+          }),
+        });
+        if (copyResult.status === "error") {
+          return failureFromState(
+            makeError(copyResult.reason === "conflict" ? "conflict" : "invalid"),
+            initial,
+          );
+        }
+        nextState = copyResult.state;
+        queuedCount += 1;
+        changedCount += 1;
+      }
+      return this.persistResolution(nextState, changedCount, queuedCount, initial);
+    }
+
+    // There is no visible local branch to copy when it is a tombstone.  Keep
+    // the remote original at its original id and clear the review marker;
+    // recreating a tombstone at that id here would silently turn keep-both
+    // into keep-local.
+    if (parsed.decision === "keep-both" && conflict.remote && !localEntry) {
+      return this.persistResolution(nextState, changedCount, queuedCount, initial);
+    }
+
+    // keep-local, and keep-both when no remote original exists, retain the
+    // local branch at its original slot.  A tombstone is represented by a new
+    // tombstone mutation only when a remote base exists; if the remote branch
+    // is absent, there is nothing to delete on the server.
+    if (localEntry) {
+      const result = enqueueSyncMutation(nextState, {
+        kind: parsed.kind,
+        entry: localEntry,
+        now: this.now,
+        mutationId: this.resolveMutationId({
+          kind: parsed.kind,
+          entryId: parsed.entryId,
+          operation: "upsert",
+          index: 0,
+        }),
+      });
+      if (result.status === "error") {
+        return failureFromState(
+          makeError(result.reason === "conflict" ? "conflict" : "invalid"),
+          initial,
+        );
+      }
+      nextState = result.state;
+      queuedCount += 1;
+    } else if (conflict.remote && !conflict.remote.tombstone) {
+      const result = enqueueSyncTombstone(nextState, {
+        kind: parsed.kind,
+        entryId: parsed.entryId,
+        now: this.now,
+        mutationId: this.resolveMutationId({
+          kind: parsed.kind,
+          entryId: parsed.entryId,
+          operation: "delete",
+          index: 0,
+        }),
+      });
+      if (result.status === "error") {
+        return failureFromState(
+          makeError(result.reason === "conflict" ? "conflict" : "invalid"),
+          initial,
+        );
+      }
+      nextState = result.state;
+      queuedCount += 1;
+    }
+    return this.persistResolution(nextState, changedCount, queuedCount, initial);
   }
 
   synchronize(trigger: SyncTrigger): Promise<SyncBoxSynchronizeResult> {
@@ -611,6 +964,23 @@ export class SyncBoxRepository {
     if (this.mutationIdFactory) return this.mutationIdFactory(context);
     if (this.mutationId !== undefined) return this.mutationId;
     return undefined;
+  }
+
+  private persistResolution(
+    nextState: LocalSyncState,
+    changedCount: number,
+    queuedCount: number,
+    originalState: LocalSyncState,
+  ): SyncBoxRepositoryResult {
+    try {
+      const saved = this.local.save(nextState);
+      if (saved.status !== "valid") {
+        return failureFromState(fromLocalSaveCode(saved.error.code), originalState);
+      }
+      return successFromState(saved.state, changedCount, queuedCount);
+    } catch {
+      return failureFromState(makeError("unavailable"), originalState);
+    }
   }
 }
 

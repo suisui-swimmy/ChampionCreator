@@ -177,12 +177,12 @@ export function SyncMigrationDialog({
       ? "保存データを確認できませんでした"
       : "保存データの統合方法を選択";
   const description = mode === "checking"
-    ? "この端末とクラウドの保存データを確認しています。"
+    ? "このブラウザとクラウドの保存データを確認しています。"
     : mode === "error"
       ? "保存データの確認に失敗しました。再試行してください。"
-      : "この端末の保存データとクラウドの保存データをどう扱うか選んでください。";
+      : "このブラウザの保存データとクラウドの保存データをどう扱うか選んでください。";
   const deviceDisabledReason = !canUseDevice
-    ? "この端末の保存データを利用できないため選択できません。"
+    ? "このブラウザの保存データを利用できないため選択できません。"
     : isBusy
       ? "保存データを処理中のため選択できません。"
       : null;
@@ -225,7 +225,7 @@ export function SyncMigrationDialog({
 
         <div className="sync-migration-summary" aria-label="保存データの件数">
           <section className="sync-migration-summary-side" aria-labelledby={`${statusId}-device`}>
-            <h3 id={`${statusId}-device`}>この端末</h3>
+            <h3 id={`${statusId}-device`}>このブラウザ</h3>
             <dl className="sync-migration-counts">
               <div><dt>調整対象</dt><dd>{formatCount(targetDeviceCount)}</dd></div>
               <div><dt>仮想敵</dt><dd>{formatCount(enemyDeviceCount)}</dd></div>
@@ -251,7 +251,7 @@ export function SyncMigrationDialog({
             </p>
             {!canUseDevice ? (
               <p id={deviceDisabledReasonId} className="sync-migration-disabled-note" role="note">
-                この端末の保存データを利用できないため、「統合」と「この端末を使用」は選択できません。
+                このブラウザの保存データを利用できないため、「統合」と「このブラウザを使用」は選択できません。
               </p>
             ) : null}
             <div className="sync-migration-actions" aria-label="保存データの扱い">
@@ -277,7 +277,7 @@ export function SyncMigrationDialog({
                 aria-describedby={disabledReasonId}
                 onClick={() => onDecision("device")}
               >
-                この端末を使用
+                このブラウザを使用
               </Button>
               <Button
                 variant="ghost"

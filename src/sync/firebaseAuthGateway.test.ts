@@ -5,13 +5,13 @@ import {
   createFirebaseAuthGateway,
 } from "./firebaseAuthGateway";
 
-const auth = {} as Auth;
 const firebaseUser = {
   uid: "user-123",
   displayName: "Test User",
   email: "test@example.com",
   photoURL: "https://example.com/user.png",
 } as User;
+const auth = { currentUser: firebaseUser } as unknown as Auth;
 
 const makeDependencies = () => {
   let onUser: ((user: User | null) => void) | undefined;
@@ -20,6 +20,8 @@ const makeDependencies = () => {
     readonly providerId = "google.com";
   };
   const signInWithPopup = vi.fn(async () => ({ user: firebaseUser }) as UserCredential);
+  const reauthenticateWithPopup = vi.fn(async () => ({ user: firebaseUser }) as UserCredential);
+  const deleteUser = vi.fn(async () => undefined);
   const signOut = vi.fn(async () => undefined);
   const onAuthStateChanged = vi.fn(
     (_auth: Auth, next: (user: User | null) => void, error?: (error: unknown) => void) => {
@@ -31,6 +33,8 @@ const makeDependencies = () => {
   const dependencies: FirebaseAuthGatewayDependencies = {
     onAuthStateChanged: onAuthStateChanged as never,
     signInWithPopup: signInWithPopup as never,
+    reauthenticateWithPopup: reauthenticateWithPopup as never,
+    deleteUser: deleteUser as never,
     signOut: signOut as never,
     GoogleAuthProvider: Provider as never,
   };
@@ -38,6 +42,8 @@ const makeDependencies = () => {
     dependencies,
     onAuthStateChanged,
     signInWithPopup,
+    reauthenticateWithPopup,
+    deleteUser,
     signOut,
     emitUser: (user: User | null) => onUser?.(user),
     emitError: (error: unknown) => onError?.(error),
@@ -101,6 +107,46 @@ describe("createFirebaseAuthGateway", () => {
       code: "network",
       operation: "sign-out",
     });
+  });
+
+  it("reauthenticates with the same Google UID and keeps Firebase User private", async () => {
+    const fakes = makeDependencies();
+    const gateway = createFirebaseAuthGateway({ auth, dependencies: fakes.dependencies });
+
+    await expect(gateway.reauthenticateWithGoogle?.("user-123")).resolves.toMatchObject({
+      uid: "user-123",
+    });
+    expect(fakes.reauthenticateWithPopup).toHaveBeenCalledTimes(1);
+    expect((fakes.reauthenticateWithPopup.mock.calls[0] as unknown as [User] | undefined)?.[0])
+      .toBe(firebaseUser);
+  });
+
+  it("rejects a popup result or current user that switches UID", async () => {
+    const fakes = makeDependencies();
+    fakes.reauthenticateWithPopup.mockResolvedValue({
+      user: { ...firebaseUser, uid: "other-user" },
+    } as UserCredential);
+    const gateway = createFirebaseAuthGateway({ auth, dependencies: fakes.dependencies });
+
+    await expect(gateway.reauthenticateWithGoogle?.("user-123")).rejects.toMatchObject({
+      code: "invalid-credential",
+      operation: "reauthenticate",
+    });
+    expect(JSON.stringify(await gateway.getCurrentUserUid?.())).not.toContain("accessToken");
+  });
+
+  it("calls deleteUser only with the currently authenticated expected UID", async () => {
+    const fakes = makeDependencies();
+    const gateway = createFirebaseAuthGateway({ auth, dependencies: fakes.dependencies });
+
+    await expect(gateway.deleteAccount?.("user-123")).resolves.toBeUndefined();
+    expect(fakes.deleteUser).toHaveBeenCalledWith(firebaseUser);
+
+    await expect(gateway.deleteAccount?.("other-user")).rejects.toMatchObject({
+      code: "invalid-credential",
+      operation: "delete-account",
+    });
+    expect(fakes.deleteUser).toHaveBeenCalledTimes(1);
   });
 
   it("returns an unavailable gateway when Firebase client setup is absent", async () => {

@@ -148,7 +148,7 @@ describe("CloudDraftProvider activation and lifecycle boundary", () => {
 
   it("keeps lifecycle status labels stable", () => {
     const expected: Record<CloudDraftRuntimeStatus, string> = {
-      idle: "この端末のみ",
+      idle: "このブラウザのみ",
       queued: "未同期",
       syncing: "同期中…",
       synced: "同期済み",

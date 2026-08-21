@@ -107,7 +107,7 @@ type PlanStats = {
  * be stable for the same input.
  */
 const MIGRATION_NOW = "1970-01-01T00:00:00.000Z";
-const DEVICE_COPY_SUFFIX = "（この端末）";
+const DEVICE_COPY_SUFFIX = "（このブラウザ）";
 
 const isTargetKind = (kind: SyncKind): kind is "target-box" => kind === "target-box";
 

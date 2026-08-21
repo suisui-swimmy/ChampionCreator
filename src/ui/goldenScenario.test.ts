@@ -106,7 +106,10 @@ describe("golden UI scenario", () => {
     }];
     const input = buildDefenceSearchInput(target, scenarios);
 
-    const results = searchDefenceCandidates(input.build, input.scenarios, { maxResults: 1 });
+    const results = searchDefenceCandidates(input.build, input.scenarios, {
+      maxResults: 1,
+      searchStatKeys: input.searchStatKeys,
+    });
 
     expect(input.build.pokemon.canonicalName).toBe("Vivillon");
     expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Garchomp");

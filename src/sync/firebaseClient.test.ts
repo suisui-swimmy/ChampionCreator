@@ -158,6 +158,28 @@ describe("createFirebaseClient", () => {
     }
   });
 
+  it("keeps the client ready when optional App Check initialization fails", () => {
+    const fakes = makeDependencies();
+    fakes.initializeAppCheck.mockImplementation(() => {
+      throw new Error("App Check setup failed");
+    });
+
+    const result = createFirebaseClient({
+      resolution: resolveFirebaseConfig({
+        ...environment,
+        VITE_FIREBASE_APP_CHECK_SITE_KEY: "enterprise-site-key",
+      }),
+      dependencies: fakes.dependencies,
+    });
+
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") return;
+    expect(result.appCheck).toBeNull();
+    expect(result.appCheckStatus).toBe("failed");
+    expect(result.auth).toBeDefined();
+    expect(result.firestore).toBeDefined();
+  });
+
   it("connects only to development emulators and disables App Check there", () => {
     const fakes = makeDependencies();
     const result = createFirebaseClient({

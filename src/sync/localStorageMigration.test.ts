@@ -320,7 +320,7 @@ describe("LocalStorageMigrationController", () => {
       const decoded = decodeSyncPayload("target-box", record.payload, record.entryId);
       return decoded.status === "success" ? decoded.entry.name : "invalid";
     });
-    expect(decodedNames).toContain("マフォクシー（この端末）");
+    expect(decodedNames).toContain("マフォクシー（このブラウザ）");
     expect([...cloud.records.keys()].some((key) => key.startsWith("target-box:m3-device-"))).toBe(true);
     expect(memory.values.get(BOX_STORAGE_KEY)).toBe(raw);
   });
@@ -393,6 +393,20 @@ describe("LocalStorageMigrationController", () => {
     expect(resumed.status).toBe("completed");
     expect(cloud.records).toHaveLength(1);
     expect(cloud.writes).toHaveLength(1);
+  });
+
+  it("exposes resume as the persisted-marker retry API", async () => {
+    const local = targetEntry("resume-api");
+    const memory = makeStorage({ [BOX_STORAGE_KEY]: stringifyBoxStorageDocument([local]) });
+    const cloud = makeCloud([], { lostFirstWrite: true });
+    const controller = makeController(OWNER, memory.storage, cloud);
+
+    expect((await controller.inspect()).status).toBe("in-progress");
+    const resumed = await controller.resume();
+
+    expect(resumed.status).toBe("completed");
+    expect(JSON.parse(memory.values.get(makeMigrationStateStorageKey(OWNER)) ?? "{}").status)
+      .toBe("completed");
   });
 
   it("does not erase a normal outbox mutation queued after a failed migration", async () => {

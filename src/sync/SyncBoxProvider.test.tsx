@@ -79,6 +79,8 @@ describe("SyncBoxProvider activation boundary", () => {
       conflictCount: 0,
       targetConflictCount: 0,
       enemyConflictCount: 0,
+      conflicts: [],
+      conflictDetails: [],
     };
     const target = createBoxEntryFromState(
       createDefaultTargetForm(),

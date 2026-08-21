@@ -193,7 +193,7 @@ const CloudDraftRow = ({
       <div className="cloud-draft-row-copy">
         <h4 className="cloud-draft-device-label">
           {summary.deviceLabel}
-          {current ? <span className="cloud-draft-current-badge">この端末</span> : null}
+          {current ? <span className="cloud-draft-current-badge">このブラウザ</span> : null}
         </h4>
         <dl id={detailsId} className="cloud-draft-summary" aria-label={`${rowLabel}の概要`}>
           <div><dt>更新日時</dt><dd>{summary.updatedAt}</dd></div>
@@ -392,7 +392,7 @@ export function CloudDraftDialog({
       >
         <div className="cloud-draft-header">
           <div className="cloud-draft-copy">
-            <span className="cloud-draft-kicker">端末別クラウド保存</span>
+            <span className="cloud-draft-kicker">ブラウザ別クラウド保存</span>
             <h2 id={titleId}>作業中の下書き</h2>
             <p id={descriptionId} className="cloud-draft-description">
               復元する下書きを選んでください。表示しただけでは現在の入力を変更しません。
@@ -430,7 +430,7 @@ export function CloudDraftDialog({
         </div>
 
         <section className="cloud-draft-section" aria-labelledby={`${titleId}-current`}>
-          <h3 id={`${titleId}-current`}>この端末</h3>
+          <h3 id={`${titleId}-current`}>このブラウザ</h3>
           {currentRecords.length > 0 ? currentRecords.map((record) => (
             <CloudDraftRow
               key={getRecordKey(record)}
@@ -447,12 +447,12 @@ export function CloudDraftDialog({
               onCancelDelete={() => setPendingDeleteKey(null)}
             />
           )) : (
-            <p className="cloud-draft-empty">この端末の下書きはありません。</p>
+            <p className="cloud-draft-empty">このブラウザの下書きはありません。</p>
           )}
         </section>
 
         <section className="cloud-draft-section" aria-labelledby={`${titleId}-other`}>
-          <h3 id={`${titleId}-other`}>他の端末</h3>
+          <h3 id={`${titleId}-other`}>他のブラウザ</h3>
           {otherRecords.length > 0 ? otherRecords.map((record) => (
             <CloudDraftRow
               key={getRecordKey(record)}
@@ -469,7 +469,7 @@ export function CloudDraftDialog({
               onCancelDelete={() => setPendingDeleteKey(null)}
             />
           )) : (
-            <p className="cloud-draft-empty">他の端末の下書きはありません。</p>
+            <p className="cloud-draft-empty">他のブラウザの下書きはありません。</p>
           )}
         </section>
 

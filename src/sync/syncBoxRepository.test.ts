@@ -360,4 +360,106 @@ describe("SyncBoxRepository", () => {
       },
     });
   });
+
+  it("exposes decoded conflict details and keeps both branches with one atomic save", () => {
+    const localEntry = targetEntry("same-slot", { name: "local" });
+    const remoteEntry = targetEntry("same-slot", { name: "remote" });
+    const { local, repository } = makeRepository([remoteRecord(OWNER, "target-box", remoteEntry)]);
+    expect(repository.saveTargetEntries([localEntry]).status).toBe("success");
+
+    const loaded = local.load();
+    expect(loaded.status).toBe("valid");
+    if (loaded.status !== "valid") return;
+    const recordKey = makeSyncRecordKey("target-box", localEntry.id);
+    const localRecord = loaded.state.records[recordKey];
+    expect(localRecord).toBeDefined();
+    if (!localRecord) return;
+    const remote = remoteRecord(OWNER, "target-box", remoteEntry);
+    const conflict: SyncConflict = {
+      recordKey,
+      kind: "target-box",
+      entryId: localEntry.id,
+      local: localRecord,
+      remote,
+      detectedAt: NOW,
+      reason: "test-conflict",
+    };
+    expect(local.save({
+      ...loaded.state,
+      outbox: [],
+      conflicts: { [recordKey]: conflict },
+    }).status).toBe("valid");
+
+    const save = vi.spyOn(local, "save");
+    const before = repository.loadSnapshot();
+    expect(before.status).toBe("success");
+    if (before.status !== "success") return;
+    expect(before.snapshot.conflicts).toHaveLength(1);
+    expect(before.snapshot.conflicts[0]).toMatchObject({
+      recordKey,
+      localEntry,
+      remoteEntry,
+      localTombstone: false,
+      remoteTombstone: false,
+    });
+
+    const result = repository.resolveConflict("target-box", localEntry.id, "keep-both");
+    expect(result).toMatchObject({
+      status: "success",
+      changedCount: 2,
+      queuedCount: 1,
+      conflictCount: 0,
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    if (result.status !== "success") return;
+    expect(result.snapshot.conflicts).toEqual([]);
+    expect(result.snapshot.targetEntries).toHaveLength(2);
+    expect(result.snapshot.targetEntries).toEqual(expect.arrayContaining([
+      remoteEntry,
+      expect.objectContaining({
+        id: expect.stringMatching(/^m6-local-[0-9a-f]{64}$/),
+        name: "local（このブラウザ）",
+      }),
+    ]));
+  });
+
+  it.each([
+    ["keep-local", "local"],
+    ["keep-remote", "remote"],
+  ] as const)("resolves %s at the original slot", (decision, expectedName) => {
+    const localEntry = targetEntry("same-slot", { name: "local" });
+    const remoteEntry = targetEntry("same-slot", { name: "remote" });
+    const { local, repository } = makeRepository([remoteRecord(OWNER, "target-box", remoteEntry)]);
+    expect(repository.saveTargetEntries([localEntry]).status).toBe("success");
+
+    const loaded = local.load();
+    expect(loaded.status).toBe("valid");
+    if (loaded.status !== "valid") return;
+    const recordKey = makeSyncRecordKey("target-box", localEntry.id);
+    const localRecord = loaded.state.records[recordKey];
+    if (!localRecord) return;
+    const conflict: SyncConflict = {
+      recordKey,
+      kind: "target-box",
+      entryId: localEntry.id,
+      local: localRecord,
+      remote: remoteRecord(OWNER, "target-box", remoteEntry),
+      detectedAt: NOW,
+      reason: "test-conflict",
+    };
+    expect(local.save({ ...loaded.state, outbox: [], conflicts: { [recordKey]: conflict } }).status)
+      .toBe("valid");
+
+    const result = repository.resolveConflict(recordKey, decision);
+    expect(result).toMatchObject({ status: "success", conflictCount: 0 });
+    if (result.status !== "success") return;
+    expect(result.snapshot.targetEntries).toHaveLength(1);
+    expect(result.snapshot.targetEntries[0]?.name).toBe(expectedName);
+    expect(result.queuedCount).toBe(decision === "keep-local" ? 1 : 0);
+    if (decision === "keep-local") {
+      expect(result.snapshot.outboxCount).toBe(1);
+    } else {
+      expect(result.snapshot.outboxCount).toBe(0);
+    }
+  });
 });

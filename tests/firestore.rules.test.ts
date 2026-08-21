@@ -103,7 +103,7 @@ describe("Firestore sync record rules", () => {
     await assertFails(document.delete());
   });
 
-  it("allows the owner to create, read, list, and sequentially update, but denies delete", async () => {
+  it("allows the owner to create, read, list, sequentially update, and physically delete", async () => {
     const document = aliceDocument();
 
     await assertSucceeds(document.set(validRecord()));
@@ -151,8 +151,9 @@ describe("Firestore sync record rules", () => {
     });
     expect(updated.data()?.updatedAt).toBeInstanceOf(Timestamp);
 
-    await assertFails(document.delete());
-    await assertSucceeds(document.get());
+    await assertSucceeds(document.delete());
+    const deleted = await assertSucceeds(document.get());
+    expect(deleted.exists).toBe(false);
   });
 
   it("allows both supported sync record kinds", async () => {
@@ -171,6 +172,7 @@ describe("Firestore sync record rules", () => {
       .doc(DOCUMENT_PATH);
     await assertFails(otherDocument.get());
     await assertFails(otherDocument.update(validRecord({ ownerUid: "alice" })));
+    await assertFails(otherDocument.delete());
     await assertFails(
       testEnv.authenticatedContext("bob").firestore().collection("users/alice/syncRecords").get(),
     );
@@ -528,7 +530,7 @@ describe("Firestore draft rules", () => {
     await assertFails(document.delete());
   });
 
-  it("allows the owner to create, read, list, update, tombstone, and resurrect, but denies delete", async () => {
+  it("allows the owner to create, read, list, update, tombstone, resurrect, and physically delete", async () => {
     const document = aliceDraft();
 
     await assertSucceeds(document.set(validDraft()));
@@ -618,8 +620,9 @@ describe("Firestore draft rules", () => {
     });
     expect(resurrected.data()?.updatedAt).toBeInstanceOf(Timestamp);
 
-    await assertFails(document.delete());
-    await assertSucceeds(document.get());
+    await assertSucceeds(document.delete());
+    const deleted = await assertSucceeds(document.get());
+    expect(deleted.exists).toBe(false);
   });
 
   it("denies a different uid from reading, listing, or updating the owner's draft", async () => {
@@ -641,6 +644,7 @@ describe("Firestore draft rules", () => {
       expiresAt: Timestamp.fromMillis(Date.now() + 60 * 60 * 1000),
       deletedAt: null,
     }));
+    await assertFails(otherDocument.delete());
     await assertFails(otherFirestore.collection("users/alice/drafts").get());
   });
 
@@ -654,7 +658,7 @@ describe("Firestore draft rules", () => {
     await assertFails(bob.doc(DRAFT_PATH).set(validDraft({ ownerUid: "bob" })));
   });
 
-  it("rejects physical delete and non-sequential or stale revisions", async () => {
+  it("rejects non-sequential or stale revisions", async () => {
     const document = aliceDraft();
     await assertSucceeds(document.set(validDraft()));
 
@@ -693,7 +697,6 @@ describe("Firestore draft rules", () => {
       mutationId: "mutation-device",
       updatedAt: serverTimestamp(),
     })));
-    await assertFails(document.delete());
   });
 
   it.each([

@@ -25,7 +25,12 @@ export type AuthErrorCode =
   | "emulator"
   | "unknown";
 
-export type AuthOperation = "restore" | "sign-in" | "sign-out";
+export type AuthOperation =
+  | "restore"
+  | "sign-in"
+  | "sign-out"
+  | "reauthenticate"
+  | "delete-account";
 
 const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   "not-configured": "Firebase 認証は設定されていません。",
@@ -42,6 +47,8 @@ const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   "requires-recent-login": "安全のため、もう一度ログインしてください。",
   "invalid-credential": "ログイン情報を確認できませんでした。",
   "account-exists-with-different-credential": "別のログイン方法で登録されたアカウントです。",
+  // Reauthentication and account deletion deliberately reuse the same
+  // provider-safe wording as their interactive popup operation.
   emulator: "認証エミュレーターへ接続できませんでした。",
   unknown: "認証処理に失敗しました。",
 };
@@ -165,6 +172,11 @@ export interface AuthGateway {
   ): Unsubscribe;
   signInWithGoogle(): Promise<AuthUser>;
   signOut(): Promise<void>;
+  /** Optional until an app opts into the SYNC-M6 account controls. */
+  reauthenticateWithGoogle?(expectedUid: string): Promise<AuthUser>;
+  deleteAccount?(expectedUid: string): Promise<void>;
+  /** Kept separate from Firebase User so callers can detect UID switches. */
+  getCurrentUserUid?(): string | null;
 }
 
 const unavailableErrorCode = (
@@ -184,6 +196,13 @@ export function createUnavailableAuthGateway(
     signOut: async () => {
       throw new AuthSessionError(unavailableErrorCode(availability), "sign-out");
     },
+    reauthenticateWithGoogle: async () => {
+      throw new AuthSessionError(unavailableErrorCode(availability), "reauthenticate");
+    },
+    deleteAccount: async () => {
+      throw new AuthSessionError(unavailableErrorCode(availability), "delete-account");
+    },
+    getCurrentUserUid: () => null,
   };
 }
 
@@ -216,6 +235,9 @@ export interface AuthSession {
   start(): Unsubscribe;
   signInWithGoogle(): Promise<AuthUser>;
   signOut(): Promise<void>;
+  reauthenticateWithGoogle(expectedUid?: string): Promise<AuthUser>;
+  deleteAccount(expectedUid?: string): Promise<void>;
+  getCurrentUserUid(): string | null;
 }
 
 class AuthSessionController implements AuthSession {
@@ -251,6 +273,10 @@ class AuthSessionController implements AuthSession {
       try {
         this.gatewayUnsubscribe = this.gateway.subscribe(
           (user) => {
+            // The provider listener is authoritative. Invalidate any slower
+            // sign-in/sign-out/reauth/delete Promise so it cannot overwrite a
+            // newer UID (or signed-out) callback after an account switch.
+            this.operationId += 1;
             this.setState(
               user
                 ? {
@@ -268,6 +294,7 @@ class AuthSessionController implements AuthSession {
             );
           },
           (error) => {
+            this.operationId += 1;
             this.setState({
               status: "error",
               availability: "available",
@@ -277,6 +304,7 @@ class AuthSessionController implements AuthSession {
           },
         );
       } catch (error) {
+        this.operationId += 1;
         this.setState({
           status: "error",
           availability: "available",
@@ -290,6 +318,10 @@ class AuthSessionController implements AuthSession {
       this.gatewayUnsubscribe?.();
       this.gatewayUnsubscribe = null;
       this.started = false;
+      // Invalidate a sign-in/sign-out/reauth/delete Promise that was already
+      // in flight when the session owner unmounted. It may still resolve, but
+      // it must not publish state into a stopped (or later restarted) session.
+      this.operationId += 1;
     };
   }
 
@@ -375,6 +407,115 @@ class AuthSessionController implements AuthSession {
           status: "error",
           availability: "available",
           user: previousUser,
+          error: classified,
+        });
+      }
+      throw classified;
+    }
+  }
+
+  getCurrentUserUid(): string | null {
+    return this.gateway.getCurrentUserUid?.() ?? this.state.user?.uid ?? null;
+  }
+
+  async reauthenticateWithGoogle(expectedUid = this.getCurrentUserUid() ?? ""): Promise<AuthUser> {
+    if (this.gateway.availability !== "available") {
+      const error = new AuthSessionError(
+        unavailableErrorCode(this.gateway.availability),
+        "reauthenticate",
+      );
+      throw error;
+    }
+    if (!expectedUid || this.getCurrentUserUid() !== expectedUid) {
+      const error = new AuthSessionError("invalid-credential", "reauthenticate", {
+        retryable: false,
+      });
+      this.setState({
+        status: "error",
+        availability: "available",
+        user: this.state.user,
+        error,
+      });
+      throw error;
+    }
+    const operationId = ++this.operationId;
+    try {
+      if (!this.gateway.reauthenticateWithGoogle) {
+        throw new AuthSessionError("misconfigured", "reauthenticate", { retryable: false });
+      }
+      const user = await this.gateway.reauthenticateWithGoogle(expectedUid);
+      if (user.uid !== expectedUid) {
+        throw new AuthSessionError("invalid-credential", "reauthenticate", {
+          retryable: false,
+        });
+      }
+      if (operationId === this.operationId) {
+        this.setState({
+          status: "signed-in",
+          availability: "available",
+          user,
+          error: null,
+        });
+      }
+      return user;
+    } catch (error) {
+      const classified = classifyAuthError(error, "reauthenticate");
+      if (operationId === this.operationId) {
+        this.setState({
+          status: "error",
+          availability: "available",
+          user: this.state.user,
+          error: classified,
+        });
+      }
+      throw classified;
+    }
+  }
+
+  async deleteAccount(expectedUid = this.getCurrentUserUid() ?? ""): Promise<void> {
+    if (this.gateway.availability !== "available") {
+      const error = new AuthSessionError(
+        unavailableErrorCode(this.gateway.availability),
+        "delete-account",
+      );
+      throw error;
+    }
+    if (!expectedUid || this.getCurrentUserUid() !== expectedUid) {
+      const error = new AuthSessionError("invalid-credential", "delete-account", {
+        retryable: false,
+      });
+      this.setState({
+        status: "error",
+        availability: "available",
+        user: this.state.user,
+        error,
+      });
+      throw error;
+    }
+    const operationId = ++this.operationId;
+    try {
+      if (!this.gateway.deleteAccount) {
+        throw new AuthSessionError("misconfigured", "delete-account", { retryable: false });
+      }
+      await this.gateway.deleteAccount(expectedUid);
+      // Firebase emits null through onAuthStateChanged after deleteUser. The
+      // immediate state transition keeps non-Firebase test/emulator gateways
+      // safe too; no signOut call is made here.
+      if (operationId === this.operationId) {
+        this.setState({
+          status: "signed-out",
+          availability: "available",
+          user: null,
+          error: null,
+        });
+      }
+    } catch (error) {
+      const classified = classifyAuthError(error, "delete-account");
+      if (operationId === this.operationId) {
+        this.setState({
+          status: "error",
+          availability: "available",
+          user: this.state.user,
           error: classified,
         });
       }

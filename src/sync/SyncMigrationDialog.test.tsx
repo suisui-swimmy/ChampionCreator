@@ -37,9 +37,9 @@ describe("SyncMigrationDialog", () => {
     expect(html).toContain('aria-busy="false"');
     expect(html).toContain(">統合</button>");
     expect(html).toContain(">クラウドを使用</button>");
-    expect(html).toContain(">この端末を使用</button>");
+    expect(html).toContain(">このブラウザを使用</button>");
     expect(html).toContain(">あとで決める</button>");
-    expect(html).toContain("この端末");
+    expect(html).toContain("このブラウザ");
     expect(html).toContain("クラウド");
     expect(html).toContain("調整対象");
     expect(html).toContain("仮想敵");
@@ -53,10 +53,10 @@ describe("SyncMigrationDialog", () => {
     const html = renderDialog({ canUseDevice: false });
 
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>統合<\/button>/);
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>この端末を使用<\/button>/);
-    expect(html).toContain("この端末の保存データを利用できないため選択できません。");
-    expect(html).toContain("この端末の保存データを利用できないため、「統合」と「この端末を使用」は選択できません。");
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-describedby="[^"]+"[^>]*>この端末を使用<\/button>/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>このブラウザを使用<\/button>/);
+    expect(html).toContain("このブラウザの保存データを利用できないため選択できません。");
+    expect(html).toContain("このブラウザの保存データを利用できないため、「統合」と「このブラウザを使用」は選択できません。");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-describedby="[^"]+"[^>]*>このブラウザを使用<\/button>/);
   });
 
   it("marks every review choice busy while a decision is being applied", () => {
