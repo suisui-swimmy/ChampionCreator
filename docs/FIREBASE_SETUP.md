@@ -1,33 +1,33 @@
-# Firebase 同期基盤セットアップ（SYNC-M1〜M7）
+# Firebase同期 セットアップ・運用手順
 
-この文書は `SYNC-M1`〜`SYNC-M7` で追加した Firebase 同期基盤の開発・公開手順です。現在の実装範囲は Firebase client、Google provider の認証 session owner、Auth / Firestore Emulator、App Check、保存スロット単位の local / Firestore repository、outbox、同期 coordinator、既存 localStorage の one-time migration controller、M4の調整対象・仮想敵ボックス接続、M5のブラウザ別cloud draft、M6の常設ログイン・同期状態・アカウント管理 UI、Firestore Security Rules、M7の公開設定検証までです。
+この文書は、ChampionCreatorのFirebase同期を開発・運用するための恒久的な手順です。Firebase client、Google認証、Auth / Firestore Emulator、Security Rules、App Check、ブラウザ内保存、Firestore同期、アカウントライフサイクルを扱います。
 
-`SYNC-M3` の controller は既存データを一度だけ移行するための状態・選択肢・UID境界を扱い、`SYNC-M4` の runtime owner はM3の移行が完了した復元済み認証 session にだけ通常のbox操作を接続します。`SYNC-M5` の runtime owner は同じ認証・UID境界で、`userId + deviceId` ごとのcloud draftを別collectionへ接続します。`SYNC-M6` は未ログインでも到達できるGoogle popup loginと、M3完了後の7種類の同期状態、ログアウト、アカウントデータの書き出し、再認証付きアカウント削除を接続します。ゲスト・未認証、移行保留中、移行失敗時は従来どおり browser storage / local-first です。Firebase config がないローカル開発環境でも、既存の guest / local-first 機能はそのまま利用できます。本番Pages workflowは同期機能なしの誤公開を防ぐため、Firebase必須設定の欠落時に停止します。
+計算と通常編集は、Firebaseを利用できない場合もブラウザ内保存だけで動作します。本番Pages workflowは、Firebase Web configまたはApp Check site keyが欠けている場合に停止し、同期機能のないbuildを誤って公開しません。
 
-## 現在の状態
+Googleログイン後は、既存のブラウザ内保存をアカウントの保存領域へ初回統合します。統合後は、調整対象・仮想敵ボックスとブラウザ別クラウド下書きをUIDごとに同期します。ログアウト、書き出し、アカウント削除までの境界は`src/sync/`が所有し、`App`へFirebase固有処理を散らしません。
 
-| 項目 | 状態 |
+## 現在の設定状態
+
+| 項目 | 現在の状態 |
 | --- | --- |
-| Firebase Web SDK と `src/sync/` の境界 | 実装済み |
-| 認証 session の restore / sign-in / sign-out / error 単体テスト | 実装済み |
-| Auth / Firestore Emulator 設定 | 実装済み |
-| local / Firestore repository、outbox、同期 coordinator | 実装済み（M2） |
-| Firestore Security Rules と Emulator test | 実装済み（M2） |
-| Firebase project / Web app の作成 | 2026-08-21 確認済み |
-| Google provider / authorized domains の設定 | 2026-08-21 確認済み |
-| Cloud Firestore の作成 | 2026-08-21 確認済み |
-| M2 Rules / indexes の本番反映 | 2026-08-21 完了 |
-| M5 / M6 Rules / indexes の本番反映 | 2026-08-21 完了（M7でsource一致を再確認） |
-| App Check の登録・metrics・enforcement | 2026-08-21 完了（Firestore / Authenticationともverified 100%、unverified 0%を確認後に適用） |
-| SYNC-M3 one-time migration controller / UID別 marker / 初回統合dialog | 認証済みsessionのruntime gateへ接続済み |
-| SYNC-M4 UID別local / outbox / Firestoreによるtarget・enemy box操作 | M3完了後の復元済み認証sessionへ接続済み |
-| SYNC-M4 tombstone、競合保持、破損remote分離 | 実装済み（対象repository / coordinator経路） |
-| SYNC-M4 backup importの`統合` / `クラウド全体を置き換え`と件数preview | 実装済み |
-| SYNC-M5 cloud draft | UID + deviceId別local / outbox / Firestoreへ接続済み（2秒queue、10件上限、30日保持、期限切れcleanup） |
-| SYNC-M6 常設ログイン・同期状態・アカウント管理 UI | 実装済み（ログイン導線は未ログインでも表示） |
-| SYNC-M6 アカウント export / delete と失敗時 retry | 実装済み（UID専用削除、Auth削除は最後） |
-| SYNC-M6 account operation gate / provider disposal | 実装済み（export / delete / logout中の保存・同期を停止） |
-| SYNC-M7 全体検証・Pages公開・custom domain smoke | 2026-08-21 完了（version `0.21.2`） |
+| Firebase Web SDK | `src/sync/`の初期化境界から利用 |
+| 認証状態 | restore / sign-in / sign-out / errorを専用sessionで管理 |
+| Auth / Firestore Emulator | `firebase.json`と`.firebaserc`で設定 |
+| ブラウザ内 / Firestore repository | UID別、ブラウザへの保存を先に確定 |
+| 未送信操作 | 順序付きキュー（`outbox`）へ保持 |
+| Firestore Security Rules | Emulator test対象。本番Rules / indexesはrepositoryと同じ内容 |
+| Firebase project / Web app | 有効 |
+| Google provider | 有効。追加のアクセス権は要求しない |
+| authorized domains | custom domain、`localhost`、`127.0.0.1`を登録 |
+| Cloud Firestore | `(default)` databaseを利用 |
+| App Check | reCAPTCHA Enterprise。Cloud Firestore / Authenticationともenforcement有効 |
+| 初回統合 | UID別の統合状態と4つの選択肢を管理 |
+| ボックス同期 | 調整対象・仮想敵をUID別local / `outbox` / Firestoreへ保存 |
+| バックアップ読み込み | `統合` / `クラウド全体を置き換え`と件数previewに対応 |
+| ブラウザ別クラウド下書き | UID + deviceId別。2秒queue、10件上限、30日保持 |
+| アカウント画面 | 未ログイン時のログイン導線と、認証後の同期・書き出し・削除を提供 |
+| アカウント削除 | UID専用データを先に削除し、Authenticationのアカウントを最後に削除 |
+| 公開版 | version `0.21.2`。custom domainでFirebase同期を有効化 |
 
 ## 秘密情報の境界
 
@@ -70,16 +70,20 @@ npm run test:rules
 
 通常の unit test は `npm test`、Rules を含む全体確認は `npm run check` です。`.firebaserc` は実 project へ接続しない `demo-championcreator` 専用です。
 
-M4のbox同期とバックアップ取り込みを変更した場合は、次の対象テストを先に実行します。
+ボックス同期とバックアップ取り込みを変更した場合は、次の対象テストを先に実行します。
 
 ```powershell
 npm test -- --run src/sync/syncBoxRepository.test.ts src/sync/SyncBoxProvider.test.tsx src/ui/boxBackupImport.test.ts src/ui/BackupImportDialog.test.tsx src/App.test.tsx
 npm run typecheck
 ```
 
-その後、Emulator上でM3を `completed` にしたテスト用UIDの復元済みsessionを使い、調整対象・仮想敵の作成、上書き、名前変更、複製、削除、読み込み、バックアップ書き出し・読み込みを確認します。保存操作ではブラウザ保存とoutboxが先に成功し、Firestoreのnetwork / permission failure後も画面のentryとJSONバックアップが残ること、起動・focus・online復帰・ボックス操作後の再試行でoutboxが再送されることを確認します。削除後のtombstone、同一slotの更新競合・更新対削除、1件だけ壊れたremote、バックアップの件数preview（追加 / 更新 / 削除 / 変更なし）、`統合`、アカウント時の`クラウド全体を置き換え`、削除済みentryのバックアップ復元も確認対象です。ゲスト・未認証、M3の移行保留・失敗、`variant="tutorial"` では従来のlocal-first動作を確認します。
+その後、Emulator上で初回統合済みのテスト用UIDを使い、調整対象・仮想敵の作成、上書き、名前変更、複製、削除、読み込み、バックアップ書き出し・読み込みを確認します。保存操作ではブラウザ内保存と`outbox`が先に成功し、Firestoreのnetwork / permission failure後も画面の保存とJSONバックアップが残ることを確認します。起動、画面focus、online復帰、ボックス操作後の再試行では、`outbox`を順番どおり再送します。
 
-M5のcloud draftは、同じテストUIDの複数deviceIdで、ブラウザ内0.75秒autosave、操作停止後2秒のcloud queue、別ブラウザ一覧の更新日時・ブラウザラベル・入力概要、明示的な復元・削除、同時編集、offline中のoutbox保持、network / permission / quota / 破損payload、10件上限、30日経過、起動・focus・online・手動cleanupを確認します。復元時にbox dataと計算結果・候補・Worker stateを変更しないこと、`pagehide` / `visibilitychange` で同期完了を装わないこと、`variant="tutorial"` が保存・同期されないことも確認対象です。realtime listenerと共有ボックスは採用しません。常設ログイン・同期状態・アカウント管理UIはM6で接続します。
+削除済み記録（`tombstone`）、同一スロットの更新競合・更新対削除、1件だけ壊れたremote、バックアップの件数preview（追加 / 更新 / 削除 / 変更なし）、`統合`、アカウント利用時の`クラウド全体を置き換え`、削除済み保存のバックアップ復元も確認対象です。未ログイン、初回統合の保留・失敗、`variant="tutorial"`では、ブラウザ内保存を優先する動作を確認します。
+
+ブラウザ別クラウド下書きは、同じテストUIDの複数deviceIdで確認します。ブラウザ内の0.75秒autosave、操作停止後2秒のクラウド保存予約、別ブラウザ一覧の更新日時・ブラウザラベル・入力概要、明示的な復元・削除、同時編集、offline中の`outbox`保持、network / permission / quota / 破損`payload`、10件上限、30日経過、起動・focus・online・手動cleanupを対象にします。
+
+復元時にボックス、計算結果、候補、Workerの状態を変更しないこと、`pagehide` / `visibilitychange`で同期完了を装わないこと、`variant="tutorial"`が保存・同期されないことも確認します。realtime listenerと共有ボックスは採用しません。
 
 ## Web config
 
@@ -102,15 +106,15 @@ Firebase config を入れた development build では `VITE_FIREBASE_USE_EMULATO
 
 ## Firebase Console と本番反映
 
-次の項目は repository から自動実行しません。1〜6は2026-08-21に確認済みです。7はM2〜M6のsourceを2026-08-21に本番へ反映し、M7でRules release / indexesとrepositoryの一致を再確認しました。`SYNC-M3` と `SYNC-M4` は既存のbox保存契約を再利用し、`SYNC-M5` はFirestoreの `/users/{uid}/drafts/{deviceId}` へ保存するため、Firebase Console上で新しいproject、provider、scope、authorized domain、GitHub variable、手動collection作成は不要です。M6のアカウント削除で必要な変更は既存Rulesへのowner delete許可だけで、Admin SDKやFunctionsを追加しません。project IDやcredentialそのものではなく、完了した項目と検証結果だけを `PROGRESS.md` に残します。
+次の項目はリポジトリから自動設定しません。初期セットアップ時と本番公開前に、Firebase Consoleの状態とリポジトリの設定が一致していることを確認します。ボックスは`/users/{uid}/syncRecords/{documentId}`、ブラウザ別クラウド下書きは`/users/{uid}/drafts/{deviceId}`へ保存するため、コレクションを手動作成する必要はありません。アカウント削除もFirebase client SDKとSecurity Rulesで処理し、Admin SDKやFunctionsは追加しません。
 
-1. Firebase project と Web app を作成し、Web config を取得する。
-2. Authentication で Google provider を有効にする。追加 scope（Driveのファイル、連絡先、Gmailのメール本文などへアクセスする権限）は要求しない。
-3. Authentication の authorized domains に `championcreator.suisui-swimmy.com`、`localhost`、`127.0.0.1` を用途別に登録する。
-4. Cloud Firestore を production mode で作成し、利用地域を確定する。
-5. Web app を App Check の reCAPTCHA Enterprise provider に登録し、site key を設定する。最初は enforcement を有効にせず、verified / outdated / unknown / invalid request の metrics を monitor する。M7ではCloud Firestore 173/173件、Authentication 17/17件がverified、unverified 0件であることを確認してから両APIを適用済みにした。
-6. GitHub repository variables を登録し、Pages build が Firebase Web config と App Check site key を受け取れるようにする。
-7. Emulator test が pass した同じ Rules と indexes を、明示した production project へ deployする。M2〜M6分は2026-08-21完了済みです。今後Rulesを変更した場合も同じ手順で再反映します。
+1. FirebaseプロジェクトとWebアプリを作成し、Web configを取得する。
+2. AuthenticationでGoogleプロバイダーを有効にする。Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加権限は要求しない。
+3. Authenticationのauthorized domainsへ`championcreator.suisui-swimmy.com`、`localhost`、`127.0.0.1`を用途別に登録する。
+4. Cloud Firestoreを本番モードで作成し、利用地域を確定する。
+5. WebアプリをApp CheckのreCAPTCHA Enterpriseプロバイダーへ登録し、site keyを設定する。新しいWebアプリを登録した直後は適用（enforcement）を有効にせず、verified / outdated / unknown / invalid requestの指標を監視する。正規リクエストがverifiedになることを確認してから、Cloud FirestoreとAuthenticationのenforcementを有効にする。現在の本番プロジェクトでは両APIとも有効にしている。
+6. GitHub repository variablesを登録し、Pages buildがFirebase Web configとApp Check site keyを受け取れるようにする。
+7. Emulator testがpassしたRulesとindexesを、明示した本番プロジェクトへdeployする。Rulesまたはindexesを変更した場合は、毎回この手順で再反映する。
 
 ```powershell
 npx firebase-tools login
@@ -124,13 +128,13 @@ npx firebase-tools deploy --only firestore:rules --project <firebase-project-id>
 
 ## 認証方式
 
-GitHub Pages / custom domain では `GoogleAuthProvider` と `signInWithPopup` を使用します。`signInWithRedirect` は採用せず、popup failure から redirect へ自動 fallback もしません。これは Firebase Hosting 以外で redirect helper の third-party storage 対策が別途必要になるためです。Googleログインから受け取る標準プロフィールはUID、表示名、メールアドレス、プロフィール画像です。`addScope()`は呼ばず、Google Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加 scope は要求しません。
+GitHub Pagesとcustom domainでは、`GoogleAuthProvider`と`signInWithPopup`を使用します。`signInWithRedirect`は採用せず、popup失敗時もredirectへ自動切り替えしません。Firebase Hosting以外でredirectを安全に使うには、helper用storageへの追加対策が必要になるためです。Googleログインから受け取る標準プロフィールは、UID、表示名、メールアドレス、プロフィール画像です。`addScope()`は呼ばず、Google Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加権限は要求しません。
 
-session restore は `onAuthStateChanged`、logout は Firebase Auth の `signOut` を owner 経由で扱います。Firebase の `User`、credential、access token は `App` の state や保存 payload に渡しません。アカウント削除では `reauthenticateWithPopup` の後に Firestore の UID専用データを消し、`deleteUser` を最後に一度だけ呼びます。成功時は Auth listener が `null` を通知するため、`signOut` を重ねて呼びません。
+ログイン状態の復元は`onAuthStateChanged`、ログアウトはFirebase Authの`signOut`を専用session経由で扱います。Firebaseの`User`、credential、access tokenは`App`のstateや保存`payload`へ渡しません。アカウント削除では`reauthenticateWithPopup`の後にFirestoreのUID専用データを削除し、`deleteUser`を最後に一度だけ呼びます。成功時はAuth listenerが`null`を通知するため、`signOut`を重ねて呼びません。
 
-## Firestore repository / Rules の M2〜M5 契約
+## Firestore repository / Security Rules
 
-M2〜M4のbox保存で許可するpathは `/users/{uid}/syncRecords/{documentId}`、M5のdraft保存で許可するpathは `/users/{uid}/drafts/{deviceId}` だけです。両方とも認証済みownerのUID境界を持ち、通常のrepositoryから物理deleteは行いません。M6のアカウント削除専用サービスだけが、再認証済みの同一ownerとして両collectionの物理deleteを行います。
+ボックス保存で許可するpathは`/users/{uid}/syncRecords/{documentId}`、ブラウザ別クラウド下書きで許可するpathは`/users/{uid}/drafts/{deviceId}`だけです。どちらも認証済みownerのUID境界を持ち、通常のrepositoryから物理deleteは行いません。アカウント削除専用サービスだけが、再認証済みの同一ownerとして両コレクションを物理deleteします。
 
 - 未認証と別 UID の read / write を拒否し、write では path と `ownerUid` の一致を必須にする
 - 1保存スロットを1 documentとして扱い、全ボックスを1つのblobへまとめない
@@ -149,67 +153,68 @@ M2〜M4のbox保存で許可するpathは `/users/{uid}/syncRecords/{documentId}
 - remote empty、network、permission、quota、invalid payload、future schemaを別状態として扱い、1件の破損documentで正常な一覧を空にしない
 - 同一slotの同時更新や更新対削除はLast Write Winsにせず、local / remoteを要確認状態へ保持する
 
-## SYNC-M3: 既存 localStorage の one-time migration
+## 既存ブラウザ内保存の初回統合
 
-`SYNC-M3` は、既存ブラウザの保存をアカウント単位の保存領域へ一度だけ移行する controller の内部境界です。通常のボックス操作を常時クラウドへ切り替える機能ではありません。
+Googleログイン後、既存ブラウザのボックス保存をアカウントの保存領域へ初めて結び付けるときに実行します。通常の編集や未ログイン時の保存を、常にクラウドへ切り替える処理ではありません。
 
-- `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1` を移行元として扱う
-- migration state は `not-started` / `in-progress` / `needs-review` / `completed` を区別し、UIDごとの marker として保存する。ゲスト領域とUID領域は分離し、logoutや別アカウントへの切り替えで混在させない
-- local only / cloud only / 双方空 / 双方同一 / 双方競合を区別する。双方にデータがある場合の選択肢は `統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める`
-- `統合`では同一ID・同一payloadを1件にまとめ、同一ID・異なるpayloadは競合コピーとして両方を保持する
-- 移行完了が確認できるまで legacy localStorage key を削除しない。移行失敗時も旧データと既存のJSONバックアップを復旧手段として残す
-- 未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを移行や新しいブラウザで復活させない
-- 移行対象は調整対象・仮想敵ボックスの保存済み入力条件だけで、計算結果、候補一覧、Worker state、チュートリアル state、cloud draft は含めない
+- `championcreator.box.v1`、`championcreator.enemy-box.v1`、`championcreator.box.default-example.v1`を統合元として扱う
+- 統合状態はUIDごとのversioned markerへ保存する。未ログイン領域とUID領域を分け、ログアウトやアカウント切り替えで混在させない
+- ブラウザだけに保存がある、クラウドだけに保存がある、双方が空、双方が同じ、双方に異なる保存がある、の各状態を区別する
+- 双方に保存がある場合は、`統合` / `クラウドを使用` / `このブラウザを使用` / `あとで決める`を表示する
+- `統合`では同一ID・同一`payload`を1件にまとめ、同一IDで`payload`が異なる場合は競合コピーとして両方を保持する
+- Firestoreとブラウザ内保存の両方が成功するまで、既存のlocalStorage keyを削除しない。失敗時も旧データとJSONバックアップを復旧手段として残す
+- 未変更の既定サンプルは重複させず、ユーザーが削除した既定サンプルを復活させない
+- 対象は調整対象・仮想敵ボックスの保存済み入力条件だけとし、計算結果、候補一覧、Workerの状態、チュートリアル、ブラウザ別クラウド下書きは含めない
 
-この controller は `SYNC-M4` のbox runtime ownerと `SYNC-M5` のcloud draft ownerが利用する内部境界です。M3のproduction確認では実Google popupと移行のread / writeを検証します。M5のdraftは移行対象へ含めず、別の `/users/{uid}/drafts/{deviceId}` namespaceへ保存します。M6のアカウント削除では、この legacy key をゲスト資産として扱い、UID専用cleanupの対象へ含めません。
+ブラウザ別クラウド下書きは初回統合の対象にせず、`/users/{uid}/drafts/{deviceId}`へ別データとして保存します。アカウント削除でも、既存の未ログイン用keyはゲスト資産として残し、UID専用の削除対象へ含めません。
 
-## SYNC-M4: 調整対象・仮想敵ボックス同期
+## ボックス同期
 
-M4のruntime ownerは、次の条件をすべて満たす場合だけ有効になります。
+ボックス同期は、次の条件をすべて満たす場合だけ有効になります。
 
 - Firebase Authから復元された認証済みsessionである
-- sessionのUIDとM3のmigration markerのUIDが一致する
-- M3のone-time migration stateが `completed` である
+- sessionのUIDと初回統合のmarkerに保存したUIDが一致する
+- 初回統合が正常に完了している
 
-条件を満たさないゲスト・未認証、移行中、`needs-review`、移行エラー、別UIDのsessionは、従来のbrowser storage / local-first経路を使います。M4のrepositoryはアカウント管理UIや物理deleteを直接所有せず、M6のaccount serviceとProvider停止APIから停止・削除の境界を受け取ります。
+条件を満たさない未ログイン、統合中、確認待ち、統合エラー、別UIDのsessionは、ブラウザ内保存を優先する経路を使います。ボックスrepositoryはアカウント管理UIや物理deleteを直接所有しません。同期停止と削除は、アカウントサービスとProvider停止APIから受け取ります。
 
-M4でUID別のlocal repositoryへ保存する対象は、調整対象ボックスと仮想敵ボックスの各保存slotです。作成、上書き、名前変更、複製、削除、読み込み、バックアップ書き出し、バックアップ読み込みを同じkind境界で扱い、調整対象と仮想敵のpayloadを混ぜません。計算結果、候補一覧、Worker state、作業中のdraft、チュートリアルstateは同期しません。
+UID別のlocal repositoryへ保存する対象は、調整対象ボックスと仮想敵ボックスの各保存slotです。作成、上書き、名前変更、複製、削除、読み込み、バックアップ書き出し・読み込みを同じkind境界で扱い、調整対象と仮想敵の`payload`を混ぜません。計算結果、候補一覧、Workerの状態、作業中の下書き、チュートリアルは同期しません。
 
-保存操作はlocal repositoryの成功を先に確定し、同じUID namespaceの順序付きoutboxへmutationを残してからFirestoreへpushします。同期はlaunch、window focus、online復帰、box操作後のretryで行います。network、permission、quota、invalid payload、future schemaは別状態として扱い、同期に失敗してもlocalのentryとJSON backupを失いません。
+保存操作はlocal repositoryへの保存成功を先に確定します。その後、同じUID namespaceの順序付き`outbox`へ未送信操作（mutation）を残し、Firestoreへ送ります。同期は起動時、window focus時、online復帰時、ボックス操作後の再試行で行います。network、permission、quota、invalid `payload`、future schemaは別状態として扱い、同期に失敗してもブラウザ内の保存とJSONバックアップを失いません。
 
-削除はpayloadを保持するtombstoneとしてFirestoreへ残します。同じslotの同時更新、更新対削除、復帰したブラウザからの古いmutationはLast Write Winsで消さず、local / remoteの両方を競合として保持して要確認にします。remoteの1件が破損・未知schemaでも、その1件を問題として隔離し、正常なremote一覧を空にしません。
+削除は`payload`を保持する`tombstone`としてFirestoreへ残します。同じslotの同時更新、更新対削除、復帰したブラウザからの古いmutationはLast Write Winsで消しません。ブラウザ側とクラウド側の両方を競合として保持し、確認待ちにします。クラウド上の1件が破損している、または未知schemaでも、その1件だけを問題として隔離し、正常な一覧を空にしません。
 
-バックアップ読み込みは既存のbox parserとkind検証を通し、コミット前に追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示します。認証済みsessionでは `統合` と `クラウド全体を置き換え`、ゲスト・未認証では `統合` と `このブラウザの保存を置き換え` を選べます。`統合` は同一ID・同一payloadを重複排除し、同一ID・異なるpayloadを競合コピーとして残します。読み込めないentryがある場合は警告を表示して置き換えを無効にし、validなentryの`統合`だけを許可します。保存0件の正常な空backupは、現在の全slotを削除する警告を表示したうえで置き換えを許可します。バックアップに残ったentryを統合すれば、tombstoneになった削除済みentryも明示的に復元できます。
+バックアップ読み込みは既存のボックスparserとkind検証を通します。反映前に、追加・更新・削除・変更なし、競合コピー、重複除外の件数を表示します。認証済みsessionでは`統合`と`クラウド全体を置き換え`、未ログインでは`統合`と`このブラウザの保存を置き換え`を選べます。`統合`は同一ID・同一`payload`を重複除外し、同一ID・異なる`payload`を競合コピーとして残します。読み込めない保存がある場合は警告を表示して置き換えを無効にし、validな保存の`統合`だけを許可します。保存0件の正常な空バックアップは、現在の全slotを削除する警告を表示したうえで置き換えを許可します。バックアップに残った保存を統合すれば、`tombstone`になった保存も明示的に復元できます。
 
-### M4の確認項目
+### ボックス同期の確認項目
 
 1. `npm run emulators` と `npm run test:rules` がpassし、Rulesが未認証・別UIDを拒否することを確認する。
-2. M3 `completed` のテストUIDで、local保存成功後にoutboxが増え、Firestore failure時も保存済みentryとbackupが残ることを確認する。
+2. 初回統合済みのテストUIDで、local保存成功後に`outbox`が増え、Firestore failure時も保存済みentryとbackupが残ることを確認する。
 3. launch、focus、online、box操作後のretryでoutboxが順番どおり送信され、同じmutationの再送が二重適用されないことを確認する。
 4. tombstone、更新競合・更新対削除、壊れたremoteの分離、`統合` / `クラウド全体を置き換え` の件数preview、削除済みentryのbackup復元を対象テストで確認する。
-5. guest、M3移行保留・失敗、`variant="tutorial"` がboxの永続化・同期対象にならないことを確認し、M5 draftとM6の常設UIはそれぞれの確認項目で検証する。
+5. 未ログイン、初回統合の保留・失敗、`variant="tutorial"`がボックス同期の対象にならないことを確認する。ブラウザ別クラウド下書きとアカウント画面は、それぞれの確認項目で検証する。
 
-## SYNC-M5: ブラウザ別クラウド下書き
+## ブラウザ別クラウド下書き
 
-M5のcloud draftは、M3のone-time migrationが `completed` になったUIDの復元済み認証sessionだけで有効になります。ゲスト・未認証、移行保留・失敗、別UIDのsession、`variant="tutorial"` はcloud draftを保存・同期しません。M6の常設UIはこのdraftのnamespaceと同期状態を表示し、cloud draft削除とアカウント全体削除を別操作として扱います。
+ブラウザ別クラウド下書きは、Googleログイン後に初回統合を完了したUIDの認証sessionだけで有効になります。未ログイン、統合の保留・失敗、別UIDのsession、`variant="tutorial"`は保存・同期しません。アカウント画面では下書きのnamespaceと同期状態を表示し、下書き1件の削除とアカウント全体の削除を別操作として扱います。
 
-Firestoreの保存先は `/users/{uid}/drafts/{deviceId}` です。1ブラウザ1documentとし、内部識別子として`deviceId` / `deviceLabel`を使います。ほかに`ownerUid`、draft `schemaVersion`、normalized payload、`revision`、`baseRevision`、`mutationId`、`updatedAt`、`expiresAt`、`deletedAt` を保持します。RulesではUIDとdeviceIdの一致、schema 1、payloadサイズ、将来schema、期限、server timestamp、連番revisionを検証し、物理deleteではなくpayloadを保持したtombstoneを使います。payload indexは検索に使わないため無効化します。
+Firestoreの保存先は`/users/{uid}/drafts/{deviceId}`です。1ブラウザにつき1documentとし、内部識別子には`deviceId` / `deviceLabel`を使います。ほかに`ownerUid`、下書きの`schemaVersion`、正規化済み`payload`、`revision`、`baseRevision`、`mutationId`、`updatedAt`、`expiresAt`、`deletedAt`を保持します。RulesではUIDとdeviceIdの一致、schema 1、`payload`サイズ、将来schema、期限、server timestamp、連番revisionを検証します。通常の削除には物理deleteではなく、`payload`を保持した`tombstone`を使います。`payload` indexは検索に使わないため無効化します。
 
-ブラウザ内の作業中下書きは入力変更後約0.75秒で保存し、cloud deliveryは操作停止後2秒でqueueします。local / cloudとも `userId + deviceId` namespaceを分け、同じアカウントの別ブラウザが同じdraftを上書きしないようにします。未送信mutationは順序付きoutboxへ残し、`pagehide` / `visibilitychange` で同期完了を装いません。realtime listenerは使わず、起動時、window focus時、online復帰時、手動操作時に期限切れcleanupを行います。
+ブラウザ内の作業中下書きは、入力変更後約0.75秒で保存します。Firestoreへの送信は、操作停止後2秒で予約します。ブラウザ内とクラウドの両方で`userId + deviceId` namespaceを分け、同じアカウントの別ブラウザが同じ下書きを上書きしないようにします。未送信mutationは順序付き`outbox`へ残し、`pagehide` / `visibilitychange`で同期完了を装いません。realtime listenerは使わず、起動時、window focus時、online復帰時、手動操作時に期限切れデータを整理します。
 
-アカウントあたり有効なdraftは最大10件、保持期間は30日です。他のブラウザのdraft一覧には更新日時、ブラウザラベル、入力概要を表示し、ユーザーが選んだdraftだけを明示的に現在の作業画面へ復元します。復元はbox dataを変更せず、draftの削除も明示操作で行います。復元時は進行中Workerとstale resultを破棄し、計算結果、候補一覧、Worker state、tutorial stateはdraft payloadへ含めません。
+有効な下書きは1アカウント最大10件、保持期間は30日です。他のブラウザの下書き一覧には、更新日時、ブラウザラベル、入力概要を表示します。ユーザーが選んだ下書きだけを現在の作業画面へ復元し、ボックスの保存内容は変更しません。下書きの削除も明示操作で行います。復元時は進行中Workerと古い結果を破棄し、計算結果、候補一覧、Workerの状態、チュートリアルは下書きの`payload`へ含めません。
 
-### M5の確認項目
+### ブラウザ別クラウド下書きの確認項目
 
-1. `npm run test:rules` と `npm run check` がpassし、`/users/{uid}/drafts/{deviceId}` の未認証・別UID・別deviceId書き込み、通常mutationからの物理delete、期限切れ、payload超過、future schemaを拒否することを確認する。M6のaccount delete専用owner deleteだけは別テストで許可を確認する。
+1. `npm run test:rules`と`npm run check`がpassし、`/users/{uid}/drafts/{deviceId}`の未認証・別UID・別deviceId書き込み、通常mutationからの物理delete、期限切れ、`payload`超過、future schemaを拒否することを確認する。アカウント削除専用のowner deleteだけは別テストで許可を確認する。
 2. 同じUIDの2つのdeviceIdで、ブラウザ内0.75秒autosave、操作停止後2秒のcloud queue、別ブラウザ一覧、明示的な復元・削除、10件上限を確認する。
 3. 同時編集、revision競合、更新対削除、network / permission / quota failure、offline復帰、lost response再送、tombstone、壊れたdraftの隔離を確認する。
 4. 起動、focus、online、手動操作時の30日cleanupと、`pagehide` / `visibilitychange` 後のoutbox保持を確認する。
 5. draft復元後にbox dataが変わらず、Workerのstale resultが混入せず、`variant="tutorial"` が保存・同期されないことを確認する。
 
-## SYNC-M6: アカウント・同期状態 UI とライフサイクル
+## アカウント・同期ライフサイクル
 
-M6は、未ログインでもヘッダーにアカウント画面とGoogleログイン導線を表示します。ログイン後、M3のmigration stateが `completed` になった認証済みsessionにだけ、通常同期、cloud draft、export、deleteなどのアカウント保存操作を接続します。Google popupでログイン・再認証し、UID、表示名、メールアドレス、プロフィール画像を受け取ります。Google Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加 scope は要求しません。FirebaseのUser object、credential、access tokenはUI state、localStorage、バックアップへ保存しません。
+未ログインでも、ヘッダーにアカウント画面とGoogleログイン導線を表示します。ログイン後、初回統合を完了した認証済みsessionにだけ、通常同期、ブラウザ別クラウド下書き、書き出し、削除などのアカウント保存操作を接続します。Google popupでログイン・再認証し、UID、表示名、メールアドレス、プロフィール画像を受け取ります。Google Driveのファイル、連絡先、Gmailのメール本文などへアクセスする追加権限は要求しません。Firebaseの`User`、credential、access tokenはUI state、localStorage、バックアップへ保存しません。
 
 ### 同期状態の表示契約
 
@@ -223,36 +228,36 @@ M6は、未ログインでもヘッダーにアカウント画面とGoogleログ
 - `競合あり`
 - `同期エラー`
 
-local成功とFirestore成功を分けて表示し、未送信outbox、競合、network / permission / quota failureが残る状態を `同期済み` と表示しません。ログアウト・export・delete中は各account operationが通常のbox / draftの保存、queue、同期を止め、進行中の古い結果を現在のUIDへ適用しません。
+ブラウザ内保存とFirestoreへの保存を分けて表示します。未送信の`outbox`、競合、network / permission / quotaのエラーが残る状態を`同期済み`とは表示しません。ログアウト、書き出し、削除の実行中は、通常のボックス・下書き保存、送信予約、同期を止めます。進行中だった古い結果は、現在のUIDへ適用しません。
 
-### アカウントデータの export
+### アカウントデータの書き出し
 
 アカウントデータ書き出しは、次の順で実行します。
 
 1. 現在のUIDを固定し、手動同期を完了させる。
-2. `/users/{uid}/syncRecords` と `/users/{uid}/drafts` を server read する。
-3. read error、未送信outbox、競合、破損・未対応payloadがないことを確認する。
-4. `schemaVersion`、`exportedAt`、UID、サニタイズしたプロフィール、両collectionのデータをJSONにまとめ、Blob download後にURLをrevokeする。
+2. `/users/{uid}/syncRecords`と`/users/{uid}/drafts`をサーバーから読み直す。
+3. 読み取りエラー、未送信の`outbox`、競合、破損・未対応`payload`がないことを確認する。
+4. `schemaVersion`、`exportedAt`、UID、サニタイズしたプロフィール、両コレクションのデータをJSONにまとめる。Blobのdownload後にURLをrevokeする。
 
-完全性を確認できない場合は、完全なexportと表示しません。部分exportを許可する場合も、欠落・警告のあるファイルであることを明示します。credential、token、Firebase Admin credential、service account key、Google OAuth client secret、ゲストnamespaceはexportへ含めません。
+完全性を確認できない場合は、完全な書き出しとは表示しません。部分的な書き出しを許可する場合も、欠落や警告のあるファイルだと明示します。credential、token、Firebase Admin credential、service account key、Google OAuth client secret、未ログイン時のnamespaceは書き出しへ含めません。
 
-### アカウントデータの delete
+### アカウントデータの削除
 
-静的Pages構成のため、アカウント削除は Firebase client SDK から直接実行します。Admin SDK、service account、別のruntime backendは追加しません。Rulesでは通常のbox / draft mutationを従来どおりtombstoneとして扱い、アカウント削除専用経路だけにownerの物理deleteを許可します。
+静的Pages構成のため、アカウント削除はFirebase client SDKから直接実行します。Admin SDK、service account、別のruntime backendは追加しません。Rulesでは通常のボックス・下書きmutationを`tombstone`として扱い、アカウント削除専用経路だけにownerの物理deleteを許可します。
 
 処理順は固定します。
 
-1. account lifecycleを `deleting` にし、同じタブのSyncBox / CloudDraftのtimer、queue、in-flight synchronize / pushを停止する。
+1. account lifecycleを`deleting`にし、同じタブのSyncBox / CloudDraftが持つtimer、queue、進行中のsynchronize / pushを停止する。
 2. UIDを固定して `reauthenticateWithPopup` を実行し、popup後も `currentUser.uid` が同じことを確認する。
-3. `syncRecords` と `drafts` を server readし、`writeBatch` は1 batch 450件以下でdeleteする。両collectionを再列挙し、空になるまで有限回確認する。
-4. UID専用の `championcreator.sync.v1.<uid>`、`championcreator.cloud-draft.v1.<uid>.<device>`、`championcreator.draft.v1.<uid>.<device>`、`championcreator.migration.v1.<uid>` と実行中のprovider cacheを削除する。
+3. `syncRecords`と`drafts`をサーバーから読み、`writeBatch`は1 batch 450件以下でdeleteする。両コレクションを再列挙し、空になるまで有限回確認する。
+4. UID専用の`championcreator.sync.v1.<uid>`、`championcreator.cloud-draft.v1.<uid>.<device>`、`championcreator.draft.v1.<uid>.<device>`、`championcreator.migration.v1.<uid>`と実行中のprovider cacheを削除する。
 5. 最後に `deleteUser` を呼ぶ。成功時はAuth listenerが `null` を通知するため、追加の `signOut` は呼ばない。
 
-legacyの `championcreator.box.v1` / `championcreator.enemy-box.v1`、既定サンプルmarker、guest namespaceはアカウント削除で消しません。ログイン前からこのブラウザだけにあるデータはアカウントデータと別管理であり、必要な場合はブラウザ側のサイトデータ削除や通常のbox操作で別途消します。
+既存の`championcreator.box.v1` / `championcreator.enemy-box.v1`、既定サンプルmarker、未ログイン時のnamespaceはアカウント削除で消しません。ログイン前からこのブラウザだけにあるデータはアカウントデータと別管理です。必要な場合は、ブラウザ側のサイトデータ削除や通常のボックス操作で別途削除します。
 
-再認証、一覧取得、batch commit、空確認、UID専用local cleanupのいずれかが失敗した場合は `deleteUser` を呼ばず、stableなエラー分類と再試行を表示します。`deleteUser` だけが失敗した場合はFirebase Auth sessionを維持し、クラウド・UID専用localの削除済み状態を再試行へ引き継ぎます。別のブラウザからの同時書き込みに対して完全な原子性はないため、同じtabのmutationを停止し、削除後の再列挙・空確認を行います。
+再認証、一覧取得、batch commit、空確認、UID専用local cleanupのいずれかが失敗した場合は`deleteUser`を呼びません。安定したエラー分類と再試行操作を表示します。`deleteUser`だけが失敗した場合はFirebase Auth sessionを維持し、クラウド・UID専用localの削除済み状態を再試行へ引き継ぎます。別のブラウザからの同時書き込みに対して完全な原子性はないため、同じタブのmutationを停止し、削除後の再列挙・空確認を行います。
 
-### M6の確認項目
+### アカウント・同期ライフサイクルの確認項目
 
 1. popup gatewayのDI mockで、再認証 → server read → batch delete → empty verify → UID専用local cleanup → `deleteUser` の順序を確認し、各段階の失敗で `deleteUser` が呼ばれないことを確認する。
 2. UID変更、popup blocked / closed、requires-recent-login、network / permission、quota、partial batch、再試行を確認する。別UIDの結果や古い同期結果を現UIDへ混ぜない。
@@ -260,4 +265,18 @@ legacyの `championcreator.box.v1` / `championcreator.enemy-box.v1`、既定サ�
 4. Rules Emulatorでownerの物理deleteだけを許可し、未認証・別UIDを拒否する。通常のtombstone、更新、復元の契約を回帰確認する。
 5. desktop、代表スマホ幅、320px前後でlogin、sync status、migration、export、delete、retry、logoutを確認し、console errorと横overflowがないことを確認する。
 
-`SYNC-M7` は2026-08-21に完了しました。`npm run check`、production Rules / indexes、authorized domains、Google provider、Pages run、custom domainのGoogle login・Firestore read / write・再読み込み、2つの独立ブラウザでのbox / cloud draft作成・削除同期、desktop / 393px / 320px、consoleを確認しています。App CheckはCloud Firestore / Authenticationともverified 100%・unverified 0%を確認してenforcementを有効にし、反映後のlogin・manual syncを再確認しました。実アカウント削除はユーザーデータを破壊するため本番アカウントでは実施せず、再認証から失敗時retryまでをmock / Rules Emulator / UI QAで検証しています。
+## 本番公開とApp Check
+
+本番では、Googleプロバイダー、authorized domains、Cloud Firestore、GitHub Pages variables、reCAPTCHA Enterprise App Checkを有効にします。Cloud FirestoreとAuthenticationのApp Check enforcementも有効な状態を維持します。
+
+公開前とFirebase設定変更後は、次の順で再検証します。
+
+1. `npm run check`を実行し、unit test、Rules Emulator、production buildを完了させる。
+2. リポジトリの`firestore.rules` / `firestore.indexes.json`と本番設定の差分を確認し、必要な場合だけ明示したプロジェクトへdeployする。
+3. Pages workflowがFirebase Web configとApp Check site keyを受け取り、guest-only buildを公開していないことを確認する。
+4. custom domainでGoogleログイン、Firestoreのread / write、再読み込み、別ブラウザへのボックス・下書き反映、削除同期、consoleを確認する。
+5. desktop、393px前後、320px前後でログイン、初回統合、同期状態、競合、ログアウト、書き出し、削除・再試行の表示と横overflowを確認する。
+6. App Checkのverified / outdated / unknown / invalid requestのmetricsを確認する。Webアプリ登録やsite key変更後にenforcementを再設定する場合は、正規リクエストがverifiedになることを確認してから有効にする。
+7. enforcement変更後は、ログアウトからのGoogle再ログインと`今すぐ同期`を再実行し、AuthenticationとFirestoreの両方を確認する。
+
+実アカウント削除はユーザーデータを破壊するため、通常の本番smokeには含めません。再認証、物理deleteの順序、途中失敗、再試行はmock、Rules Emulator、UI QAで確認します。

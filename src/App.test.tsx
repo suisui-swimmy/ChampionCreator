@@ -363,7 +363,8 @@ describe("App", () => {
     }
 
     expect(appFooter.match(/ \| /g)).toHaveLength(3);
-    expect(guideFooter.match(/ \| /g)).toHaveLength(4);
+    expect(guideFooter.match(/ \| /g)).toHaveLength(3);
+    expect(guideFooter).toContain('aria-label="関連リンク"');
     expect(guideFooter).toContain('href="https://championsbattledata.com/"');
 
     expect(githubIcon).toContain('<svg width="98" height="96"');
@@ -450,7 +451,7 @@ describe("App", () => {
     expect(guideHtml).toContain("必要生存率・KO確率、A/C/Sの固定SPが厳しすぎないかを確認してください。");
     expect(guideHtml).not.toContain("A/C/Sの固定SPが重すぎないか");
     expect(guideHtml).toContain('class="guide-notes-list"');
-    expect(guideHtml).toContain("ゲスト・未認証の保存データはブラウザ内保存なので、バックアップ用途としては完全ではありません。");
+    expect(guideHtml).toContain("未ログイン時の保存は、このブラウザ内だけに残ります。");
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
@@ -1632,10 +1633,11 @@ describe("App", () => {
     expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.draft-recovery-actions\s*\{[^}]*grid-template-columns:\s*1fr;/s);
   });
 
-  it("documents local drafts separately from boxes and cross-device sync", () => {
+  it("documents the current save and sync flow without exposing development milestones", () => {
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
     const guide = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const privacy = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
+    const firebaseSetup = readFileSync(new URL("../docs/FIREBASE_SETUP.md", import.meta.url), "utf8");
 
     for (const document of [readme, guide]) {
       expect(document).toContain("作業中の下書き");
@@ -1643,40 +1645,60 @@ describe("App", () => {
       expect(document).toContain("下書きを破棄");
       expect(document).toContain("計算結果");
       expect(document).toContain("候補一覧");
-      expect(document).toContain("別のブラウザ");
-    }
-    expect(readme).toContain("約0.75秒後");
-    expect(guide).toContain("約0.75秒後");
-    expect(readme).toContain("ボックスに保存済み");
-    expect(readme).toContain("次回起動時に下書きの復元確認を表示しません");
-    expect(guide).toContain("ボックスに保存済み");
-    expect(guide).toContain("次回起動時に下書きの復元確認を表示しません");
-    for (const document of [readme, guide]) {
-      expect(document).toContain("SYNC-M4");
-      expect(document).toContain("ゲスト・未認証");
-      expect(document).toContain("UID別");
+      expect(document).toContain("ブラウザ別クラウド下書き");
+      expect(document).toContain("約0.75秒");
+      expect(document).toContain("ボックスに保存済み");
+      expect(document).toContain("初回統合");
+      expect(document).toContain("Googleでログイン");
       expect(document).toContain("Firestore");
-      expect(document).toContain("outbox");
-      expect(document).toContain("tombstone");
-      expect(document).toContain("Last Write Wins");
-      expect(document).toContain("追加・更新・削除・変更なし");
-      expect(document).toContain("競合コピー");
-      expect(document).toContain("重複除外");
-      expect(document).toContain("置き換えを無効");
-      expect(document).toContain("保存0件");
+      expect(document).toContain("JSONバックアップ");
+      expect(document).toContain("競合あり");
       expect(document).toContain("クラウド全体を置き換え");
       expect(document).toContain("削除済み");
-      expect(document).toContain("SYNC-M5");
-    }
-    for (const document of [readme, guide]) {
-      expect(document).toContain("Googleでログイン");
-      expect(document).toContain("このブラウザのみ");
-      expect(document).toContain("競合あり");
       expect(document).toContain("アカウントデータ");
       expect(document).toContain("プライバシー");
     }
+
+    for (const label of ["統合", "クラウドを使用", "このブラウザを使用", "あとで決める"]) {
+      expect(readme).toContain(`\`${label}\``);
+      expect(guide).toContain(`<code>${label}</code>`);
+    }
+    for (const label of ["このブラウザのみ", "未同期", "同期中…", "同期済み", "オフライン", "競合あり", "同期エラー"]) {
+      expect(readme).toContain(`\`${label}\``);
+      expect(guide).toContain(`<code>${label}</code>`);
+    }
+
+    expect(readme).toContain("未送信操作を順番に保持するキュー（`outbox`）");
+    expect(readme).toContain("削除済みと記録します（`tombstone`）");
+    expect(readme).toContain("保存内容のJSON文字列（`payload`）");
+    expect(readme).toContain("`syncRecords`");
+    expect(readme).toContain("`drafts`");
+    expect(readme).toContain("Firebase Authenticationのアカウントを削除します");
+
+    expect(privacy).toContain("ブラウザ内保存");
+    expect(privacy).toContain("<code>syncRecords</code>");
+    expect(privacy).toContain("<code>drafts</code>");
+    expect(privacy).toContain("Google Analytics 4");
+    expect(privacy).toContain("Google Fonts");
+    expect(privacy).toContain("App Check");
+    expect(privacy).toContain("<code>アカウントデータを書き出す</code>");
+    expect(privacy).toContain("<code>アカウントを削除</code>");
+
+    expect(firebaseSetup).toContain("## 既存ブラウザ内保存の初回統合");
+    expect(firebaseSetup).toContain("## ボックス同期");
+    expect(firebaseSetup).toContain("## ブラウザ別クラウド下書き");
+    expect(firebaseSetup).toContain("## アカウント・同期ライフサイクル");
+    expect(firebaseSetup).toContain("## 本番公開とApp Check");
+    expect(firebaseSetup).toContain("Cloud FirestoreとAuthenticationのApp Check enforcement");
+
+    for (const document of [readme, guide, privacy, firebaseSetup]) {
+      expect(document).not.toMatch(/SYNC-M|\bM\d+(?:\.\d+)?\b/);
+      expect(document).not.toContain("controller");
+      expect(document).not.toContain("runtime gate");
+      expect(document).not.toContain("`completed`");
+    }
+
     for (const document of [readme, guide, privacy]) {
-      expect(document).toContain("アクセス権の種類");
       expect(document).toContain("表示名");
       expect(document).toContain("メールアドレス");
       expect(document).toContain("プロフィール画像");
