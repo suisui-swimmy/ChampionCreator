@@ -848,6 +848,19 @@ const getStatIconSrc = (key: StatKey): string => {
 
 const getAssetSrc = (path: string): string => getPublicAssetUrl(path);
 
+const accountSyncStatusIconPaths = {
+  "local-only": "assets/ui/sync-local-only.svg",
+  unsynced: "assets/ui/sync-unsynced.svg",
+  syncing: "assets/ui/sync-syncing.svg",
+  synced: "assets/ui/sync-synced.svg",
+  offline: "assets/ui/sync-offline.svg",
+  conflict: "assets/ui/sync-conflict.svg",
+  error: "assets/ui/sync-error.svg",
+} satisfies Record<AccountSyncStatusKey, string>;
+
+export const getAccountSyncStatusIconPath = (status: AccountSyncStatusKey): string =>
+  accountSyncStatusIconPaths[status];
+
 const getBattleIconSrc = (name: string): string => getAssetSrc(`assets/battle-icons/${name}.svg`);
 const getNatureModifierIconSrc = (name: "up" | "down"): string =>
   getAssetSrc(`assets/nature-modifiers/nature-${name}.svg`);
@@ -3372,6 +3385,11 @@ export function App({
   });
   const accountSyncStatus: AccountSyncStatusKey = derivedProviderStatus;
   const accountSyncLabel = getAccountSyncStatusLabel(accountSyncStatus);
+  const accountSyncIconPath = getAccountSyncStatusIconPath(accountSyncStatus);
+  const accountSyncIconStyle = {
+    WebkitMaskImage: `url("${getAssetSrc(accountSyncIconPath)}")`,
+    maskImage: `url("${getAssetSrc(accountSyncIconPath)}")`,
+  } satisfies CSSProperties;
   const firstConflict = syncBox?.conflicts[0] ?? null;
   const firstConflictName = firstConflict
     ? firstConflict.localEntry?.name
@@ -3497,7 +3515,11 @@ export function App({
                 setAccountOpen(true);
               }}
             >
-              <span className="account-sync-trigger-icon" aria-hidden="true" />
+              <span
+                className="account-sync-trigger-icon"
+                style={accountSyncIconStyle}
+                aria-hidden="true"
+              />
               <span className="account-sync-trigger-label">{accountSyncLabel}</span>
               {accountConflictCount > 0 ? <strong>{accountConflictCount}</strong> : null}
             </button>

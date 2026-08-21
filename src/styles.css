@@ -509,11 +509,17 @@ textarea:focus-visible,
 }
 
 .account-sync-trigger-icon {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
+  display: block;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
   background: currentColor;
-  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .account-sync-trigger strong {
@@ -5466,6 +5472,11 @@ textarea {
     width: 36px;
     height: 36px;
     padding: 0;
+  }
+
+  .account-sync-trigger-icon {
+    width: 18px;
+    height: 18px;
   }
 
   .account-sync-trigger-label {

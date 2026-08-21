@@ -19,6 +19,7 @@ import {
   getAttackSuggestionRankingOwners,
   getDraftSaveStatusLabel,
   getDraftAutosaveDecision,
+  getAccountSyncStatusIconPath,
   isCurrentAccountOperation,
   shouldInvalidateAccountOperationOnUidChange,
   getOffenseDefenderStatKeys,
@@ -274,17 +275,34 @@ describe("App", () => {
     expect(html).toContain('class="app-footer-version"');
   });
 
-  it("keeps the M6 account status reachable in the app header but out of the tutorial", () => {
+  it("shows the matching account status icon in the app header but keeps it out of the tutorial", () => {
     const html = renderToStaticMarkup(<App />);
     const tutorial = renderToStaticMarkup(<App variant="tutorial" />);
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
+    const expectedIconPaths = {
+      "local-only": "assets/ui/sync-local-only.svg",
+      unsynced: "assets/ui/sync-unsynced.svg",
+      syncing: "assets/ui/sync-syncing.svg",
+      synced: "assets/ui/sync-synced.svg",
+      offline: "assets/ui/sync-offline.svg",
+      conflict: "assets/ui/sync-conflict.svg",
+      error: "assets/ui/sync-error.svg",
+    } as const;
+
     expect(html).toContain('class="account-sync-trigger local-only"');
     expect(html).toContain('aria-label="アカウントと同期: このブラウザのみ"');
     expect(html).toContain("このブラウザのみ");
+    expect(html).toContain("assets/ui/sync-local-only.svg");
     expect(tutorial).not.toContain("account-sync-trigger");
     expect(tutorial).not.toContain("Googleでログイン");
+    for (const [status, path] of Object.entries(expectedIconPaths)) {
+      expect(getAccountSyncStatusIconPath(status as keyof typeof expectedIconPaths)).toBe(path);
+      expect(readFileSync(new URL(`../public/${path}`, import.meta.url), "utf8")).toContain('viewBox="0 0 24 24"');
+    }
+    expect(css).toMatch(/\.account-sync-trigger-icon\s*\{[^}]*width:\s*16px;[^}]*height:\s*16px;[^}]*mask-size:\s*contain;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.account-sync-trigger\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.account-sync-trigger-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
     expect(css).toMatch(/\.account-sync-window\s*\{[^}]*width:\s*min\(660px, calc\(100vw - 36px\)\);[^}]*overflow:\s*auto;/s);
   });
 
@@ -1706,6 +1724,21 @@ describe("App", () => {
       expect(document).toContain("Gmail");
       expect(document).not.toContain("追加scope");
     }
+  });
+
+  it("keeps the privacy title on one line and follows the guide scroll spy contract", () => {
+    const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
+    const privacyMain = readFileSync(new URL("./privacy/main.ts", import.meta.url), "utf8");
+    const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
+
+    expect(privacyHtml).toContain('<body class="guide-page privacy-page">');
+    expect(privacyHtml).toContain("<h1>プライバシーとデータの取り扱い</h1>");
+    expect(privacyHtml).not.toContain("プライバシーと<br");
+    expect(privacyMain).toContain('import { getActiveGuideSectionIndex } from "../guide/scrollSpy"');
+    expect(privacyMain).toContain('window.addEventListener("scroll", scheduleActiveTocUpdate, { passive: true })');
+    expect(privacyMain).toContain('link.setAttribute("aria-current", "location")');
+    expect(guideCss).toMatch(/\.privacy-page \.guide-intro h1\s*\{[^}]*white-space:\s*nowrap;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.privacy-page \.guide-intro h1\s*\{[^}]*font-size:\s*clamp\(18px, 6vw, 23px\);/s);
   });
 
   it("maps mobile scenario direction icons by adjustment type", () => {

@@ -228,6 +228,10 @@ body.guide-page {
   letter-spacing: -0.035em;
 }
 
+.privacy-page .guide-intro h1 {
+  white-space: nowrap;
+}
+
 .guide-lead {
   max-width: none;
   margin: 14px 0 16px;
@@ -1120,6 +1124,10 @@ body.guide-page {
 
   .guide-lead {
     font-size: 13px;
+  }
+
+  .privacy-page .guide-intro h1 {
+    font-size: clamp(18px, 6vw, 23px);
   }
 
   .guide-stat-rule-row {
