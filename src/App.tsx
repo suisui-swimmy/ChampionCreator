@@ -5561,15 +5561,13 @@ function BoxPanel({
           </div>
           <div className="box-window-actions">
             <Button variant="ghost" size="small" aria-label="バックアップを書き出す" disabled={disabled} onClick={onExportEntries}>
-              <span className="box-action-label-full">バックアップを書き出す</span>
-              <span className="box-action-label-short" aria-hidden="true">書き出す</span>
+              <img className="box-window-action-icon" src={getAssetSrc("assets/ui/download.svg")} alt="" aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="small" aria-label="バックアップを読み込む" disabled={disabled} onClick={onRequestImport}>
-              <span className="box-action-label-full">バックアップを読み込む</span>
-              <span className="box-action-label-short" aria-hidden="true">読み込む</span>
+              <img className="box-window-action-icon" src={getAssetSrc("assets/ui/upload.svg")} alt="" aria-hidden="true" />
             </Button>
-            <button className="box-close-button" type="button" onClick={onClose}>
-              閉じる
+            <button className="box-close-button" type="button" aria-label="閉じる" onClick={onClose}>
+              <img className="box-window-action-icon" src={getAssetSrc("assets/ui/close.svg")} alt="" aria-hidden="true" />
             </button>
           </div>
         </header>
@@ -5730,8 +5728,8 @@ function TargetPanel({
           >
             <img src={getAssetSrc("assets/ui/box.svg")} alt="" aria-hidden="true" />
           </button>
-          <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
-            閉じる
+          <button className="mobile-sheet-close mobile-sheet-icon-button" type="button" aria-label="閉じる" onClick={onCloseMobileSheet}>
+            <img className="mobile-sheet-action-icon" src={getAssetSrc("assets/ui/close.svg")} alt="" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -6121,14 +6119,15 @@ function ScenarioPanel({
             <Button
               variant="ghost"
               size="small"
-              className="mobile-sheet-list-button"
+              className="mobile-sheet-list-button mobile-sheet-icon-button"
+              aria-label="一覧"
               onClick={onShowMobileScenarioList}
             >
-              一覧
+              <img className="mobile-sheet-action-icon" src={getAssetSrc("assets/ui/list.svg")} alt="" aria-hidden="true" />
             </Button>
           ) : null}
-          <button className="mobile-sheet-close" type="button" onClick={onCloseMobileSheet}>
-            閉じる
+          <button className="mobile-sheet-close mobile-sheet-icon-button" type="button" aria-label="閉じる" onClick={onCloseMobileSheet}>
+            <img className="mobile-sheet-action-icon" src={getAssetSrc("assets/ui/close.svg")} alt="" aria-hidden="true" />
           </button>
         </div>
       </div>

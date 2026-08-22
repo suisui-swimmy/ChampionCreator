@@ -312,6 +312,36 @@ describe("App", () => {
     expect(css).toMatch(/\.account-sync-window\s*\{[^}]*width:\s*min\(660px, calc\(100vw - 36px\)\);[^}]*overflow:\s*auto;/s);
   });
 
+  it("uses the provided icons for box actions and requested mobile sheet controls", () => {
+    const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const guideMain = readFileSync(new URL("./guide/main.tsx", import.meta.url), "utf8");
+    const privacyMain = readFileSync(new URL("./privacy/main.ts", import.meta.url), "utf8");
+
+    expect(source).toMatch(/aria-label="バックアップを書き出す"[\s\S]*?assets\/ui\/download\.svg/);
+    expect(source).toMatch(/aria-label="バックアップを読み込む"[\s\S]*?assets\/ui\/upload\.svg/);
+    expect(source).toMatch(/className="box-close-button"[^>]*aria-label="閉じる"[\s\S]*?assets\/ui\/close\.svg/);
+    expect(source.match(/assets\/ui\/close\.svg/g)).toHaveLength(3);
+    expect(source).not.toContain("assets/ui/x.svg");
+    expect(source.match(/mobile-sheet-close mobile-sheet-icon-button/g)).toHaveLength(2);
+    expect(source).toMatch(/mobile-sheet-list-button mobile-sheet-icon-button"[\s\S]*?aria-label="一覧"[\s\S]*?assets\/ui\/list\.svg/);
+    expect(source).not.toContain("box-action-label");
+
+    for (const path of ["download.svg", "upload.svg", "list.svg", "close.svg", "x.svg"]) {
+      const svg = readFileSync(new URL(`../public/assets/ui/${path}`, import.meta.url), "utf8");
+      expect(svg).toContain('viewBox="0 0 24 24"');
+      expect(svg).toContain('stroke="#ffffff"');
+    }
+    expect(readFileSync(new URL("../public/assets/ui/x.svg", import.meta.url), "utf8"))
+      .toContain('<circle cx="12" cy="12" r="10"/>');
+    expect(readFileSync(new URL("../public/assets/ui/close.svg", import.meta.url), "utf8"))
+      .toContain('class="lucide lucide-x-icon lucide-x"');
+    expect(guideMain).toContain('nextOpen ? "assets/ui/x.svg" : "assets/ui/menu.svg"');
+    expect(privacyMain).toContain('nextOpen ? "assets/ui/x.svg" : "assets/ui/menu.svg"');
+    expect(css).toMatch(/\.box-window-actions \.ui-button-small\s*\{[^}]*width:\s*32px;[^}]*height:\s*32px;[^}]*padding:\s*0;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-sheet-icon-button\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*padding:\s*4px;/s);
+  });
+
   it("publishes indexable metadata and canonical XML and text sitemaps", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");

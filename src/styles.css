@@ -1419,18 +1419,36 @@ textarea:focus-visible,
   gap: 6px;
 }
 
-.box-action-label-short {
-  display: none;
+.box-window-actions .ui-button-small {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
 }
 
 .box-close-button {
-  min-height: 28px;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: #15191a;
   color: var(--muted);
-  padding: 0 10px;
+  padding: 0;
   font-weight: 800;
+}
+
+.box-window-action-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 .box-current-row {
@@ -6933,6 +6951,23 @@ textarea {
     font-weight: 850;
   }
 
+  .mobile-sheet-icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 4px;
+  }
+
+  .mobile-sheet-action-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+
   .box-overlay {
     align-items: end;
     padding: 0;
@@ -6968,16 +7003,7 @@ textarea {
 
   .box-window-actions .ui-button-small,
   .box-close-button {
-    padding-right: 9px;
-    padding-left: 9px;
-  }
-
-  .box-action-label-full {
-    display: none;
-  }
-
-  .box-action-label-short {
-    display: inline;
+    padding: 0;
   }
 
   .box-current-row {
