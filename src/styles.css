@@ -1456,6 +1456,12 @@ textarea:focus-visible,
   white-space: nowrap;
 }
 
+.box-slot > strong {
+  width: 100%;
+  max-width: 100%;
+  justify-self: stretch;
+}
+
 .box-name-input {
   width: min(280px, 100%);
   height: 28px;
