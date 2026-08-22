@@ -231,13 +231,18 @@ describe("App", () => {
     expect(css).toMatch(/--mobile-sheet-z:\s*70;/);
     expect(css).toMatch(/--box-overlay-z:\s*100;/);
     expect(css).toMatch(/\.box-overlay\s*\{[^}]*z-index:\s*var\(--box-overlay-z\);/s);
-    expect(css).toMatch(/\.box-slot > strong\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*justify-self:\s*stretch;/s);
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-row-toggle\s*\{[^}]*grid-template-columns:\s*36px minmax\(0, 1fr\) 18px;/s);
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-bar\s*\{[^}]*grid-template-columns:\s*minmax\(max-content, var\(--candidate-used-track, 1fr\)\)\s*minmax\(max-content, var\(--candidate-remaining-track, 1fr\)\);/s);
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\s*\{[^}]*min-width:\s*0;[^}]*width:\s*100%;/s);
     expect(css).toMatch(/\.mobile-candidate-actions \.ui-button\s*\{[^}]*flex:\s*0 0 auto;[^}]*white-space:\s*nowrap;/s);
     expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.mobile-candidate-layout \.candidate-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 60px;/s);
     expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.mobile-candidate-layout \.candidate-apply-button\s*\{[^}]*width:\s*60px;[^}]*min-width:\s*60px;/s);
+  });
+
+  it("keeps box slot names constrained without clipping their line box", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(css).toMatch(/\.box-slot > strong\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*min-block-size:\s*1\.5em;[^}]*line-height:\s*1\.5;[^}]*justify-self:\s*stretch;/s);
   });
 
   it("lets the mobile board follow its content while keeping the footer at the viewport bottom", () => {

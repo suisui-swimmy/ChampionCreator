@@ -1459,6 +1459,8 @@ textarea:focus-visible,
 .box-slot > strong {
   width: 100%;
   max-width: 100%;
+  min-block-size: 1.5em;
+  line-height: 1.5;
   justify-self: stretch;
 }
 
