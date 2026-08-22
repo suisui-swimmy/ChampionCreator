@@ -223,6 +223,26 @@ ChampionCreator は GitHub Pages の静的フロントを維持し、guest / loc
 
 既存 UI 部品は `src/ui/primitives.tsx` と既存 Radix UI 構成を優先し、似た独自部品を増やしすぎない。
 
+### UIサイズ体系
+
+No.349 / No.350で確立した役割別サイズ体系を、新規UIと既存UIの拡張にも継承する。36pxは通常操作の基準であり、全要素を画一的に36pxへ揃える規則ではない。
+
+- サイズの正は`src/styles.css`の`--mobile-*` / `--desktop-*` control・icon・text variablesとする。新規UIへ同じ`32px` / `36px` / `40px` / `44px`をリテラルで増やさず、既存primitiveまたは文脈classから参照する
+- `compact`: 入力欄内のlock、stepper、候補展開など密度が必要な操作。幅32px以上、icon 16pxとし、mobileでは高さ36px、non-mobileの密集欄内では32x32pxを許可する。non-mobileの入力欄自体は高さ32px・文字13pxを基準とする
+- `standard`: 通常の独立した操作。36x36pxを基本とし、iconは18〜20px、操作文字は13px。header / toolbarの既存契約は36x36px、SVG / mask 20x20px、主要クラスタgap 8pxを維持する
+- `primary`: 計算、保存、読込など結果や保存状態を確定する主要操作。高さ40px以上、文字14pxを基本とする
+- `comfort`: 目次、メニュー、disclosureなど縦に余裕のある開閉行。高さ44px以上、文字13〜14pxを基本とする
+- 攻撃追加、シナリオ追加、候補行、ボックスカードなど、カード全体が十分な操作領域を持つ既存の大型操作は専用寸法を維持する。内部の表示要素まで36pxへ拡大しない
+
+文字サイズは、本体見出し15px、通常操作・カード名13px、押せる補助文12px以上、非操作メタ情報11pxを基準とする。モバイルの編集可能なtext input / selectはiOSの自動zoomを避けるため16px以上を維持する。guide / privacyは本文14px、lead 15px、ナビ13px、footer 12px、tips / flow / table本文12px以上を基準とする。
+
+- WCAG 2.2 AAの24x24 CSS pxを絶対下限とするが、新規の通常操作は原則standard以上を選ぶ。見た目のtrack、bar、iconを小さく保つ場合も、実ヒット領域は役割tierまで拡張する
+- 透明なヒット領域を使う場合は、隣接操作やシナリオ分岐と重ねず、誤操作しないことを実測する
+- 720px以下をmobile、721px以上をnon-mobileのサイズ境界とする。1180px / 1181pxはworkbenchのレイアウト・密度境界であり、操作領域を旧小型寸法へ戻す境界として使わない
+- `max-width: 380px`ではpadding、gap、列幅だけを圧縮し、操作領域、操作文字、入力文字を再縮小しない。意図的なrail / table以外の横scrollを増やさない
+- 実操作を`tabIndex={-1}`で通常のTab順から外さない。roving focusやdialogの初期focusなど、明示したfocus管理上の理由がある場合だけ例外とし、focus-visible / focus-withinを必ず確認する
+- 新規UIのテストは、役割tierとCSS variablesの契約をassertする。広い`[\s\S]*?`や重複した36px正規表現で偶然passさせず、該当media blockとsemantic classを限定して検証する
+
 ### 表示文言
 
 - ユーザーが指定した日本語文字列、記号、表記、順序をそのまま確認する
@@ -278,11 +298,13 @@ ChampionCreator は GitHub Pages の静的フロントを維持し、guest / loc
 
 ### UI・レスポンシブ変更
 
-1. 既存 helper、primitive、semantic class を再利用する
-2. desktop の比較体験を壊していないか確認する
-3. 代表的なスマホ幅と狭い幅で、重なり、切れ、横 overflow を確認する
-4. click / tap、focus、keyboard、popover / sheet の到達性を確認する
-5. ユーザー向け表示なら app version も確認する
+1. 上記UIサイズ体系から操作の役割tierを決め、既存helper、primitive、semantic class、CSS variablesを再利用する
+2. desktop の比較体験を壊していないか、1280x900、注釈で頻出する1186x698、1180px / 1181px境界で確認する
+3. mobileは484x698、393x852、320x700を目安に、重なり、切れ、document / body / mainの横 overflowを確認する
+4. click / tap、Tab / Space / Enter、focus ring、popover / sheet / dialogの到達性と、隣接操作の誤操作がないことを確認する
+5. guide / privacyと埋め込みtutorialへ影響する場合は、同じ代表幅、本文・ナビ・footerの文字サイズ、意図しない横scrollを確認する
+6. 文字やlayoutを変更した場合は200%文字拡大と320 CSS px相当のreflowも確認する
+7. ユーザー向け表示なら app versionも確認し、Browserで画面version、実寸、console error / warningを確認する
 
 ## 検証方針
 
