@@ -244,11 +244,84 @@ describe("App", () => {
     for (const [token, value] of Object.entries(expectedTokens)) {
       expect(css).toMatch(new RegExp(`${token}\\s*:\\s*${value};`));
     }
+    expect(css).toMatch(/\.app-footer\s*\{[^}]*font-size:\s*12px;/s);
 
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.search-control-bar #runButton,[\s\S]*?\.mobile-candidate-actions \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--mobile-control-primary\);[^}]*font-size:\s*14px;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.search-control-bar > \.ui-button-ghost,[\s\S]*?\.mobile-candidate-actions \.ui-button-ghost\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-target-open \.target-level-field \.level-inline-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--mobile-control-compact\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-target-open \.target-level-field \.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--mobile-control-compact\);[^}]*min-width:\s*var\(--mobile-control-compact\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
+  });
+
+  it("defines role-based desktop size tokens and keeps the desktop workbench controls in their tiers", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const nonMobileStart = css.indexOf("@media (min-width: 721px)");
+    const nonMobileEnd = css.indexOf("@media (min-width: 1181px)", nonMobileStart);
+    const nonMobileCss = css.slice(nonMobileStart, nonMobileEnd);
+    const desktopCss = nonMobileCss;
+    const expectedTokens = {
+      "--desktop-control-compact": "32px",
+      "--desktop-control-standard": "36px",
+      "--desktop-control-primary": "40px",
+      "--desktop-control-comfort": "44px",
+      "--desktop-icon-compact": "16px",
+      "--desktop-icon-standard": "20px",
+      "--desktop-text-heading": "15px",
+      "--desktop-text-control": "13px",
+      "--desktop-text-interactive-small": "12px",
+      "--desktop-text-meta": "11px",
+      "--desktop-text-input": "16px",
+    } as const;
+
+    expect(nonMobileStart).toBeGreaterThanOrEqual(0);
+    expect(nonMobileEnd).toBeGreaterThan(nonMobileStart);
+    for (const [token, value] of Object.entries(expectedTokens)) {
+      expect(css).toMatch(new RegExp(`${token}\\s*:\\s*${value};`));
+    }
+
+    // Header format choices remain compact in width, but become first-class 36px controls.
+    expect(nonMobileCss).toMatch(/\.suggestion-format-option\s*\{[^}]*min-width:\s*80px;[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
+    expect(nonMobileCss).toMatch(/\.suggestion-format-option-content\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*padding:\s*0 8px;[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
+    expect(nonMobileCss).toMatch(/\.suggestion-format-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
+    expect(nonMobileCss).toMatch(/\.suggestion-format-option-label\s*\{[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
+    expect(nonMobileCss).toMatch(/\.cloud-draft-trigger,\s*\.account-sync-trigger\s*\{[^}]*height:\s*var\(--desktop-control-standard\);[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
+    expect(nonMobileCss).toMatch(/\.account-sync-trigger-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
+
+    // Dense fields use 32px; visible actions use 36px; primary actions get extra emphasis.
+    expect(desktopCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field,[\s\S]*?height:\s*var\(--desktop-control-compact\);[\s\S]*?font-size:\s*var\(--desktop-text-control\);/s);
+    expect(desktopCss).toMatch(/\.scenario-row-title \.inline-title-input,[\s\S]*?\.attack-card-header \.inline-title-input\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.scenario-row input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),[\s\S]*?\.attack-condition-card input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),[\s\S]*?\.attack-condition-card \.nature-trigger\s*\{[^}]*height:\s*var\(--desktop-control-compact\);[^}]*font-size:\s*var\(--desktop-text-control\);/s);
+    expect(desktopCss).toMatch(/\.ui-button,[\s\S]*?\.ui-button-small\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/#runButton,[\s\S]*?\.account-sync-window \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--desktop-control-primary\);[^}]*font-size:\s*14px;/s);
+
+    // Switch hit area grows to 36px while the visual track/knob keeps its established shape.
+    expect(desktopCss).toMatch(/\.switch\s*\{[^}]*width:\s*42px;[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.switch span\s*\{[^}]*width:\s*38px;[^}]*height:\s*22px;/s);
+    expect(desktopCss).toMatch(/\.switch span::after\s*\{[^}]*width:\s*16px;[^}]*height:\s*16px;/s);
+
+    // Scenario/attack controls share the same standard target and compact steppers remain usable.
+    expect(desktopCss).toMatch(/\.scenario-adjustment-card\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
+    expect(desktopCss).toMatch(/\.scenario-remove-button,[\s\S]*?\.attack-remove-button,[\s\S]*?\.hp-event-remove-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.scenario-remove-button \.ui-button-icon,[\s\S]*?\.attack-remove-button \.ui-button-icon,[\s\S]*?\.hp-event-remove-button \.ui-button-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
+    expect(desktopCss).toMatch(/\.attack-direction-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.attack-direction-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
+    expect(desktopCss).toMatch(/\.mechanic-icon-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.mechanic-icon-button img\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
+    expect(desktopCss).toMatch(/\.number-stepper\s*\{[^}]*grid-template-columns:\s*var\(--desktop-control-compact\) minmax\(38px, 1fr\) var\(--desktop-control-compact\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.speed-offset-input\s*\{[^}]*width:\s*112px;/s);
+    expect(desktopCss).toMatch(/\.move-power-inline-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--desktop-control-compact\);/s);
+    expect(desktopCss).toMatch(/\.move-power-trigger,[\s\S]*?\.move-power-inline-control\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--desktop-control-compact\);/s);
+    expect(desktopCss).toMatch(/\.beat-up-participant-power\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--desktop-control-compact\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.beat-up-participant-power \.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--desktop-control-compact\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+
+    // Search, candidate, box, and footer surfaces follow the same standard/primary tiers.
+    expect(desktopCss).toMatch(/#runButton,[\s\S]*?min-height:\s*var\(--desktop-control-primary\);/s);
+    expect(desktopCss).toMatch(/\.candidate-toolbar\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.candidate-apply-button,[\s\S]*?\.candidate-page-actions \.ui-button,[\s\S]*?\.adjustment-apply-button\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.box-window-actions \.ui-button-small,[\s\S]*?\.box-close-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.box-window-action-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
+    expect(desktopCss).toMatch(/#runButton,[\s\S]*?\.box-current-row \.ui-button-primary,[\s\S]*?\.box-action-buttons \.ui-button-primary,[\s\S]*?\.account-sync-window \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--desktop-control-primary\);/s);
+    expect(desktopCss).toMatch(/\.app-footer-links \.app-footer-contact,[\s\S]*?\.app-footer-source-link\s*\{[^}]*min-height:\s*var\(--desktop-control-compact\);[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
   });
 
   it("keeps mobile overview scenario affordances role-sized at narrow widths", () => {
@@ -664,20 +737,24 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-menu-open \.guide-toc\s*\{[^}]*visibility:\s*visible;/s);
     expect(guideCss).toMatch(/\.guide-page \.app-shell--tutorial \.results-panel\s*\{[^}]*top:\s*60px;[^}]*height:\s*calc\(100dvh - 60px\);/s);
     expect(guideCss).toMatch(/\.guide-intro h1\s*\{[^}]*font-size:\s*clamp\(23px, 2\.4vw, 32px\);/s);
+    expect(guideCss).toMatch(/body\.guide-page\s*\{[^}]*font-size:\s*14px;/s);
+    expect(guideCss).toMatch(/\.guide-header-action\s*\{[^}]*min-height:\s*36px;[^}]*font-size:\s*12px;/s);
+    expect(guideCss).toMatch(/\.guide-reset-button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*min-height:\s*36px;/s);
+    expect(guideCss).toMatch(/\.guide-reset-button img\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
     expect(guideCss).toMatch(/\.guide-lead\s*\{[^}]*max-width:\s*none;[^}]*margin:\s*14px 0 16px;/s);
     expect(guideCss).toMatch(/\.guide-overview-image\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-feature-list\s*\{[^}]*list-style:\s*none;/s);
-    expect(guideCss).toMatch(/\.guide-feature-list p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-feature-list p\s*\{[^}]*font-size:\s*14px;/s);
     expect(guideCss).toContain(".feature-mark.target { color: var(--guide-yellow); }");
     expect(guideCss).toMatch(/\.guide-tip-heading\s*\{[^}]*display:\s*flex;/s);
     expect(guideCss).toMatch(/\.guide-mobile-overview-image\s*\{[^}]*width:\s*min\(100%, 320px\);[^}]*height:\s*auto;/s);
-    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*cursor:\s*pointer;/s);
+    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*40px;[^}]*font-size:\s*12px;[^}]*cursor:\s*pointer;/s);
     expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\[data-state="open"\] \.guide-disclosure-chevron\s*\{[^}]*transform:\s*rotate\(90deg\);/s);
     expect(guideCss).toMatch(/\.guide-ally-ability-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-row-image\s*\{[^}]*width:\s*min\(100%, 520px\);/s);
     expect(guideCss).toMatch(/\.guide-mode-grid\s*\{[^}]*margin-top:\s*28px;/s);
-    expect(guideCss).toMatch(/\.guide-mode-section p\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-mode-section p\s*\{[^}]*font-size:\s*14px;/s);
     expect(guideCss).toMatch(/\.guide-tutorial-steps\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;[^}]*padding:\s*10px;/s);
     expect(guideCss).toMatch(/\.guide-tutorial-steps li\s*\{[^}]*min-height:\s*56px;[^}]*border:\s*1px solid var\(--guide-border\);[^}]*font-size:\s*13px;/s);
     expect(guideCss).toMatch(/\.guide-tutorial-steps span\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*font-size:\s*12px;/s);
@@ -701,7 +778,12 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-stat-rule-row\s*\{[^}]*grid-template-columns:\s*190px minmax\(0, 1fr\);[^}]*min-height:\s*72px;/s);
     expect(guideCss).toMatch(/\.guide-stat-rule-items\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     expect(guideCss).toMatch(/\.guide-stat-rule-items dd\s*\{[^}]*font-size:\s*24px;[^}]*font-weight:\s*800;/s);
-    expect(guideCss).toMatch(/\.guide-troubleshooting-list,\s*\.guide-notes-list\s*\{[^}]*padding-left:\s*20px;[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-troubleshooting-list,\s*\.guide-notes-list\s*\{[^}]*padding-left:\s*20px;[^}]*font-size:\s*14px;/s);
+    expect(guideCss).toMatch(/\.guide-toc nav a\s*\{[^}]*min-height:\s*36px;[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-flow-list p\s*\{[^}]*font-size:\s*12px;/s);
+    expect(guideCss).toMatch(/\.guide-flow-list strong\s*\{[^}]*font-size:\s*13px;/s);
+    expect(guideCss).toMatch(/\.guide-table-wrap table\s*\{[^}]*font-size:\s*12px;/s);
+    expect(guideCss).toMatch(/\.guide-table-wrap th\s*\{[^}]*font-size:\s*11px;/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
     expect(guideHtml).toContain('class="guide-troubleshooting-list"');
     expect(guideHtml).not.toContain("<details");
@@ -1333,19 +1415,22 @@ describe("App", () => {
   it("matches the target form density to attack cards on desktop only", () => {
     const html = renderExampleApp();
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const nonMobileStart = css.indexOf("@media (min-width: 721px)");
     const desktopStart = css.indexOf("@media (min-width: 1181px)");
     const desktopEnd = css.indexOf("@media (max-width: 1180px)", desktopStart);
+    const nonMobileCss = css.slice(nonMobileStart, desktopStart);
     const desktopCss = css.slice(desktopStart, desktopEnd);
 
     expect(html).toMatch(/class="target-summary compact"[\s\S]*?aria-label="ポケモン"[\s\S]*?aria-label="性格:[^"]+"[\s\S]*?placeholder="持ち物"[\s\S]*?aria-label="特性候補を開く"[\s\S]*?>レベル<\/span>/);
     expect(css).toMatch(/\.workbench\s*\{[^}]*grid-template-columns:\s*468px minmax\(0, 1fr\);/s);
+    expect(nonMobileStart).toBeGreaterThanOrEqual(0);
     expect(desktopStart).toBeGreaterThanOrEqual(0);
     expect(desktopEnd).toBeGreaterThan(desktopStart);
     expect(desktopCss).toMatch(/\.target-identity,\s*\.target-summary\.compact\s*\{[^}]*gap:\s*6px;/s);
-    expect(desktopCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field,[\s\S]*?height:\s*28px;[\s\S]*?padding:\s*0 7px;[\s\S]*?font-size:\s*12px;/s);
-    expect(desktopCss).toMatch(/\.target-level-field,\s*\.placeholder-field\.target-level-field\s*\{[^}]*grid-template-columns:\s*52px minmax\(0, 1fr\);[^}]*gap:\s*6px;/s);
-    expect(desktopCss).toMatch(/\.target-level-field \.level-inline-control\s*\{[^}]*height:\s*28px;/s);
-    expect(desktopCss).toMatch(/\.target-level-field \.move-power-lock-toggle\s*\{[^}]*width:\s*22px;/s);
+    expect(nonMobileCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field,[\s\S]*?height:\s*var\(--desktop-control-compact\);[\s\S]*?padding:\s*0 7px;[\s\S]*?font-size:\s*var\(--desktop-text-control\);/s);
+    expect(nonMobileCss).toMatch(/\.target-level-field,\s*\.placeholder-field\.target-level-field\s*\{[^}]*grid-template-columns:\s*52px minmax\(0, 1fr\);[^}]*gap:\s*6px;/s);
+    expect(nonMobileCss).toMatch(/\.target-level-field \.level-inline-control\s*\{[^}]*height:\s*var\(--desktop-control-compact\);/s);
+    expect(nonMobileCss).toMatch(/\.target-level-field \.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--desktop-control-compact\);/s);
     expect(css.slice(desktopEnd)).toMatch(/\.workbench\s*\{[^}]*grid-template-columns:\s*1fr;/s);
   });
 

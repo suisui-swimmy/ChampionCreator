@@ -26,6 +26,7 @@ body.guide-page {
     radial-gradient(circle at 50% -20%, rgba(70, 101, 91, 0.12), transparent 38%),
     var(--guide-bg);
   color: var(--guide-text);
+  font-size: 14px;
   font-family: "LINE Seed JP", "Yu Gothic UI", sans-serif;
   line-height: 1.75;
 }
@@ -83,13 +84,13 @@ body.guide-page {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 36px;
   border: 1px solid rgba(247, 212, 71, 0.78);
   border-radius: 7px;
   background: rgba(247, 212, 71, 0.04);
   padding: 0 18px;
   color: var(--guide-yellow);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   text-decoration: none;
 }
@@ -150,9 +151,10 @@ body.guide-page {
 .guide-toc nav a {
   position: relative;
   border-bottom: 1px solid var(--guide-border-soft);
+  min-height: 36px;
   padding: 10px 12px 10px 20px;
   color: var(--guide-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
   text-decoration: none;
@@ -297,9 +299,9 @@ body.guide-page {
 
 .guide-reset-button {
   display: grid;
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
   place-items: center;
   border: 1px solid var(--guide-border);
   border-radius: 7px;
@@ -322,8 +324,8 @@ body.guide-page {
 
 .guide-reset-button img {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .guide-tutorial-steps {
@@ -499,7 +501,7 @@ body.guide-page {
 .guide-mode-section p {
   margin: 10px 0;
   color: #b7c2be;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.95;
 }
 
@@ -551,7 +553,7 @@ body.guide-page {
 .guide-feature-list p {
   margin: 0;
   color: var(--guide-muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -577,7 +579,7 @@ body.guide-page {
 
 .guide-tip strong {
   color: var(--guide-green);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .guide-tip-heading {
@@ -596,7 +598,7 @@ body.guide-page {
 .guide-tip p {
   margin: 4px 0 0;
   color: #abb7b2;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.75;
 }
 
@@ -624,13 +626,13 @@ body.guide-page {
   width: 100%;
   gap: 7px;
   align-items: center;
-  min-height: 36px;
+  min-height: 40px;
   border: 0;
   background: transparent;
   padding: 7px 0;
   color: var(--guide-text);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   text-align: left;
   cursor: pointer;
@@ -647,8 +649,8 @@ body.guide-page {
 }
 
 .guide-disclosure-chevron {
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   flex: 0 0 auto;
   color: var(--guide-green);
   transition: transform 160ms ease;
@@ -668,7 +670,7 @@ body.guide-page {
   margin: 0;
   padding: 4px 0 10px 22px;
   color: #abb7b2;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -741,14 +743,14 @@ body.guide-page {
 .guide-flow-list p {
   margin: 0;
   color: var(--guide-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .guide-flow-list strong {
   display: block;
   margin-bottom: 2px;
   color: var(--guide-text);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .guide-stat-rules {
@@ -837,7 +839,7 @@ body.guide-page {
 }
 
 .guide-mode-section p {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.75;
 }
 
@@ -860,7 +862,7 @@ body.guide-page {
   min-width: 620px;
   border-collapse: collapse;
   background: var(--guide-surface);
-  font-size: 10px;
+  font-size: 12px;
   text-align: left;
 }
 
@@ -873,7 +875,7 @@ body.guide-page {
 .guide-table-wrap th {
   background: rgba(247, 212, 71, 0.04);
   color: var(--guide-yellow);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .guide-table-wrap td {
@@ -885,7 +887,7 @@ body.guide-page {
   margin: 0;
   padding-left: 20px;
   color: var(--guide-muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -960,8 +962,9 @@ body.guide-page {
     flex: 0 0 auto;
     border: 0;
     border-right: 1px solid var(--guide-border-soft);
+    min-height: 36px;
     padding: 7px 12px;
-    font-size: 10px;
+    font-size: 13px;
   }
 
   .guide-toc nav a::before {

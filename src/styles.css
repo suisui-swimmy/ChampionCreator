@@ -44,6 +44,17 @@
   --mobile-text-interactive-small: 12px;
   --mobile-text-meta: 11px;
   --mobile-text-input: 16px;
+  --desktop-control-compact: 32px;
+  --desktop-control-standard: 36px;
+  --desktop-control-primary: 40px;
+  --desktop-control-comfort: 44px;
+  --desktop-icon-compact: 16px;
+  --desktop-icon-standard: 20px;
+  --desktop-text-heading: 15px;
+  --desktop-text-control: 13px;
+  --desktop-text-interactive-small: 12px;
+  --desktop-text-meta: 11px;
+  --desktop-text-input: 16px;
   font-family: "LINE Seed JP", "Segoe UI", "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif;
 }
 
@@ -105,7 +116,7 @@ textarea:focus-visible,
   border-top: 1px solid rgba(238, 241, 237, 0.11);
   padding: 12px 10px 4px;
   color: rgba(238, 241, 237, 0.58);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
   text-align: center;
 }
@@ -5236,30 +5247,87 @@ textarea {
   color: #d7d0bf;
 }
 
-@media (min-width: 1181px) {
-  .target-identity,
-  .target-summary.compact {
-    gap: 6px;
+@media (min-width: 721px) {
+  .suggestion-format-toggle {
+    min-height: var(--desktop-control-standard);
+  }
+
+  .suggestion-format-option {
+    min-width: 80px;
+    min-height: var(--desktop-control-standard);
+  }
+
+  .suggestion-format-option-content {
+    min-height: var(--desktop-control-standard);
+    gap: 5px;
+    padding: 0 8px;
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .suggestion-format-icon {
+    width: var(--desktop-icon-standard);
+    height: var(--desktop-icon-standard);
+  }
+
+  .suggestion-format-option-label {
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .cloud-draft-trigger,
+  .account-sync-trigger {
+    height: var(--desktop-control-standard);
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-meta);
+  }
+
+  .account-sync-trigger-icon {
+    width: var(--desktop-icon-standard);
+    height: var(--desktop-icon-standard);
+  }
+
+  .ui-button,
+  .ui-button-small {
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-control);
+  }
+
+  .icon-button {
+    width: var(--desktop-control-standard);
+    min-width: var(--desktop-control-standard);
+    min-height: var(--desktop-control-standard);
+  }
+
+  #runButton,
+  .box-current-row .ui-button-primary,
+  .box-action-buttons .ui-button-primary,
+  .draft-recovery-window .ui-button-primary,
+  .sync-migration-window .ui-button-primary,
+  .account-sync-window .ui-button-primary {
+    min-height: var(--desktop-control-primary);
+    font-size: 14px;
   }
 
   .target-summary.compact > .pokemon-autocomplete-field,
   .target-summary.compact > .dropdown-text-field input,
   .target-summary.compact > .nature-field .nature-trigger {
-    height: 28px;
+    height: var(--desktop-control-compact);
     padding: 0 7px;
-    font-size: 12px;
+    font-size: var(--desktop-text-control);
   }
 
   .target-summary.compact > .dropdown-text-field .ability-menu-trigger,
   .target-summary.compact > .dropdown-text-field .dropdown-menu-trigger {
-    width: 30px;
-    height: 26px;
+    top: 0;
+    right: 0;
+    width: var(--desktop-control-compact);
+    min-width: var(--desktop-control-compact);
+    height: var(--desktop-control-compact);
     padding: 0;
   }
 
   .target-summary.compact > .dropdown-text-field .ability-input-row.has-ability-menu input,
   .target-summary.compact > .dropdown-text-field .dropdown-input-row input {
-    padding-right: 34px;
+    padding-right: 40px;
   }
 
   .target-level-field,
@@ -5276,16 +5344,345 @@ textarea {
   }
 
   .target-level-field .level-inline-control {
-    height: 28px;
+    grid-template-columns: minmax(0, 1fr) var(--desktop-control-compact);
+    height: var(--desktop-control-compact);
   }
 
   .target-level-field .move-power-lock-toggle {
-    width: 22px;
+    width: var(--desktop-control-compact);
+    min-width: var(--desktop-control-compact);
   }
 
   .target-level-field .level-inline-control > strong,
   .target-level-field .level-inline-control > input {
-    font-size: 12px;
+    font-size: var(--desktop-text-control);
+  }
+
+  .target-level-field .move-power-lock-toggle img {
+    width: var(--desktop-icon-compact);
+    height: var(--desktop-icon-compact);
+  }
+
+  .mechanic-toggle-row {
+    min-height: var(--desktop-control-standard);
+  }
+
+  .mechanic-icon-button {
+    flex: 0 0 var(--desktop-control-standard);
+    width: var(--desktop-control-standard);
+    min-width: var(--desktop-control-standard);
+    height: var(--desktop-control-standard);
+  }
+
+  .mechanic-icon-button img {
+    width: var(--desktop-icon-standard);
+    height: var(--desktop-icon-standard);
+  }
+
+  .variant-choice {
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-control);
+  }
+
+  .ev-header,
+  .ev-row {
+    min-height: 42px;
+  }
+
+  .ev-row input:not([type="checkbox"]),
+  .target-rank-field .select-trigger,
+  .target-rank-placeholder {
+    height: var(--desktop-control-compact);
+  }
+
+  .sp-cell-bar {
+    height: 28px;
+  }
+
+  .scenario-row-header,
+  .scenario-row-title {
+    min-height: var(--desktop-control-standard);
+  }
+
+  .switch {
+    width: 42px;
+    height: var(--desktop-control-standard);
+    align-items: center;
+  }
+
+  .switch:focus-within {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
+    border-radius: 999px;
+  }
+
+  .switch span {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 22px;
+  }
+
+  .switch span::after {
+    width: 16px;
+    height: 16px;
+  }
+
+  .scenario-row-title .inline-title-input,
+  .attack-card-header .inline-title-input {
+    height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-control);
+  }
+
+  .scenario-adjustment-card {
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .scenario-row input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input),
+  .scenario-row select,
+  .attack-condition-card input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input),
+  .attack-condition-card select,
+  .attack-condition-card .select-trigger,
+  .attack-condition-card .nature-trigger {
+    height: var(--desktop-control-compact);
+    font-size: var(--desktop-text-control);
+  }
+
+  .attack-condition-card .ability-menu-trigger,
+  .attack-condition-card .dropdown-menu-trigger {
+    top: 0;
+    right: 0;
+    width: var(--desktop-control-compact);
+    min-width: var(--desktop-control-compact);
+    height: var(--desktop-control-compact);
+  }
+
+  .attack-condition-card .ability-input-row.has-ability-menu input,
+  .attack-condition-card .dropdown-input-row input {
+    padding-right: 40px;
+  }
+
+  .scenario-row-header .scenario-remove-button,
+  .scenario-remove-button,
+  .attack-remove-button,
+  .hp-event-remove-button {
+    width: var(--desktop-control-standard);
+    min-width: var(--desktop-control-standard);
+    height: var(--desktop-control-standard);
+    min-height: var(--desktop-control-standard);
+  }
+
+  .scenario-remove-button .ui-button-icon,
+  .attack-remove-button .ui-button-icon,
+  .hp-event-remove-button .ui-button-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .attack-card-header {
+    grid-template-columns: var(--desktop-control-standard) 46px minmax(0, 1fr) var(--desktop-control-standard);
+  }
+
+  .attack-direction-button {
+    width: var(--desktop-control-standard);
+  }
+
+  .attack-direction-icon {
+    width: var(--desktop-icon-standard);
+    height: var(--desktop-icon-standard);
+  }
+
+  .move-power-trigger,
+  .move-power-inline-control {
+    height: var(--desktop-control-standard);
+  }
+
+  .move-power-inline-control {
+    grid-template-columns: minmax(0, 1fr) var(--desktop-control-compact);
+  }
+
+  .move-power-inline-control.is-readonly {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .move-power-lock-toggle {
+    width: var(--desktop-control-compact);
+    min-width: var(--desktop-control-compact);
+  }
+
+  .move-power-lock-toggle img {
+    width: var(--desktop-icon-compact);
+    height: var(--desktop-icon-compact);
+  }
+
+  .move-power-stepper {
+    grid-template-columns: repeat(2, var(--desktop-control-compact));
+    grid-template-rows: var(--desktop-control-standard);
+    width: calc(var(--desktop-control-compact) * 2);
+    height: var(--desktop-control-standard);
+  }
+
+  .move-power-stepper button {
+    width: var(--desktop-control-compact);
+    height: var(--desktop-control-standard);
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .move-power-stepper button:first-child {
+    border-radius: 0;
+  }
+
+  .move-power-stepper button:last-child {
+    border-top: 1px solid var(--line-strong);
+    border-left: 0;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .move-power-field.steppable .move-power-control {
+    grid-template-columns: minmax(0, 1fr) calc(var(--desktop-control-compact) * 2);
+  }
+
+  .number-stepper {
+    grid-template-columns: var(--desktop-control-compact) minmax(38px, 1fr) var(--desktop-control-compact);
+    height: var(--desktop-control-standard);
+  }
+
+  .number-stepper button {
+    width: var(--desktop-control-compact);
+  }
+
+  .speed-offset-input {
+    width: 112px;
+  }
+
+  .beat-up-participant-row {
+    grid-template-columns: 72px minmax(0, 1fr) 70px var(--desktop-control-standard);
+  }
+
+  .beat-up-order-controls {
+    grid-template-columns: repeat(2, var(--desktop-control-standard));
+    grid-template-rows: var(--desktop-control-standard);
+    width: 72px;
+    height: var(--desktop-control-standard);
+  }
+
+  .beat-up-order-controls button,
+  .beat-up-remove-participant {
+    min-width: var(--desktop-control-standard);
+    min-height: var(--desktop-control-standard);
+  }
+
+  .beat-up-order-controls button:first-child {
+    border-radius: 5px 0 0 5px;
+  }
+
+  .beat-up-order-controls button:last-child {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    border-radius: 0 5px 5px 0;
+  }
+
+  .beat-up-participant-power {
+    grid-template-columns: minmax(0, 1fr) var(--desktop-control-compact);
+    height: var(--desktop-control-standard);
+  }
+
+  .beat-up-participant-power .move-power-lock-toggle {
+    width: var(--desktop-control-compact);
+    min-width: var(--desktop-control-compact);
+    height: var(--desktop-control-standard);
+  }
+
+  .beat-up-remove-participant {
+    width: var(--desktop-control-standard);
+  }
+
+  .attack-advanced-settings summary,
+  .hp-event-add-row .ui-button {
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .hp-event-enable,
+  .scenario-options label,
+  .speed-target-mode-option,
+  .checkbox-field {
+    min-height: var(--desktop-control-standard);
+  }
+
+  .hp-event-enable {
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .hp-event-enable input,
+  .scenario-options input,
+  .speed-target-mode-option input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .scenario-options label {
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .select-item,
+  .ability-option,
+  .dropdown-option,
+  .pokemon-suggestion-option {
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-control);
+  }
+
+  .results-panel .select-trigger,
+  .box-name-input,
+  .account-sync-delete-confirm input {
+    height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-control);
+  }
+
+  .candidate-toolbar {
+    min-height: var(--desktop-control-standard);
+  }
+
+  .candidate-apply-button,
+  .candidate-page-actions .ui-button,
+  .adjustment-apply-button {
+    min-height: var(--desktop-control-standard);
+    font-size: var(--desktop-text-control);
+  }
+
+  .box-window-actions .ui-button-small,
+  .box-close-button {
+    width: var(--desktop-control-standard);
+    min-width: var(--desktop-control-standard);
+    height: var(--desktop-control-standard);
+    min-height: var(--desktop-control-standard);
+  }
+
+  .box-window-action-icon {
+    width: var(--desktop-icon-standard);
+    height: var(--desktop-icon-standard);
+  }
+
+  .app-footer-links .app-footer-contact,
+  .app-footer-source-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--desktop-control-compact);
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .app-footer-links .app-footer-contact {
+    justify-content: center;
+    min-width: 24px;
+  }
+}
+
+@media (min-width: 1181px) {
+  .target-identity,
+  .target-summary.compact {
+    gap: 6px;
   }
 }
 
