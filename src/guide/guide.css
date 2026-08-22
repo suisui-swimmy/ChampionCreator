@@ -1038,9 +1038,9 @@ body.guide-page {
   }
 
   .guide-header-action {
-    min-height: 36px;
+    min-height: var(--mobile-control-standard);
     padding: 0 10px;
-    font-size: 10px;
+    font-size: var(--mobile-text-interactive-small);
   }
 
   .guide-menu-toggle {
@@ -1112,10 +1112,13 @@ body.guide-page {
   }
 
   .guide-toc nav a {
+    display: flex;
+    align-items: center;
+    min-height: var(--mobile-control-comfort);
     border-right: 0;
     border-bottom: 1px solid var(--guide-border-soft);
     padding: 10px 12px;
-    font-size: 12px;
+    font-size: var(--mobile-text-control);
   }
 
   .guide-toc nav a:last-child {
@@ -1123,7 +1126,16 @@ body.guide-page {
   }
 
   .guide-lead {
-    font-size: 13px;
+    font-size: 15px;
+  }
+
+  .guide-section > p:not(.guide-section-kicker),
+  .guide-mode-section p,
+  .guide-mode-section ul,
+  .guide-feature-list p,
+  .guide-troubleshooting-list,
+  .guide-notes-list {
+    font-size: 14px;
   }
 
   .privacy-page .guide-intro h1 {
@@ -1155,6 +1167,36 @@ body.guide-page {
 
   .guide-stat-rule-items dd {
     font-size: 20px;
+  }
+
+  .guide-tip strong,
+  .guide-tip p,
+  .guide-flow-list p,
+  .guide-ability-disclosure-content ul {
+    font-size: var(--mobile-text-interactive-small);
+  }
+
+  .guide-ability-disclosure-trigger {
+    min-height: var(--mobile-control-comfort);
+    font-size: var(--mobile-text-control);
+  }
+
+  .guide-disclosure-chevron {
+    width: var(--mobile-icon-standard);
+    height: var(--mobile-icon-standard);
+  }
+
+  .guide-table-wrap table {
+    font-size: 12px;
+  }
+
+  .guide-table-wrap th {
+    font-size: 11px;
+  }
+
+  .guide-page > .app-footer .app-footer-contact {
+    min-height: var(--mobile-control-standard);
+    font-size: var(--mobile-text-interactive-small);
   }
 
   .guide-tutorial-steps {

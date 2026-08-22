@@ -1,6 +1,6 @@
 {
   "name": "championcreator",
-  "version": "0.21.9",
+  "version": "0.21.11",
   "private": true,
   "type": "module",
   "scripts": {

@@ -6713,7 +6713,6 @@ function LevelLockField({
         <button
           className={`move-power-lock-toggle ${isManual ? "is-open" : "is-closed"}`}
           type="button"
-          tabIndex={-1}
           aria-label={isManual
             ? `${ownerLabel} レベルを50に戻して固定`
             : `${ownerLabel} レベルの固定を解除`}
@@ -7128,7 +7127,6 @@ function MovePowerField({
               <span className="move-power-stepper" aria-label="威力条件ステッパー">
                 <button
                   type="button"
-                  tabIndex={-1}
                   aria-label={`${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`}
                   disabled={!canStepUp}
                   onClick={() => commitOption(selectedOptionIndex + 1)}
@@ -7137,7 +7135,6 @@ function MovePowerField({
                 </button>
                 <button
                   type="button"
-                  tabIndex={-1}
                   aria-label={`${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`}
                   disabled={!canStepDown}
                   onClick={() => commitOption(selectedOptionIndex - 1)}
@@ -7254,7 +7251,6 @@ function MovePowerField({
             <button
               className="move-power-lock-toggle is-open"
               type="button"
-              tabIndex={-1}
               aria-label={`${attackLabel} 威力を自動入力に戻す`}
               title="自動入力に戻す"
               onClick={restoreAutomaticPower}
@@ -7268,7 +7264,6 @@ function MovePowerField({
             <button
               className="move-power-lock-toggle is-closed"
               type="button"
-              tabIndex={-1}
               aria-label={`${attackLabel} 威力の自動入力を解除`}
               title="手動入力へ切り替え"
               onClick={unlockInlineManualPower}

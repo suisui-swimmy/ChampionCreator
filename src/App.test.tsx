@@ -225,6 +225,82 @@ describe("App", () => {
     expect(html).not.toMatch(/maximum-scale|user-scalable\s*=\s*no/);
   });
 
+  it("defines the role-based mobile size tokens used by the workbench", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const expectedTokens = {
+      "--mobile-control-compact": "32px",
+      "--mobile-control-standard": "36px",
+      "--mobile-control-primary": "40px",
+      "--mobile-control-comfort": "44px",
+      "--mobile-icon-compact": "16px",
+      "--mobile-icon-standard": "20px",
+      "--mobile-text-heading": "15px",
+      "--mobile-text-control": "13px",
+      "--mobile-text-interactive-small": "12px",
+      "--mobile-text-meta": "11px",
+      "--mobile-text-input": "16px",
+    } as const;
+
+    for (const [token, value] of Object.entries(expectedTokens)) {
+      expect(css).toMatch(new RegExp(`${token}\\s*:\\s*${value};`));
+    }
+
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.search-control-bar #runButton,[\s\S]*?\.mobile-candidate-actions \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--mobile-control-primary\);[^}]*font-size:\s*14px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.search-control-bar > \.ui-button-ghost,[\s\S]*?\.mobile-candidate-actions \.ui-button-ghost\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-target-open \.target-level-field \.level-inline-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--mobile-control-compact\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-target-open \.target-level-field \.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--mobile-control-compact\);[^}]*min-width:\s*var\(--mobile-control-compact\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
+  });
+
+  it("keeps mobile overview scenario affordances role-sized at narrow widths", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const enabledHtml = renderExampleApp();
+    const disabledScenarios = createDefaultScenarioForms().map((scenario, index) => (
+      index === 0 ? { ...scenario, enabled: false } : scenario
+    ));
+    const disabledHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={disabledScenarios}
+      />,
+    );
+
+    expect(enabledHtml).toMatch(
+      /<button class="mobile-scenario-state on" type="button" role="switch" aria-checked="true" aria-label="シナリオ1を無効化">/,
+    );
+    expect(disabledHtml).toMatch(
+      /<button class="mobile-scenario-state off" type="button" role="switch" aria-checked="false" aria-label="シナリオ1を有効化">/,
+    );
+    expect(enabledHtml).toContain('class="mobile-scenario-state on"');
+    expect(enabledHtml).toContain('class="mobile-scenario-adjustment-row"');
+    expect(enabledHtml).toMatch(/class="[^"]*mobile-scenario-remove-button[^"]*"/);
+
+    expect(css).toMatch(/\.mobile-scenario-state\s*\{[^}]*width:\s*var\(--mobile-control-standard\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
+    expect(css).toMatch(/\.mobile-scenario-summary-main,\s*\.mobile-scenario-title\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);/s);
+    expect(css).toMatch(/\.mobile-scenario-remove-button\s*\{[^}]*width:\s*var\(--mobile-control-standard\);[^}]*height:\s*var\(--mobile-control-standard\);[^}]*min-width:\s*var\(--mobile-control-standard\);/s);
+    expect(css).toMatch(/\.mobile-scenario-remove-button \.ui-button-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
+    expect(css).toMatch(/\.mobile-scenario-adjustment-row\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*var\(--mobile-control-standard\);/s);
+    expect(css).toMatch(/\.mobile-scenario-adjustment-label\s*\{[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
+
+    const has34x20ToggleTrack = [
+      /\.mobile-scenario-state::before\s*\{[^}]*width:\s*34px;[^}]*height:\s*20px;/s,
+      /\.mobile-scenario-state span\s*\{[^}]*width:\s*34px;[^}]*height:\s*20px;/s,
+    ].some((pattern) => pattern.test(css));
+    const has14pxToggleKnob = [
+      /\.mobile-scenario-state::after\s*\{[^}]*width:\s*14px;[^}]*height:\s*14px;/s,
+      /\.mobile-scenario-state span::after\s*\{[^}]*width:\s*14px;[^}]*height:\s*14px;/s,
+      /\.mobile-scenario-state span\s*\{[^}]*width:\s*14px;[^}]*height:\s*14px;/s,
+    ].some((pattern) => pattern.test(css));
+    expect(has34x20ToggleTrack).toBe(true);
+    expect(has14pxToggleKnob).toBe(true);
+
+    const narrowMedia = css.match(/@media \(max-width: 380px\)[\s\S]*$/)?.[0] ?? "";
+    expect(narrowMedia).not.toMatch(/\.mobile-scenario-state\s*\{[^}]*width:\s*(?:28|30)px;/s);
+    expect(narrowMedia).not.toMatch(/\.mobile-scenario-state\s*\{[^}]*height:\s*16px;/s);
+    expect(narrowMedia).not.toMatch(/\.mobile-scenario-state\.on span\s*\{[^}]*transform:\s*translateX\(12px\);/s);
+    expect(narrowMedia).not.toMatch(/\.mobile-scenario-title strong(?:\s*,[\s\S]*?)?\s*\{[^}]*font-size:\s*12px;/s);
+    expect(narrowMedia).not.toMatch(/\.mobile-scenario-adjustment-label\s*\{[^}]*font-size:\s*10px;/s);
+  });
+
   it("keeps box dialogs above mobile sheets and candidate budget values proportional", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
@@ -658,6 +734,33 @@ describe("App", () => {
     expect(tutorialHtml).not.toContain('aria-label="バトル形式とサジェスト基準"');
     expect(tutorialHtml).not.toContain('class="app-footer"');
     expect(robots).toContain("Sitemap: https://championcreator.suisui-swimmy.com/sitemap.xml");
+  });
+
+  it("keeps guide and privacy mobile navigation and prose in the shared size system", () => {
+    const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
+    const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+    const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
+
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-header-action\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-menu-toggle\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*flex:\s*0 0 36px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-menu-toggle img\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-toc nav a\s*\{[^}]*min-height:\s*var\(--mobile-control-comfort\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-lead\s*\{[^}]*font-size:\s*15px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-section > p:not\(\.guide-section-kicker\),[\s\S]*?\.guide-notes-list\s*\{[^}]*font-size:\s*14px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-tip strong,[\s\S]*?\.guide-ability-disclosure-content ul\s*\{[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-ability-disclosure-trigger\s*\{[^}]*min-height:\s*var\(--mobile-control-comfort\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-table-wrap table\s*\{[^}]*font-size:\s*12px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-table-wrap th\s*\{[^}]*font-size:\s*11px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-page > \.app-footer \.app-footer-contact\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
+
+    for (const html of [guideHtml, privacyHtml]) {
+      expect(html).toContain('class="guide-header"');
+      expect(html).toContain('class="guide-header-action"');
+      expect(html).toContain('class="guide-menu-toggle"');
+      expect(html).toContain('class="guide-toc"');
+    }
+    expect(privacyHtml).toContain('<body class="guide-page privacy-page">');
+    expect(privacyHtml).toContain('aria-label="プライバシーメニューを開く"');
   });
 
   it("keeps type and item dropdown candidates separated", () => {
@@ -1202,7 +1305,9 @@ describe("App", () => {
     expect(css).toMatch(/\.mobile-scenarios-open \.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(54px, auto\) minmax\(0, 1fr\);/s);
     expect(html).toMatch(/attack-card-identity-row[^>]*>[\s\S]*?aria-label="ポケモン"[\s\S]*?<span class="row-label">レベル<\/span>/);
     expect(html.match(/aria-label="[^"]+ レベルの固定を解除"/g)).toHaveLength(4);
-    expect(html).toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A レベルの固定を解除"/);
+    expect(html).toMatch(/class="move-power-lock-toggle is-closed" type="button" aria-label="耐久調整A レベルの固定を解除"/);
+    expect(html).not.toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A レベルの固定を解除"/);
+    expect(html).not.toMatch(/<button type="button" tabindex="-1" aria-label="耐久調整A 威力条件を(?:上げる|下げる)/);
     expect(html).toMatch(/attack-move-power-cell[^>]*>[\s\S]*?placeholder="技"[\s\S]*?move-power-field/);
     expect(html).toMatch(/move-power-field[^>]*aria-label="耐久調整A 威力"[^>]*>[\s\S]*?<span class="move-power-label">威力<\/span>[\s\S]*?move-power-inline-control is-readonly/);
     expect(html).toMatch(/attack-card-details-row[^>]*>[\s\S]*?aria-label="性格:[^"]+"[\s\S]*?aria-label="特性候補を開く"/);
@@ -1263,6 +1368,7 @@ describe("App", () => {
     expect(html).toContain("level-inline-control is-manual");
     expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
     expect(html).toContain('aria-label="耐久調整A レベルを50に戻して固定"');
+    expect(html).not.toMatch(/class="move-power-lock-toggle is-open" type="button" tabindex="-1" aria-label="耐久調整A レベルを50に戻して固定"/);
     expect(html).toContain('src="/assets/ui/lock-open.svg"');
     expect(html).not.toContain('aria-label="耐久調整A レベルを50に戻して固定" disabled=""');
   });
@@ -1282,6 +1388,7 @@ describe("App", () => {
     expect(html).toMatch(/class="placeholder-field target-level-field"[\s\S]*?level-inline-control is-manual/);
     expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
     expect(html).toContain('aria-label="調整対象 レベルを50に戻して固定"');
+    expect(html).not.toMatch(/class="move-power-lock-toggle is-open" type="button" tabindex="-1" aria-label="調整対象 レベルを50に戻して固定"/);
     expect(html).not.toContain('aria-label="調整対象 レベルを50に戻して固定" disabled=""');
   });
 
@@ -1308,6 +1415,7 @@ describe("App", () => {
     expect(lastRespectsHtml).toMatch(/class="move-power-trigger" type="button" tabindex="-1" aria-label="耐久調整A 威力 150/);
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を上げる: ひんしの味方 3体"');
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を下げる: ひんしの味方 1体"');
+    expect(lastRespectsHtml).not.toMatch(/<button type="button" tabindex="-1" aria-label="耐久調整A 威力条件を(?:上げる|下げる)/);
     expect(lastRespectsHtml).toContain("▲");
     expect(lastRespectsHtml).toContain("▼");
 
@@ -1328,7 +1436,8 @@ describe("App", () => {
     );
 
     expect(eruptionHtml).toContain('aria-label="耐久調整A 威力の自動入力を解除"');
-    expect(eruptionHtml).toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A 威力の自動入力を解除"/);
+    expect(eruptionHtml).toMatch(/class="move-power-lock-toggle is-closed" type="button" aria-label="耐久調整A 威力の自動入力を解除"/);
+    expect(eruptionHtml).not.toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A 威力の自動入力を解除"/);
     expect(eruptionHtml).toContain(
       '<strong>150</strong><button class="move-power-lock-toggle is-closed"',
     );
@@ -1367,6 +1476,7 @@ describe("App", () => {
     expect(manualEruptionHtml).toContain('aria-label="耐久調整A 任意威力"');
     expect(manualEruptionHtml).toMatch(/<input[^>]*tabindex="-1"[^>]*aria-label="耐久調整A 任意威力"/);
     expect(manualEruptionHtml).toContain('aria-label="耐久調整A 威力を自動入力に戻す"');
+    expect(manualEruptionHtml).not.toMatch(/class="move-power-lock-toggle is-open" type="button" tabindex="-1" aria-label="耐久調整A 威力を自動入力に戻す"/);
     expect(manualEruptionHtml).toContain('src="/assets/ui/lock-open.svg"');
   });
 
