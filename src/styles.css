@@ -293,7 +293,7 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -374,8 +374,8 @@ textarea:focus-visible,
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: linear-gradient(180deg, #1d2224 0%, #141718 100%);
@@ -397,8 +397,8 @@ textarea:focus-visible,
 
 .readme-link img {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .topbar-actions,
@@ -1323,13 +1323,13 @@ textarea:focus-visible,
 .box-access-button {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   border: 1px solid #30383b;
   border-radius: 6px;
   background: linear-gradient(180deg, #1a1f20 0%, #121516 100%);
-  padding: 5px;
+  padding: 7px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 1px 2px rgba(0, 0, 0, 0.28);
   transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
@@ -1347,8 +1347,8 @@ textarea:focus-visible,
 
 .box-access-button img {
   display: block;
-  width: 21px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
 }
 
@@ -1416,26 +1416,26 @@ textarea:focus-visible,
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
 
 .box-window-actions .ui-button-small {
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
 }
 
 .box-close-button {
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background: #15191a;
@@ -5453,23 +5453,61 @@ textarea {
   .topbar-action-row {
     grid-area: actions;
     justify-self: end;
-    gap: 6px;
+    gap: 8px;
   }
 
   .suggestion-format-toggle {
     height: 36px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .suggestion-format-option {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    overflow: visible;
+  }
+
+  .suggestion-format-option + .suggestion-format-option {
+    border-left: 0;
   }
 
   .suggestion-format-option-content {
-    min-height: 34px;
-    gap: 4px;
-    padding: 0 clamp(5px, 1.6vw, 7px);
-    font-size: 11px;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    gap: 0;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 0;
+  }
+
+  .suggestion-format-option:first-child .suggestion-format-option-content {
+    border-radius: 6px 0 0 6px;
+  }
+
+  .suggestion-format-option:last-child .suggestion-format-option-content {
+    border-left: 0;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .suggestion-format-option[data-checked="true"] {
+    background: transparent;
+  }
+
+  .suggestion-format-option[data-checked="true"] .suggestion-format-option-content {
+    background: var(--gold-soft);
+  }
+
+  .suggestion-format-option-label {
+    display: none;
   }
 
   .suggestion-format-icon {
-    width: 15px;
-    height: 15px;
+    width: 20px;
+    height: 20px;
   }
 
   .readme-link {
@@ -5501,8 +5539,8 @@ textarea {
   }
 
   .account-sync-trigger-icon {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
   .account-sync-trigger-label {
@@ -5580,7 +5618,7 @@ textarea {
 
   .mobile-target-heading {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 32px;
+    grid-template-columns: minmax(0, 1fr) 36px;
     align-items: center;
     gap: 8px;
     min-width: 0;
@@ -5588,9 +5626,9 @@ textarea {
 
   .mobile-box-access-button {
     justify-self: end;
-    width: 30px;
-    height: 30px;
-    padding: 4px;
+    width: 36px;
+    height: 36px;
+    padding: 7px;
   }
 
   .mobile-box-access-button img {
@@ -6954,11 +6992,11 @@ textarea {
   .mobile-sheet-icon-button {
     display: inline-grid;
     place-items: center;
-    width: 30px;
-    min-width: 30px;
-    height: 30px;
-    min-height: 30px;
-    padding: 4px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 7px;
   }
 
   .mobile-sheet-action-icon {
@@ -6997,7 +7035,7 @@ textarea {
 
   .box-window-actions {
     flex-wrap: nowrap;
-    gap: 5px;
+    gap: 8px;
     max-width: none;
   }
 
@@ -7177,19 +7215,7 @@ textarea {
   }
 
   .topbar-action-row {
-    gap: 4px;
-  }
-
-  .suggestion-format-option-content {
-    min-height: 34px;
-    gap: 3px;
-    padding: 0 5px;
-    font-size: 9px;
-  }
-
-  .suggestion-format-icon {
-    width: 14px;
-    height: 14px;
+    gap: 8px;
   }
 
   .readme-link {

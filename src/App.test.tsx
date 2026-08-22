@@ -270,11 +270,20 @@ describe("App", () => {
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-draft-row\s*\{[^}]*display:\s*flex;[^}]*grid-area:\s*status;[^}]*justify-content:\s*flex-end;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-meta\s*\{[^}]*display:\s*contents;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-action-row\s*\{[^}]*grid-area:\s*actions;[^}]*justify-self:\s*end;/s);
-    expect(css).toMatch(/\.suggestion-format-toggle\s*\{[^}]*height:\s*36px;/s);
-    expect(css).toMatch(/\.suggestion-format-option-content\s*\{[^}]*min-height:\s*34px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-toggle\s*\{[^}]*height:\s*36px;[^}]*border:\s*0;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-option\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*flex:\s*0 0 36px;[^}]*overflow:\s*visible;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-option-content\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*min-height:\s*36px;[^}]*gap:\s*0;[^}]*padding:\s*0;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-option:first-child \.suggestion-format-option-content\s*\{[^}]*border-radius:\s*6px 0 0 6px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-option:last-child \.suggestion-format-option-content\s*\{[^}]*border-left:\s*0;[^}]*border-radius:\s*0 6px 6px 0;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-option\[data-checked="true"\]\s*\{[^}]*background:\s*transparent;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-option-label\s*\{[^}]*display:\s*none;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.suggestion-format-icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
+    expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.topbar-action-row\s*\{[^}]*gap:\s*8px;/s);
     expect(css).toMatch(/\.readme-link\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
     expect(css).toMatch(/\.app-footer-version\s*\{[^}]*display:\s*block;/s);
     expect(html).toContain("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール");
+    expect(html).toContain('class="suggestion-format-option-label">シングル</span>');
+    expect(html).toContain('class="suggestion-format-option-label">ダブル</span>');
     expect(html).toContain('class="topbar"');
     expect(html).not.toContain("has-draft-status");
     expect(html).not.toContain('class="topbar-draft-row"');
@@ -308,13 +317,14 @@ describe("App", () => {
     }
     expect(css).toMatch(/\.account-sync-trigger-icon\s*\{[^}]*width:\s*16px;[^}]*height:\s*16px;[^}]*mask-size:\s*contain;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.account-sync-trigger\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
-    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.account-sync-trigger-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.account-sync-trigger-icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
     expect(css).toMatch(/\.account-sync-window\s*\{[^}]*width:\s*min\(660px, calc\(100vw - 36px\)\);[^}]*overflow:\s*auto;/s);
   });
 
   it("uses the provided icons for box actions and requested mobile sheet controls", () => {
     const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
     const guideMain = readFileSync(new URL("./guide/main.tsx", import.meta.url), "utf8");
     const privacyMain = readFileSync(new URL("./privacy/main.ts", import.meta.url), "utf8");
 
@@ -338,8 +348,20 @@ describe("App", () => {
       .toContain('class="lucide lucide-x-icon lucide-x"');
     expect(guideMain).toContain('nextOpen ? "assets/ui/x.svg" : "assets/ui/menu.svg"');
     expect(privacyMain).toContain('nextOpen ? "assets/ui/x.svg" : "assets/ui/menu.svg"');
-    expect(css).toMatch(/\.box-window-actions \.ui-button-small\s*\{[^}]*width:\s*32px;[^}]*height:\s*32px;[^}]*padding:\s*0;/s);
-    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-sheet-icon-button\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*padding:\s*4px;/s);
+    expect(css).toMatch(/\.topbar-action-row\s*\{[^}]*gap:\s*8px;/s);
+    expect(css).toMatch(/\.readme-link\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;/s);
+    expect(css).toMatch(/\.readme-link img\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
+    expect(css).toMatch(/\.box-access-button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*7px;/s);
+    expect(css).toMatch(/\.box-access-button img\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
+    expect(css).toMatch(/\.box-window-actions\s*\{[^}]*gap:\s*8px;/s);
+    expect(css).toMatch(/\.box-window-actions \.ui-button-small\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*0;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-target-heading\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 36px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-box-access-button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*7px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-sheet-heading-actions\s*\{[^}]*gap:\s*8px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.mobile-sheet-icon-button\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*7px;/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.box-window-actions\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*gap:\s*8px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-menu-toggle\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*flex:\s*0 0 36px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-menu-toggle img\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
   });
 
   it("publishes indexable metadata and canonical XML and text sitemaps", () => {
