@@ -29,8 +29,32 @@ describe("boxStorage", () => {
     expect(summary).toEqual({
       pokemonName: "メガマフォクシー",
       conditionSummary: "耐久 1 / 火力 1 / 素早さ 1",
-      statPointSummary: "H0 / A0 / B0 / C0 / D0 / S0",
+      statPointSummary: "H0 A0 B0 C0 D0 S0",
     });
+  });
+
+  it("normalizes legacy slash-separated stat summaries from the saved payload", () => {
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: "legacy-stat-summary",
+      now: "2026-08-24T00:00:00.000Z",
+    });
+    const [normalized] = parseBoxStorageDocument(JSON.stringify({
+      schemaVersion: BOX_STORAGE_SCHEMA_VERSION,
+      entries: [{
+        ...entry,
+        summary: {
+          ...entry.summary,
+          statPointSummary: "H0 / A0 / B0 / C0 / D0 / S0",
+        },
+      }],
+    }));
+
+    expect(normalized).toBeDefined();
+    if (!normalized) {
+      throw new Error("legacy box summary was not normalized");
+    }
+    expect(normalized.summary.statPointSummary).toBe("H0 A0 B0 C0 D0 S0");
+    expect(stringifyBoxStorageDocument([normalized])).not.toContain("H0 / A0");
   });
 
   it("round-trips box entries as versioned browser storage", () => {
@@ -67,7 +91,7 @@ describe("boxStorage", () => {
       name: "メガマフォクシー",
       summary: {
         pokemonName: "メガマフォクシー",
-        statPointSummary: "H0 / A0 / B0 / C0 / D0 / S0",
+        statPointSummary: "H0 A0 B0 C0 D0 S0",
       },
     });
     expect(parsed[0]?.payload.target.pokemonInput).toBe("メガマフォクシー");

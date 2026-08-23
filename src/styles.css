@@ -1549,7 +1549,7 @@ textarea:focus-visible,
   border-radius: 7px;
   background: linear-gradient(180deg, #1a1f20 0%, #121516 100%);
   color: var(--text);
-  padding: 10px 8px;
+  padding: 10px 4px;
   text-align: center;
 }
 
@@ -8103,6 +8103,10 @@ textarea {
     width: 100%;
     min-width: 0;
     white-space: nowrap;
+  }
+
+  .box-slot {
+    padding-inline: 4px;
   }
 
   .mobile-symmetric-board {

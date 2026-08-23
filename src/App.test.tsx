@@ -754,6 +754,16 @@ describe("App", () => {
     expect(css).toMatch(/\.box-slot > strong\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*min-block-size:\s*1\.5em;[^}]*line-height:\s*1\.5;[^}]*justify-self:\s*stretch;/s);
   });
 
+  it("gives narrow box stat summaries more room without shrinking their text", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const narrowStart = css.lastIndexOf("@media (max-width: 380px)");
+    const narrowCss = css.slice(narrowStart);
+
+    expect(css).toMatch(/\.box-slot\s*\{[^}]*padding:\s*10px 4px;/s);
+    expect(narrowCss).toMatch(/\.box-slot\s*\{[^}]*padding-inline:\s*4px;/s);
+    expect(narrowCss).not.toMatch(/\.box-slot span\s*\{[^}]*font-size:/s);
+  });
+
   it("lets the mobile board follow its content while keeping the footer at the viewport bottom", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 

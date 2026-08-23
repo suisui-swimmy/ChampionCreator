@@ -79,7 +79,7 @@ const formatBoxStatPointSummary = (statPoints: StatPointTable): string => (
     `C${statPoints.spa}`,
     `D${statPoints.spd}`,
     `S${statPoints.spe}`,
-  ].join(" / ")
+  ].join(" ")
 );
 
 export const createBoxEntrySummary = (
@@ -171,9 +171,7 @@ const normalizeBoxEntry = (value: unknown): BoxEntry | null => {
         conditionSummary: typeof value.summary.conditionSummary === "string"
           ? value.summary.conditionSummary
           : fallbackSummary.conditionSummary,
-        statPointSummary: typeof value.summary.statPointSummary === "string"
-          ? value.summary.statPointSummary
-          : fallbackSummary.statPointSummary,
+        statPointSummary: fallbackSummary.statPointSummary,
       }
       : fallbackSummary;
 
