@@ -53,6 +53,11 @@
   --desktop-control-comfort: 44px;
   --desktop-icon-compact: 16px;
   --desktop-icon-standard: 20px;
+  --desktop-attack-card-width: 340px;
+  --desktop-grid-add-size: 64px;
+  --desktop-grid-add-color: rgba(245, 197, 66, 0.42);
+  --desktop-attack-lane-gap: 8px;
+  --desktop-attack-add-plus-size: 32px;
   --desktop-text-heading: 15px;
   --desktop-text-control: 13px;
   --desktop-text-interactive-small: 12px;
@@ -3310,18 +3315,14 @@ textarea {
 
 .scenario-attack-lane {
   display: flex;
-  gap: 8px;
+  gap: var(--desktop-attack-lane-gap);
   align-items: stretch;
   overflow-x: auto;
   padding-bottom: 2px;
 }
 
 .scenario-attack-lane > * {
-  flex: 0 0 340px;
-}
-
-.scenario-attack-lane > .attack-add-card {
-  flex-basis: 190px;
+  flex: 0 0 var(--desktop-attack-card-width);
 }
 
 .attack-field-grid {
@@ -4571,7 +4572,6 @@ textarea {
 .attack-add-card {
   display: grid;
   place-items: center;
-  min-height: 270px;
 }
 
 .attack-add-card span {
@@ -4584,7 +4584,6 @@ textarea {
 .scenario-add-row {
   display: grid;
   place-items: center;
-  min-height: 120px;
   border-style: dashed;
   color: var(--muted);
   font-size: 15px;
@@ -5441,6 +5440,31 @@ textarea {
     font-size: var(--desktop-text-interactive-small);
   }
 
+  .attack-add-card {
+    align-self: stretch;
+    flex: 0 0 var(--desktop-grid-add-size);
+    width: var(--desktop-grid-add-size);
+    min-width: var(--desktop-grid-add-size);
+    height: auto;
+    min-height: 0;
+    border-style: dashed;
+    padding: 0;
+  }
+
+  .attack-add-card span {
+    color: var(--desktop-grid-add-color);
+    font-size: var(--desktop-attack-add-plus-size);
+    font-weight: 800;
+  }
+
+  .scenario-add-row {
+    width: 100%;
+    height: var(--desktop-grid-add-size);
+    min-height: var(--desktop-grid-add-size);
+    color: var(--desktop-grid-add-color);
+    font-size: var(--desktop-text-control);
+  }
+
   .scenario-row input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input),
   .scenario-row select,
   .attack-condition-card input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input),
@@ -5618,7 +5642,42 @@ textarea {
     font-size: var(--desktop-text-interactive-small);
   }
 
+  .hp-event-rule-meta small,
+  .hp-event-formula,
+  .hp-event-warning,
+  .hp-event-help,
+  .hp-dependent-move-note,
+  .hp-events-empty {
+    font-size: var(--desktop-text-meta);
+  }
+
+  .hp-event-help a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    font-size: var(--desktop-text-interactive-small);
+    vertical-align: middle;
+  }
+
+  .hp-event-help a:focus-visible {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  .bulk-nature-toggle {
+    min-height: var(--desktop-control-compact);
+    font-size: var(--desktop-text-interactive-small);
+  }
+
+  .bulk-nature-toggle:focus-within {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
   .hp-event-enable input,
+  .bulk-nature-toggle input,
   .scenario-options input,
   .speed-target-mode-option input {
     width: 18px;
@@ -5672,7 +5731,7 @@ textarea {
   .app-footer-source-link {
     display: inline-flex;
     align-items: center;
-    min-height: var(--desktop-control-compact);
+    min-height: var(--desktop-control-standard);
     font-size: var(--desktop-text-interactive-small);
   }
 
@@ -5771,6 +5830,29 @@ textarea {
 
   .app-footer-links {
     justify-self: center;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1180px) {
+  .scenario-attack-lane {
+    display: flex;
+    gap: var(--desktop-attack-lane-gap);
+    align-items: stretch;
+    overflow-x: auto;
+  }
+
+  .scenario-attack-lane > .attack-condition-card {
+    flex: 0 0 var(--desktop-attack-card-width);
+    width: var(--desktop-attack-card-width);
+    min-width: var(--desktop-attack-card-width);
+  }
+
+  .scenario-attack-lane > .attack-add-card {
+    flex: 0 0 var(--desktop-grid-add-size);
+    width: var(--desktop-grid-add-size);
+    min-width: var(--desktop-grid-add-size);
+    height: auto;
+    min-height: 0;
   }
 }
 

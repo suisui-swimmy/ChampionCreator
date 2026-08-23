@@ -6702,7 +6702,6 @@ function LevelLockField({
             value={value}
             min={1}
             max={100}
-            tabIndex={-1}
             aria-label="レベル"
             onFocus={selectInputValueOnFocus}
             onChange={(event) => onChange(clampNumberInput(toNumber(event.target.value, 50), 1, 100))}
@@ -6817,7 +6816,6 @@ function BeatUpPowerField({
           <button
             className="move-power-trigger"
             type="button"
-            tabIndex={-1}
             aria-label={`${attackLabel} ふくろだたき参加ポケモンを設定。威力 ${compactPower}`}
           >
             <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
@@ -7117,7 +7115,6 @@ function MovePowerField({
               <button
                 className="move-power-trigger"
                 type="button"
-                tabIndex={-1}
                 aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
               >
                 <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
@@ -7237,7 +7234,6 @@ function MovePowerField({
               value={manualDraft}
               min={1}
               max={10_000}
-              tabIndex={-1}
               aria-label={`${attackLabel} 任意威力`}
               aria-invalid={!manualValueIsValid}
               onFocus={selectInputValueOnFocus}

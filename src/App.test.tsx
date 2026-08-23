@@ -321,7 +321,136 @@ describe("App", () => {
     expect(desktopCss).toMatch(/\.box-window-actions \.ui-button-small,[\s\S]*?\.box-close-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.box-window-action-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
     expect(desktopCss).toMatch(/#runButton,[\s\S]*?\.box-current-row \.ui-button-primary,[\s\S]*?\.box-action-buttons \.ui-button-primary,[\s\S]*?\.account-sync-window \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--desktop-control-primary\);/s);
-    expect(desktopCss).toMatch(/\.app-footer-links \.app-footer-contact,[\s\S]*?\.app-footer-source-link\s*\{[^}]*min-height:\s*var\(--desktop-control-compact\);[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
+    expect(desktopCss).toMatch(/\.app-footer-links \.app-footer-contact,[\s\S]*?\.app-footer-source-link\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
+  });
+
+  it("keeps desktop workbench add actions aligned to the row-and-column grid", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const html = renderExampleApp();
+    const rootStart = css.indexOf(":root");
+    const rootEnd = css.indexOf("}", rootStart);
+    const nonMobileStart = css.indexOf("@media (min-width: 721px)");
+    const wideStart = css.indexOf("@media (min-width: 1181px)", nonMobileStart);
+    const wideEnd = css.indexOf("@media (max-width: 1180px)", wideStart);
+    const stackStart = css.indexOf("@media (min-width: 721px) and (max-width: 1180px)");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const rootCss = css.slice(rootStart, rootEnd + 1);
+    const nonMobileCss = css.slice(nonMobileStart, mobileStart);
+    const stackCss = css.slice(stackStart, mobileStart);
+    const desktopAttackAddRules = Array.from(
+      nonMobileCss.matchAll(/(?:\.scenario-attack-lane\s*>)?\s*\.attack-add-card\s*\{([^}]*)\}/g),
+    ).map((match) => match[1] ?? "").join("\n");
+
+    expect(nonMobileStart).toBeGreaterThanOrEqual(0);
+    expect(wideStart).toBeGreaterThan(nonMobileStart);
+    expect(wideEnd).toBeGreaterThan(wideStart);
+    expect(stackStart).toBeGreaterThan(wideEnd);
+    expect(mobileStart).toBeGreaterThan(stackStart);
+
+    expect(rootCss).toContain("--desktop-attack-card-width: 340px;");
+    expect(rootCss).toContain("--desktop-grid-add-size: 64px;");
+    expect(rootCss).toContain("--desktop-grid-add-color: rgba(245, 197, 66, 0.42);");
+    expect(rootCss).toContain("--desktop-attack-lane-gap: 8px;");
+    expect(rootCss).not.toContain("--desktop-attack-add-height:");
+    expect(rootCss).not.toContain("--desktop-attack-add-min-width:");
+
+    expect(css).toMatch(
+      /\.scenario-attack-lane\s*\{[^}]*display:\s*flex;[^}]*gap:\s*var\(--desktop-attack-lane-gap\);[^}]*align-items:\s*stretch;[^}]*overflow-x:\s*auto;/s,
+    );
+    expect(css).toMatch(
+      /\.scenario-attack-lane > \*\s*\{[^}]*flex:\s*0 0 var\(--desktop-attack-card-width\);/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.attack-add-card\s*\{[^}]*align-self:\s*stretch;[^}]*flex:\s*0 0 var\(--desktop-grid-add-size\);[^}]*width:\s*var\(--desktop-grid-add-size\);[^}]*min-width:\s*var\(--desktop-grid-add-size\);/s,
+    );
+    expect(stackCss).toMatch(
+      /\.scenario-attack-lane > \.attack-add-card\s*\{[^}]*flex:\s*0 0 var\(--desktop-grid-add-size\);[^}]*width:\s*var\(--desktop-grid-add-size\);[^}]*min-width:\s*var\(--desktop-grid-add-size\);/s,
+    );
+    expect(desktopAttackAddRules).not.toMatch(/\b(?:min-)?height\s*:\s*(?:\d+px|var\(--desktop-[^)]+\))/);
+    expect(nonMobileCss).not.toMatch(/\.scenario-attack-lane > \.attack-add-card\s*\{[^}]*clamp\(/s);
+    expect(css).toMatch(/\.attack-add-card\s*\{[^}]*display:\s*grid;[^}]*place-items:\s*center;/s);
+    expect(nonMobileCss).toMatch(/\.attack-add-card\s*\{[^}]*border-style:\s*dashed;/s);
+    expect(nonMobileCss).toMatch(
+      /\.attack-add-card span\s*\{[^}]*font-size:\s*var\(--desktop-attack-add-plus-size\);/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.attack-add-card span\s*\{[^}]*color:\s*var\(--desktop-grid-add-color\);[^}]*font-size:\s*var\(--desktop-attack-add-plus-size\);[^}]*font-weight:\s*800;/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.scenario-add-row\s*\{[^}]*width:\s*100%;[^}]*height:\s*var\(--desktop-grid-add-size\);[^}]*min-height:\s*var\(--desktop-grid-add-size\);[^}]*color:\s*var\(--desktop-grid-add-color\);/s,
+    );
+
+    // 721-1180 remains a horizontal flex lane; the add column is never rewritten as a grid row.
+    expect(stackCss).toMatch(
+      /\.scenario-attack-lane\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*stretch;/s,
+    );
+    expect(stackCss).not.toMatch(/\.scenario-attack-lane\s*\{[^}]*display:\s*grid;/s);
+    expect(stackCss).not.toMatch(
+      /\.scenario-attack-lane > \.attack-condition-card\s*\{[^}]*width:\s*100%;/s,
+    );
+    expect(stackCss).not.toMatch(
+      /\.scenario-attack-lane > \.attack-add-card\s*\{[^}]*width:\s*100%;/s,
+    );
+
+    // Desktop-only tokens and overrides must not leak into the mobile rules.
+    const mobileCss = css.slice(mobileStart);
+    expect(mobileCss).not.toContain("--desktop-");
+
+    const scenarioStart = html.indexOf('<article class="scenario-row defence"');
+    const scenarioEnd = html.indexOf("</article>", scenarioStart);
+    const scenarioHtml = html.slice(scenarioStart, scenarioEnd + "</article>".length);
+    const attackAddIndex = scenarioHtml.indexOf('class="attack-add-card ui-button"');
+    expect(scenarioStart).toBeGreaterThanOrEqual(0);
+    expect(scenarioEnd).toBeGreaterThan(scenarioStart);
+    expect(scenarioHtml).toContain('aria-label="シナリオ1に攻撃を追加"');
+    expect(attackAddIndex).toBeGreaterThan(scenarioHtml.lastIndexOf('class="attack-condition-card"'));
+    expect(html).toContain('class="scenario-add-row ui-button"');
+    expect(html).toContain("シナリオを追加");
+
+    const [baseScenario, ...otherScenarios] = createDefaultScenarioForms();
+    const multipleAttackScenario = {
+      ...baseScenario,
+      attacks: [
+        ...baseScenario.attacks,
+        { ...baseScenario.attacks[0], id: "attack-b", label: "追加条件", attackerPokemonInput: "", moveInput: "" },
+      ],
+    };
+    const multipleHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[multipleAttackScenario, ...otherScenarios]}
+      />,
+    );
+    const multipleStart = multipleHtml.indexOf('<article class="scenario-row defence"');
+    const multipleEnd = multipleHtml.indexOf("</article>", multipleStart);
+    const multipleScenarioHtml = multipleHtml.slice(multipleStart, multipleEnd + "</article>".length);
+    expect(multipleScenarioHtml.match(/class="attack-condition-card"/g)).toHaveLength(2);
+    expect(multipleScenarioHtml.indexOf('class="attack-add-card ui-button"')).toBeGreaterThan(
+      multipleScenarioHtml.lastIndexOf('class="attack-condition-card"'),
+    );
+  });
+
+  it("keeps desktop secondary controls readable and keyboard reachable", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const nonMobileStart = css.indexOf("@media (min-width: 721px)");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const nonMobileCss = css.slice(nonMobileStart, mobileStart);
+
+    expect(nonMobileCss).toMatch(
+      /\.bulk-nature-toggle\s*\{[^}]*min-height:\s*var\(--desktop-control-compact\);/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.hp-event-enable input,\s*\.bulk-nature-toggle input,\s*\.scenario-options input,\s*\.speed-target-mode-option input\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
+    );
+    expect(nonMobileCss).toMatch(/\.bulk-nature-toggle:focus-within\s*\{[^}]*outline:/s);
+
+    expect(nonMobileCss).toMatch(
+      /\.hp-event-rule-meta small,\s*\.hp-event-formula,\s*\.hp-event-warning,\s*\.hp-event-help,\s*\.hp-dependent-move-note,\s*\.hp-events-empty\s*\{[^}]*font-size:\s*var\(--desktop-text-meta\);/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.hp-event-help a\s*\{[^}]*display:\s*inline-flex;[^}]*min-height:\s*24px;[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s,
+    );
+    expect(nonMobileCss).toMatch(/\.hp-event-help a:focus-visible\s*\{[^}]*outline:/s);
   });
 
   it("keeps mobile overview scenario affordances role-sized at narrow widths", () => {
@@ -855,7 +984,7 @@ describe("App", () => {
     expect(guideCss).toContain(".feature-mark.target { color: var(--guide-yellow); }");
     expect(guideCss).toMatch(/\.guide-tip-heading\s*\{[^}]*display:\s*flex;/s);
     expect(guideCss).toMatch(/\.guide-mobile-overview-image\s*\{[^}]*width:\s*min\(100%, 320px\);[^}]*height:\s*auto;/s);
-    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*40px;[^}]*font-size:\s*12px;[^}]*cursor:\s*pointer;/s);
+    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*var\(--desktop-control-comfort\);[^}]*font-size:\s*var\(--desktop-text-control\);[^}]*cursor:\s*pointer;/s);
     expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\[data-state="open"\] \.guide-disclosure-chevron\s*\{[^}]*transform:\s*rotate\(90deg\);/s);
     expect(guideCss).toMatch(/\.guide-ally-ability-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
@@ -1541,7 +1670,7 @@ describe("App", () => {
     expect(css.slice(desktopEnd)).toMatch(/\.workbench\s*\{[^}]*grid-template-columns:\s*1fr;/s);
   });
 
-  it("uses the power-lock design for an unlocked level without adding it to the Tab order", () => {
+  it("uses the power-lock design for an unlocked level in the normal Tab order", () => {
     const [scenario] = createDefaultScenarioForms();
     const html = renderToStaticMarkup(
       <App
@@ -1558,7 +1687,8 @@ describe("App", () => {
     );
 
     expect(html).toContain("level-inline-control is-manual");
-    expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
+    expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*aria-label="レベル")[^>]*>/);
+    expect(html).not.toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
     expect(html).toContain('aria-label="耐久調整A レベルを50に戻して固定"');
     expect(html).not.toMatch(/class="move-power-lock-toggle is-open" type="button" tabindex="-1" aria-label="耐久調整A レベルを50に戻して固定"/);
     expect(html).toContain('src="/assets/ui/lock-open.svg"');
@@ -1578,7 +1708,8 @@ describe("App", () => {
     );
 
     expect(html).toMatch(/class="placeholder-field target-level-field"[\s\S]*?level-inline-control is-manual/);
-    expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
+    expect(html).toMatch(/<input(?=[^>]*value="73")(?=[^>]*aria-label="レベル")[^>]*>/);
+    expect(html).not.toMatch(/<input(?=[^>]*value="73")(?=[^>]*tabindex="-1")(?=[^>]*aria-label="レベル")[^>]*>/);
     expect(html).toContain('aria-label="調整対象 レベルを50に戻して固定"');
     expect(html).not.toMatch(/class="move-power-lock-toggle is-open" type="button" tabindex="-1" aria-label="調整対象 レベルを50に戻して固定"/);
     expect(html).not.toContain('aria-label="調整対象 レベルを50に戻して固定" disabled=""');
@@ -1604,7 +1735,7 @@ describe("App", () => {
 
     expect(lastRespectsHtml).toContain('class="move-power-field steppable"');
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力 150（条件: ひんしの味方 2体）。条件を開く"');
-    expect(lastRespectsHtml).toMatch(/class="move-power-trigger" type="button" tabindex="-1" aria-label="耐久調整A 威力 150/);
+    expect(lastRespectsHtml).toMatch(/class="move-power-trigger" type="button" aria-label="耐久調整A 威力 150/);
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を上げる: ひんしの味方 3体"');
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を下げる: ひんしの味方 1体"');
     expect(lastRespectsHtml).not.toMatch(/<button type="button" tabindex="-1" aria-label="耐久調整A 威力条件を(?:上げる|下げる)/);
@@ -1666,7 +1797,7 @@ describe("App", () => {
       />,
     );
     expect(manualEruptionHtml).toContain('aria-label="耐久調整A 任意威力"');
-    expect(manualEruptionHtml).toMatch(/<input[^>]*tabindex="-1"[^>]*aria-label="耐久調整A 任意威力"/);
+    expect(manualEruptionHtml).not.toMatch(/<input[^>]*tabindex="-1"[^>]*aria-label="耐久調整A 任意威力"/);
     expect(manualEruptionHtml).toContain('aria-label="耐久調整A 威力を自動入力に戻す"');
     expect(manualEruptionHtml).not.toMatch(/class="move-power-lock-toggle is-open" type="button" tabindex="-1" aria-label="耐久調整A 威力を自動入力に戻す"/);
     expect(manualEruptionHtml).toContain('src="/assets/ui/lock-open.svg"');
@@ -1721,7 +1852,7 @@ describe("App", () => {
     );
 
     expect(html).toContain("ふくろだたき参加ポケモンを設定。威力 18");
-    expect(html).toMatch(/class="move-power-trigger" type="button" tabindex="-1" aria-label="耐久調整A ふくろだたき参加ポケモンを設定/);
+    expect(html).toMatch(/class="move-power-trigger" type="button" aria-label="耐久調整A ふくろだたき参加ポケモンを設定/);
     expect(html).toContain("<strong>18</strong>");
     expect(html).toContain('disabled="" aria-label="攻撃回数" value="1"');
   });

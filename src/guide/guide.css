@@ -626,13 +626,13 @@ body.guide-page {
   width: 100%;
   gap: 7px;
   align-items: center;
-  min-height: 40px;
+  min-height: var(--desktop-control-comfort);
   border: 0;
   background: transparent;
   padding: 7px 0;
   color: var(--guide-text);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--desktop-text-control);
   font-weight: 800;
   text-align: left;
   cursor: pointer;
