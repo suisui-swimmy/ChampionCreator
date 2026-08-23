@@ -453,6 +453,130 @@ describe("App", () => {
     expect(nonMobileCss).toMatch(/\.hp-event-help a:focus-visible\s*\{[^}]*outline:/s);
   });
 
+  it("keeps the mobile SP summary on one stable two-row layout", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const narrowStart = css.indexOf("@media (max-width: 380px)", mobileStart);
+    const mobileCss = css.slice(mobileStart, narrowStart);
+    const narrowCss = css.slice(narrowStart);
+
+    expect(mobileCss).toMatch(
+      /\.mobile-target-open \.sp-summary\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto;[^}]*align-items:\s*start;[^}]*gap:\s*0 12px;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-target-open \.sp-summary-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2,\s*max-content\);[^}]*grid-template-rows:\s*repeat\(2,\s*var\(--mobile-control-standard\)\);[^}]*gap:\s*8px;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-target-open \.sp-summary-actions \.ui-button\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-target-open \.bulk-nature-toggle\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
+    );
+    expect(mobileCss).toMatch(/\.mobile-target-open \.bulk-nature-toggle:focus-within\s*\{[^}]*outline:/s);
+    expect(mobileCss).toMatch(
+      /\.mobile-target-open \.sp-summary-total\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;[^}]*align-self:\s*start;[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*margin-left:\s*0;/s,
+    );
+
+    expect(narrowCss).not.toMatch(
+      /\.mobile-target-open \.sp-summary(?:-actions|-total)?\s*\{[^}]*(?:grid-template|align-items|min-height|font-size):/s,
+    );
+  });
+
+  it("organizes battle modifiers as one accessible two-column section per attack", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const narrowStart = css.indexOf("@media (max-width: 380px)", mobileStart);
+    const mobileCss = css.slice(mobileStart, narrowStart);
+    const narrowCss = css.slice(narrowStart);
+
+    expect(css).toMatch(
+      /\.scenario-options\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[^}]*gap:\s*6px;[^}]*margin-left:\s*0;/s,
+    );
+    expect(css).toMatch(
+      /\.scenario-options label\s*\{[^}]*display:\s*inline-flex;[^}]*width:\s*100%;[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*border:\s*1px solid[^}]*background:\s*var\(--surface-inset\);[^}]*padding:\s*0 8px;/s,
+    );
+    expect(css).toMatch(
+      /\.scenario-options label:focus-within\s*\{[^}]*border-color:[^}]*box-shadow:/s,
+    );
+    expect(css).toMatch(
+      /\.scenario-options input\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
+    );
+
+    // Mobile keeps the same 2-column interaction model and the narrow block does not shrink it.
+    expect(mobileCss).toMatch(
+      /\.mobile-scenarios-open \.scenario-options\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[^}]*gap:\s*6px;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-scenarios-open \.scenario-options label\s*\{[^}]*height:\s*var\(--mobile-control-standard\);[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
+    );
+    expect(narrowCss).not.toMatch(
+      /\.mobile-scenarios-open \.scenario-options\s*\{[^}]*grid-template-columns:\s*repeat\(1/s,
+    );
+    expect(narrowCss).not.toMatch(
+      /\.mobile-scenarios-open \.scenario-options label\s*\{[^}]*\b(?:height|min-height|font-size)\s*:\s*(?:10|11|12|28|30|32)px;/s,
+    );
+    expect(narrowCss).toMatch(
+      /\.mobile-scenarios-open \.scenario-options label\s*\{[^}]*gap:\s*0;[^}]*padding:\s*0 2px;/s,
+    );
+
+    const html = renderExampleApp();
+    const attackCount = html.match(/class="attack-condition-card"/g)?.length ?? 0;
+    const modifierSectionCount = html.match(/class="attack-setting-section attack-battle-modifiers"/g)?.length ?? 0;
+    const optionsCount = html.match(/class="scenario-options"/g)?.length ?? 0;
+    expect(attackCount).toBeGreaterThan(0);
+    // Speed attacks intentionally do not expose these battle modifiers; every rendered
+    // modifier section must still own exactly one options grid.
+    expect(modifierSectionCount).toBeGreaterThan(0);
+    expect(optionsCount).toBe(modifierSectionCount);
+
+    const labels = ["急所", "てだすけ", "リフレクター", "ひかりのかべ", "オーロラベール", "フレンドガード"];
+    const modifierSections = Array.from(html.matchAll(
+      /<section class="attack-setting-section attack-battle-modifiers" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/g,
+    ));
+    expect(modifierSections).toHaveLength(modifierSectionCount);
+    for (const modifierSection of modifierSections) {
+      const headingId = modifierSection[1] ?? "";
+      const sectionHtml = modifierSection[2] ?? "";
+      expect(sectionHtml).toContain(`<h3 id="${headingId}">戦闘補正</h3>`);
+      expect(sectionHtml).toContain('class="scenario-options"');
+
+      const labelOrder = labels.map((label) => sectionHtml.indexOf(`> ${label}</label>`));
+      expect(labelOrder.every((index) => index >= 0)).toBe(true);
+      expect(labelOrder).toEqual([...labelOrder].sort((left, right) => left - right));
+      for (const label of labels) {
+        expect(sectionHtml.match(new RegExp(`> ${label}</label>`, "g"))).toHaveLength(1);
+      }
+    }
+
+    const [baseScenario, ...otherScenarios] = createDefaultScenarioForms();
+    const [baseAttack, ...otherAttacks] = baseScenario.attacks;
+    const checkedScenario = {
+      ...baseScenario,
+      attacks: [{
+        ...baseAttack,
+        critical: true,
+        reflect: true,
+        lightScreen: true,
+        auroraVeil: true,
+        helpingHand: true,
+        friendGuard: true,
+      }, ...otherAttacks],
+    };
+    const checkedHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[checkedScenario, ...otherScenarios]}
+      />,
+    );
+    const checkedSection = checkedHtml.match(
+      /<section class="attack-setting-section attack-battle-modifiers" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/,
+    )?.[2] ?? "";
+    expect((checkedSection.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(6);
+    for (const label of labels) {
+      expect(checkedSection).toContain(`> ${label}</label>`);
+    }
+  });
+
   it("keeps mobile overview scenario affordances role-sized at narrow widths", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const enabledHtml = renderExampleApp();

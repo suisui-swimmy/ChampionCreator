@@ -4147,6 +4147,16 @@ textarea {
   gap: 6px;
 }
 
+.attack-battle-modifiers {
+  min-width: 0;
+}
+
+.attack-battle-modifiers > .scenario-options {
+  width: 100%;
+  min-width: 0;
+  margin-left: 0;
+}
+
 .attack-setting-section--indented .attack-setting-section-body,
 .attack-setting-section--indented .attack-target-condition-body {
   margin-left: 8px;
@@ -4546,26 +4556,45 @@ textarea {
 }
 
 .scenario-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, var(--desktop-control-standard));
+  gap: 6px;
   align-items: center;
-  min-height: 28px;
-  margin-left: 8px;
+  width: 100%;
+  min-width: 0;
+  margin-left: 0;
 }
 
 .scenario-options label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  width: 100%;
+  min-width: 0;
+  height: var(--desktop-control-standard);
+  min-height: var(--desktop-control-standard);
+  border: 1px solid rgba(124, 143, 144, 0.2);
+  border-radius: 6px;
+  background: var(--surface-inset);
   color: var(--text);
   font-size: 11px;
   font-weight: 700;
+  overflow: hidden;
+  padding: 0 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-options label:focus-within {
+  border-color: var(--gold-line);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .scenario-options input {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
   accent-color: var(--gold);
 }
 
@@ -6829,6 +6858,47 @@ textarea {
     overscroll-behavior-x: none;
   }
 
+  .mobile-target-open .sp-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0 12px;
+  }
+
+  .mobile-target-open .sp-summary-actions {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    grid-template-rows: repeat(2, var(--mobile-control-standard));
+    align-items: center;
+    justify-items: start;
+    gap: 8px;
+  }
+
+  .mobile-target-open .sp-summary-actions .ui-button {
+    min-height: var(--mobile-control-standard);
+    font-size: var(--mobile-text-interactive-small);
+  }
+
+  .mobile-target-open .bulk-nature-toggle {
+    grid-column: 1 / -1;
+    min-height: var(--mobile-control-standard);
+    font-size: var(--mobile-text-interactive-small);
+  }
+
+  .mobile-target-open .bulk-nature-toggle:focus-within {
+    outline: 2px solid rgba(245, 197, 66, 0.55);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .mobile-target-open .sp-summary-total {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    min-height: var(--mobile-control-standard);
+    margin-left: 0;
+  }
+
   .mobile-scenarios-open .scenario-panel:not(.mobile-scenario-detail-panel) {
     padding-top: 0;
   }
@@ -7219,15 +7289,17 @@ textarea {
   .mobile-scenarios-open .scenario-options {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, var(--mobile-control-standard));
     gap: 6px;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
   }
 
   .mobile-scenarios-open .scenario-options label {
+    height: var(--mobile-control-standard);
     min-height: var(--mobile-control-standard);
-    border: 1px solid rgba(124, 143, 144, 0.2);
-    border-radius: 6px;
-    background: #101516;
-    padding: 0 8px;
+    font-size: var(--mobile-text-interactive-small);
   }
 
   .mobile-scenarios-open .scenario-options input {
@@ -7964,6 +8036,11 @@ textarea {
 }
 
 @media (max-width: 380px) {
+  .mobile-scenarios-open .scenario-options label {
+    gap: 0;
+    padding: 0 2px;
+  }
+
   .app-shell {
     padding: 6px;
   }
