@@ -374,6 +374,113 @@ describe("App", () => {
     expect(narrowMedia).not.toMatch(/\.mobile-scenario-adjustment-label\s*\{[^}]*font-size:\s*10px;/s);
   });
 
+  it("keeps mobile overview large-card controls stable on narrow rails", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const rootStart = css.indexOf(":root");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const narrowStart = css.indexOf("@media (max-width: 380px)", mobileStart);
+    const rootCss = css.slice(rootStart, css.indexOf("}", rootStart) + 1);
+    const mobileCss = css.slice(mobileStart, narrowStart);
+    const narrowCss = css.slice(narrowStart);
+
+    expect(rootStart).toBeGreaterThanOrEqual(0);
+    expect(mobileStart).toBeGreaterThan(rootStart);
+    expect(narrowStart).toBeGreaterThan(mobileStart);
+    expect(rootCss).toContain("--mobile-overview-card-action-height: 64px;");
+    expect(rootCss).toContain("--mobile-overview-attack-gap: 7px;");
+    expect(rootCss).toContain("--mobile-overview-attack-artwork-size: 32px;");
+
+    // One attack consumes the rail content width left after the 44px add action and 7px gap.
+    expect(mobileCss).toMatch(
+      /\.mobile-attack-rail\s*\{[^}]*gap:\s*var\(--mobile-overview-attack-gap\);[^}]*overflow-x:\s*auto;[^}]*overscroll-behavior-inline:\s*contain;[^}]*scroll-snap-type:\s*x\s+proximity;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-attack-summary\s*\{[^}]*grid-template-columns:\s*var\(--mobile-overview-attack-artwork-size\)\s+minmax\(0,\s*1fr\);[^}]*gap:\s*6px;[^}]*flex:\s*0\s*0\s*calc\(100%\s*-\s*var\(--mobile-control-comfort\)\s*-\s*var\(--mobile-overview-attack-gap\)\);[^}]*width:\s*calc\(100%\s*-\s*var\(--mobile-control-comfort\)\s*-\s*var\(--mobile-overview-attack-gap\)\);[^}]*min-width:\s*calc\(100%\s*-\s*var\(--mobile-control-comfort\)\s*-\s*var\(--mobile-overview-attack-gap\)\);[^}]*height:\s*var\(--mobile-overview-card-action-height\);[^}]*min-height:\s*var\(--mobile-overview-card-action-height\);[^}]*padding:\s*6px;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-attack-summary \.pokemon-artwork\.attack\s*\{[^}]*width:\s*var\(--mobile-overview-attack-artwork-size\);[^}]*height:\s*var\(--mobile-overview-attack-artwork-size\);/s,
+    );
+
+    // The add affordance shares the attack-card height and the comfort-width hit target.
+    expect(mobileCss).toMatch(
+      /\.mobile-attack-add\s*\{[^}]*flex:\s*0\s*0\s*var\(--mobile-control-comfort\);[^}]*width:\s*var\(--mobile-control-comfort\);[^}]*min-width:\s*var\(--mobile-control-comfort\);[^}]*height:\s*var\(--mobile-overview-card-action-height\);[^}]*min-height:\s*var\(--mobile-overview-card-action-height\);[^}]*padding:\s*0;[^}]*font-size:\s*24px;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-scenario-add-card\s*\{[^}]*width:\s*100%;[^}]*height:\s*var\(--mobile-overview-card-action-height\);[^}]*min-height:\s*var\(--mobile-overview-card-action-height\);[^}]*font-size:\s*28px;/s,
+    );
+    // The narrow media block must keep the same content-width calculation instead of a second fixed width.
+    for (const pattern of [
+      /\.mobile-attack-summary\s*\{[^}]*grid-template-columns:/s,
+      /\.mobile-attack-summary\s*\{[^}]*flex-basis:/s,
+      /\.mobile-attack-summary\s*\{[^}]*width:/s,
+      /\.mobile-attack-summary\s*\{[^}]*min-width:/s,
+      /\.mobile-attack-summary\s*\{[^}]*height:/s,
+      /\.mobile-attack-summary\s*\{[^}]*min-height:/s,
+      /\.mobile-attack-summary \.pokemon-artwork\.attack\s*\{[^}]*width:/s,
+      /\.mobile-attack-summary \.pokemon-artwork\.attack\s*\{[^}]*height:/s,
+      /\.mobile-attack-add\s*\{[^}]*flex-basis:/s,
+      /\.mobile-attack-add\s*\{[^}]*width:/s,
+      /\.mobile-attack-add\s*\{[^}]*height:/s,
+      /\.mobile-attack-add\s*\{[^}]*min-height:/s,
+      /\.mobile-scenario-add-card\s*\{[^}]*height:/s,
+      /\.mobile-scenario-add-card\s*\{[^}]*min-height:/s,
+    ]) {
+      expect(narrowCss).not.toMatch(pattern);
+    }
+
+    const defaultHtml = renderExampleApp();
+    expect(defaultHtml).toContain('aria-label="シナリオ1に攻撃を追加"');
+    expect(defaultHtml).toContain('aria-label="シナリオを追加"');
+
+    // Unresolved inputs still render one stable attack card and its explicit add action.
+    const unresolvedTarget = { ...createDefaultTargetForm(), pokemonInput: "" };
+    const unresolvedScenarios = createDefaultScenarioForms().map((scenario, index) => index === 0
+      ? {
+          ...scenario,
+          attacks: scenario.attacks.map((attack) => ({
+            ...attack,
+            label: "",
+            attackerPokemonInput: "",
+            moveInput: "",
+          })),
+        }
+      : scenario);
+    const unresolvedHtml = renderToStaticMarkup(
+      <App initialTargetForm={unresolvedTarget} initialScenarioForms={unresolvedScenarios} />,
+    );
+    const unresolvedArticle = unresolvedHtml.match(
+      /<article class="mobile-scenario-summary defence[\s\S]*?<\/article>/,
+    )?.[0] ?? "";
+    expect(unresolvedArticle.match(/class="mobile-attack-summary"/g)).toHaveLength(1);
+    expect(unresolvedArticle).toContain("未設定");
+    expect(unresolvedArticle).toContain('aria-label="シナリオ1に攻撃を追加"');
+
+    // Multiple attacks remain independent cards, with the add control after the rail items.
+    const [baseScenario, ...otherScenarios] = createDefaultScenarioForms();
+    const multipleAttackScenario = {
+      ...baseScenario,
+      attacks: [
+        ...baseScenario.attacks,
+        { ...baseScenario.attacks[0], id: "attack-b", label: "追加条件", attackerPokemonInput: "", moveInput: "" },
+      ],
+    };
+    const multipleHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[multipleAttackScenario, ...otherScenarios]}
+      />,
+    );
+    const multipleArticle = multipleHtml.match(
+      /<article class="mobile-scenario-summary defence[\s\S]*?<\/article>/,
+    )?.[0] ?? "";
+    expect(multipleArticle.match(/class="mobile-attack-summary"/g)).toHaveLength(2);
+    expect(multipleArticle).toContain(">追加条件</strong>");
+    expect(multipleArticle.indexOf('class="mobile-attack-add"')).toBeGreaterThan(
+      multipleArticle.lastIndexOf('class="mobile-attack-summary"'),
+    );
+    expect(multipleArticle).toContain('aria-label="シナリオ1に攻撃を追加"');
+  });
+
   it("keeps box dialogs above mobile sheets and candidate budget values proportional", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 

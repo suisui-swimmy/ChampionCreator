@@ -37,6 +37,9 @@
   --mobile-control-standard: 36px;
   --mobile-control-primary: 40px;
   --mobile-control-comfort: 44px;
+  --mobile-overview-card-action-height: 64px;
+  --mobile-overview-attack-gap: 7px;
+  --mobile-overview-attack-artwork-size: 32px;
   --mobile-icon-compact: 16px;
   --mobile-icon-standard: 20px;
   --mobile-text-heading: 15px;
@@ -6229,7 +6232,9 @@ textarea {
   .mobile-scenario-add-card {
     display: grid;
     place-items: center;
-    min-height: 92px;
+    width: 100%;
+    height: var(--mobile-overview-card-action-height);
+    min-height: var(--mobile-overview-card-action-height);
     border: 1px dashed rgba(238, 241, 237, 0.22);
     border-radius: 7px;
     background: rgba(17, 21, 22, 0.72);
@@ -6473,7 +6478,7 @@ textarea {
 
   .mobile-attack-rail {
     display: flex;
-    gap: 7px;
+    gap: var(--mobile-overview-attack-gap);
     min-width: 0;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
@@ -6484,11 +6489,14 @@ textarea {
 
   .mobile-attack-summary {
     display: grid;
-    grid-template-columns: 32px 70px;
+    grid-template-columns: var(--mobile-overview-attack-artwork-size) minmax(0, 1fr);
     align-items: center;
     gap: 6px;
-    flex: 0 0 118px;
-    min-height: 52px;
+    flex: 0 0 calc(100% - var(--mobile-control-comfort) - var(--mobile-overview-attack-gap));
+    width: calc(100% - var(--mobile-control-comfort) - var(--mobile-overview-attack-gap));
+    min-width: calc(100% - var(--mobile-control-comfort) - var(--mobile-overview-attack-gap));
+    height: var(--mobile-overview-card-action-height);
+    min-height: var(--mobile-overview-card-action-height);
     border: 1px solid #30383b;
     border-radius: 7px;
     background: #111516;
@@ -6499,8 +6507,8 @@ textarea {
   }
 
   .mobile-attack-summary .pokemon-artwork.attack {
-    width: 32px;
-    height: 32px;
+    width: var(--mobile-overview-attack-artwork-size);
+    height: var(--mobile-overview-attack-artwork-size);
   }
 
   .mobile-attack-summary em {
@@ -6508,12 +6516,16 @@ textarea {
   }
 
   .mobile-attack-add {
-    flex: 0 0 42px;
-    min-height: 52px;
+    flex: 0 0 var(--mobile-control-comfort);
+    width: var(--mobile-control-comfort);
+    min-width: var(--mobile-control-comfort);
+    height: var(--mobile-overview-card-action-height);
+    min-height: var(--mobile-overview-card-action-height);
     border: 1px dashed var(--line-strong);
     border-radius: 7px;
     background: #111516;
     color: var(--gold);
+    padding: 0;
     font-size: 24px;
     font-weight: 900;
     scroll-snap-align: start;
@@ -7957,11 +7969,6 @@ textarea {
   .mobile-target-heading h2,
   .mobile-board-heading h2 {
     font-size: var(--mobile-text-heading);
-  }
-
-  .mobile-attack-summary {
-    grid-template-columns: 30px 66px;
-    flex-basis: 110px;
   }
 
   .mobile-candidate-layout .candidate-row {
