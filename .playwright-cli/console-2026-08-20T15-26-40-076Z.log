@@ -1,4 +1,0 @@
-[26840188ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://content-firebaseappcheck.googleapis.com/v1/projects/championcreator/apps/1:81003905467:web:211201e5e6e003541d049e:exchangeRecaptchaEnterpriseToken?key=AIzaSyDvsAxNSWEcECIRI1tzcBdGMPl4rYCYEeg:0
-[26840192ms] [WARNING] [2026-08-20T22:54:00.267Z]  @firebase/app-check: AppCheck: 401 error. Attempts allowed again after 00m:01s (appCheck/initial-throttle). @ https://championcreator.suisui-swimmy.com/assets/app-nR5QAncz.js:0
-[48469241ms] [ERROR] Framing 'https://www.google.com/' violates the following report-only Content Security Policy directive: "frame-ancestors 'self'". The violation has been logged, but no further action has been taken.
- @ :0

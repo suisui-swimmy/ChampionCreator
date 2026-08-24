@@ -13,4 +13,5 @@ coverage/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+.playwright-cli/
 public/data/champions-usage-current.json
