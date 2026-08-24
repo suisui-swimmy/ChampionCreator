@@ -24,6 +24,7 @@ import {
   shouldInvalidateAccountOperationOnUidChange,
   getOffenseDefenderStatKeys,
   getPokemonSuggestionKeyAction,
+  resolveUsageSuggestionOwner,
   resolveDraftStorageScope,
   formatLocalizedDamageDescription,
   formatNatureModifierLabel,
@@ -54,7 +55,12 @@ import {
   createDraftStorageDocument,
 } from "./ui/draftStorage";
 import { GuideAllyAbilityTip, allyAbilityLabels } from "./guide/GuideAllyAbilityTip";
-import { GuideTutorial, getTutorialMessage } from "./guide/GuideTutorial";
+import {
+  GuideTutorial,
+  getTutorialMessage,
+  guideTutorialSuggestionFormat,
+  guideTutorialUsagePokemonAliases,
+} from "./guide/GuideTutorial";
 
 const renderExampleApp = (): string => renderToStaticMarkup(
   <App
@@ -981,9 +987,13 @@ describe("App", () => {
   it("publishes a static, indexable guide with a responsive real-calculation tutorial", () => {
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
+    const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const robots = readFileSync(new URL("../public/robots.txt", import.meta.url), "utf8");
     const allyAbilityTipHtml = renderToStaticMarkup(<GuideAllyAbilityTip />);
     const tutorialHtml = renderToStaticMarkup(<GuideTutorial />);
+    const tutorialPreset = JSON.parse(
+      readFileSync(new URL("./guide/tutorial-preset.json", import.meta.url), "utf8"),
+    ) as { entries: Array<{ payload: { scenarios: Array<{ attacks: Array<{ gameType: string }> }> } }> };
 
     expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>");
     expect(guideHtml).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/"');
@@ -1000,6 +1010,32 @@ describe("App", () => {
     expect(guideHtml).toContain('href="#getting-started" aria-current="location"');
     expect(guideHtml).toContain('<a href="#home-screen">ホーム画面へ追加</a>');
     expect(guideHtml).toContain('<a href="#notes">注意点</a>');
+    const guideTocHtml = guideHtml.match(/<nav>[\s\S]*?<\/nav>/)?.[0] ?? "";
+    const expectedGuideTocLabels = [
+      "まずは使ってみよう",
+      "画面の見方",
+      "基本の流れ",
+      "調整対象",
+      "入力候補",
+      "SP（能力ポイント）",
+      "仮想敵シナリオ",
+      "定数ダメージ・回復",
+      "候補一覧",
+      "保存・読み込み",
+      "ブラウザ同期",
+      "ホーム画面へ追加",
+      "よくある困りごと",
+      "注意点",
+    ];
+    let previousTocLabelIndex = -1;
+    for (const label of expectedGuideTocLabels) {
+      const labelIndex = guideTocHtml.indexOf(`>${label}</a>`);
+      expect(labelIndex).toBeGreaterThan(previousTocLabelIndex);
+      previousTocLabelIndex = labelIndex;
+    }
+    for (const heading of ["調整対象", "入力候補", "SP（能力ポイント）", "仮想敵シナリオ", "候補一覧", "ブラウザ同期"]) {
+      expect(guideHtml).toContain(`<h2>${heading}</h2>`);
+    }
     expect(guideHtml).toContain('<span>使い方ガイド</span>');
     expect(guideHtml).not.toContain('class="guide-global-nav"');
     expect(guideHtml).toContain('<a class="guide-header-action" href="/">アプリを開く</a>');
@@ -1055,6 +1091,10 @@ describe("App", () => {
     expect(guideHtml).toContain("「相手のこの技を、指定した回数・確率で耐える」という条件です。");
     expect(guideHtml).toContain("「調整対象のこの技で、相手を指定した確率で倒す」という条件です。");
     expect(guideHtml).toContain("「この相手より速くする」「この相手より遅くする」という条件です。");
+    expect(guideHtml).toContain("ポケモン・技・特性・持ち物の入力欄に文字を入力、または「&gt;」ボタンを押すと、入力候補が表示されます。");
+    expect(guideHtml).toContain('href="https://championsbattledata.com/" target="_blank" rel="noreferrer">Pokemon Champions Battle Data</a>の使用率データを参考に並び替えます。');
+    expect(guideHtml).toContain("個体値は全能力31固定で計算します。現在、個体値を変更する入力欄はありません。");
+    expect(guideHtml).not.toContain("レベル、性格、SP、個体値");
     expect(guideHtml).toContain("現在HPで威力が変わる技は、ロック中に各攻撃時点のHPから自動計算されます。");
     expect(guideHtml).toContain("攻撃カード下部の「定数ダメージ・回復」を開き、「効果を追加」から計算に含めたい効果を選んでください。");
     expect(guideHtml).toContain("持ち物・状態・天候を入力しても、それに対応する定数ダメージや回復は、この欄へ自動では追加されません。");
@@ -1092,6 +1132,15 @@ describe("App", () => {
     const guideTipIcon = readFileSync(new URL("../public/assets/guide/lightbulb.svg", import.meta.url), "utf8");
     expect(guideTipIcon).toContain("<svg");
     expect(guideTipIcon).toContain('stroke="#00FF72"');
+    const guideAlertIcon = readFileSync(new URL("../public/assets/guide/triangle-alert.svg", import.meta.url), "utf8");
+    expect(guideAlertIcon).toContain('viewBox="0 0 24 24"');
+    expect(guideAlertIcon).toContain('stroke="#f7d447"');
+    const importantTipIndex = guideHtml.indexOf('class="guide-tip guide-important-tip"');
+    const alertIconIndex = guideHtml.indexOf('src="/assets/guide/triangle-alert.svg"', importantTipIndex);
+    const importantLabelIndex = guideHtml.indexOf("<strong>重要</strong>", importantTipIndex);
+    expect(importantTipIndex).toBeGreaterThan(-1);
+    expect(alertIconIndex).toBeGreaterThan(importantTipIndex);
+    expect(alertIconIndex).toBeLessThan(importantLabelIndex);
     const guideAllyAbilityImage = readFileSync(new URL("../public/assets/guide/double-battle-ally-abilities.png", import.meta.url));
     expect(guideAllyAbilityImage.subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(guideAllyAbilityImage.readUInt32BE(16)).toBe(871);
@@ -1192,6 +1241,21 @@ describe("App", () => {
     expect(guideHtml).toContain('src="/assets/social/github-invertocat-white.svg"');
     expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
     expect(tutorialHtml).toContain("このサンプルは実際に操作できます。");
+    expect(tutorialHtml).toContain("メガマフォクシーのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。");
+    expect(tutorialHtml).toContain("チュートリアル内の変更内容・計算結果は保存・同期されません。");
+    expect(guideTutorialSuggestionFormat).toBe("Doubles");
+    expect(guideTutorialUsagePokemonAliases).toEqual({
+      "Delphox-Mega": "Delphox",
+      "Gengar-Mega": "Gengar",
+    });
+    expect(resolveUsageSuggestionOwner("Delphox-Mega", guideTutorialUsagePokemonAliases)).toBe("Delphox");
+    expect(resolveUsageSuggestionOwner("Kingambit", guideTutorialUsagePokemonAliases)).toBe("Kingambit");
+    expect(tutorialPreset.entries.flatMap((entry) => (
+      entry.payload.scenarios.flatMap((scenario) => scenario.attacks.map((attack) => attack.gameType))
+    ))).toEqual(["doubles", "doubles", "doubles"]);
+    expect(appSource).toContain("const activeUsageData = usageData === undefined");
+    expect(appSource).not.toContain('const activeUsageData = variant === "tutorial"');
+    expect(appSource).toMatch(/useEffect\(\(\) => \{\s*if \(usageData !== undefined\)/);
     expect(tutorialHtml).toContain("入力内容を確認する");
     expect(tutorialHtml).toContain("候補の詳細を見る");
     expect(getTutorialMessage("idle", false)).toBe("必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。");

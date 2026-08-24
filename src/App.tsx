@@ -1062,13 +1062,22 @@ type SuggestionUsageContextValue = {
   data: ChampionsUsageData | null;
   format: SuggestionFormat;
   enabled: boolean;
+  ownerAliases: Readonly<Record<string, string>>;
 };
 
 const SuggestionUsageContext = createContext<SuggestionUsageContextValue>({
   data: null,
   format: "Singles",
   enabled: false,
+  ownerAliases: {},
 });
+
+export const resolveUsageSuggestionOwner = (
+  ownerPokemonCanonicalName: string | undefined,
+  ownerAliases: Readonly<Record<string, string>>,
+): string | undefined => ownerPokemonCanonicalName
+  ? ownerAliases[ownerPokemonCanonicalName] ?? ownerPokemonCanonicalName
+  : undefined;
 
 const useUsageSuggestionOptions = (
   category: UsageRankingCategory,
@@ -1077,13 +1086,13 @@ const useUsageSuggestionOptions = (
   baseOptions: readonly EntityInputOption[] = getEntityInputOptions(category),
   limit = 40,
 ): EntityInputOption[] => {
-  const { data, format } = useContext(SuggestionUsageContext);
+  const { data, format, ownerAliases } = useContext(SuggestionUsageContext);
   return getUsageMatchingEntityInputOptions(
     baseOptions,
     input,
     data,
     format,
-    ownerPokemonCanonicalName,
+    resolveUsageSuggestionOwner(ownerPokemonCanonicalName, ownerAliases),
     category,
     limit,
   );
@@ -1335,6 +1344,7 @@ type AppProps = {
   suggestionFormat?: SuggestionFormat;
   onSuggestionFormatChange?: (format: SuggestionFormat) => void;
   usageData?: ChampionsUsageData | null;
+  usagePokemonAliases?: Readonly<Record<string, string>>;
   usageSourceGeneratedAt?: string | null;
   onSearchStatusChange?: (status: SearchStatus) => void;
   onCandidateApplied?: () => void;
@@ -1347,6 +1357,7 @@ export function App({
   suggestionFormat,
   onSuggestionFormatChange,
   usageData,
+  usagePokemonAliases,
   usageSourceGeneratedAt,
   onSearchStatusChange,
   onCandidateApplied,
@@ -1373,11 +1384,9 @@ export function App({
   );
   const [loadedUsageData, setLoadedUsageData] = useState<ChampionsUsageData | null>(null);
   const activeSuggestionFormat = suggestionFormat ?? savedSuggestionFormat;
-  const activeUsageData = variant === "tutorial"
-    ? null
-    : usageData === undefined
-      ? loadedUsageData
-      : usageData;
+  const activeUsageData = usageData === undefined
+    ? loadedUsageData
+    : usageData;
   const [targetForm, setTargetForm] = useState<TargetFormState>(
     () => initialTargetForm ?? createBlankTargetForm(),
   );
@@ -1565,7 +1574,7 @@ export function App({
         : null;
 
   useEffect(() => {
-    if (variant !== "default" || usageData !== undefined) {
+    if (usageData !== undefined) {
       return undefined;
     }
 
@@ -1577,7 +1586,7 @@ export function App({
     });
 
     return () => controller.abort();
-  }, [usageData, variant]);
+  }, [usageData]);
 
   useEffect(() => {
     if (variant !== "default") return undefined;
@@ -3472,6 +3481,7 @@ export function App({
       data: activeUsageData,
       format: activeSuggestionFormat,
       enabled: variant !== "tutorial",
+      ownerAliases: usagePokemonAliases ?? {},
     }}>
       <div
         className={[
@@ -4434,10 +4444,20 @@ function NatureMatrixField({
   onChange,
 }: NatureMatrixFieldProps) {
   const labelClassName = ["nature-field", isUnresolvedEntityInput("nature", value) && "is-invalid", className].filter(Boolean).join(" ");
-  const { data, format, enabled: usageEnabled } = useContext(SuggestionUsageContext);
+  const {
+    data,
+    format,
+    enabled: usageEnabled,
+    ownerAliases,
+  } = useContext(SuggestionUsageContext);
 
   const getUsageState = (option: NatureOption): NatureUsageState => (
-    getNatureUsageState(data, format, ownerPokemonCanonicalName, option.showdownName)
+    getNatureUsageState(
+      data,
+      format,
+      resolveUsageSuggestionOwner(ownerPokemonCanonicalName, ownerAliases),
+      option.showdownName,
+    )
   );
 
   return (

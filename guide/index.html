@@ -104,14 +104,14 @@
           <a class="active" href="#getting-started" aria-current="location">まずは使ってみよう</a>
           <a href="#screen">画面の見方</a>
           <a href="#basic-flow">基本の流れ</a>
-          <a href="#target">調整対象を入力</a>
-          <a href="#suggestions">名前は候補から選ぶ</a>
-          <a href="#sp">SPを入力</a>
-          <a href="#scenarios">シナリオを作る</a>
+          <a href="#target">調整対象</a>
+          <a href="#suggestions">入力候補</a>
+          <a href="#sp">SP（能力ポイント）</a>
+          <a href="#scenarios">仮想敵シナリオ</a>
           <a id="constant-damage-nav" href="#constant-damage">定数ダメージ・回復</a>
-          <a href="#candidates">候補を選ぶ</a>
+          <a href="#candidates">候補一覧</a>
           <a href="#box">保存・読み込み</a>
-          <a href="#account">別のブラウザでも使う（同期）</a>
+          <a href="#account">ブラウザ同期</a>
           <a href="#home-screen">ホーム画面へ追加</a>
           <a href="#troubleshooting">よくある困りごと</a>
           <a href="#notes">注意点</a>
@@ -128,7 +128,7 @@
           </p>
           <p>耐久・火力・素早さを別々に計算するだけでなく、同じSP上限の中でまとめて調整できます。ログインしなくても、計算・保存・バックアップを利用できます。</p>
           <p><a class="guide-inline-action" href="/">ChampionCreatorを開く</a></p>
-          <p>はじめに、用意されたサンプルを使って、計算から候補の適用までを一通り試してみましょう。</p>
+          <p>はじめに、入力されたサンプルを使って、計算から候補の適用までを一通り試してみましょう。</p>
 
           <noscript>
             <p class="guide-noscript">実計算チュートリアルを使うにはJavaScriptを有効にしてください。ガイド本文はそのまま読めます。</p>
@@ -155,7 +155,7 @@
             <li><span class="feature-mark target">①</span><div><h3>調整対象</h3><p>SP配分を決めたいポケモンと、計算の前提にする性格・特性・持ち物・現在SPなどを入力します。</p></div></li>
             <li><span class="feature-mark scenario">②</span><div><h3>仮想敵シナリオ</h3><p>「この攻撃を耐える」「この技で倒す」「この相手を抜く」など、満たしたい条件を作成します。</p></div></li>
             <li><span class="feature-mark result">③</span><div><h3>候補一覧</h3><p>有効なシナリオをすべて満たしたSP配分が表示されます。候補ごとの詳細を比べ、使いたい配分を調整対象へ適用できます。</p></div></li>
-            <li><span class="feature-mark format">④</span><div><h3>シングル／ダブル</h3><p>計算に使うバトル形式を選びます。技・特性・持ち物の候補順と、現在の各攻撃カードのルールをまとめて切り替えます。</p><p>各攻撃カードのルールは、あとから個別に変更できます。</p></div></li>
+            <li><span class="feature-mark format">④</span><div><h3>シングル／ダブル</h3><p>計算に使うバトル形式を選びます。技・特性・持ち物の入力候補と、現在の各攻撃カードのルールをまとめて切り替えます。</p><p>各攻撃カードのルールは、あとから個別に変更できます。</p></div></li>
             <li><span class="feature-mark sync">⑤</span><div><h3>同期</h3><p>「このブラウザのみ」「同期済み」など、現在の保存・同期状態が表示されます。ボタンを開くと、Googleログイン、手動同期、競合の解決、アカウント管理を行えます。</p></div></li>
             <li><span class="feature-mark box">⑥</span><div><h3>ボックス</h3><p>各パネル右上のボタンから、入力中の条件を名前付きで保存・読み込みできます。</p></div></li>
           </ol>
@@ -200,7 +200,7 @@
 
         <section class="guide-section" id="target">
           <p class="guide-section-kicker">TARGET</p>
-          <h2>調整対象を入力</h2>
+          <h2>調整対象</h2>
           <p>「調整対象」は、これからSP配分を決めたいポケモンです。</p>
           <p>まずポケモン名を選び、計算の前提にする性格・特性・持ち物・レベルなどを入力します。</p>
           <p>レベルは通常50でロックされています。別のレベルで計算するときだけ、ロックを外して変更してください。</p>
@@ -217,16 +217,16 @@
 
         <section class="guide-section" id="suggestions">
           <p class="guide-section-kicker">SUGGESTIONS</p>
-          <h2>名前は候補から選ぶ</h2>
-          <p>ポケモン・技・特性・持ち物の入力欄に文字を入力すると、選択候補が表示されます。</p>
+          <h2>入力候補</h2>
+          <p>ポケモン・技・特性・持ち物の入力欄に文字を入力、または「&gt;」ボタンを押すと、入力候補が表示されます。</p>
           <p>表記ゆれやフォーム違いによる入力エラーを避けるため、<strong>文字を入力するだけで終わらせず、表示された候補から選択してください。</strong></p>
-          <p>技・特性・持ち物は、ヘッダーで選んだ「シングル」「ダブル」に合わせて、よく使われる候補が上に表示されます。</p>
+          <p>技・特性・持ち物の入力候補は、<a href="https://championsbattledata.com/" target="_blank" rel="noreferrer">Pokemon Champions Battle Data</a>の使用率データを参考に並び替えます。ヘッダーで選んだ「シングル」「ダブル」に合わせて、よく使われる候補が上に表示されます。</p>
           <p>ヘッダーの形式を切り替えると、現在のすべての攻撃カードにある「状況条件 &gt; ルール」も同じ形式へ一括変更されます。特定の攻撃だけ別ルールにしたい場合は、その攻撃カードから個別に変更してください。</p>
         </section>
 
         <section class="guide-section" id="sp">
           <p class="guide-section-kicker">STAT POINTS</p>
-          <h2>SPを入力</h2>
+          <h2>SP（能力ポイント）</h2>
           <p>Pokemon ChampionsのSPには、次の上限があります。</p>
           <div class="guide-table-wrap">
             <table aria-label="SPの上限と表示内容">
@@ -240,12 +240,13 @@
             </table>
           </div>
           <p>「現在SP」には、すでに配分が決まっている分を入力します。入力済みのSPや、火力・素早さ調整で必要になった<code>A / C / S</code>も、同じ合計66SPの中に含まれます。</p>
+          <p>個体値は全能力31固定で計算します。現在、個体値を変更する入力欄はありません。</p>
           <p>計算後は「使用SP」と「残りSP」を確認すると、その候補を採用したあとに、どれだけSPを自由に使えるかが分かります。</p>
         </section>
 
         <section class="guide-section" id="scenarios">
           <p class="guide-section-kicker">SCENARIOS</p>
-          <h2>シナリオを作る</h2>
+          <h2>仮想敵シナリオ</h2>
           <p>シナリオは、「この攻撃を耐える」「この技で倒す」「この相手を抜く」といった、満たしたい条件のまとまりです。</p>
           <p>シナリオ上部のボタンから「耐久調整」「火力調整」「素早さ調整」を選び、相手・技・必要な確率などを入力します。</p>
           <h3>「＋」と「シナリオを追加」の違い</h3>
@@ -330,7 +331,10 @@
           </div>
           <p>効果の対象、発動するタイミング、計算へ入る順番は、選んだ効果に応じて自動で決まります。</p>
           <div class="guide-tip guide-important-tip">
-            <div class="guide-tip-heading"><strong>重要</strong></div>
+            <div class="guide-tip-heading">
+              <img class="guide-tip-icon" src="/assets/guide/triangle-alert.svg" width="24" height="24" alt="" aria-hidden="true" />
+              <strong>重要</strong>
+            </div>
             <p>持ち物・状態・天候を入力しても、それに対応する定数ダメージや回復は、この欄へ自動では追加されません。計算へ含めたい効果を「定数ダメージ・回復」から明示的に追加してください。</p>
           </div>
           <p>入力した持ち物・状態・天候と、追加した効果が一致しない場合は警告が表示されます。警告が出ても効果は自動削除されないため、意図した条件になっているか確認してください。</p>
@@ -338,7 +342,7 @@
 
         <section class="guide-section" id="candidates">
           <p class="guide-section-kicker">RESULTS</p>
-          <h2>候補を選ぶ</h2>
+          <h2>候補一覧</h2>
           <p>計算が終わると、有効になっているすべてのシナリオを満たした候補だけが表示されます。</p>
           <p>候補が多い場合は、並び替えやページ移動を使って比較できます。総合・物理・特殊の各耐久指数による並び替えは、候補を比較するための補助機能です。シナリオの合否そのものは、各攻撃の計算結果によって判定されます。</p>
           <p>候補は、次の順番で確認すると選びやすくなります。</p>
@@ -387,9 +391,9 @@
 
         <section class="guide-section" id="account">
           <p class="guide-section-kicker">ACCOUNT &amp; SYNC</p>
-          <h2>別のブラウザでも使う（同期）</h2>
-          <p>同期は任意です。Googleログインをしなくても、このブラウザで計算・保存・JSONバックアップを利用できます。</p>
-          <p>Googleログイン後に初回の統合を完了すると、別のPCやスマホでもボックスを同期できます。ほかのブラウザで保存された下書きも、内容を確認してから選んで復元できます。</p>
+          <h2>ブラウザ同期</h2>
+          <p>Googleアカウントによるログインをすると、別のPCやスマホでもボックスを同期できます。他のブラウザで保存された下書きも、内容を確認してから選んで復元できます。</p>
+          <p>Googleログインをしなくても、このブラウザで計算・保存・JSONバックアップを利用できます。</p>
 
           <h3>同期を始める</h3>
           <ol class="guide-flow-list">
@@ -488,7 +492,7 @@
           <h3>実際のゲーム内結果と違う</h3>
           <p>次の条件が、実際の対戦と一致しているか確認してください。</p>
           <ul class="guide-notes-list guide-prose-list">
-            <li>レベル、性格、SP、個体値</li>
+            <li>レベル、性格、SP</li>
             <li>特性、持ち物、テラスタイプ</li>
             <li>能力ランク、状態異常</li>
             <li>天候、フィールド、壁、バトル形式</li>

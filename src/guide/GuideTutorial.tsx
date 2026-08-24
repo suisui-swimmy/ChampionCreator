@@ -12,6 +12,12 @@ const tutorialSteps = [
   { id: 4, label: "候補を適用する" },
 ] as const;
 
+export const guideTutorialSuggestionFormat = "Doubles" as const;
+export const guideTutorialUsagePokemonAliases = {
+  "Delphox-Mega": "Delphox",
+  "Gengar-Mega": "Gengar",
+} as const;
+
 const loadTutorialPreset = () => {
   const result = parseBoxBackupDocument(JSON.stringify(tutorialPresetJson));
   if (result.status === "error") {
@@ -88,6 +94,8 @@ export function GuideTutorial() {
         <div>
           <span className="guide-live-badge"><i aria-hidden="true" />このサンプルは実際に操作できます。</span>
           <h2 id="interactive-tutorial-title">サンプル入力で計算してみよう</h2>
+          <p className="guide-tutorial-context">メガマフォクシーのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。</p>
+          <p className="guide-tutorial-context guide-tutorial-storage-note">チュートリアル内の変更内容・計算結果は保存・同期されません。</p>
         </div>
         <div className="guide-tutorial-actions">
           <button type="button" className="guide-reset-button" onClick={handleReset} aria-label="サンプルに戻す" title="サンプルに戻す">
@@ -118,6 +126,8 @@ export function GuideTutorial() {
         <App
           key={resetKey}
           variant="tutorial"
+          suggestionFormat={guideTutorialSuggestionFormat}
+          usagePokemonAliases={guideTutorialUsagePokemonAliases}
           initialTargetForm={preset.target}
           initialScenarioForms={preset.scenarios}
           onSearchStatusChange={handleStatusChange}

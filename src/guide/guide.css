@@ -316,6 +316,13 @@ body.guide-page {
   line-height: 1.4;
 }
 
+.guide-tutorial-context {
+  margin: 6px 0 0;
+  color: var(--guide-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .guide-tutorial-actions {
   display: flex;
   flex: 0 0 auto;
