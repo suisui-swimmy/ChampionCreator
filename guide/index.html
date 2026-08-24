@@ -526,53 +526,76 @@
 
     </div>
 
-    <footer class="app-footer" aria-label="権利表記">
+    <footer class="app-footer" aria-label="サイトフッター">
       <div class="app-footer-copy">
         <span>© 2026 suisui-swimmy</span>
         <span>
           本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します
         </span>
       </div>
-      <div class="app-footer-links" aria-label="フッターリンク">
-        <a class="app-footer-contact" href="/privacy/">プライバシー</a>
-        <span aria-hidden="true"> | </span>
-        <a
-          class="app-footer-contact"
-          href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
-          target="_blank"
-          rel="noreferrer"
-        >不具合報告</a>
-        <span aria-hidden="true"> | </span>
-        <a
-          class="app-footer-contact"
-          href="https://x.com/peixe0307"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="お問い合わせ: X @peixe0307"
-        >
-          <span>お問い合わせ</span>
-          <img src="/assets/social/x-logo.svg" alt="X" />
-        </a>
+      <nav class="app-footer-links app-footer-page-links" aria-label="ページリンク">
+        <span class="app-footer-link-item">
+          <a class="app-footer-contact" href="/">アプリ</a>
+        </span>
+        <span class="app-footer-link-item">
+          <span class="app-footer-separator" aria-hidden="true"> | </span>
+          <a class="app-footer-contact" href="/guide/" aria-current="page">使い方ガイド</a>
+        </span>
+        <span class="app-footer-link-item">
+          <span class="app-footer-separator" aria-hidden="true"> | </span>
+          <a class="app-footer-contact" href="/privacy/">プライバシー</a>
+        </span>
+      </nav>
+      <nav class="app-footer-links app-footer-support-links" aria-label="サポート・関連リンク">
+        <span class="app-footer-link-item">
+          <a
+            class="app-footer-contact"
+            href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
+            target="_blank"
+            rel="noreferrer"
+          >不具合報告</a>
+        </span>
+        <span class="app-footer-link-item">
+          <span class="app-footer-separator" aria-hidden="true"> | </span>
+          <a
+            class="app-footer-contact"
+            href="https://x.com/peixe0307"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="お問い合わせ: X @peixe0307"
+          >
+            <span>お問い合わせ</span>
+            <img src="/assets/social/x-logo.svg" alt="X" />
+          </a>
+        </span>
+        <span class="app-footer-link-item">
+          <span class="app-footer-separator" aria-hidden="true"> | </span>
+          <a
+            class="app-footer-contact app-footer-icon-link"
+            href="https://github.com/suisui-swimmy/ChampionCreator"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="ChampionCreator GitHub リポジトリ"
+          >
+            <img src="/assets/social/github-invertocat-white.svg" alt="" />
+          </a>
+        </span>
+      </nav>
+      <div class="app-footer-source">
+        <span class="app-footer-link-item">
+          <a
+            class="app-footer-source-link"
+            href="https://championsbattledata.com/"
+            target="_blank"
+            rel="noreferrer"
+          >使用率データ提供元: Pokemon Champions Battle Data</a>
+        </span>
+        <span class="app-footer-link-item">
+          <span class="app-footer-separator" aria-hidden="true"> | </span>
+          <span class="app-footer-source-date">データ更新日: __CHAMPIONCREATOR_FOOTER_USAGE_DATE__</span>
+        </span>
       </div>
-      <div class="app-footer-links" aria-label="関連リンク">
-        <a
-          class="app-footer-contact"
-          href="https://github.com/suisui-swimmy/ChampionCreator"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="ChampionCreator GitHub リポジトリ"
-        >
-          <img src="/assets/social/github-invertocat-white.svg" alt="" />
-        </a>
-        <span aria-hidden="true"> | </span>
-        <a
-          class="app-footer-contact"
-          href="https://championsbattledata.com/"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="使用率データ提供元 Pokemon Champions Battle Data"
-        >使用率データ提供元</a>
-      </div>
+      <p class="app-footer-version">__CHAMPIONCREATOR_FOOTER_VERSION__</p>
     </footer>
     <script type="module" src="/src/guide/main.tsx"></script>
   </body>

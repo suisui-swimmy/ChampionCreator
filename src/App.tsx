@@ -31,7 +31,7 @@ import type {
   SupportedHpEventEffectId,
 } from "./domain/hpEvents";
 import type { EntityKind } from "./data/localizationTypes";
-import { appVersionInfo } from "./appVersion";
+import { appVersionInfo, formatAppVersionLabel } from "./appVersion";
 import {
   formatUsageDataDateJst,
   getUsageMatchingEntityInputOptions,
@@ -3911,74 +3911,88 @@ export function App({
           onCloseMobileSheet={closeMobileSheet}
         />
       </main>
-      {variant === "default" ? <footer className="app-footer" aria-label="権利表記">
+      {variant === "default" ? <footer className="app-footer" aria-label="サイトフッター">
         <div className="app-footer-copy">
           <span>© 2026 suisui-swimmy</span>
           <span>
             本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します
           </span>
         </div>
-        <div className="app-footer-links" aria-label="フッターリンク">
-          <a className="app-footer-contact" href="/privacy/">
-            プライバシー
-          </a>
-          <span aria-hidden="true"> | </span>
-          <a
-            className="app-footer-contact"
-            href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
-            target="_blank"
-            rel="noreferrer"
-          >
-            不具合報告
-          </a>
-          <span aria-hidden="true"> | </span>
-          <a
-            className="app-footer-contact"
-            href="https://x.com/peixe0307"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="お問い合わせ: X @peixe0307"
-          >
-            <span>お問い合わせ</span>
-            <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
-          </a>
-          <span aria-hidden="true"> | </span>
-          <a
-            className="app-footer-contact"
-            href="https://github.com/suisui-swimmy/ChampionCreator"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="ChampionCreator GitHub リポジトリ"
-          >
-            <img src={getAssetSrc("assets/social/github-invertocat-white.svg")} alt="" />
-          </a>
-        </div>
+        <nav className="app-footer-links app-footer-page-links" aria-label="ページリンク">
+          <span className="app-footer-link-item">
+            <a className="app-footer-contact" href="/" aria-current="page">アプリ</a>
+          </span>
+          <span className="app-footer-link-item">
+            <span className="app-footer-separator" aria-hidden="true"> | </span>
+            <a className="app-footer-contact" href="/guide/">使い方ガイド</a>
+          </span>
+          <span className="app-footer-link-item">
+            <span className="app-footer-separator" aria-hidden="true"> | </span>
+            <a className="app-footer-contact" href="/privacy/">プライバシー</a>
+          </span>
+        </nav>
+        <nav className="app-footer-links app-footer-support-links" aria-label="サポート・関連リンク">
+          <span className="app-footer-link-item">
+            <a
+              className="app-footer-contact"
+              href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform?usp=header"
+              target="_blank"
+              rel="noreferrer"
+            >
+              不具合報告
+            </a>
+          </span>
+          <span className="app-footer-link-item">
+            <span className="app-footer-separator" aria-hidden="true"> | </span>
+            <a
+              className="app-footer-contact"
+              href="https://x.com/peixe0307"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="お問い合わせ: X @peixe0307"
+            >
+              <span>お問い合わせ</span>
+              <img src={getAssetSrc("assets/social/x-logo.svg")} alt="X" />
+            </a>
+          </span>
+          <span className="app-footer-link-item">
+            <span className="app-footer-separator" aria-hidden="true"> | </span>
+            <a
+              className="app-footer-contact app-footer-icon-link"
+              href="https://github.com/suisui-swimmy/ChampionCreator"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="ChampionCreator GitHub リポジトリ"
+            >
+              <img src={getAssetSrc("assets/social/github-invertocat-white.svg")} alt="" />
+            </a>
+          </span>
+        </nav>
         <div className="app-footer-source">
-          <a
-            className="app-footer-source-link"
-            href="https://championsbattledata.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Pokemon Champions Battle Data
-          </a>
-          <span className="app-footer-source-date">
-            データ更新日: {formatUsageDataDateJst(
-              usageSourceGeneratedAt === undefined
-                ? activeUsageData?.dataVersion === "empty"
-                  ? undefined
-                  : activeUsageData?.sourceGeneratedAt
-                : usageSourceGeneratedAt ?? undefined,
-            )}
+          <span className="app-footer-link-item">
+            <a
+              className="app-footer-source-link"
+              href="https://championsbattledata.com/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              使用率データ提供元: Pokemon Champions Battle Data
+            </a>
+          </span>
+          <span className="app-footer-link-item">
+            <span className="app-footer-separator" aria-hidden="true"> | </span>
+            <span className="app-footer-source-date">
+              データ更新日: {formatUsageDataDateJst(
+                usageSourceGeneratedAt === undefined
+                  ? activeUsageData?.dataVersion === "empty"
+                    ? undefined
+                    : activeUsageData?.sourceGeneratedAt
+                  : usageSourceGeneratedAt ?? undefined,
+              )}
+            </span>
           </span>
         </div>
-        <p className="app-footer-version">
-          app v{appVersionInfo.appVersion}
-          {" / "}
-          calc {appVersionInfo.smogonCalcVersion}
-          {" / "}
-          data {appVersionInfo.localizationEntries}
-        </p>
+        <p className="app-footer-version">{formatAppVersionLabel()}</p>
       </footer> : null}
       </div>
     </SuggestionUsageContext.Provider>

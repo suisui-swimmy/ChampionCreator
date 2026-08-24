@@ -250,7 +250,21 @@ describe("App", () => {
     for (const [token, value] of Object.entries(expectedTokens)) {
       expect(css).toMatch(new RegExp(`${token}\\s*:\\s*${value};`));
     }
+    expect(css).toMatch(/--footer-icon-size:\s*18px;/);
+    expect(css).toMatch(/--desktop-page-gutter:\s*16px;/);
+    expect(css).toMatch(/--stacked-page-max-width:\s*780px;/);
+    expect(css).toMatch(/--mobile-page-gutter:\s*8px;/);
+    expect(css).toMatch(/--narrow-page-gutter:\s*6px;/);
+    expect(css).toMatch(/--mobile-page-max-width:\s*460px;/);
     expect(css).toMatch(/\.app-footer\s*\{[^}]*font-size:\s*12px;/s);
+    expect(css).toMatch(/\.app-footer\s*\{[^}]*gap:\s*2px;[^}]*margin:\s*8px auto 0;[^}]*padding:\s*8px 10px;[^}]*line-height:\s*1\.35;/s);
+    expect(css).toMatch(/\.app-footer-copy\s*\{[^}]*display:\s*grid;[^}]*gap:\s*0;/s);
+    expect(css).toMatch(/\.app-footer-links\s*\{[^}]*flex-wrap:\s*wrap;[^}]*white-space:\s*normal;/s);
+    expect(css).toMatch(/\.app-footer-link-item\s*\{[^}]*display:\s*inline-flex;[^}]*white-space:\s*nowrap;/s);
+    expect(css).toMatch(/\.app-footer-source > \.app-footer-link-item:first-child,[\s\S]*?\.app-footer-source-link\s*\{[^}]*max-width:\s*100%;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(css).toMatch(/\.app-footer-contact:focus-visible,[\s\S]*?\.app-footer-source-link:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--gold\);[^}]*outline-offset:\s*2px;/s);
+    expect(css).toMatch(/\.app-footer-contact img\s*\{[^}]*width:\s*var\(--footer-icon-size\);[^}]*height:\s*var\(--footer-icon-size\);/s);
+    expect(css).toMatch(/\.app-footer-version\s*\{[^}]*display:\s*block;[^}]*font-size:\s*var\(--desktop-text-meta\);[^}]*line-height:\s*1\.2;/s);
 
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.search-control-bar #runButton,[\s\S]*?\.mobile-candidate-actions \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--mobile-control-primary\);[^}]*font-size:\s*14px;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.search-control-bar > \.ui-button-ghost,[\s\S]*?\.mobile-candidate-actions \.ui-button-ghost\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
@@ -328,6 +342,8 @@ describe("App", () => {
     expect(desktopCss).toMatch(/\.box-window-action-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
     expect(desktopCss).toMatch(/#runButton,[\s\S]*?\.box-current-row \.ui-button-primary,[\s\S]*?\.box-action-buttons \.ui-button-primary,[\s\S]*?\.account-sync-window \.ui-button-primary\s*\{[^}]*min-height:\s*var\(--desktop-control-primary\);/s);
     expect(desktopCss).toMatch(/\.app-footer-links \.app-footer-contact,[\s\S]*?\.app-footer-source-link\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
+    expect(css).toMatch(/\.app-footer-icon-link\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.app-footer-icon-link\s*\{[^}]*width:\s*var\(--mobile-control-standard\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
   });
 
   it("keeps desktop workbench add actions aligned to the row-and-column grid", () => {
@@ -959,28 +975,53 @@ describe("App", () => {
     ]);
   });
 
-  it("publishes matching GitHub footer links on the app and guide", () => {
+  it("publishes the same five-group footer contract on the app, guide, and privacy pages", () => {
     const appFooter = renderExampleApp().match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const guideFooter = guideHtml.match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
+    const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
+    const privacyFooter = privacyHtml.match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
     const githubIcon = readFileSync(
       new URL("../public/assets/social/github-invertocat-white.svg", import.meta.url),
       "utf8",
     );
 
-    for (const footer of [appFooter, guideFooter]) {
-      expect(footer).toContain('aria-label="フッターリンク"');
+    for (const footer of [appFooter, guideFooter, privacyFooter]) {
+      expect(footer).toContain('aria-label="サイトフッター"');
+      expect(footer).toContain('class="app-footer-copy"');
+      expect(footer).toContain('class="app-footer-links app-footer-page-links"');
+      expect(footer).toContain('aria-label="ページリンク"');
+      expect(footer).toContain('class="app-footer-links app-footer-support-links"');
+      expect(footer).toContain('aria-label="サポート・関連リンク"');
+      expect(footer).toContain('class="app-footer-source"');
+      expect(footer).toContain('class="app-footer-version"');
+      expect(footer).toContain("© 2026 suisui-swimmy");
+      expect(footer).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
+      expect(footer.indexOf('class="app-footer-copy"')).toBeLessThan(footer.indexOf("app-footer-page-links"));
+      expect(footer.indexOf("app-footer-page-links")).toBeLessThan(footer.indexOf("app-footer-support-links"));
+      expect(footer.indexOf("app-footer-support-links")).toBeLessThan(footer.indexOf('class="app-footer-source"'));
+      expect(footer.indexOf('class="app-footer-source"')).toBeLessThan(footer.indexOf('class="app-footer-version"'));
+      expect(footer.indexOf("アプリ")).toBeLessThan(footer.indexOf("使い方ガイド"));
+      expect(footer.indexOf("使い方ガイド")).toBeLessThan(footer.indexOf("プライバシー"));
       expect(footer).toContain('href="https://github.com/suisui-swimmy/ChampionCreator"');
       expect(footer).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
       expect(footer).toContain("assets/social/github-invertocat-white.svg");
       expect(footer.indexOf("不具合報告")).toBeLessThan(footer.indexOf("お問い合わせ"));
       expect(footer.indexOf("お問い合わせ")).toBeLessThan(footer.indexOf("https://github.com/suisui-swimmy/ChampionCreator"));
+      expect(footer).toContain("使用率データ提供元: Pokemon Champions Battle Data");
+      expect(footer).toContain("データ更新日:");
+      expect(footer.match(/aria-current="page"/g)).toHaveLength(1);
+      expect(footer.match(/app-footer-separator/g)).toHaveLength(5);
     }
 
-    expect(appFooter.match(/ \| /g)).toHaveLength(3);
-    expect(guideFooter.match(/ \| /g)).toHaveLength(3);
-    expect(guideFooter).toContain('aria-label="関連リンク"');
-    expect(guideFooter).toContain('href="https://championsbattledata.com/"');
+    expect(appFooter).toMatch(/href="\/" aria-current="page"[^>]*>アプリ<\/a>/);
+    expect(guideFooter).toMatch(/href="\/guide\/" aria-current="page"[^>]*>使い方ガイド<\/a>/);
+    expect(privacyFooter).toMatch(/href="\/privacy\/" aria-current="page"[^>]*>プライバシー<\/a>/);
+    expect(appFooter).toContain(`app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`);
+    for (const staticFooter of [guideFooter, privacyFooter]) {
+      expect(staticFooter).toContain("__CHAMPIONCREATOR_FOOTER_USAGE_DATE__");
+      expect(staticFooter).toContain("__CHAMPIONCREATOR_FOOTER_VERSION__");
+    }
 
     expect(githubIcon).toContain('<svg width="98" height="96"');
     expect(githubIcon).toContain('fill="white"');
@@ -1283,6 +1324,7 @@ describe("App", () => {
   });
 
   it("keeps guide and privacy mobile navigation and prose in the shared size system", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
@@ -1297,7 +1339,15 @@ describe("App", () => {
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-ability-disclosure-trigger\s*\{[^}]*min-height:\s*var\(--mobile-control-comfort\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-table-wrap table\s*\{[^}]*font-size:\s*12px;/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-table-wrap th\s*\{[^}]*font-size:\s*11px;/s);
-    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-page > \.app-footer \.app-footer-contact\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.app-footer-links \.app-footer-contact,[\s\S]*?\.app-footer-source-link\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
+    expect(guideCss).toMatch(/\.guide-page > \.app-footer\s*\{[^}]*width:\s*min\([\s\S]*?var\(--desktop-page-gutter\)[\s\S]*?1540px[\s\S]*?\);[^}]*margin-inline:\s*auto;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 1180px\)[\s\S]*?\.guide-page > \.app-footer\s*\{[^}]*width:\s*min\([\s\S]*?var\(--stacked-page-max-width\)[\s\S]*?\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-page > \.app-footer\s*\{[^}]*width:\s*min\([\s\S]*?var\(--mobile-page-max-width\)[\s\S]*?\);/s);
+    expect(guideCss).toMatch(/\.guide-page \.app-footer-contact\s*\{[^}]*color:\s*rgba\(238, 241, 237, 0\.7\);/s);
+    expect(guideCss).toMatch(/\.guide-page \.app-footer-contact:hover,[\s\S]*?\.guide-page \.app-footer-contact:focus-visible\s*\{[^}]*color:\s*var\(--text\);/s);
+    expect(guideCss).toMatch(/\.guide-page \.app-footer-contact\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--gold\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.guide-page > \.app-footer\s*\{[^}]*width:\s*min\([\s\S]*?var\(--narrow-page-gutter\)[\s\S]*?\);/s);
+    expect(guideCss).not.toContain(".guide-page > .app-footer .app-footer-contact");
 
     for (const html of [guideHtml, privacyHtml]) {
       expect(html).toContain('class="guide-header"');
@@ -1483,10 +1533,11 @@ describe("App", () => {
     expect(html).toContain("候補一覧");
     expect(html).toContain("計算結果");
     expect(html).not.toContain("計算開始で Worker 経由の候補がここに出ます");
-    expect(html).toContain('aria-label="権利表記"');
+    expect(html).toContain('aria-label="サイトフッター"');
     expect(html).toContain("© 2026 suisui-swimmy");
     expect(html).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
-    expect(html).toContain('class="app-footer-links"');
+    expect(html).toContain('class="app-footer-links app-footer-page-links"');
+    expect(html).toContain('class="app-footer-links app-footer-support-links"');
     expect(html).toContain('class="app-footer-version"');
     expect(html).toContain('role="radiogroup" aria-label="バトル形式とサジェスト基準"');
     expect(html).toContain('aria-label="シングル"');

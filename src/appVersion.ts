@@ -18,3 +18,7 @@ export const appVersionInfo = {
     + natureOptions.entries.length
     + typeOptions.entries.length,
 };
+
+export const formatAppVersionLabel = (): string => (
+  `app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`
+);
