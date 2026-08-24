@@ -33,11 +33,14 @@ export function GuideAllyAbilityTip() {
         />
         <strong>ダブルバトルの味方特性</strong>
       </div>
-      <p>「わざわいのつるぎ」「フェアリーオーラ」「フレンドガード」などは、ダブルバトルを選択し、同じシナリオ内にその特性を持つポケモンを追加すると反映できます。</p>
+      <p>ダブルバトルでは、同じシナリオに味方を追加し、そのポケモンの特性による補正を計算へ含められます。</p>
+      <p>ヘッダーを「ダブル」に切り替え、同じシナリオ内の「＋」から味方を追加して、ポケモンと特性を選択してください。</p>
+      <p>「わざわいのつるぎ」「フェアリーオーラ」「フレンドガード」などに対応しています。</p>
+      <p>対応している味方特性は、次のとおりです。</p>
       <Collapsible.Root className="guide-ability-disclosure">
         <Collapsible.Trigger className="guide-ability-disclosure-trigger" type="button">
           <ChevronRightIcon className="guide-disclosure-chevron" aria-hidden="true" />
-          <span>対象の特性</span>
+          <span>対応している味方特性</span>
         </Collapsible.Trigger>
         <Collapsible.Content className="guide-ability-disclosure-content">
           <ul>
@@ -52,7 +55,7 @@ export function GuideAllyAbilityTip() {
         height="548"
         loading="lazy"
         decoding="async"
-        alt="ダブルバトルのシナリオで、味方ポケモンの特性とダブルルールを設定した例"
+        alt="ダブルバトルの味方特性を設定した例"
       />
     </div>
   );

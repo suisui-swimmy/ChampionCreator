@@ -13,6 +13,8 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計
 
 Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
 
+画面の操作手順は使い方ガイド、計算・保存・同期の詳細仕様と対応範囲はこのREADMEを参照してください。
+
 ## 実装機能
 
 - 複数の仮想敵シナリオを同時に満たす `H / B / D` 耐久配分を探索する
@@ -158,7 +160,7 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 
 データは1日1回確認し、更新されている場合だけ反映します。提供元とデータ更新日はアプリのフッターに表示します。
 
-詳しい入力項目、ボックス機能、火力ライン、素早さラインの説明は Wiki を参照してください。
+画面上での入力手順、候補の見方、保存・同期の始め方は[使い方ガイド](https://championcreator.suisui-swimmy.com/guide/)を参照してください。
 
 ## ブラウザ内保存
 

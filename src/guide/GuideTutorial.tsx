@@ -6,10 +6,10 @@ import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 import tutorialPresetJson from "./tutorial-preset.json";
 
 const tutorialSteps = [
-  { id: 1, label: "条件を確認" },
-  { id: 2, label: "計算する" },
-  { id: 3, label: "候補を比較" },
-  { id: 4, label: "配分を適用" },
+  { id: 1, label: "入力内容を確認する" },
+  { id: 2, label: "「計算開始」を押す" },
+  { id: 3, label: "候補の詳細を見る" },
+  { id: 4, label: "候補を適用する" },
 ] as const;
 
 const loadTutorialPreset = () => {
@@ -45,21 +45,21 @@ const getActiveStep = (status: SearchStatus, candidateApplied: boolean): number 
 
 export const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): string => {
   if (candidateApplied) {
-    return "候補のSP配分を調整対象へ適用できました。入力値が変わったことを確認してみよう。";
+    return "上部の「調整対象」を確認してください。選んだ候補のSP配分が反映されています。";
   }
   if (status === "complete") {
-    return "計算完了！候補を開くと、各条件のPASS結果とダメージ内訳を確認できます。";
+    return "候補を1つ開き、各条件の「PASS」表示とダメージ詳細を確認してみましょう。";
   }
   if (status === "running") {
-    return "アプリと同じ計算方法で全条件を評価しています。";
+    return "条件に合うSP配分を探索しています。計算が完了するまで、そのままお待ちください。";
   }
   if (status === "error") {
-    return "入力内容を確認して、もう一度計算してください。サンプルに戻すこともできます。";
+    return "エラーが表示されている入力欄を確認してください。右上のボタンからサンプルの初期状態へ戻すこともできます。";
   }
   if (status === "canceled") {
-    return "計算を中断しました。条件を変えて、いつでも再実行できます。";
+    return "条件を変更したあと、もう一度「計算開始」を押すと再計算できます。";
   }
-  return "サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。";
+  return "必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。";
 };
 
 export function GuideTutorial() {
@@ -86,7 +86,7 @@ export function GuideTutorial() {
     <section className="guide-tutorial" aria-labelledby="interactive-tutorial-title">
       <header className="guide-tutorial-header">
         <div>
-          <span className="guide-live-badge"><i aria-hidden="true" />実際に操作できます</span>
+          <span className="guide-live-badge"><i aria-hidden="true" />このサンプルは実際に操作できます。</span>
           <h2 id="interactive-tutorial-title">サンプル入力で計算してみよう</h2>
         </div>
         <div className="guide-tutorial-actions">

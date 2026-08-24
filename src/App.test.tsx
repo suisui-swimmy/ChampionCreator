@@ -996,7 +996,10 @@ describe("App", () => {
     expect(guideHtml).toContain('aria-controls="guide-toc-panel"');
     expect(guideHtml).toContain('src="/assets/ui/menu.svg"');
     expect(guideHtml).toContain('id="guide-toc-panel"');
+    expect(guideHtml).toContain('<p class="guide-toc-label">目次</p>');
     expect(guideHtml).toContain('href="#getting-started" aria-current="location"');
+    expect(guideHtml).toContain('<a href="#home-screen">ホーム画面へ追加</a>');
+    expect(guideHtml).toContain('<a href="#notes">注意点</a>');
     expect(guideHtml).toContain('<span>使い方ガイド</span>');
     expect(guideHtml).not.toContain('class="guide-global-nav"');
     expect(guideHtml).toContain('<a class="guide-header-action" href="/">アプリを開く</a>');
@@ -1015,59 +1018,69 @@ describe("App", () => {
     expect(guideHtml).toContain('class="feature-mark target">①</span>');
     expect(guideHtml).toContain('class="feature-mark scenario">②</span>');
     expect(guideHtml).toContain('class="feature-mark result">③</span>');
-    expect(guideHtml).toContain('class="feature-mark box">④</span>');
+    expect(guideHtml).toContain('class="feature-mark format">④</span>');
+    expect(guideHtml).toContain('<h3>シングル／ダブル</h3>');
+    expect(guideHtml).toContain('class="feature-mark sync">⑤</span>');
+    expect(guideHtml).toContain('<h3>同期</h3>');
+    expect(guideHtml).toContain('class="feature-mark box">⑥</span>');
+    expect(guideHtml.indexOf('class="feature-mark format">④</span>')).toBeLessThan(guideHtml.indexOf('class="feature-mark sync">⑤</span>'));
+    expect(guideHtml.indexOf('class="feature-mark sync">⑤</span>')).toBeLessThan(guideHtml.indexOf('class="feature-mark box">⑥</span>'));
     expect(guideHtml).not.toContain('class="guide-feature-grid"');
     expect(guideHtml).toContain('src="/assets/guide/lightbulb.svg"');
     expect(guideHtml).toContain("スマホでは？");
-    expect(guideHtml).toContain("スマホ表示では、調整対象と仮想敵シナリオをタッチすると拡大シートで入力できます。候補一覧はトップ画面のまま並び替え、詳細確認、適用、ページ移動ができます。");
-    expect(guideHtml).toContain("並び替えでは、<code>総合耐久指数=HBD/(B+D)</code>、<code>物理耐久指数=H*B</code>、<code>特殊耐久指数=H*D</code> を選べます。H/B/D は候補適用後の実数値（H=<code>maxHP()</code>、B=<code>stats.def</code>、D=<code>stats.spd</code>）を使い、SP値の積ではありません。");
-    expect(guideHtml).toContain("これらはシナリオ固有のダメージ、タイプ相性、特性、持ち物、HPイベントを含まない並び替え用の補助指標です。検索の合否判定やシナリオ評価は、従来どおり各条件の計算結果を使います。");
-    expect(guideHtml).toContain("画面中央のノードは、小さい丸エッジ側が「攻撃を与える側」「素早さを抜く側」、細長いピル型エッジ側が「攻撃を受ける側」「素早さを抜かれる側」を表しています。");
+    expect(guideHtml).toContain("調整対象やシナリオのカードをタップすると、画面下から入力用のシートが開きます。候補一覧はメイン画面に表示され、そのまま詳細の確認や適用ができます。");
+    expect(guideHtml).toContain("カードをつなぐ線は、「どちらが攻撃するか」「どちらの素早さを比べるか」を表しています。");
     expect(guideHtml).toContain('src="/assets/guide/overview_mobile.png"');
-    expect(guideHtml.indexOf("素早さを抜かれる側")).toBeLessThan(guideHtml.indexOf('class="guide-mobile-overview-image"'));
+    expect(guideHtml.indexOf("どちらの素早さを比べるか")).toBeLessThan(guideHtml.indexOf('class="guide-mobile-overview-image"'));
     expect(guideHtml).not.toContain("調整対象、シナリオ、候補をタップすると");
-    expect(guideHtml).toContain("デスクトップは20件、スマホは5件ずつ表示します。スマホではトップ画面の候補一覧から並び替えとページ移動を行い、候補を開くと詳細がその場に展開されます。");
-    const scenarioColumnText = "同じシナリオ内の「＋」を押すと、調整列を追加できます。シナリオ名・有効状態・調整種別を共有したまま、相手や技などの条件を追加したい場合に使用します。耐久調整や火力調整では、追加した攻撃を左から順に一連の攻撃として評価します。";
-    const scenarioRowText = "「シナリオを追加」を押すと、独立したシナリオ行を追加できます。別の調整種別を設定したい場合や、条件ごとに有効・無効を切り替えたい場合は、新しいシナリオ行を追加してください。";
-    const scenarioEvaluationText = "計算時は、最終的に有効になっているすべてのシナリオ行を条件として評価します。一時的に条件から外したい場合は、トグルスイッチで無効化することができます。";
+    expect(guideHtml).toContain("画面は、主に3つの作業エリアと、3つの共通操作で構成されています。");
+    expect(guideHtml).toContain("すべての条件を同時に満たすSP（能力ポイント）配分");
+    expect(guideHtml).toContain("ログインしなくても、計算・保存・バックアップを利用できます。");
+    const scenarioColumnText = "技Aを受けたあとに技Bも受ける場合や、同じ相手へ複数の技を使う場合に使います。耐久調整と火力調整では、攻撃を左から右へ順番に評価し、HPの変化を引き継ぎます。ダブルバトルでは、味方を追加するときにも使います。";
+    const scenarioRowText = "別の相手や別の目的を追加するときは、画面下の「シナリオを追加」を使います。";
+    const scenarioEvaluationText = '<p>有効になっているシナリオは、<strong>すべて同時に満たす必要があります。</strong></p>';
     expect(guideHtml).toContain(scenarioColumnText);
     expect(guideHtml).toContain(scenarioRowText);
     expect(guideHtml).toContain(scenarioEvaluationText);
-    expect(guideHtml).not.toContain("有効なシナリオだけが計算対象になります。一時的に条件から外したい場合は、削除ではなく無効化しておくと戻しやすいです。");
     expect(guideHtml.indexOf(scenarioColumnText)).toBeLessThan(guideHtml.indexOf('src="/assets/guide/scenario-adjustment-column-addition.png"'));
     expect(guideHtml.indexOf('src="/assets/guide/scenario-adjustment-column-addition.png"')).toBeLessThan(guideHtml.indexOf(scenarioRowText));
     expect(guideHtml.indexOf(scenarioRowText)).toBeLessThan(guideHtml.indexOf('src="/assets/guide/scenario-row-addition.png"'));
     expect(guideHtml.indexOf('src="/assets/guide/scenario-row-addition.png"')).toBeLessThan(guideHtml.indexOf(scenarioEvaluationText));
-    expect(guideHtml.indexOf(scenarioEvaluationText)).toBeLessThan(guideHtml.indexOf('id="guide-ally-ability-tip-root"'));
-    expect(guideHtml).toContain('class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別"');
-    expect(guideHtml).toMatch(/<section class="guide-section" id="scenarios">[\s\S]*?<div class="guide-mode-grid" role="group" aria-label="仮想敵シナリオの調整種別">[\s\S]*?<section class="guide-mode-section defence" id="defence">[\s\S]*?<section class="guide-mode-section offense" id="offense">[\s\S]*?<section class="guide-mode-section speed" id="speed">[\s\S]*?<\/div>\s*<\/section>\s*<section class="guide-section" id="constant-damage">/s);
-    expect(guideHtml).toContain("調整対象が相手の攻撃をどれだけ耐えるかを設定します。攻撃側条件、必要耐久回数、必要生存率を入力し、複数条件をすべて満たす配分だけを候補にします。");
-    expect(guideHtml).toContain("指定した技で相手を倒すために必要なAまたはCのラインを計算します。必要KO確率を満たすSPが固定条件として耐久候補へ統合されます。");
-    expect(guideHtml).toContain("相手ポケモンや任意の実数値を基準に、確定抜き・+〇などのSラインを計算します。条件は、全体へ適用する「共通S条件」、相手側へ適用する「相手S条件」、調整対象側へ適用する「調整対象S条件」に分かれています。");
-    expect(guideHtml).toContain("トリックルームと、おいかぜ（両側）は同時に指定できます。");
-    expect(guideHtml).toContain("倍率欄が金色になり、欄内へ「手動」を表示します。");
-    expect(guideHtml).toContain("元入力を暗色＋金枠で示します。");
-    expect(guideHtml).not.toContain("「自動 → 手動」の置換内容");
-    expect(guideHtml).not.toContain("確定抜き・同速などのSライン");
-    expect(guideHtml).toContain("追加した効果は発動する前提で計算し、入力条件と一致しない場合は警告が表示されます。現在HP依存技は、各攻撃・各ヒット時点のHPから自動再計算します。");
-    expect(guideHtml).not.toContain("警告を表示しますが、自動削除はしません");
-    expect(guideHtml).toContain("保存名の変更、上書き、複製、削除、空スロットの読み込みに対応しています。");
-    expect(guideHtml).not.toContain("空スロットの読み込みにも対応しています");
-    expect(guideHtml).toContain("PC版Chrome・Edgeはアドレスバーのインストールアイコンから利用できます。");
-    expect(guideHtml).not.toContain("アドレスバー付近のインストール導線");
-    expect(guideHtml).toContain("必要生存率・KO確率、A/C/Sの固定SPが厳しすぎないかを確認してください。");
-    expect(guideHtml).not.toContain("A/C/Sの固定SPが重すぎないか");
+    expect(guideHtml).toContain('class="guide-mode-grid guide-mode-grid--detailed" role="group" aria-label="仮想敵シナリオの調整種別"');
+    expect(guideHtml.indexOf('id="defence"')).toBeLessThan(guideHtml.indexOf('id="offense"'));
+    expect(guideHtml.indexOf('id="offense"')).toBeLessThan(guideHtml.indexOf('id="speed"'));
+    expect(guideHtml.indexOf('id="speed"')).toBeLessThan(guideHtml.indexOf("技の威力を確認する"));
+    expect(guideHtml.indexOf("技の威力を確認する")).toBeLessThan(guideHtml.indexOf('id="guide-ally-ability-tip-root"'));
+    expect(guideHtml.indexOf('id="guide-ally-ability-tip-root"')).toBeLessThan(guideHtml.indexOf('id="constant-damage"'));
+    expect(guideHtml).toContain("「相手のこの技を、指定した回数・確率で耐える」という条件です。");
+    expect(guideHtml).toContain("「調整対象のこの技で、相手を指定した確率で倒す」という条件です。");
+    expect(guideHtml).toContain("「この相手より速くする」「この相手より遅くする」という条件です。");
+    expect(guideHtml).toContain("現在HPで威力が変わる技は、ロック中に各攻撃時点のHPから自動計算されます。");
+    expect(guideHtml).toContain("攻撃カード下部の「定数ダメージ・回復」を開き、「効果を追加」から計算に含めたい効果を選んでください。");
+    expect(guideHtml).toContain("持ち物・状態・天候を入力しても、それに対応する定数ダメージや回復は、この欄へ自動では追加されません。");
+    expect(guideHtml).toContain("調整対象ボックスへの保存は行われません。");
+    expect(guideHtml).toContain("ChampionCreatorには、作業中の下書き、2種類のボックス、JSONバックアップがあります。");
+    expect(guideHtml).toContain("迷った場合はこの方法が安全です。");
+    expect(guideHtml).toContain("同期に失敗しても、ブラウザ内の保存やJSONバックアップはそのまま利用できます。");
+    expect(guideHtml).toContain("アドレスバーに表示されるインストールアイコンから追加します。");
+    expect(guideHtml).toContain("シナリオを1つずつ無効にし、候補が出なくなる条件を特定する");
+    expect(guideHtml).toContain("計算方式、対応している効果、未対応範囲、保存・同期の詳しい仕様は、");
+    expect(guideHtml).toContain('href="https://github.com/suisui-swimmy/ChampionCreator#readme"');
+    expect(guideHtml).toContain("<code>@smogon/calc</code>");
+    for (const technicalDetail of ["Firestore", "Worker", "outbox", "tombstone", "HBD/(B+D)", "Showdown EV", "userId + deviceId"]) {
+      expect(guideHtml).not.toContain(technicalDetail);
+    }
     expect(guideHtml).toContain('class="guide-notes-list"');
-    expect(guideHtml).toContain("未ログイン時の保存は、このブラウザ内だけに残ります。");
+    expect(guideHtml).toContain("ログインしない場合、ボックスと下書きは基本的に現在のブラウザ内へ保存されます。");
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
-    expect(guideOverviewImage.readUInt32BE(16)).toBe(1763);
-    expect(guideOverviewImage.readUInt32BE(20)).toBe(1645);
+    expect(guideOverviewImage.readUInt32BE(16)).toBe(1905);
+    expect(guideOverviewImage.readUInt32BE(20)).toBe(2249);
     const guideMobileOverviewImage = readFileSync(new URL("../public/assets/guide/overview_mobile.png", import.meta.url));
     expect(guideMobileOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
-    expect(guideMobileOverviewImage.readUInt32BE(16)).toBe(690);
-    expect(guideMobileOverviewImage.readUInt32BE(20)).toBe(1024);
+    expect(guideMobileOverviewImage.readUInt32BE(16)).toBe(1179);
+    expect(guideMobileOverviewImage.readUInt32BE(20)).toBe(2218);
     const guideScenarioColumnImage = readFileSync(new URL("../public/assets/guide/scenario-adjustment-column-addition.png", import.meta.url));
     expect(guideScenarioColumnImage.subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(guideScenarioColumnImage.readUInt32BE(16)).toBe(1045);
@@ -1085,10 +1098,11 @@ describe("App", () => {
     expect(guideAllyAbilityImage.readUInt32BE(20)).toBe(548);
     expect(allyAbilityTipHtml).toContain('class="guide-tip-icon"');
     expect(allyAbilityTipHtml).toContain("ダブルバトルの味方特性");
-    expect(allyAbilityTipHtml).toContain("「わざわいのつるぎ」「フェアリーオーラ」「フレンドガード」などは、ダブルバトルを選択し、同じシナリオ内にその特性を持つポケモンを追加すると反映できます。");
+    expect(allyAbilityTipHtml).toContain("ダブルバトルでは、同じシナリオに味方を追加し、そのポケモンの特性による補正を計算へ含められます。");
+    expect(allyAbilityTipHtml).toContain("ヘッダーを「ダブル」に切り替え、同じシナリオ内の「＋」から味方を追加して、ポケモンと特性を選択してください。");
     expect(allyAbilityTipHtml).toContain('class="guide-ability-disclosure-trigger"');
     expect(allyAbilityTipHtml).toContain('data-state="closed"');
-    expect(allyAbilityTipHtml).toContain("対象の特性");
+    expect(allyAbilityTipHtml).toContain("対応している味方特性");
     expect(allyAbilityLabels).toEqual([
       "わざわいのつるぎ",
       "わざわいのたま",
@@ -1106,7 +1120,7 @@ describe("App", () => {
       "フレンドガード",
     ]);
     expect(allyAbilityTipHtml).toContain('src="/assets/guide/double-battle-ally-abilities.png"');
-    expect(allyAbilityTipHtml.indexOf("対象の特性")).toBeLessThan(allyAbilityTipHtml.indexOf('class="guide-ally-ability-image"'));
+    expect(allyAbilityTipHtml.indexOf("対応している味方特性")).toBeLessThan(allyAbilityTipHtml.indexOf('class="guide-ally-ability-image"'));
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(guideStructuredDataMatch).not.toBeNull();
     const guideStructuredData = JSON.parse(guideStructuredDataMatch?.[1] ?? "{}");
@@ -1128,6 +1142,9 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-feature-list\s*\{[^}]*list-style:\s*none;/s);
     expect(guideCss).toMatch(/\.guide-feature-list p\s*\{[^}]*font-size:\s*14px;/s);
     expect(guideCss).toContain(".feature-mark.target { color: var(--guide-yellow); }");
+    expect(guideCss).toContain(".feature-mark.format { color: var(--guide-magenta); }");
+    expect(guideCss).toContain("--guide-blue: #6EA8FF;");
+    expect(guideCss).toContain(".feature-mark.sync { color: var(--guide-blue); }");
     expect(guideCss).toMatch(/\.guide-tip-heading\s*\{[^}]*display:\s*flex;/s);
     expect(guideCss).toMatch(/\.guide-mobile-overview-image\s*\{[^}]*width:\s*min\(100%, 320px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*var\(--desktop-control-comfort\);[^}]*font-size:\s*var\(--desktop-text-control\);[^}]*cursor:\s*pointer;/s);
@@ -1136,6 +1153,7 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-scenario-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-row-image\s*\{[^}]*width:\s*min\(100%, 520px\);/s);
     expect(guideCss).toMatch(/\.guide-mode-grid\s*\{[^}]*margin-top:\s*28px;/s);
+    expect(guideCss).toMatch(/\.guide-mode-grid--detailed\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s);
     expect(guideCss).toMatch(/\.guide-mode-section p\s*\{[^}]*font-size:\s*14px;/s);
     expect(guideCss).toMatch(/\.guide-tutorial-steps\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;[^}]*padding:\s*10px;/s);
     expect(guideCss).toMatch(/\.guide-tutorial-steps li\s*\{[^}]*min-height:\s*56px;[^}]*border:\s*1px solid var\(--guide-border\);[^}]*font-size:\s*13px;/s);
@@ -1147,19 +1165,13 @@ describe("App", () => {
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-tutorial-steps\s*\{[^}]*overflow-x:\s*visible;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-tutorial-steps li:not\(:last-child\)::after\s*\{[^}]*display:\s*none;/s);
     expect(guideCss).not.toMatch(/\.guide-tutorial-steps\s*\{[^}]*overflow-x:\s*auto;/s);
-    expect(guideHtml).toContain('class="guide-stat-rules" aria-label="SPの基本ルール"');
-    expect(guideHtml).toContain("<h3>SPの制約</h3>");
-    expect(guideHtml).toContain("<h3>計算での扱い</h3>");
-    expect(guideHtml).toContain("<div><dt>各能力</dt><dd>0–32</dd></div>");
-    expect(guideHtml).toContain("<div><dt>合計上限</dt><dd>66</dd></div>");
-    expect(guideHtml).toContain("<div><dt>同時探索</dt><dd>H/B/D</dd></div>");
-    expect(guideHtml).toContain("<div><dt>固定条件</dt><dd>A/C/S</dd></div>");
-    expect(guideHtml).not.toContain("各能力に使えるSP");
-    expect(guideHtml).not.toContain("1候補として同時探索");
-    expect(guideCss).toMatch(/\.guide-stat-rules\s*\{[^}]*overflow:\s*hidden;[^}]*border:\s*1px solid var\(--guide-border\);[^}]*background:\s*var\(--guide-surface\);/s);
-    expect(guideCss).toMatch(/\.guide-stat-rule-row\s*\{[^}]*grid-template-columns:\s*190px minmax\(0, 1fr\);[^}]*min-height:\s*72px;/s);
-    expect(guideCss).toMatch(/\.guide-stat-rule-items\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
-    expect(guideCss).toMatch(/\.guide-stat-rule-items dd\s*\{[^}]*font-size:\s*24px;[^}]*font-weight:\s*800;/s);
+    expect(guideHtml).toContain('table aria-label="SPの上限と表示内容"');
+    expect(guideHtml).toContain("<tr><td>各能力に使えるSP</td><td>0〜32</td></tr>");
+    expect(guideHtml).toContain("<tr><td>6能力の合計SP</td><td>66まで</td></tr>");
+    expect(guideHtml).toContain("<tr><td>使用SP</td><td>その候補で使用するSPの合計</td></tr>");
+    expect(guideHtml).toContain("<tr><td>残りSP</td><td>上限66から使用SPを引いた値</td></tr>");
+    expect(guideCss).toMatch(/\.guide-inline-action\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
+    expect(guideCss).toMatch(/\.guide-prose-list\s*\{[^}]*margin-top:\s*12px;[^}]*margin-bottom:\s*18px;/s);
     expect(guideCss).toMatch(/\.guide-troubleshooting-list,\s*\.guide-notes-list\s*\{[^}]*padding-left:\s*20px;[^}]*font-size:\s*14px;/s);
     expect(guideCss).toMatch(/\.guide-toc nav a\s*\{[^}]*min-height:\s*36px;[^}]*font-size:\s*13px;/s);
     expect(guideCss).toMatch(/\.guide-flow-list p\s*\{[^}]*font-size:\s*12px;/s);
@@ -1167,7 +1179,8 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-table-wrap table\s*\{[^}]*font-size:\s*12px;/s);
     expect(guideCss).toMatch(/\.guide-table-wrap th\s*\{[^}]*font-size:\s*11px;/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
-    expect(guideHtml).toContain('class="guide-troubleshooting-list"');
+    expect(guideHtml).toContain("<h3>候補が出ない</h3>");
+    expect(guideHtml).toContain("<h3>実際のゲーム内結果と違う</h3>");
     expect(guideHtml).not.toContain("<details");
     expect(guideHtml).not.toContain('class="guide-context"');
     expect(guideHtml).not.toContain('id="guide-version"');
@@ -1178,11 +1191,14 @@ describe("App", () => {
     expect(guideHtml).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
     expect(guideHtml).toContain('src="/assets/social/github-invertocat-white.svg"');
     expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
-    expect(getTutorialMessage("idle", false)).toBe("サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。");
-    expect(getTutorialMessage("running", false)).toBe("アプリと同じ計算方法で全条件を評価しています。");
-    expect(getTutorialMessage("complete", false)).toBe("計算完了！候補を開くと、各条件のPASS結果とダメージ内訳を確認できます。");
-    expect(getTutorialMessage("complete", true)).toBe("候補のSP配分を調整対象へ適用できました。入力値が変わったことを確認してみよう。");
-    expect(tutorialHtml).toContain("サンプル入力を確認したら、実際に「計算開始」を押してみよう。入力内容は自由に変更できます。");
+    expect(tutorialHtml).toContain("このサンプルは実際に操作できます。");
+    expect(tutorialHtml).toContain("入力内容を確認する");
+    expect(tutorialHtml).toContain("候補の詳細を見る");
+    expect(getTutorialMessage("idle", false)).toBe("必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。");
+    expect(getTutorialMessage("running", false)).toBe("条件に合うSP配分を探索しています。計算が完了するまで、そのままお待ちください。");
+    expect(getTutorialMessage("complete", false)).toBe("候補を1つ開き、各条件の「PASS」表示とダメージ詳細を確認してみましょう。");
+    expect(getTutorialMessage("complete", true)).toBe("上部の「調整対象」を確認してください。選んだ候補のSP配分が反映されています。");
+    expect(tutorialHtml).toContain("必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。");
     expect(tutorialHtml).not.toContain("作業台の「計算開始」");
     expect(tutorialHtml).not.toContain("添付バックアップの3条件を、本体と同じ計算経路で同時評価します。");
     expect(tutorialHtml).not.toContain('class="guide-open-app-button"');
@@ -2292,47 +2308,51 @@ describe("App", () => {
     expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.draft-recovery-actions\s*\{[^}]*grid-template-columns:\s*1fr;/s);
   });
 
-  it("documents the current save and sync flow without exposing development milestones", () => {
+  it("keeps the guide task-focused while technical documents retain save and sync details", () => {
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
     const guide = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const privacy = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
     const firebaseSetup = readFileSync(new URL("../docs/FIREBASE_SETUP.md", import.meta.url), "utf8");
 
-    for (const document of [readme, guide]) {
-      expect(document).toContain("作業中の下書き");
-      expect(document).toContain("下書きを復元");
-      expect(document).toContain("下書きを破棄");
-      expect(document).toContain("計算結果");
-      expect(document).toContain("候補一覧");
-      expect(document).toContain("ブラウザ別クラウド下書き");
-      expect(document).toContain("約0.75秒");
-      expect(document).toContain("ボックスに保存済み");
-      expect(document).toContain("初回統合");
-      expect(document).toContain("Googleでログイン");
-      expect(document).toContain("Firestore");
-      expect(document).toContain("JSONバックアップ");
-      expect(document).toContain("競合あり");
-      expect(document).toContain("クラウド全体を置き換え");
-      expect(document).toContain("削除済み");
-      expect(document).toContain("アカウントデータ");
-      expect(document).toContain("プライバシー");
+    for (const technicalDetail of [
+      "作業中の下書き",
+      "ブラウザ別クラウド下書き",
+      "約0.75秒",
+      "初回統合",
+      "Firestore",
+      "クラウド全体を置き換え",
+      "削除済み",
+      "未送信操作を順番に保持するキュー（`outbox`）",
+      "削除済みと記録します（`tombstone`）",
+      "保存内容のJSON文字列（`payload`）",
+      "`syncRecords`",
+      "`drafts`",
+      "Firebase Authenticationのアカウントを削除します",
+    ]) {
+      expect(readme).toContain(technicalDetail);
     }
+
+    expect(guide).toContain("入力中の内容は、ボックスとは別に、このブラウザへ自動で下書き保存されます。");
+    expect(guide).toContain("「下書きを復元」または「下書きを破棄」");
+    expect(guide).toContain("「ボックスに保存済み」");
+    expect(guide).toContain("「Googleでログイン」を選ぶ");
+    expect(guide).toContain("JSONバックアップ");
+    expect(guide).toContain("「ログアウト」「アカウントデータを書き出す」「アカウントを削除」");
+    expect(guide).toContain("プライバシー");
+    expect(guide).not.toContain("ブラウザ別クラウド下書き");
+    expect(guide).not.toContain("約0.75秒");
+    expect(guide).not.toContain("初回統合");
+    expect(guide).not.toContain("Firestore");
+    expect(guide).not.toContain("クラウド全体を置き換え");
 
     for (const label of ["統合", "クラウドを使用", "このブラウザを使用", "あとで決める"]) {
       expect(readme).toContain(`\`${label}\``);
-      expect(guide).toContain(`<code>${label}</code>`);
+      expect(guide).toContain(`<strong>${label}</strong>`);
     }
     for (const label of ["このブラウザのみ", "未同期", "同期中…", "同期済み", "オフライン", "競合あり", "同期エラー"]) {
       expect(readme).toContain(`\`${label}\``);
       expect(guide).toContain(`<code>${label}</code>`);
     }
-
-    expect(readme).toContain("未送信操作を順番に保持するキュー（`outbox`）");
-    expect(readme).toContain("削除済みと記録します（`tombstone`）");
-    expect(readme).toContain("保存内容のJSON文字列（`payload`）");
-    expect(readme).toContain("`syncRecords`");
-    expect(readme).toContain("`drafts`");
-    expect(readme).toContain("Firebase Authenticationのアカウントを削除します");
 
     expect(privacy).toContain("ブラウザ内保存");
     expect(privacy).toContain("<code>syncRecords</code>");
