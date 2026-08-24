@@ -7527,8 +7527,19 @@ textarea {
     content: "使用";
   }
 
+  .mobile-candidate-layout .candidate-budget-value.used.is-budget-full {
+    border-color: var(--red);
+  }
+
   .mobile-candidate-layout .candidate-budget-value.remaining {
     grid-column: 2;
+  }
+
+  .mobile-candidate-layout .candidate-budget-value.remaining.has-remaining {
+    color: var(--text);
+  }
+
+  .mobile-candidate-layout .candidate-budget-value.remaining.is-zero {
     color: var(--muted);
   }
 

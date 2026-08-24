@@ -8651,6 +8651,8 @@ export function ResultsPanel({
           </div>
         ) : displayedCandidates.map((candidate) => {
           const expanded = selectedCandidateId === candidate.id;
+          const isStatPointBudgetFull = candidate.remainingStatPointBudget === 0;
+          const hasRemainingStatPoints = candidate.remainingStatPointBudget > 0;
           return (
             <Collapsible.Root
               className={`candidate-entry${expanded ? " selected" : ""}`}
@@ -8677,13 +8679,13 @@ export function ResultsPanel({
                       } as CSSProperties}
                     >
                       <span
-                        className="candidate-budget-value used"
+                        className={`candidate-budget-value used${isStatPointBudgetFull ? " is-budget-full" : ""}`}
                       >
                         <span className="visually-hidden">使用SP</span>
                         {candidate.usedStatPointBudget}
                       </span>
                       <span
-                        className="candidate-budget-value remaining"
+                        className={`candidate-budget-value remaining ${hasRemainingStatPoints ? "has-remaining" : "is-zero"}`}
                       >
                         <span className="visually-hidden">残りSP</span>
                         {candidate.remainingStatPointBudget}

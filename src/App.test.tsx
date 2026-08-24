@@ -751,7 +751,9 @@ describe("App", () => {
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\s*\{[^}]*min-width:\s*0;[^}]*width:\s*100%;[^}]*height:\s*24px;[^}]*min-height:\s*24px;[^}]*border:\s*1px solid[^}]*border-radius:\s*5px;[^}]*overflow:\s*hidden;/s);
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.used\s*\{[^}]*border-color:\s*color-mix\(in srgb,\s*var\(--gold\) 60%,\s*var\(--bg\)\);[^}]*background:\s*var\(--gold\);[^}]*color:\s*var\(--bg\);/s);
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.used::before\s*\{[^}]*margin-right:\s*2px;[^}]*color:\s*inherit;[^}]*content:\s*"使用";/s);
-    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.remaining\s*\{[^}]*color:\s*var\(--muted\);/s);
+    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.used\.is-budget-full\s*\{[^}]*border-color:\s*var\(--red\);/s);
+    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.remaining\.has-remaining\s*\{[^}]*color:\s*var\(--text\);/s);
+    expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.remaining\.is-zero\s*\{[^}]*color:\s*var\(--muted\);/s);
     expect(css).toMatch(/\.mobile-candidate-layout \.candidate-budget-value\.remaining::before\s*\{[^}]*margin-right:\s*2px;[^}]*color:\s*inherit;[^}]*content:\s*"残";/s);
     expect(css).toMatch(/\.mobile-candidate-actions \.ui-button\s*\{[^}]*flex:\s*0 0 auto;[^}]*white-space:\s*nowrap;/s);
     expect(css).toMatch(/\.mobile-search-counts\s*\{[^}]*display:\s*inline-flex;[^}]*flex:\s*1 1 auto;[^}]*gap:\s*8px;[^}]*min-width:\s*0;/s);
@@ -2792,7 +2794,7 @@ describe("App", () => {
     const [scenario] = createDefaultScenarioForms();
     const candidates: CandidateResult[] = Array.from({ length: 12 }, (_, index) => {
       const rank = index + 1;
-      const usedStatPointBudget = rank === 1 ? 33 : rank === 2 ? 64 : rank === 3 ? 0 : rank;
+      const usedStatPointBudget = rank === 1 ? 33 : rank === 2 ? 64 : rank === 3 ? 0 : rank === 4 ? 66 : rank;
       return {
         id: `candidate-${rank}`,
         rank,
@@ -2842,6 +2844,10 @@ describe("App", () => {
     expect(html).toContain("--candidate-used-track:33fr;--candidate-remaining-track:33fr");
     expect(html).toContain("--candidate-used-track:64fr;--candidate-remaining-track:2fr");
     expect(html).toContain("--candidate-used-track:0fr;--candidate-remaining-track:66fr");
+    expect(html).toContain("--candidate-used-track:66fr;--candidate-remaining-track:0fr");
+    expect(html).toContain('class="candidate-budget-value used is-budget-full"');
+    expect(html).toContain('class="candidate-budget-value remaining has-remaining"');
+    expect(html).toContain('class="candidate-budget-value remaining is-zero"');
     expect(html).toContain('<span class="visually-hidden">使用SP</span>33');
     expect(html).toContain('<span class="visually-hidden">残りSP</span>33');
     expect(html).toContain("最厳条件: モバイル候補1");
@@ -3129,7 +3135,7 @@ describe("App", () => {
     expect(html).toContain(">最厳条件<");
     expect(html).toContain(">H/A/B/C/D/S<");
     expect(html).toContain('class="candidate-budget-value used"');
-    expect(html).toContain('class="candidate-budget-value remaining"');
+    expect(html).toContain('class="candidate-budget-value remaining has-remaining"');
     expect(html).toContain('class="candidate-bottleneck"');
     expect(html).toContain("シナリオA +0.0%");
     expect(html).toContain("最厳条件: シナリオA +0.0%");
