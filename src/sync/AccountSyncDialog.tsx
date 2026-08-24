@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { Button } from "../ui/primitives";
+import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 
 /** The small, app-owned view model needed by the account dialog. */
 export type AccountSyncMode = "signed-out" | "signed-in";
@@ -378,7 +379,20 @@ export function AccountSyncDialog({
             </p>
           </div>
           {onClose ? (
-            <Button variant="ghost" size="icon" aria-label="アカウント画面を閉じる" onClick={onClose}>×</Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="account-sync-close-button"
+              aria-label="アカウント画面を閉じる"
+              onClick={onClose}
+            >
+              <img
+                className="account-sync-close-icon"
+                src={getPublicAssetUrl("assets/ui/close.svg")}
+                alt=""
+                aria-hidden="true"
+              />
+            </Button>
           ) : null}
         </header>
 

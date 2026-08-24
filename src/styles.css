@@ -967,6 +967,28 @@ textarea:focus-visible,
 
 .account-sync-header {
   justify-content: space-between;
+  padding-right: calc(var(--desktop-control-standard) + 8px);
+}
+
+.account-sync-window .account-sync-close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: inline-grid;
+  place-items: center;
+  width: var(--desktop-control-standard);
+  min-width: var(--desktop-control-standard);
+  height: var(--desktop-control-standard);
+  min-height: var(--desktop-control-standard);
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+}
+
+.account-sync-close-icon {
+  display: block;
+  width: var(--desktop-icon-standard);
+  height: var(--desktop-icon-standard);
 }
 
 .account-sync-header > div,
@@ -6694,6 +6716,26 @@ textarea {
     margin-right: auto;
   }
 
+  .mobile-search-counts {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .mobile-search-counts > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-search-counts > span:last-child {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .mobile-candidate-actions .ui-button {
     flex: 0 0 auto;
     white-space: nowrap;
@@ -7461,6 +7503,7 @@ textarea {
     justify-content: center;
     min-width: 0;
     width: 100%;
+    height: 24px;
     min-height: 24px;
     border: 1px solid rgba(124, 143, 144, 0.22);
     border-radius: 5px;
@@ -7468,25 +7511,30 @@ textarea {
     color: #c9d1cc;
     font-size: 11px;
     font-weight: 900;
+    overflow: hidden;
   }
 
   .mobile-candidate-layout .candidate-budget-value.used {
     grid-column: 1;
+    border-color: color-mix(in srgb, var(--gold) 60%, var(--bg));
+    background: var(--gold);
+    color: var(--bg);
   }
 
   .mobile-candidate-layout .candidate-budget-value.used::before {
     margin-right: 2px;
-    color: var(--muted);
+    color: inherit;
     content: "使用";
   }
 
   .mobile-candidate-layout .candidate-budget-value.remaining {
     grid-column: 2;
+    color: var(--muted);
   }
 
   .mobile-candidate-layout .candidate-budget-value.remaining::before {
     margin-right: 2px;
-    color: var(--muted);
+    color: inherit;
     content: "残";
   }
 
@@ -7965,6 +8013,24 @@ textarea {
     padding: 16px;
   }
 
+  .account-sync-header {
+    padding-right: calc(var(--mobile-control-standard) + 8px);
+  }
+
+  .account-sync-window .account-sync-close-button {
+    top: 16px;
+    right: 16px;
+    width: var(--mobile-control-standard);
+    min-width: var(--mobile-control-standard);
+    height: var(--mobile-control-standard);
+    min-height: var(--mobile-control-standard);
+  }
+
+  .account-sync-close-icon {
+    width: var(--mobile-icon-standard);
+    height: var(--mobile-icon-standard);
+  }
+
   .account-sync-actions,
   .account-sync-conflict-actions,
   .account-sync-delete-actions,
@@ -8039,6 +8105,22 @@ textarea {
   .mobile-scenarios-open .scenario-options label {
     gap: 0;
     padding: 0 2px;
+  }
+
+  .mobile-candidate-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobile-search-counts {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .mobile-candidate-actions .ui-button {
+    width: 100%;
+    min-width: 0;
   }
 
   .app-shell {

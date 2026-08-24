@@ -22,6 +22,21 @@ const renderDialog = (
 );
 
 describe("AccountSyncDialog", () => {
+  it("uses the shared close icon in the dialog's top-right control", () => {
+    const html = renderDialog({ onClose: () => undefined });
+    const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const mobileCss = css.slice(mobileStart);
+
+    expect(html).toMatch(/class="[^"]*account-sync-close-button[^"]*"[^>]*aria-label="アカウント画面を閉じる"/);
+    expect(html).toMatch(/class="account-sync-close-icon" src="[^"]*assets\/ui\/close\.svg" alt="" aria-hidden="true"/);
+    expect(html).not.toContain(">×</button>");
+    expect(css).toMatch(/\.account-sync-window \.account-sync-close-button\s*\{[^}]*position:\s*absolute;[^}]*top:\s*20px;[^}]*right:\s*20px;[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);[^}]*padding:\s*0;[^}]*font-size:\s*0;[^}]*line-height:\s*0;/s);
+    expect(css).toMatch(/\.account-sync-close-icon\s*\{[^}]*display:\s*block;[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
+    expect(mobileCss).toMatch(/\.account-sync-window \.account-sync-close-button\s*\{[^}]*top:\s*16px;[^}]*right:\s*16px;[^}]*width:\s*var\(--mobile-control-standard\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
+    expect(mobileCss).toMatch(/\.account-sync-close-icon\s*\{[^}]*width:\s*var\(--mobile-icon-standard\);[^}]*height:\s*var\(--mobile-icon-standard\);/s);
+  });
+
   it("explains the signed-out Google login data and permissions without user-facing jargon", () => {
     const html = renderToStaticMarkup(
       <AccountSyncDialog mode="signed-out" onSignIn={() => undefined} />,

@@ -5419,11 +5419,21 @@ function MobileOverview({
       </section>
 
       <section className="mobile-candidate-dock" aria-label="候補一覧と探索操作">
-        <div className="mobile-progress-line" aria-hidden="true">
-          <span style={{ width: `${Math.round(searchProgress * 100)}%` }} />
+        <div
+          className="mobile-progress-line"
+          role="progressbar"
+          aria-label="探索進捗"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(searchProgress * 100)}
+        >
+          <span style={{ width: `${Math.round(searchProgress * 100)}%` }} aria-hidden="true" />
         </div>
         <div className="mobile-candidate-actions">
-          <span>{Math.round(searchProgress * 100)}% / 評価 {searchedCandidates} / {totalCandidates || "-"} / 合格 {passingCandidateCount}</span>
+          <span className="mobile-search-counts">
+            <span>評価 {searchedCandidates}/{totalCandidates || "-"}</span>
+            <span>合格 {passingCandidateCount}</span>
+          </span>
           <Button
             variant="ghost"
             size="small"
