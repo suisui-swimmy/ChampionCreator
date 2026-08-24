@@ -76,6 +76,28 @@ describe("AccountSyncDialog", () => {
     expect(html).toContain(">競合あり</p>");
   });
 
+  it("keeps the shared close icon in the signed-in conflict header", () => {
+    const html = renderDialog({
+      status: "conflict",
+      onClose: () => undefined,
+      conflicts: {
+        count: 14,
+        message: "このブラウザとクラウドの変更が競合しています。",
+        onAction: () => undefined,
+      },
+    });
+    const headerHtml = html.match(/<header class="account-sync-header">([\s\S]*?)<\/header>/)?.[1] ?? "";
+
+    expect(html).toContain(">アカウント管理</h2>");
+    expect(html).toContain('data-sync-status="競合あり"');
+    expect(html).toContain(">競合あり（14件）</h3>");
+    expect(headerHtml).toContain("account-sync-close-button");
+    expect(headerHtml).toContain('aria-label="アカウント画面を閉じる"');
+    expect(headerHtml).toContain("assets/ui/close.svg");
+    expect(headerHtml).not.toContain("×");
+    expect(html.match(/account-sync-close-button/g)).toHaveLength(1);
+  });
+
   it("shows migration retry and all conflict resolution choices", () => {
     const onRetry = vi.fn();
     const onAction = vi.fn();

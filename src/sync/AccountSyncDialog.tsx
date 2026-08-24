@@ -161,6 +161,25 @@ const run = (callback: (() => void | Promise<unknown>) | undefined): void => {
   }
 };
 
+function AccountSyncCloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="account-sync-close-button"
+      aria-label="アカウント画面を閉じる"
+      onClick={onClose}
+    >
+      <img
+        className="account-sync-close-icon"
+        src={getPublicAssetUrl("assets/ui/close.svg")}
+        alt=""
+        aria-hidden="true"
+      />
+    </Button>
+  );
+}
+
 /**
  * Account, synchronization, export, and destructive-account controls.
  *
@@ -378,22 +397,7 @@ export function AccountSyncDialog({
                 : "Googleアカウントでログインすると、保存データをブラウザ間で同期できます。"}
             </p>
           </div>
-          {onClose ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="account-sync-close-button"
-              aria-label="アカウント画面を閉じる"
-              onClick={onClose}
-            >
-              <img
-                className="account-sync-close-icon"
-                src={getPublicAssetUrl("assets/ui/close.svg")}
-                alt=""
-                aria-hidden="true"
-              />
-            </Button>
-          ) : null}
+          {onClose ? <AccountSyncCloseButton onClose={onClose} /> : null}
         </header>
 
         {!isSignedIn ? (
