@@ -929,8 +929,9 @@ describe("App", () => {
     expect(css).toMatch(/\.topbar-meta\s*\{[^}]*justify-items:\s*end;/s);
     expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*font-size:\s*9px;[^}]*text-align:\s*right;/s);
     expect(html).toContain("<title>ChampionCreator | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール</title>");
-    expect(html).toContain('name="description"');
-    expect(html).toContain("能力ポイント（SP・努力値相当）の候補配分を自動計算");
+    const description = "「神調整」を誰にでも ― ポケモンチャンピオンズ（ポケチャン） の耐久・火力・素早さ条件から、能力ポイント（SP）の配分を自動計算できる調整ツール";
+    expect(html.match(new RegExp(`content="${description}"`, "g"))).toHaveLength(3);
+    expect(html).not.toContain("能力ポイント（SP・努力値相当）");
     expect(html).toContain('name="robots" content="index, follow, max-image-preview:large"');
     expect(html).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/"');
     expect(html).toContain('property="og:url" content="https://championcreator.suisui-swimmy.com/"');
@@ -1079,7 +1080,7 @@ describe("App", () => {
     for (const heading of ["調整対象", "入力候補", "SP（能力ポイント）", "仮想敵シナリオ", "候補一覧", "ブラウザ同期"]) {
       expect(guideHtml).toContain(`<h2>${heading}</h2>`);
     }
-    expect(guideHtml).toContain('<span>使い方ガイド</span>');
+    expect(guideHtml).toContain('<a class="guide-brand-page" href="#getting-started">使い方ガイド</a>');
     expect(guideHtml).not.toContain('class="guide-global-nav"');
     expect(guideHtml).toContain('<a class="guide-header-action" href="/">アプリを開く</a>');
     expect(guideHtml).not.toContain('href="#defence"');
@@ -1357,6 +1358,32 @@ describe("App", () => {
     }
     expect(privacyHtml).toContain('<body class="guide-page privacy-page">');
     expect(privacyHtml).toContain('aria-label="プライバシーメニューを開く"');
+  });
+
+  it("splits the static-page brand into an app logo link and a page-top link", () => {
+    const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+    const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
+    const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
+
+    for (const [html, pageLabel, pageTopHref] of [
+      [guideHtml, "使い方ガイド", "#getting-started"],
+      [privacyHtml, "プライバシー", "#overview"],
+    ] as const) {
+      const brand = html.match(/<div class="guide-brand">[\s\S]*?<\/div>/)?.[0] ?? "";
+      expect(brand).toContain('<a class="guide-brand-home" href="/" aria-label="ChampionCreatorを開く">');
+      expect(brand).toContain('<img src="/assets/brand/championcreator-title.svg" alt="ChampionCreator" />');
+      expect(brand).toContain(`<a class="guide-brand-page" href="${pageTopHref}">${pageLabel}</a>`);
+      expect(brand.match(/href="\/"/g)).toHaveLength(1);
+      expect(brand).not.toContain("<span>");
+      expect(html).not.toContain('<a class="guide-brand" href="/"');
+    }
+
+    expect(guideCss).toMatch(/\.guide-brand-page\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*padding-left:\s*14px;/s);
+    expect(guideCss).toMatch(/\.guide-brand-page::before\s*\{[^}]*height:\s*18px;[^}]*background:\s*var\(--guide-border\);/s);
+    expect(guideCss).toMatch(/\.guide-brand-home:focus-visible,[\s\S]*?\.guide-brand-page:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--guide-yellow\);/s);
+    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-brand-page\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*padding-left:\s*8px;[^}]*font-size:\s*11px;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 440px\)[\s\S]*?\.guide-brand-page\s*\{[^}]*display:\s*none;/s);
+    expect(guideCss).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.guide-brand img\s*\{[^}]*width:\s*min\(150px, 46vw\);/s);
   });
 
   it("keeps type and item dropdown candidates separated", () => {
@@ -2425,11 +2452,15 @@ describe("App", () => {
     expect(css).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.draft-recovery-actions\s*\{[^}]*grid-template-columns:\s*1fr;/s);
   });
 
-  it("keeps the guide task-focused while technical documents retain save and sync details", () => {
+  it("keeps public guidance approachable while technical documents retain save and sync details", () => {
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
     const guide = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const privacy = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
     const firebaseSetup = readFileSync(new URL("../docs/FIREBASE_SETUP.md", import.meta.url), "utf8");
+    const privacyImplementation = readFileSync(
+      new URL("../docs/privacy-implementation.md", import.meta.url),
+      "utf8",
+    );
 
     for (const technicalDetail of [
       "作業中の下書き",
@@ -2471,14 +2502,63 @@ describe("App", () => {
       expect(guide).toContain(`<code>${label}</code>`);
     }
 
-    expect(privacy).toContain("ブラウザ内保存");
-    expect(privacy).toContain("<code>syncRecords</code>");
-    expect(privacy).toContain("<code>drafts</code>");
-    expect(privacy).toContain("Google Analytics 4");
-    expect(privacy).toContain("Google Fonts");
-    expect(privacy).toContain("App Check");
-    expect(privacy).toContain("<code>アカウントデータを書き出す</code>");
-    expect(privacy).toContain("<code>アカウントを削除</code>");
+    for (const publicDetail of [
+      "<h2>まとめ</h2>",
+      "このブラウザのサイトデータ",
+      "調整対象・仮想敵ボックス",
+      "ブラウザごとの作業中の下書き",
+      "Google Drive",
+      "Gmail",
+      "連絡先",
+      "Google Analytics 4",
+      "Google Fonts",
+      "Firebase / reCAPTCHA Enterprise",
+      "アカウントデータを書き出す",
+      "アカウントを削除",
+      "ログアウト",
+      "docs/privacy-implementation.md",
+    ]) {
+      expect(privacy).toContain(publicDetail);
+    }
+    for (const internalTerm of [
+      "syncRecords",
+      "tombstone",
+      "outbox",
+      "schemaVersion",
+      "revision",
+      "source fingerprint",
+      "deviceId",
+      "Firestore Security Rules",
+    ]) {
+      expect(privacy).not.toContain(internalTerm);
+    }
+    expect(privacy).toContain("2026年8月25日");
+    expect(privacy).toContain("https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform");
+
+    for (const heading of [
+      "# ChampionCreator データ取り扱いの技術詳細",
+      "## 1. データフローの概要",
+      "## 2. アプリが管理するブラウザ内保存",
+      "## 4. Cloud Firestore",
+      "## 6. アカウントデータの書き出し",
+      "## 8. アカウント削除",
+    ]) {
+      expect(privacyImplementation).toContain(heading);
+    }
+    for (const technicalDetail of [
+      "Firebase SDKが管理するブラウザ保存",
+      "championcreator.device.v1",
+      "championcreator.migration-source.v1",
+      "championcreator.sync.v1.<uid>",
+      "championcreator.cloud-draft.v1.<uid>.<device>",
+      "championcreator.draft.v1.<uid>.<device>",
+      "`syncRecords`",
+      "`drafts`",
+      "削除済み記録",
+      "App Check",
+    ]) {
+      expect(privacyImplementation).toContain(technicalDetail);
+    }
 
     expect(firebaseSetup).toContain("## 既存ブラウザ内保存の初回統合");
     expect(firebaseSetup).toContain("## ボックス同期");
@@ -2487,7 +2567,7 @@ describe("App", () => {
     expect(firebaseSetup).toContain("## 本番公開とApp Check");
     expect(firebaseSetup).toContain("Cloud FirestoreとAuthenticationのApp Check enforcement");
 
-    for (const document of [readme, guide, privacy, firebaseSetup]) {
+    for (const document of [readme, guide, privacy, firebaseSetup, privacyImplementation]) {
       expect(document).not.toMatch(/SYNC-M|\bM\d+(?:\.\d+)?\b/);
       expect(document).not.toContain("controller");
       expect(document).not.toContain("runtime gate");
@@ -2508,10 +2588,37 @@ describe("App", () => {
     const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
     const privacyMain = readFileSync(new URL("./privacy/main.ts", import.meta.url), "utf8");
     const guideCss = readFileSync(new URL("./guide/guide.css", import.meta.url), "utf8");
+    const privacyCalendarIcon = readFileSync(
+      new URL("../public/assets/guide/calendar-days.svg", import.meta.url),
+      "utf8",
+    );
 
     expect(privacyHtml).toContain('<body class="guide-page privacy-page">');
     expect(privacyHtml).toContain("<h1>プライバシーとデータの取り扱い</h1>");
     expect(privacyHtml).not.toContain("プライバシーと<br");
+    expect(privacyHtml).toContain(
+      '<img class="guide-tip-icon" src="/assets/guide/calendar-days.svg" width="24" height="24" alt="" aria-hidden="true" />',
+    );
+    expect(privacyHtml.indexOf('src="/assets/guide/calendar-days.svg"'))
+      .toBeLessThan(privacyHtml.indexOf("<strong>更新日</strong>"));
+    expect(privacyCalendarIcon).toContain('viewBox="0 0 24 24"');
+    expect(privacyCalendarIcon).toContain('stroke="#00ff72"');
+    expect(privacyCalendarIcon).toContain('fill="none"');
+    for (const [sectionId, label] of [
+      ["overview", "概要"],
+      ["summary", "まとめ"],
+      ["local-storage", "データの保存"],
+      ["firebase", "Googleログイン"],
+      ["analytics-fonts", "外部通信"],
+      ["export", "書き出し"],
+      ["delete", "削除と保存期間"],
+      ["security", "安全性"],
+      ["technical-details", "技術的な詳細"],
+    ] as const) {
+      expect(privacyHtml).toContain(`href="#${sectionId}"`);
+      expect(privacyHtml).toContain(`id="${sectionId}"`);
+      expect(privacyHtml).toContain(`>${label}</a>`);
+    }
     expect(privacyMain).toContain('import { getActiveGuideSectionIndex } from "../guide/scrollSpy"');
     expect(privacyMain).toContain('window.addEventListener("scroll", scheduleActiveTocUpdate, { passive: true })');
     expect(privacyMain).toContain('link.setAttribute("aria-current", "location")');

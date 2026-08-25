@@ -7,7 +7,7 @@
     <title>ChampionCreator | プライバシーとデータの取り扱い</title>
     <meta
       name="description"
-      content="ChampionCreatorが扱うFirebaseアカウント、ブラウザ内保存、Google Analytics、フォント、データ書き出し、アカウント削除の説明です。"
+      content="ChampionCreatorを使うときのブラウザ保存、Googleログイン、外部通信、アカウントデータの書き出し・削除について説明します。"
     />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#090d0e" />
@@ -17,14 +17,14 @@
     <meta property="og:title" content="ChampionCreator | プライバシーとデータの取り扱い" />
     <meta
       property="og:description"
-      content="ChampionCreatorが扱うFirebaseアカウント、ブラウザ内保存、Google Analytics、フォント、データ書き出し、アカウント削除の説明です。"
+      content="ChampionCreatorを使うときのブラウザ保存、Googleログイン、外部通信、アカウントデータの書き出し・削除について説明します。"
     />
     <meta property="og:url" content="https://championcreator.suisui-swimmy.com/privacy/" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="ChampionCreator | プライバシーとデータの取り扱い" />
     <meta
       name="twitter:description"
-      content="ChampionCreatorが扱うFirebaseアカウント、ブラウザ内保存、Google Analytics、フォント、データ書き出し、アカウント削除の説明です。"
+      content="ChampionCreatorを使うときのブラウザ保存、Googleログイン、外部通信、アカウントデータの書き出し・削除について説明します。"
     />
     <link rel="canonical" href="https://championcreator.suisui-swimmy.com/privacy/" />
     <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
@@ -46,10 +46,12 @@
   </head>
   <body class="guide-page privacy-page">
     <header class="guide-header">
-      <a class="guide-brand" href="/" aria-label="ChampionCreatorを開く">
-        <img src="/assets/brand/championcreator-title.svg" alt="ChampionCreator" />
-        <span>プライバシー</span>
-      </a>
+      <div class="guide-brand">
+        <a class="guide-brand-home" href="/" aria-label="ChampionCreatorを開く">
+          <img src="/assets/brand/championcreator-title.svg" alt="ChampionCreator" />
+        </a>
+        <a class="guide-brand-page" href="#overview">プライバシー</a>
+      </div>
       <div class="guide-header-actions">
         <a class="guide-header-action" href="/">アプリを開く</a>
         <button
@@ -66,15 +68,17 @@
 
     <div class="guide-layout">
       <aside class="guide-toc" id="privacy-toc-panel" aria-label="プライバシー目次">
-        <p class="guide-toc-label">このページの項目</p>
+        <p class="guide-toc-label">目次</p>
         <nav>
           <a class="active" href="#overview" aria-current="location">概要</a>
-          <a href="#local-storage">ブラウザ内保存</a>
-          <a href="#firebase">Firebase</a>
-          <a href="#analytics-fonts">Analyticsとフォント</a>
+          <a href="#summary">まとめ</a>
+          <a href="#local-storage">データの保存</a>
+          <a href="#firebase">Googleログイン</a>
+          <a href="#analytics-fonts">外部通信</a>
           <a href="#export">書き出し</a>
-          <a href="#delete">削除・再試行</a>
-          <a href="#retention">保持と安全性</a>
+          <a href="#delete">削除と保存期間</a>
+          <a href="#security">安全性</a>
+          <a href="#technical-details">技術的な詳細</a>
         </nav>
       </aside>
 
@@ -84,71 +88,121 @@
           <p class="guide-eyebrow">PRIVACY &amp; DATA</p>
           <h1>プライバシーとデータの取り扱い</h1>
           <p class="guide-lead">
-            ChampionCreatorは、入力した調整条件を計算する静的Webアプリです。このページでは、ブラウザ、Firebase、Google Analytics、外部フォントへ何が渡るか、またアカウントデータを書き出す・削除する方法を説明します。
+            このページでは、ChampionCreatorを使うときに「どのデータが、どこへ保存・送信されるのか」を説明します。
           </p>
           <div class="guide-tip">
-            <div class="guide-tip-heading"><strong>更新日</strong></div>
-            <p>2026年8月21日</p>
-            <p>運営者: suisui-swimmy。お問い合わせは<a href="https://x.com/peixe0307" target="_blank" rel="noreferrer">X（@peixe0307）</a>またはアプリ内の不具合報告窓口からお願いします。</p>
+            <div class="guide-tip-heading">
+              <img class="guide-tip-icon" src="/assets/guide/calendar-days.svg" width="24" height="24" alt="" aria-hidden="true" />
+              <strong>更新日</strong>
+            </div>
+            <p>2026年8月25日</p>
+            <p>運営者: suisui-swimmy</p>
+            <p>
+              お問い合わせは<a href="https://x.com/peixe0307" target="_blank" rel="noreferrer">X（@peixe0307）</a>またはアプリ内の<a href="https://docs.google.com/forms/d/e/1FAIpQLSdTUyrAmTwrcarMfMt56RrcwH_g4r4WhowW0i60HDK5BflylQ/viewform" target="_blank" rel="noreferrer">不具合報告</a>からお願いします。
+            </p>
           </div>
         </section>
 
-        <section class="guide-section" id="local-storage">
-          <p class="guide-section-kicker">BROWSER STORAGE</p>
-          <h2>ブラウザに保存されるデータ</h2>
-          <p>Googleログインを利用しない場合、入力条件、調整対象ボックス、仮想敵ボックス、作業中の下書き、候補形式の設定はブラウザのlocalStorageへ保存します。Googleログイン後でも、初回統合を保留している間はブラウザ内保存を利用します。これらのデータはブラウザごとに分かれ、クラウドへ自動送信されません。</p>
-          <p>初回統合を完了した後も、同期用のデータを同じブラウザへ保持します。これには、アカウントの識別子（UID）ごとの保存内容、未送信操作を順番に保持するキュー（outbox）、ブラウザ別クラウド下書き、初回統合の状態が含まれます。計算結果、候補一覧、Workerの状態、チュートリアルは保存・同期しません。</p>
-          <p>主な保存キーは次のとおりです。UIDやブラウザ識別子（deviceId）の部分は値に応じて変わります。</p>
+        <section class="guide-section" id="summary">
+          <p class="guide-section-kicker">SUMMARY</p>
+          <h2>まとめ</h2>
           <ul class="guide-notes-list">
-            <li>未ログイン時の保存: <code>championcreator.box.v1</code>、<code>championcreator.enemy-box.v1</code>、<code>championcreator.box.default-example.v1</code></li>
-            <li>UID別の同期用保存: <code>championcreator.sync.v1.&lt;uid&gt;</code>、<code>championcreator.cloud-draft.v1.&lt;uid&gt;.&lt;device&gt;</code>、<code>championcreator.draft.v1.&lt;uid&gt;.&lt;device&gt;</code>、初回統合の状態（<code>championcreator.migration.v1.&lt;uid&gt;</code>）</li>
+            <li><strong>Googleログインを使わない場合</strong>、入力内容、ボックス、作業中の下書きなどは、このブラウザのサイトデータへ保存されます。これらをChampionCreatorがFirebaseへ自動送信することはありません。</li>
+            <li><strong>Googleログインを使う場合</strong>、調整対象・仮想敵ボックスをFirebaseへ保存し、同じGoogleアカウントを使う他のブラウザと同期できます。</li>
+            <li>作業中の下書きもFirebaseへ保存しますが、ブラウザごとに分けて扱います。他のブラウザの下書きで、現在の入力内容を自動的に上書きすることはありません。必要な下書きは自分で選んで復元できます。</li>
+            <li>Googleログインで受け取るのは、表示名、メールアドレス、プロフィール画像、アカウントを区別するIDです。<strong>Google Drive、Gmail、連絡先の内容を見る権限は要求しません。</strong></li>
+            <li>ページを開くとGoogle Analyticsなどの外部サービスへ通信します。ただし、ChampionCreatorの入力内容、ボックス、クラウド下書き、FirebaseのアカウントIDをAnalyticsへ送る処理はありません。</li>
+            <li>Googleログインを利用している場合は、クラウドに保存されたアカウントデータの書き出しと、アカウント削除を行えます。<strong>ログアウトしただけでは保存データは削除されません。</strong></li>
           </ul>
-          <p>ブラウザデータを削除すると、サインイン状態とは別にブラウザ内データが消えることがあります。JSONバックアップを書き出し、ブラウザのプロファイルや利用するスマホ・PCを変更する前に保管してください。</p>
+        </section>
+
+        <section class="guide-section" id="local-storage">
+          <p class="guide-section-kicker">STORAGE</p>
+          <h2>データの保存について</h2>
+          <h3>Googleログインを使わない場合</h3>
+          <p>次のデータを、このブラウザのサイトデータへ保存します。</p>
+          <ul class="guide-notes-list">
+            <li>入力条件</li>
+            <li>調整対象ボックス</li>
+            <li>仮想敵ボックス</li>
+            <li>作業中の下書き</li>
+            <li>技・特性・持ち物の候補をシングル／ダブルのどちらで表示するかという設定</li>
+          </ul>
+          <p>これらはブラウザのプロファイルごとに分かれ、Firebaseへ自動送信されません。ブラウザのサイトデータを削除したり、別のブラウザやプロファイルへ移ったりすると、保存内容が消えたり引き継がれなかったりします。</p>
+          <p>調整対象・仮想敵ボックスは、各ボックスのバックアップ機能でJSONファイルへ保存できます。作業中の下書きには専用の書き出し機能がないため、サイトデータを削除すると失われることがあります。</p>
+
+          <h3>Googleログインを使う場合</h3>
+          <p>初回のデータ統合時に、このブラウザとクラウドの両方にボックスがある場合は、両方を統合するか、どちらか一方を使うかを選べます。決定を保留している間は、このブラウザの保存を使い、勝手にクラウドへ統合しません。</p>
+          <p>初回のデータ統合が完了すると、次のデータをFirebaseへ保存します。</p>
+          <ul class="guide-notes-list">
+            <li>調整対象ボックスと仮想敵ボックス</li>
+            <li>ブラウザごとの作業中の下書き</li>
+            <li>同期、競合、削除を安全に処理するための管理情報</li>
+            <li>クラウド下書きをブラウザごとに分けるためのランダムなブラウザIDと、「Windows / Chrome」のような大まかな表示名</li>
+          </ul>
+          <p>同じブラウザにも、未送信の操作や同期状態などを保存します。計算結果、候補一覧、計算処理の途中状態、チュートリアルの内容は保存・同期しません。</p>
         </section>
 
         <section class="guide-section" id="firebase">
-          <p class="guide-section-kicker">FIREBASE</p>
-          <h2>Firebaseで扱うデータ</h2>
-          <p>Googleログインでは、アプリが使える情報の範囲（scope）として、標準プロフィールだけを利用します。Firebase Authenticationが扱うのは、アカウント識別子（UID）、表示名、メールアドレス、プロフィール画像、ログイン状態です。Google Driveのファイル、連絡先、Gmailのメール本文を見る追加権限は要求しません。</p>
-          <p>Googleログイン後に初回統合を完了すると、Firebaseのクラウドデータベース（Firestore）のUID配下へデータを保存します。調整対象・仮想敵ボックスはボックス保存用領域（<code>syncRecords</code>）、ブラウザ別の作業中下書きは下書き用領域（<code>drafts</code>）へ保存します。下書きはブラウザごとに分け、同じアカウントの別のブラウザから上書きしません。保存対象は入力条件と同期に必要な管理情報です。計算結果、候補一覧、Workerの状態、チュートリアルは含めません。</p>
-          <p>通常のボックス・下書き削除では、競合確認や明示的な復元に必要な元データを残したまま、削除済みと記録します（tombstone）。<code>アカウントを削除</code>を選んだ場合だけ、対象UIDの<code>syncRecords</code>と<code>drafts</code>を物理削除します。両方が空になったことを確認してから、最後にFirebase Authenticationのアカウントを削除します。</p>
-          <p>ChampionCreatorはGoogleの認証情報やアクセストークンを、アプリの保存データや書き出しファイルへ含めません。FirebaseのWebアプリ用設定（Web config）には公開値だけを使います。管理者用認証情報（Firebase Admin credential）、サービスアカウント鍵（service account key）、Google OAuth client secretなどの秘密情報は、ブラウザ配信用bundle、repository、Pages artifactへ含めません。</p>
+          <p class="guide-section-kicker">GOOGLE SIGN-IN</p>
+          <h2>Googleログインで受け取る情報</h2>
+          <p>Firebase Authenticationを通じて、次の情報を扱います。</p>
+          <ul class="guide-notes-list">
+            <li>アカウントを区別するID</li>
+            <li>表示名</li>
+            <li>メールアドレス</li>
+            <li>プロフィール画像</li>
+            <li>ログイン状態</li>
+          </ul>
+          <p>Google Driveのファイル、連絡先、Gmailのメール本文を見るための追加権限は要求しません。</p>
+          <p>Googleの認証情報やアクセストークンを、ChampionCreatorが作る保存データや書き出しファイルへ含めることはありません。ログイン状態や認証に必要な情報はFirebase Authenticationが管理します。</p>
+          <p>ログアウトしても、Firebaseにあるボックスや下書き、このブラウザにある同期用データは削除されません。保存データまで削除したい場合は、アカウント画面の<strong>「アカウントを削除」</strong>を利用してください。</p>
         </section>
 
         <section class="guide-section" id="analytics-fonts">
-          <p class="guide-section-kicker">THIRD-PARTY REQUESTS</p>
-          <h2>Google Analyticsとフォント</h2>
-          <p>アプリ、ガイド、このページではGoogle Analytics 4（測定ID <code>G-VCGTV67QC2</code>）を読み込み、ページ表示などの標準的な利用状況を計測します。ChampionCreatorは、調整条件、ボックス内容、クラウド下書き、UID、認証情報、アクセストークンをAnalyticsイベントへ意図的に送信しません。Google側のCookie、ログ、保持期間、地域処理は<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Googleのプライバシーポリシー</a>に従います。ブラウザの設定や拡張機能で外部計測を制限できます。</p>
-          <p>画面の日本語フォントにはGoogle Fontsの <code>LINE Seed JP</code> を使います。フォントを読み込むと、ブラウザからGoogle Fontsへ通常のHTTPリクエストが送られます。フォント提供元へChampionCreatorの入力条件やアカウントデータを送る処理はありません。</p>
-          <p>公開版では、Googleログインと同期を保護するため、Firebase Authentication、Firestore、App Checkへのリクエストも発生します。Cloud FirestoreとAuthenticationにはApp Checkを適用しています。Firebaseのサービス提供、ログ、保持は<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noreferrer">Firebaseのプライバシー情報</a>に従います。</p>
+          <p class="guide-section-kicker">EXTERNAL SERVICES</p>
+          <h2>ページを開いたときの外部通信</h2>
+          <ul class="guide-notes-list">
+            <li><strong>GitHub Pages</strong>: このサイトの配信に利用しています。GitHubは、セキュリティのためGitHub Pagesへのアクセス元IPアドレスを記録すると説明しています。詳しくは<a href="https://docs.github.com/ja/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank" rel="noreferrer">GitHub Pagesのデータ収集について</a>をご確認ください。</li>
+            <li><strong>Google Analytics 4</strong>: アプリ、使い方ガイド、このページを開いたときに読み込みます。ページURL、参照元、言語、画面サイズ、ブラウザ情報、概算地域、セッション情報などの標準的な利用状況が計測され、Google Analytics自身がCookieや計測用IDを使う場合があります。ChampionCreatorは、入力条件、ボックス内容、クラウド下書き、FirebaseのアカウントID、認証情報をAnalyticsイベントへ追加していません。サイト内に計測をOFFにする設定はありませんが、ブラウザの設定や拡張機能で制限できる場合があります。詳しくは<a href="https://support.google.com/analytics/answer/11593727?hl=ja" target="_blank" rel="noreferrer">Google Analyticsの標準データ収集</a>と<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Googleのプライバシーポリシー</a>をご確認ください。</li>
+            <li><strong>Google Fonts</strong>: 日本語フォント「LINE Seed JP」の配信に利用しています。フォントを読み込むと、接続元IPアドレスやブラウザ情報など、通常の通信に必要な情報がGoogleへ届きます。ChampionCreatorの入力条件やアカウントデータをフォントのリクエストへ含める処理はありません。</li>
+            <li><strong>Firebase / reCAPTCHA Enterprise</strong>: 公開版アプリのアクセス保護、Googleログイン、クラウド同期に利用します。アクセス保護の通信は、ログイン前にも発生することがあります。Firebase側での認証、不正利用対策、ログ、保持については<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noreferrer">Firebaseのプライバシー情報</a>をご確認ください。</li>
+          </ul>
+          <p>X、Googleフォーム、GitHubなどへの外部リンクは、リンクを選んだときだけ移動します。移動先では各サービスのプライバシーポリシーが適用されます。</p>
         </section>
 
         <section class="guide-section" id="export">
           <p class="guide-section-kicker">EXPORT</p>
           <h2>アカウントデータの書き出し</h2>
-          <p>ヘッダーのアカウント画面から<code>アカウントデータを書き出す</code>を選ぶと、最初に手動同期を行います。その後、Firestoreの<code>syncRecords</code>と<code>drafts</code>をサーバーから読み直します。読み取りエラー、未送信操作、競合、破損・未対応データが残る場合は、完全な書き出しとは表示せず、警告付きの部分書き出しまたは中止になります。</p>
-          <p>JSONには、形式の版（<code>schemaVersion</code>）、書き出し日時（<code>exportedAt</code>）、UID、サニタイズしたプロフィール、調整対象・仮想敵ボックス、クラウド下書きを含めます。認証情報、アクセストークン、秘密鍵、未ログイン時の保存は含めません。ダウンロード用のBlob URLは処理後に破棄します。</p>
-          <p>このブラウザだけにある未ログイン時のデータは、アカウントデータの書き出し対象外です。必要な場合は各ボックスのバックアップ機能を使って別に退避してください。</p>
+          <p>Googleログインを利用している場合、アカウント画面の<strong>「アカウントデータを書き出す」</strong>から、Firebaseに保存済みのアカウントデータをJSONファイルとして書き出せます。</p>
+          <p>書き出しには、アカウントを区別するID、書き出し用に整理したプロフィール情報、調整対象・仮想敵ボックス、ブラウザごとのクラウド下書き、削除済みの記録が含まれます。認証情報、アクセストークン、秘密鍵は含まれません。</p>
+          <p>書き出し前に同期とクラウドデータの再確認を行います。未送信の操作、競合、読み取れないデータなどが残る場合は、警告付きの部分書き出しになるか、書き出しを中止します。ブラウザ内にしかない未送信データそのものは、書き出しに含まれません。</p>
+          <p>初回統合でアカウントへ移さず、このブラウザの未ログイン用保存領域に残っているデータも対象外です。調整対象・仮想敵ボックスは各ボックスのバックアップ機能で別に保存できますが、作業中の下書きには専用の書き出し機能がありません。</p>
+          <p>現在、アカウントデータの書き出しJSONをクラウドへ一括で戻す機能はありません。</p>
         </section>
 
         <section class="guide-section" id="delete">
-          <p class="guide-section-kicker">DELETE &amp; RETRY</p>
-          <h2>アカウント削除と失敗時の再試行</h2>
-          <p><code>アカウントを削除</code>を選ぶと、必要に応じてGoogle popupで再認証し、UIDが削除対象と一致することを確認します。その後、同じタブの同期と保存予約を停止します。対象UIDのFirestoreデータを最大450件ずつ削除し、空になったことを再確認してから、UID専用のブラウザ内保存を削除します。Firebase Authenticationのアカウント削除は最後に行います。</p>
-          <p>再認証、Firestoreの読み取り・削除、空確認、UID専用データの削除のいずれかが失敗した場合は、Authenticationのアカウントを先に削除しません。失敗理由を表示し、同じ画面から再試行できます。最後のAuthentication削除だけが失敗した場合も、ログイン状態を維持して再試行できます。</p>
-          <p>アカウント削除で消すのはUID専用の保存だけです。ログイン前からこのブラウザだけにある<code>championcreator.box.v1</code> / <code>championcreator.enemy-box.v1</code>、既定サンプルの削除状態は残します。ブラウザだけのデータを消す場合は、ブラウザのサイトデータ削除や通常のボックス操作を使ってください。</p>
+          <p class="guide-section-kicker">DELETE &amp; RETENTION</p>
+          <h2>削除と保存期間</h2>
+          <p>クラウドへ保存済みのボックスや下書きを通常の操作で削除した場合は、他のブラウザから古いデータが復活しないように、削除済みの記録と元データをFirebaseへ残します。まだクラウドへ送信されていない保存は、削除済み記録を送らず破棄されることがあります。</p>
+          <p>利用中のクラウド下書きは、1アカウントにつき最大10件です。各下書きは最後の保存から30日で期限切れとなり、アプリの起動時、画面へ戻ったとき、オンライン復帰時、手動同期時に整理されます。ただし、30日後に元データがすぐ物理削除されるわけではありません。削除済み記録と元データは、同期の安全のためアカウント削除まで残ることがあります。</p>
+          <p>アカウントを削除する場合は、確認欄へ<strong>「削除」</strong>と入力し、Google popupで毎回再認証します。その後、対象アカウントのFirebase上のボックス・下書きと、このブラウザのアカウント別同期データを削除し、最後にFirebase Authenticationのアカウントを削除します。</p>
+          <p>途中で失敗した場合はログイン用アカウントを先に削除せず、同じ画面から再試行できます。ただし、失敗した時点ですでに一部のクラウドデータが削除されている場合があります。</p>
+          <p>アカウント削除後も、未ログイン用のボックスと作業中下書き、表示設定、ランダムなブラウザID、初回統合を別アカウントへ重複適用しないための履歴は、このブラウザに残ります。このサイトに関するブラウザ内データをすべて消す場合は、ブラウザの設定からChampionCreatorのサイトデータを削除してください。</p>
+          <p>Firebaseが管理する認証ログやバックアップなどは、アプリから即時に削除できるデータとは別に、Firebaseの保持方針に従って処理されます。</p>
         </section>
 
-        <section class="guide-section" id="retention">
-          <p class="guide-section-kicker">RETENTION &amp; SECURITY</p>
-          <h2>保持期間と安全性</h2>
-          <ul class="guide-notes-list">
-            <li>ブラウザ別クラウド下書きは1アカウント10件まで、保持期間は30日です。期限切れの下書きは、起動時、画面へ戻ったとき、オンライン復帰時、手動更新時に整理します。</li>
-            <li>ボックスと同期用の管理情報は、ユーザーが削除するまでUIDごとのFirestoreとブラウザ内へ保持します。通常の削除では削除済み記録を使い、アカウント削除時だけ物理削除します。</li>
-            <li>GitHub Pagesの静的フロントからFirebase client SDKを呼びます。ChampionCreator独自のAdminサーバーやGoogle Drive保存はありません。</li>
-            <li>共有ボックス、リアルタイム共同編集、Google以外のログイン方法は提供していません。</li>
-          </ul>
-          <p>Cloud FirestoreとAuthenticationにはApp Checkを適用し、未検証のアプリからのアクセスを拒否します。Firestore Security Rulesでも、未認証または別UIDからの読み取り・書き込みを拒否します。</p>
+        <section class="guide-section" id="security">
+          <p class="guide-section-kicker">SECURITY</p>
+          <h2>安全性について</h2>
+          <p>Firebaseに保存したデータはアカウントIDごとに分け、Firestoreのアクセスルールで、ログインしていない利用者や別のアカウントからの読み取り・書き込みを拒否します。公開版では、reCAPTCHA Enterpriseを使ったApp Checkもアクセス保護に利用しています。</p>
+          <p>ChampionCreatorはGitHub Pages上で動作する静的Webアプリです。ChampionCreator独自の管理用サーバーやGoogle Driveへの保存機能はありません。また、共有ボックス、リアルタイム共同編集、Google以外のログイン方法は提供していません。</p>
+        </section>
+
+        <section class="guide-section" id="technical-details">
+          <p class="guide-section-kicker">TECHNICAL DETAILS</p>
+          <h2>技術的な詳細</h2>
+          <p>ブラウザ内の保存キー、Firebase上の保存形式、同期、書き出し、削除処理、アクセス制御の技術的な詳細は、GitHubの<a href="https://github.com/suisui-swimmy/ChampionCreator/blob/main/docs/privacy-implementation.md" target="_blank" rel="noreferrer">データ取り扱いの技術詳細</a>をご確認ください。</p>
         </section>
       </main>
     </div>

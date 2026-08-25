@@ -62,7 +62,17 @@ body.guide-page {
   align-items: center;
   justify-self: start;
   gap: 14px;
+}
+
+.guide-brand-home,
+.guide-brand-page {
   text-decoration: none;
+}
+
+.guide-brand-home {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
 }
 
 .guide-brand img {
@@ -72,12 +82,37 @@ body.guide-page {
   object-position: left center;
 }
 
-.guide-brand span {
-  border-left: 1px solid var(--guide-border);
+.guide-brand-page {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--desktop-control-standard);
   padding-left: 14px;
   color: var(--guide-text);
   font-size: 14px;
   font-weight: 800;
+}
+
+.guide-brand-page::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 1px;
+  height: 18px;
+  background: var(--guide-border);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.guide-brand-page:hover,
+.guide-brand-page:focus-visible {
+  color: var(--guide-yellow);
+}
+
+.guide-brand-home:focus-visible,
+.guide-brand-page:focus-visible {
+  outline: 2px solid var(--guide-yellow);
+  outline-offset: 2px;
 }
 
 .guide-header-action {
@@ -1135,7 +1170,8 @@ body.guide-page {
     height: 34px;
   }
 
-  .guide-brand span {
+  .guide-brand-page {
+    min-height: var(--mobile-control-standard);
     padding-left: 8px;
     font-size: 11px;
   }
@@ -1356,8 +1392,8 @@ body.guide-page {
   }
 }
 
-@media (max-width: 420px) {
-  .guide-brand span {
+@media (max-width: 440px) {
+  .guide-brand-page {
     display: none;
   }
 
@@ -1375,6 +1411,10 @@ body.guide-page {
 }
 
 @media (max-width: 380px) {
+  .guide-brand img {
+    width: min(150px, 46vw);
+  }
+
   .guide-page > .app-footer {
     width: min(
       calc(100% - var(--narrow-page-gutter) - var(--narrow-page-gutter)),

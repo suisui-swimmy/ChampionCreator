@@ -1,6 +1,7 @@
 others/
 docs/*
 !docs/FIREBASE_SETUP.md
+!docs/privacy-implementation.md
 node_modules/
 dist/
 coverage/
