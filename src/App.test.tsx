@@ -317,6 +317,9 @@ describe("App", () => {
     expect(desktopCss).toMatch(/\.switch\s*\{[^}]*width:\s*42px;[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.switch span\s*\{[^}]*width:\s*38px;[^}]*height:\s*22px;/s);
     expect(desktopCss).toMatch(/\.switch span::after\s*\{[^}]*width:\s*16px;[^}]*height:\s*16px;/s);
+    expect(css).toMatch(/\.switch input:focus-visible \+ span\s*\{[^}]*box-shadow:\s*inset 0 0 0 2px var\(--text\);/s);
+    expect(css).not.toMatch(/\.switch:focus-within\s*\{/s);
+    expect(css).not.toMatch(/\.mobile-scenarios-open \.switch:focus-within\s*\{/s);
 
     // Scenario/attack controls share the same standard target and compact steppers remain usable.
     expect(desktopCss).toMatch(/\.scenario-adjustment-card\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s);
@@ -623,6 +626,8 @@ describe("App", () => {
     expect(enabledHtml).toMatch(/class="[^"]*mobile-scenario-remove-button[^"]*"/);
 
     expect(css).toMatch(/\.mobile-scenario-state\s*\{[^}]*width:\s*var\(--mobile-control-standard\);[^}]*height:\s*var\(--mobile-control-standard\);/s);
+    expect(css).toMatch(/\.mobile-scenario-state:focus-visible\s*\{[^}]*outline:\s*0;[^}]*box-shadow:\s*none;/s);
+    expect(css).toMatch(/\.mobile-scenario-state:focus-visible::before\s*\{[^}]*border-width:\s*2px;[^}]*border-color:\s*var\(--text\);/s);
     expect(css).toMatch(/\.mobile-scenario-summary-main,\s*\.mobile-scenario-title\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);/s);
     expect(css).toMatch(/\.mobile-scenario-remove-button\s*\{[^}]*width:\s*var\(--mobile-control-standard\);[^}]*height:\s*var\(--mobile-control-standard\);[^}]*min-width:\s*var\(--mobile-control-standard\);/s);
     expect(css).toMatch(/\.mobile-scenario-remove-button \.ui-button-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);

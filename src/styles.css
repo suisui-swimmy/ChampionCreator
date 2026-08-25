@@ -3329,6 +3329,10 @@ textarea {
   background: #465054;
 }
 
+.switch input:focus-visible + span {
+  box-shadow: inset 0 0 0 2px var(--text);
+}
+
 .switch span::after {
   content: "";
   position: absolute;
@@ -5512,12 +5516,6 @@ textarea {
     align-items: center;
   }
 
-  .switch:focus-within {
-    outline: 2px solid rgba(245, 197, 66, 0.55);
-    outline-offset: 2px;
-    border-radius: 999px;
-  }
-
   .switch span {
     flex: 0 0 38px;
     width: 38px;
@@ -6649,8 +6647,13 @@ textarea {
   }
 
   .mobile-scenario-state:focus-visible {
-    outline: 2px solid rgba(245, 197, 66, 0.55);
-    outline-offset: 2px;
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .mobile-scenario-state:focus-visible::before {
+    border-width: 2px;
+    border-color: var(--text);
   }
 
   .mobile-scenario-remove-button {
@@ -7082,12 +7085,6 @@ textarea {
     width: 42px;
     height: var(--mobile-control-standard);
     align-items: center;
-  }
-
-  .mobile-scenarios-open .switch:focus-within {
-    outline: 2px solid rgba(245, 197, 66, 0.55);
-    outline-offset: 2px;
-    border-radius: 999px;
   }
 
   .mobile-scenarios-open .switch span {
