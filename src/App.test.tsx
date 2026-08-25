@@ -929,7 +929,7 @@ describe("App", () => {
     expect(css).toMatch(/\.topbar-meta\s*\{[^}]*justify-items:\s*end;/s);
     expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*font-size:\s*9px;[^}]*text-align:\s*right;/s);
     expect(html).toContain("<title>ChampionCreator | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール</title>");
-    const description = "「神調整」を誰にでも ― ポケモンチャンピオンズ（ポケチャン） の耐久・火力・素早さ条件から、能力ポイント（SP）の配分を自動計算できる調整ツール";
+    const description = "「神調整」を誰にでも ― ポケモンチャンピオンズ（ポケチャン）の耐久・火力・素早さ条件から、能力ポイント（SP）の配分を自動計算できるツール";
     expect(html.match(new RegExp(`content="${description}"`, "g"))).toHaveLength(3);
     expect(html).not.toContain("能力ポイント（SP・努力値相当）");
     expect(html).toContain('name="robots" content="index, follow, max-image-preview:large"');
@@ -1039,7 +1039,9 @@ describe("App", () => {
       readFileSync(new URL("./guide/tutorial-preset.json", import.meta.url), "utf8"),
     ) as { entries: Array<{ payload: { scenarios: Array<{ attacks: Array<{ gameType: string }> }> } }> };
 
-    expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | 耐久・火力・素早さ調整</title>");
+    expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール</title>");
+    const guideDescription = "ChampionCreatorの使い方を、調整対象と仮想敵シナリオの入力から、耐久・火力・素早さの計算、候補の適用、保存・同期まで順番に解説します";
+    expect(guideHtml.match(new RegExp(`content="${guideDescription}"`, "g"))).toHaveLength(3);
     expect(guideHtml).toContain('rel="canonical" href="https://championcreator.suisui-swimmy.com/guide/"');
     expect(guideHtml).toContain('name="robots" content="index, follow, max-image-preview:large"');
     expect(guideHtml).toContain('name="championcreator-app-base" content="../"');
@@ -2594,6 +2596,9 @@ describe("App", () => {
     );
 
     expect(privacyHtml).toContain('<body class="guide-page privacy-page">');
+    expect(privacyHtml).toContain("<title>ChampionCreator | プライバシーとデータの取り扱い</title>");
+    const privacyDescription = "ChampionCreatorにおけるデータの保存先、GoogleログインとFirebase同期、外部サービスへの通信、データの書き出し・削除について説明します";
+    expect(privacyHtml.match(new RegExp(`content="${privacyDescription}"`, "g"))).toHaveLength(3);
     expect(privacyHtml).toContain("<h1>プライバシーとデータの取り扱い</h1>");
     expect(privacyHtml).not.toContain("プライバシーと<br");
     expect(privacyHtml).toContain(
