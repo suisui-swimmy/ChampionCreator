@@ -981,6 +981,28 @@ describe("App", () => {
     ]);
   });
 
+  it("uses the shared search thumbnail for every public page social card", () => {
+    const searchThumbnailUrl = "https://championcreator.suisui-swimmy.com/assets/seo/championcreator-search-thumbnail.png";
+    const pages = [
+      readFileSync(new URL("../index.html", import.meta.url), "utf8"),
+      readFileSync(new URL("../guide/index.html", import.meta.url), "utf8"),
+      readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8"),
+    ];
+
+    for (const html of pages) {
+      expect(html.match(new RegExp(`content="${searchThumbnailUrl.replaceAll(".", "\\.")}"`, "g")))
+        .toHaveLength(2);
+      expect(html).toContain('property="og:image:type" content="image/png"');
+      expect(html).toContain('property="og:image:width" content="1024"');
+      expect(html).toContain('property="og:image:height" content="1024"');
+      expect(html).toContain('property="og:image:alt" content="ChampionCreatorのロゴ"');
+      expect(html).toContain('name="twitter:image:alt" content="ChampionCreatorのロゴ"');
+    }
+
+    expect(pages[1]).not.toContain("/assets/icons/icon-512.png");
+    expect(pages[2]).not.toContain("/assets/icons/icon-512.png");
+  });
+
   it("publishes the same five-group footer contract on the app, guide, and privacy pages", () => {
     const appFooter = renderExampleApp().match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
