@@ -3578,10 +3578,6 @@ textarea {
   min-width: 0;
 }
 
-.move-power-field.steppable .move-power-control {
-  grid-template-columns: minmax(0, 1fr) 17px;
-}
-
 .move-power-trigger {
   display: grid;
   place-items: center;
@@ -3596,10 +3592,6 @@ textarea {
   overflow: hidden;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-}
-
-.move-power-field.steppable .move-power-trigger {
-  border-radius: 6px 0 0 6px;
 }
 
 .move-power-trigger:hover,
@@ -3722,40 +3714,6 @@ textarea {
 
 .move-power-lock-toggle.is-open img {
   filter: sepia(1) saturate(4) hue-rotate(355deg);
-}
-
-.move-power-stepper {
-  display: grid;
-  grid-template-rows: repeat(2, 1fr);
-  height: 28px;
-}
-
-.move-power-stepper button {
-  display: grid;
-  place-items: center;
-  width: 17px;
-  min-width: 0;
-  height: 14px;
-  border: 1px solid var(--line-strong);
-  border-left: 0;
-  background: var(--surface-raised);
-  color: var(--gold);
-  padding: 0;
-  font-size: 7px;
-  line-height: 1;
-}
-
-.move-power-stepper button:first-child {
-  border-radius: 0 6px 0 0;
-}
-
-.move-power-stepper button:last-child {
-  border-top: 0;
-  border-radius: 0 0 6px 0;
-}
-
-.move-power-stepper button:hover:not(:disabled) {
-  background: var(--gold-soft);
 }
 
 .move-power-popover {
@@ -4140,58 +4098,110 @@ textarea {
   width: 82px;
 }
 
-.number-stepper {
+.ui-stepper {
   display: grid;
-  grid-template-columns: 24px minmax(38px, 1fr) 24px;
+  grid-template-columns: var(--desktop-control-compact) minmax(var(--desktop-control-compact), 1fr) var(--desktop-control-compact);
   align-items: center;
   overflow: hidden;
   min-width: 0;
-  height: 28px;
-  border: 1px solid #354346;
-  border-radius: 7px;
-  background: #0d1213;
+  height: var(--desktop-control-standard);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-inset);
+  font-variant-numeric: tabular-nums;
 }
 
-.number-stepper:focus-within {
+.ui-stepper:focus-within {
   border-color: var(--gold-line);
-  box-shadow: 0 0 0 2px rgba(245, 197, 66, 0.12);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
-.number-stepper button {
+.ui-stepper-value {
+  display: grid;
+  align-items: stretch;
+  min-width: 0;
+  height: 100%;
+}
+
+.ui-stepper-button {
   display: grid;
   place-items: center;
-  width: 24px;
+  width: var(--desktop-control-compact);
   height: 100%;
   border: 0;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0;
+  background: var(--surface-raised);
   color: var(--muted);
-  font-size: 14px;
+  padding: 0;
+  font-size: var(--desktop-text-interactive-small);
   font-weight: 900;
+  line-height: 1;
   cursor: pointer;
 }
 
-.number-stepper button:hover:not(:disabled),
-.number-stepper button:focus-visible:not(:disabled) {
-  background: rgba(245, 197, 66, 0.13);
+.ui-stepper-button--lower {
+  border-right: 1px solid var(--line);
+}
+
+.ui-stepper-button--upper {
+  border-left: 1px solid var(--line);
+}
+
+.ui-stepper-button:hover:not(:disabled),
+.ui-stepper-button:focus-visible:not(:disabled),
+.ui-stepper-value > .move-power-trigger:hover,
+.ui-stepper-value > .move-power-trigger:focus-visible,
+.ui-stepper-value > .move-power-trigger[data-state="open"] {
+  background: var(--gold-soft);
   color: var(--gold);
 }
 
-.number-stepper button:disabled {
+.ui-stepper-button:focus-visible,
+.ui-stepper-value > input:focus-visible,
+.ui-stepper-value > .move-power-trigger:focus-visible {
+  outline: 0;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+}
+
+.ui-stepper-button:disabled {
   opacity: 0.38;
   cursor: not-allowed;
 }
 
-.number-stepper input {
+.ui-stepper-value > input {
+  width: 100%;
   min-width: 0;
   height: 100%;
   border: 0;
-  border-right: 1px solid rgba(124, 143, 144, 0.18);
-  border-left: 1px solid rgba(124, 143, 144, 0.18);
   border-radius: 0;
   background: transparent;
-  padding: 0 4px;
+  padding: 0 2px;
+  font-size: var(--desktop-text-interactive-small);
+  font-variant-numeric: tabular-nums;
   text-align: center;
   outline: 0;
+}
+
+.ui-stepper-value > input:disabled {
+  opacity: 0.56;
+}
+
+.ui-stepper-value > .move-power-trigger {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 2px 4px;
+}
+
+.scenario-stepper-field .number-stepper,
+.move-power-condition-stepper {
+  width: 100%;
+}
+
+.scenario-stepper-field {
+  gap: 4px;
 }
 
 .speed-manual-target-input {
@@ -5650,41 +5660,21 @@ textarea {
     height: var(--desktop-icon-compact);
   }
 
-  .move-power-stepper {
-    grid-template-columns: repeat(2, var(--desktop-control-compact));
-    grid-template-rows: var(--desktop-control-standard);
-    width: calc(var(--desktop-control-compact) * 2);
+  .ui-stepper {
+    grid-template-columns: var(--desktop-control-compact) minmax(var(--desktop-control-compact), 1fr) var(--desktop-control-compact);
     height: var(--desktop-control-standard);
   }
 
-  .move-power-stepper button {
+  .ui-stepper-button {
     width: var(--desktop-control-compact);
-    height: var(--desktop-control-standard);
     min-height: var(--desktop-control-standard);
     font-size: var(--desktop-text-interactive-small);
   }
 
-  .move-power-stepper button:first-child {
-    border-radius: 0;
-  }
-
-  .move-power-stepper button:last-child {
-    border-top: 1px solid var(--line-strong);
-    border-left: 0;
-    border-radius: 0 6px 6px 0;
-  }
-
-  .move-power-field.steppable .move-power-control {
-    grid-template-columns: minmax(0, 1fr) calc(var(--desktop-control-compact) * 2);
-  }
-
-  .number-stepper {
-    grid-template-columns: var(--desktop-control-compact) minmax(38px, 1fr) var(--desktop-control-compact);
-    height: var(--desktop-control-standard);
-  }
-
-  .number-stepper button {
-    width: var(--desktop-control-compact);
+  .scenario-row .ui-stepper-value > input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input),
+  .attack-condition-card .ui-stepper-value > input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input) {
+    padding-inline: 2px;
+    font-size: var(--desktop-text-interactive-small);
   }
 
   .speed-offset-input,
@@ -7275,7 +7265,6 @@ textarea {
   }
 
   .mobile-scenarios-open .move-power-trigger,
-  .mobile-scenarios-open .move-power-stepper,
   .mobile-scenarios-open .move-power-inline-control {
     height: 36px;
   }
@@ -7299,32 +7288,20 @@ textarea {
     height: var(--mobile-icon-compact);
   }
 
-  .mobile-scenarios-open .move-power-stepper {
-    grid-template-columns: repeat(2, var(--mobile-control-compact));
-    grid-template-rows: var(--mobile-control-standard);
-    width: calc(var(--mobile-control-compact) * 2);
+  .mobile-scenarios-open .ui-stepper {
+    grid-template-columns: var(--mobile-control-compact) minmax(var(--mobile-control-compact), 1fr) var(--mobile-control-compact);
     height: var(--mobile-control-standard);
   }
 
-  .mobile-scenarios-open .move-power-stepper button {
+  .mobile-scenarios-open .ui-stepper-button {
     width: var(--mobile-control-compact);
-    height: var(--mobile-control-standard);
     min-height: var(--mobile-control-standard);
     font-size: var(--mobile-text-interactive-small);
   }
 
-  .mobile-scenarios-open .move-power-stepper button:first-child {
-    border-radius: 0;
-  }
-
-  .mobile-scenarios-open .move-power-stepper button:last-child {
-    border-top: 1px solid var(--line-strong);
-    border-left: 0;
-    border-radius: 0 6px 6px 0;
-  }
-
-  .mobile-scenarios-open .move-power-field.steppable .move-power-control {
-    grid-template-columns: minmax(0, 1fr) calc(var(--mobile-control-compact) * 2);
+  .mobile-scenarios-open .ui-stepper-value > input {
+    font-size: var(--mobile-text-input);
+    letter-spacing: -1.5px;
   }
 
   .mobile-scenarios-open .move-power-trigger strong {
@@ -7336,8 +7313,9 @@ textarea {
     font-size: 16px;
   }
 
-  .mobile-scenarios-open .attack-number-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .mobile-scenarios-open .attack-number-grid,
+  .mobile-scenarios-open .attack-move-power-cell:has(.move-power-field.steppable) {
+    grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
   }
 
   .mobile-scenarios-open .attack-setting-section--indented .attack-setting-section-body,
@@ -7378,9 +7356,11 @@ textarea {
     grid-template-columns: minmax(54px, auto) minmax(0, 1fr);
   }
 
-  .mobile-scenarios-open .number-stepper {
-    grid-template-columns: var(--mobile-control-compact) minmax(40px, 1fr) var(--mobile-control-compact);
-    height: var(--mobile-control-standard);
+  .mobile-scenarios-open .scenario-stepper-field,
+  .mobile-scenarios-open .move-power-field.steppable {
+    grid-template-columns: minmax(48px, max-content) minmax(0, 1fr);
+    align-items: center;
+    gap: 4px;
   }
 
   .mobile-scenarios-open .speed-offset-input,
@@ -7390,11 +7370,6 @@ textarea {
 
   .mobile-scenarios-open .speed-manual-target-input {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .mobile-scenarios-open .number-stepper button {
-    width: var(--mobile-control-compact);
-    font-size: 16px;
   }
 
   .mobile-scenarios-open .scenario-options {

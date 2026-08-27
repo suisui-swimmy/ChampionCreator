@@ -202,7 +202,7 @@ import {
 } from "./sync/CloudDraftProvider";
 import type { CloudDraftRecord } from "./sync/cloudDraftTypes";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
-import { Button, SelectField, StatusBadge, UiPopover } from "./ui/primitives";
+import { Button, SelectField, StatusBadge, StepperControl, UiPopover } from "./ui/primitives";
 import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
@@ -4728,6 +4728,7 @@ function IconToggleButton({ active, disabled = false, iconName, label, onClick }
 
 type NumberStepperProps = {
   className?: string;
+  inputId?: string;
   label: string;
   value: number;
   min: number;
@@ -4736,37 +4737,72 @@ type NumberStepperProps = {
   onChange: (value: number) => void;
 };
 
-function NumberStepper({ className, label, value, min, max, disabled = false, onChange }: NumberStepperProps) {
+function NumberStepper({ className, inputId, label, value, min, max, disabled = false, onChange }: NumberStepperProps) {
   const normalizedValue = clampNumberInput(value, min, max);
   const updateValue = (nextValue: number) => onChange(clampNumberInput(nextValue, min, max));
 
   return (
-    <span className={`number-stepper${className ? ` ${className}` : ""}`}>
-      <button
-        type="button"
-        aria-label={`${label}を1下げる`}
-        disabled={disabled || normalizedValue <= min}
-        onClick={() => updateValue(normalizedValue - 1)}
-      >
-        -
-      </button>
+    <StepperControl
+      className={`number-stepper${className ? ` ${className}` : ""}`}
+      ariaLabel={`${label}ステッパー`}
+      lowerAction={{
+        ariaLabel: `${label}を1下げる`,
+        disabled: disabled || normalizedValue <= min,
+        onClick: () => updateValue(normalizedValue - 1),
+      }}
+      upperAction={{
+        ariaLabel: `${label}を1上げる`,
+        disabled: disabled || normalizedValue >= max,
+        onClick: () => updateValue(normalizedValue + 1),
+      }}
+    >
       <input
         {...numericInputProps}
+        id={inputId}
         value={normalizedValue}
         aria-label={label}
         disabled={disabled}
         onFocus={selectInputValueOnFocus}
         onChange={(event) => updateValue(toNumber(event.target.value, normalizedValue))}
       />
-      <button
-        type="button"
-        aria-label={`${label}を1上げる`}
-        disabled={disabled || normalizedValue >= max}
-        onClick={() => updateValue(normalizedValue + 1)}
-      >
-        +
-      </button>
-    </span>
+    </StepperControl>
+  );
+}
+
+type ScenarioStepperFieldProps = {
+  className?: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  disabled?: boolean;
+  onChange: (value: number) => void;
+};
+
+function ScenarioStepperField({
+  className,
+  label,
+  value,
+  min,
+  max,
+  disabled = false,
+  onChange,
+}: ScenarioStepperFieldProps) {
+  const inputId = useId();
+
+  return (
+    <div className={["scenario-cell number-cell number-labeled-field scenario-stepper-field", className].filter(Boolean).join(" ")}>
+      <label className="row-label" htmlFor={inputId}>{label}</label>
+      <NumberStepper
+        inputId={inputId}
+        label={label}
+        value={value}
+        min={min}
+        max={max}
+        disabled={disabled}
+        onChange={onChange}
+      />
+    </div>
   );
 }
 
@@ -7133,6 +7169,17 @@ function MovePowerField({
   const restoreAutomaticPower = () => {
     onCommit("auto", 0);
   };
+  const assistedPowerTrigger = (
+    <UiPopover.Trigger asChild>
+      <button
+        className="move-power-trigger"
+        type="button"
+        aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
+      >
+        <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+      </button>
+    </UiPopover.Trigger>
+  );
 
   return (
     <div
@@ -7155,35 +7202,24 @@ function MovePowerField({
           }}
         >
           <div className="move-power-control">
-            <UiPopover.Trigger asChild>
-              <button
-                className="move-power-trigger"
-                type="button"
-                aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
-              >
-                <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
-              </button>
-            </UiPopover.Trigger>
             {mode !== "manual" ? (
-              <span className="move-power-stepper" aria-label="威力条件ステッパー">
-                <button
-                  type="button"
-                  aria-label={`${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`}
-                  disabled={!canStepUp}
-                  onClick={() => commitOption(selectedOptionIndex + 1)}
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`}
-                  disabled={!canStepDown}
-                  onClick={() => commitOption(selectedOptionIndex - 1)}
-                >
-                  ▼
-                </button>
-              </span>
-            ) : null}
+              <StepperControl
+                className="move-power-condition-stepper"
+                ariaLabel={`${attackLabel} 威力条件ステッパー`}
+                lowerAction={{
+                  ariaLabel: `${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`,
+                  disabled: !canStepDown,
+                  onClick: () => commitOption(selectedOptionIndex - 1),
+                }}
+                upperAction={{
+                  ariaLabel: `${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`,
+                  disabled: !canStepUp,
+                  onClick: () => commitOption(selectedOptionIndex + 1),
+                }}
+              >
+                {assistedPowerTrigger}
+              </StepperControl>
+            ) : assistedPowerTrigger}
           </div>
           <UiPopover.Portal>
             <UiPopover.Content
@@ -7988,18 +8024,16 @@ function AttackCard({
           <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-survival-title`}>
             <h3 id={`${scenarioId}-${attack.id}-survival-title`}>耐久条件</h3>
             <div className="attack-number-grid attack-setting-section-body">
-              <ScenarioNumberField
+              <ScenarioStepperField
                 label="攻撃回数"
-                showLabel
                 value={attack.repeat}
                 min={1}
                 max={10}
                 disabled={isBeatUp}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)}
               />
-              <ScenarioNumberField
+              <ScenarioStepperField
                 label="耐久回数"
-                showLabel
                 value={attack.requiredSurvivedHits}
                 min={1}
                 max={10}

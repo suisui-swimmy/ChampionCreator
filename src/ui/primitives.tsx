@@ -36,6 +36,52 @@ export function Button({
   );
 }
 
+type StepperAction = {
+  ariaLabel: string;
+  disabled?: boolean;
+  onClick: () => void;
+};
+
+type StepperControlProps = {
+  ariaLabel: string;
+  lowerAction: StepperAction;
+  upperAction: StepperAction;
+  children: ReactNode;
+  className?: string;
+};
+
+export function StepperControl({
+  ariaLabel,
+  lowerAction,
+  upperAction,
+  children,
+  className,
+}: StepperControlProps) {
+  return (
+    <span className={joinClassNames("ui-stepper", className)} role="group" aria-label={ariaLabel}>
+      <button
+        className="ui-stepper-button ui-stepper-button--lower"
+        type="button"
+        aria-label={lowerAction.ariaLabel}
+        disabled={lowerAction.disabled}
+        onClick={lowerAction.onClick}
+      >
+        ▼
+      </button>
+      <span className="ui-stepper-value">{children}</span>
+      <button
+        className="ui-stepper-button ui-stepper-button--upper"
+        type="button"
+        aria-label={upperAction.ariaLabel}
+        disabled={upperAction.disabled}
+        onClick={upperAction.onClick}
+      >
+        ▲
+      </button>
+    </span>
+  );
+}
+
 type SelectOption<TValue extends string> = {
   value: TValue;
   label: ReactNode;

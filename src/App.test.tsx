@@ -69,6 +69,158 @@ const renderExampleApp = (): string => renderToStaticMarkup(
   />,
 );
 
+const countClassToken = (html: string, token: string): number => (
+  Array.from(html.matchAll(/class="([^"]*)"/g)).filter((match) => (
+    (match[1] ?? "").split(/\s+/).includes(token)
+  )).length
+);
+
+const findElementWithClasses = (
+  source: string,
+  requiredClasses: string[],
+  fromIndex = 0,
+): number => {
+  const pattern = /<([a-z][\w-]*)\b[^>]*\bclass="([^"]*)"[^>]*>/g;
+  pattern.lastIndex = fromIndex;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source)) !== null) {
+    const classes = (match[2] ?? "").split(/\s+/).filter(Boolean);
+    if (requiredClasses.every((requiredClass) => classes.includes(requiredClass))) {
+      return match.index;
+    }
+  }
+  return -1;
+};
+
+type UiStepperShape = {
+  start: number;
+  end: number;
+  block: string;
+};
+
+const assertUiStepperShape = (
+  source: string,
+  modifier: string,
+  centerMarker: string,
+  fromIndex = 0,
+): UiStepperShape => {
+  const start = findElementWithClasses(source, ["ui-stepper", modifier], fromIndex);
+  expect(start).toBeGreaterThanOrEqual(0);
+  if (start < 0) {
+    return { start, end: start, block: "" };
+  }
+
+  const lowerStart = findElementWithClasses(
+    source,
+    ["ui-stepper-button", "ui-stepper-button--lower"],
+    start,
+  );
+  const valueStart = findElementWithClasses(source, ["ui-stepper-value"], lowerStart);
+  const upperStart = findElementWithClasses(
+    source,
+    ["ui-stepper-button", "ui-stepper-button--upper"],
+    valueStart,
+  );
+  expect(lowerStart).toBeGreaterThan(start);
+  expect(valueStart).toBeGreaterThan(lowerStart);
+  expect(upperStart).toBeGreaterThan(valueStart);
+
+  const upperEnd = source.indexOf("</button>", upperStart);
+  const lowerHtml = source.slice(lowerStart, valueStart);
+  const valueHtml = source.slice(valueStart, upperStart);
+  const upperHtml = source.slice(upperStart, upperEnd + "</button>".length);
+  expect(lowerHtml).toContain("▼");
+  expect(valueHtml).toContain(centerMarker);
+  expect(upperHtml).toContain("▲");
+
+  return {
+    start,
+    end: upperEnd + "</button>".length,
+    block: source.slice(start, upperEnd + "</button>".length),
+  };
+};
+
+const expectStepperButtonDisabled = (
+  source: string,
+  ariaLabel: string,
+  disabled: boolean,
+): void => {
+  const ariaIndex = source.indexOf(`aria-label="${ariaLabel}"`);
+  expect(ariaIndex).toBeGreaterThanOrEqual(0);
+  if (ariaIndex < 0) {
+    return;
+  }
+  const buttonStart = source.lastIndexOf("<button", ariaIndex);
+  const buttonEnd = source.indexOf(">", ariaIndex);
+  const attributes = source.slice(buttonStart, buttonEnd + 1);
+  expect(attributes.includes('disabled=""')).toBe(disabled);
+};
+
+const renderMovePowerScenario = (
+  moveInput: string,
+  movePowerMode: "auto" | "assisted" | "manual",
+  movePowerValue: number,
+): string => {
+  const [scenario] = createDefaultScenarioForms();
+  return renderToStaticMarkup(
+    <App
+      initialTargetForm={createDefaultTargetForm()}
+      initialScenarioForms={[{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          moveInput,
+          movePowerMode,
+          movePowerValue,
+        }],
+      }]}
+    />,
+  );
+};
+
+const assistedPowerFixtures = [
+  {
+    moveInput: "ゆきなだれ",
+    powers: [60, 120],
+    labels: ["通常", "同じターンに相手からダメージを受けた"],
+  },
+  {
+    moveInput: "きまぐレーザー",
+    powers: [80, 160],
+    labels: ["通常（70%）", "威力が2倍になった（30%）"],
+  },
+  {
+    moveInput: "おはかまいり",
+    powers: [50, 100, 150, 200, 250, 300],
+    labels: ["ひんしの味方 0体", "ひんしの味方 1体", "ひんしの味方 2体", "ひんしの味方 3体", "ひんしの味方 4体", "ひんしの味方 5体"],
+  },
+  {
+    moveInput: "ふんどのこぶし",
+    powers: [50, 100, 150, 200, 250, 300, 350],
+    labels: ["攻撃を受けた回数 0回", "攻撃を受けた回数 1回", "攻撃を受けた回数 2回", "攻撃を受けた回数 3回", "攻撃を受けた回数 4回", "攻撃を受けた回数 5回", "攻撃を受けた回数 6回以上（最大）"],
+  },
+  {
+    moveInput: "りんしょう",
+    powers: [60, 120],
+    labels: ["通常", "味方の「りんしょう」に続けて使用"],
+  },
+  {
+    moveInput: "はきだす",
+    powers: [100, 200, 300],
+    labels: ["たくわえる 1回", "たくわえる 2回", "たくわえる 3回"],
+  },
+  {
+    moveInput: "じだんだ",
+    powers: [75, 150],
+    labels: ["通常", "直前に使った技が失敗した"],
+  },
+  {
+    moveInput: "やけっぱち",
+    powers: [75, 150],
+    labels: ["通常", "直前に使った技が失敗した"],
+  },
+] as const;
+
 const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => ({
   schemaVersion: 1,
   dataVersion,
@@ -329,7 +481,8 @@ describe("App", () => {
     expect(desktopCss).toMatch(/\.attack-direction-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
     expect(desktopCss).toMatch(/\.mechanic-icon-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.mechanic-icon-button img\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
-    expect(desktopCss).toMatch(/\.number-stepper\s*\{[^}]*grid-template-columns:\s*var\(--desktop-control-compact\) minmax\(38px, 1fr\) var\(--desktop-control-compact\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
+    expect(desktopCss).toMatch(/\.ui-stepper(?:,[^{}]+)*\s*\{[^}]*grid-template-columns:\s*var\(--desktop-control-compact\)\s+minmax\([^;]+1fr\)\s+var\(--desktop-control-compact\);/s);
+    expect(desktopCss).toMatch(/\.ui-stepper(?:,[^{}]+)*\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.speed-offset-input,\s*\.speed-manual-target-input\s*\{[^}]*width:\s*112px;/s);
     expect(desktopCss).toMatch(/\.move-power-inline-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--desktop-control-compact\);/s);
     expect(desktopCss).toMatch(/\.move-power-trigger,[\s\S]*?\.move-power-inline-control\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s);
@@ -508,6 +661,61 @@ describe("App", () => {
     expect(narrowCss).toMatch(/\.mobile-scenarios-open \.speed-target-mode-option\s*\{[^}]*gap:\s*6px;/s);
     expect(narrowCss).toMatch(/\.mobile-scenarios-open \.speed-target-mode-control\s*\{[^}]*gap:\s*2px;/s);
     expect(narrowCss).not.toMatch(/\.speed-(?:offset-input|manual-target-input)\s*\{[^}]*width:/s);
+  });
+
+  it("keeps numeric and power-condition steppers on the shared visual primitive", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const uiStepperCss = css.match(/\.ui-stepper\s*\{[^}]*\}/s)?.[0] ?? "";
+    const nonMobileStart = css.indexOf("@media (min-width: 721px)");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const nonMobileCss = css.slice(nonMobileStart, mobileStart);
+    const mobileCss = css.slice(mobileStart);
+
+    expect(css).not.toContain(".move-power-stepper");
+    expect(uiStepperCss).toContain("display: grid;");
+    expect(uiStepperCss).toContain("grid-template-columns: var(--desktop-control-compact) minmax(var(--desktop-control-compact), 1fr) var(--desktop-control-compact);");
+    expect(uiStepperCss).toContain("height: var(--desktop-control-standard);");
+    expect(uiStepperCss).toContain("overflow: hidden;");
+    expect(uiStepperCss).toContain("min-width: 0;");
+    expect(uiStepperCss).toMatch(/border:[^;]+;/);
+    expect(uiStepperCss).toMatch(/border-radius:[^;]+;/);
+    expect(css).toMatch(
+      /\.ui-stepper-button\s*\{[^}]*display:\s*grid;[^}]*place-items:\s*center;[^}]*cursor:\s*pointer;/s,
+    );
+    expect(css).toMatch(/\.ui-stepper-value\s*\{[^}]*min-width:\s*0;/s);
+    expect(css).toMatch(
+      /\.ui-stepper-button:hover:not\(:disabled\),\s*\.ui-stepper-button:focus-visible:not\(:disabled\),\s*\.ui-stepper-value > \.move-power-trigger:hover,\s*\.ui-stepper-value > \.move-power-trigger:focus-visible,\s*\.ui-stepper-value > \.move-power-trigger\[data-state="open"\]\s*\{[^}]*background:\s*var\(--gold-soft\);[^}]*color:\s*var\(--gold\);/s,
+    );
+    expect(css).toMatch(/\.ui-stepper-button:disabled\s*\{[^}]*opacity:[^;]+;[^}]*cursor:\s*not-allowed;/s);
+    expect(css).toMatch(/\.ui-stepper-value > input\s*\{[^}]*padding:\s*0 2px;[^}]*font-size:\s*var\(--desktop-text-interactive-small\);[^}]*text-align:\s*center;/s);
+    expect(css).toMatch(/\.ui-stepper-value > \.move-power-trigger\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;/s);
+    expect(nonMobileCss).toMatch(
+      /\.ui-stepper(?:,[^{}]+)*\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.ui-stepper-button(?:,[^{}]+)*\s*\{[^}]*width:\s*var\(--desktop-control-compact\);/s,
+    );
+    expect(nonMobileCss).toMatch(
+      /\.scenario-row \.ui-stepper-value > input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),\s*\.attack-condition-card \.ui-stepper-value > input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\)\s*\{[^}]*padding-inline:\s*2px;[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.ui-stepper(?:,[^{}]+)*\s*\{[^}]*height:\s*var\(--mobile-control-standard\);/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.ui-stepper-button(?:,[^{}]+)*\s*\{[^}]*width:\s*var\(--mobile-control-compact\);/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-scenarios-open \.ui-stepper-value > input\s*\{[^}]*font-size:\s*var\(--mobile-text-input\);[^}]*letter-spacing:\s*-1\.5px;/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-scenarios-open \.attack-number-grid,\s*\.mobile-scenarios-open \.attack-move-power-cell:has\(\.move-power-field\.steppable\)\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(152px, 1fr\)\);/s,
+    );
+    expect(mobileCss).toMatch(
+      /\.mobile-scenarios-open \.scenario-stepper-field,\s*\.mobile-scenarios-open \.move-power-field\.steppable\s*\{[^}]*grid-template-columns:\s*minmax\(48px, max-content\) minmax\(0, 1fr\);[^}]*align-items:\s*center;[^}]*gap:\s*4px;/s,
+    );
+    expect(mobileCss).not.toMatch(
+      /\.mobile-scenarios-open \.scenario-stepper-field,\s*\.mobile-scenarios-open \.move-power-field\.steppable\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s,
+    );
   });
 
   it("keeps the mobile SP summary on one stable two-row layout", () => {
@@ -1559,7 +1767,8 @@ describe("App", () => {
     expect(html).toContain(">任意S値</span>");
     expect(html).toContain(">素早さ条件</h3>");
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値"');
-    expect(html).toContain('class="number-stepper speed-offset-input"');
+    expect(html).toContain('class="ui-stepper number-stepper speed-offset-input"');
+    expect(html).not.toContain('class="number-stepper speed-offset-input"');
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1下げる"');
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1上げる"');
     expect(html).toContain(">共通S条件</h3>");
@@ -1691,7 +1900,18 @@ describe("App", () => {
     expect(modeHtml).not.toContain('tabindex="-1"');
     expect(modeHtml).not.toContain('class="speed-offset-sign"');
     expect(modeHtml).not.toMatch(/<strong>/);
-    expect(opponentRowHtml).toContain('class="number-stepper speed-offset-input"');
+    const speedStepper = assertUiStepperShape(
+      opponentRowHtml,
+      "number-stepper",
+      'aria-label="素早さ調整A 確定抜き差分値"',
+    );
+    expect(opponentRowHtml.match(/class="speed-target-mode-operator"/g)).toHaveLength(1);
+    expect(opponentRowHtml.indexOf('class="speed-target-mode-operator"')).toBeLessThan(speedStepper.start);
+    expect(speedStepper.block).not.toContain("speed-target-mode-operator");
+    expect(opponentRowHtml).toContain('class="ui-stepper number-stepper speed-offset-input"');
+    expect(opponentRowHtml).not.toContain('class="number-stepper speed-offset-input"');
+    expect(opponentRowHtml).toContain('aria-label="素早さ調整A 確定抜き差分値を1下げる"');
+    expect(opponentRowHtml).toContain('aria-label="素早さ調整A 確定抜き差分値を1上げる"');
     expect(manualRowHtml).toContain('class="scenario-cell number-cell number-labeled-field speed-manual-target-input"');
 
     const manualInput = manualRowHtml.match(
@@ -2159,8 +2379,17 @@ describe("App", () => {
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を上げる: ひんしの味方 3体"');
     expect(lastRespectsHtml).toContain('aria-label="耐久調整A 威力条件を下げる: ひんしの味方 1体"');
     expect(lastRespectsHtml).not.toMatch(/<button type="button" tabindex="-1" aria-label="耐久調整A 威力条件を(?:上げる|下げる)/);
-    expect(lastRespectsHtml).toContain("▲");
-    expect(lastRespectsHtml).toContain("▼");
+    expect(countClassToken(lastRespectsHtml, "move-power-condition-stepper")).toBe(1);
+    expect(countClassToken(lastRespectsHtml, "move-power-stepper")).toBe(0);
+    const lastRespectsStepper = assertUiStepperShape(
+      lastRespectsHtml,
+      "move-power-condition-stepper",
+      'class="move-power-trigger"',
+    );
+    expect(lastRespectsStepper.block).toContain('aria-label="耐久調整A 威力条件を下げる: ひんしの味方 1体"');
+    expect(lastRespectsStepper.block).toContain('aria-label="耐久調整A 威力条件を上げる: ひんしの味方 3体"');
+    expectStepperButtonDisabled(lastRespectsStepper.block, "耐久調整A 威力条件を下げる: ひんしの味方 1体", false);
+    expectStepperButtonDisabled(lastRespectsStepper.block, "耐久調整A 威力条件を上げる: ひんしの味方 3体", false);
 
     const eruptionScenario = {
       ...scenario,
@@ -2223,6 +2452,165 @@ describe("App", () => {
     expect(manualEruptionHtml).toContain('src="/assets/ui/lock-open.svg"');
   });
 
+  it.each(assistedPowerFixtures)(
+    "$moveInput uses the shared power-condition stepper at every option boundary",
+    ({ moveInput, powers, labels }) => {
+      const renderAt = (optionIndex: number): string => renderMovePowerScenario(
+        moveInput,
+        "assisted",
+        powers[optionIndex] ?? powers[0],
+      );
+      const minHtml = renderAt(0);
+      const maxIndex = powers.length - 1;
+      const maxHtml = renderAt(maxIndex);
+
+      expect(countClassToken(minHtml, "move-power-condition-stepper")).toBe(1);
+      expect(countClassToken(minHtml, "move-power-stepper")).toBe(0);
+      const minStepper = assertUiStepperShape(
+        minHtml,
+        "move-power-condition-stepper",
+        'class="move-power-trigger"',
+      );
+      expectStepperButtonDisabled(
+        minStepper.block,
+        "耐久調整A 威力条件を下げる",
+        true,
+      );
+      expectStepperButtonDisabled(
+        minStepper.block,
+        `耐久調整A 威力条件を上げる: ${labels[1]}`,
+        false,
+      );
+
+      const maxStepper = assertUiStepperShape(
+        maxHtml,
+        "move-power-condition-stepper",
+        'class="move-power-trigger"',
+      );
+      expectStepperButtonDisabled(
+        maxStepper.block,
+        `耐久調整A 威力条件を下げる: ${labels[maxIndex - 1]}`,
+        false,
+      );
+      expectStepperButtonDisabled(
+        maxStepper.block,
+        "耐久調整A 威力条件を上げる",
+        true,
+      );
+
+      if (powers.length > 2) {
+        const middleIndex = Math.floor(powers.length / 2);
+        const middleHtml = renderAt(middleIndex);
+        const middleStepper = assertUiStepperShape(
+          middleHtml,
+          "move-power-condition-stepper",
+          'class="move-power-trigger"',
+        );
+        expectStepperButtonDisabled(
+          middleStepper.block,
+          `耐久調整A 威力条件を下げる: ${labels[middleIndex - 1]}`,
+          false,
+        );
+        expectStepperButtonDisabled(
+          middleStepper.block,
+          `耐久調整A 威力条件を上げる: ${labels[middleIndex + 1]}`,
+          false,
+        );
+      }
+    },
+  );
+
+  it("keeps the power-condition stepper out of manual, automatic, fixed, status, and unsupported controls", () => {
+    const cases = [
+      ["おはかまいり", "manual", 87],
+      ["ふんか", "auto", 0],
+      ["ふいうち", "auto", 0],
+      ["まもる", "auto", 0],
+      ["ふくろだたき", "auto", 0],
+    ] as const;
+
+    for (const [moveInput, mode, value] of cases) {
+      const html = renderMovePowerScenario(moveInput, mode, value);
+      expect(countClassToken(html, "move-power-condition-stepper")).toBe(0);
+      expect(countClassToken(html, "move-power-stepper")).toBe(0);
+    }
+  });
+
+  it("uses the shared numeric stepper for attack and survival counts while keeping probability direct", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[scenario]}
+      />,
+    );
+
+    expect(countClassToken(html, "scenario-stepper-field")).toBe(2);
+    expect(countClassToken(html, "number-stepper")).toBe(2);
+    const attackStepper = assertUiStepperShape(
+      html,
+      "number-stepper",
+      'aria-label="攻撃回数"',
+    );
+    const survivalStepper = assertUiStepperShape(
+      html,
+      "number-stepper",
+      'aria-label="耐久回数"',
+      attackStepper.end,
+    );
+    expect(attackStepper.block).toContain('value="1"');
+    expect(survivalStepper.block).toContain('value="1"');
+    const attackInputId = attackStepper.block.match(
+      /<input(?=[^>]*aria-label="攻撃回数")[^>]*\bid="([^"]+)"/,
+    )?.[1];
+    expect(attackInputId).toBeTruthy();
+    expect(html).toContain(`<label class="row-label" for="${attackInputId}">攻撃回数</label>`);
+    expect(attackStepper.block).toContain('aria-label="攻撃回数を1下げる"');
+    expect(attackStepper.block).toContain('aria-label="攻撃回数を1上げる"');
+    expect(survivalStepper.block).toContain('aria-label="耐久回数を1下げる"');
+    expect(survivalStepper.block).toContain('aria-label="耐久回数を1上げる"');
+    expectStepperButtonDisabled(attackStepper.block, "攻撃回数を1下げる", true);
+    expectStepperButtonDisabled(attackStepper.block, "攻撃回数を1上げる", false);
+    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1下げる", true);
+    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1上げる", false);
+    expect(html).toMatch(/<input(?=[^>]*aria-label="耐久確率 %")(?=[^>]*value="90")[^>]*>/);
+    expect(html).not.toContain('aria-label="耐久確率 %を1下げる"');
+    expect(html).not.toContain('aria-label="耐久確率 %を1上げる"');
+    const probabilityInputIndex = html.indexOf('aria-label="耐久確率 %"');
+    const probabilityFieldStart = html.lastIndexOf("<label", probabilityInputIndex);
+    const probabilityFieldEnd = html.indexOf("</label>", probabilityInputIndex);
+    expect(html.slice(probabilityFieldStart, probabilityFieldEnd)).not.toContain("scenario-stepper-field");
+
+    const maxHtml = renderToStaticMarkup(
+      <App
+        initialTargetForm={createDefaultTargetForm()}
+        initialScenarioForms={[{
+          ...scenario,
+          attacks: [{
+            ...scenario.attacks[0],
+            repeat: 10,
+            requiredSurvivedHits: 10,
+          }],
+        }]}
+      />,
+    );
+    const maxAttackStepper = assertUiStepperShape(
+      maxHtml,
+      "number-stepper",
+      'aria-label="攻撃回数"',
+    );
+    const maxSurvivalStepper = assertUiStepperShape(
+      maxHtml,
+      "number-stepper",
+      'aria-label="耐久回数"',
+      maxAttackStepper.end,
+    );
+    expectStepperButtonDisabled(maxAttackStepper.block, "攻撃回数を1下げる", false);
+    expectStepperButtonDisabled(maxAttackStepper.block, "攻撃回数を1上げる", true);
+    expectStepperButtonDisabled(maxSurvivalStepper.block, "耐久回数を1下げる", false);
+    expectStepperButtonDisabled(maxSurvivalStepper.block, "耐久回数を1上げる", true);
+  });
+
   it("formats the actually applied power without mixing it with damage", () => {
     expect(formatMovePowerEvaluation({
       catalogBasePower: 65,
@@ -2274,7 +2662,22 @@ describe("App", () => {
     expect(html).toContain("ふくろだたき参加ポケモンを設定。威力 18");
     expect(html).toMatch(/class="move-power-trigger" type="button" aria-label="耐久調整A ふくろだたき参加ポケモンを設定/);
     expect(html).toContain("<strong>18</strong>");
-    expect(html).toContain('disabled="" aria-label="攻撃回数" value="1"');
+    const attackStepper = assertUiStepperShape(html, "number-stepper", 'aria-label="攻撃回数"');
+    expect(attackStepper.block).toMatch(/<input(?=[^>]*aria-label="攻撃回数")(?=[^>]*disabled="")[^>]*>/);
+    expect(attackStepper.block.match(/<button(?=[^>]*disabled="")[^>]*>/g)).toHaveLength(2);
+    expect(attackStepper.block).toContain("▼");
+    expect(attackStepper.block).toContain("▲");
+    const survivalStepper = assertUiStepperShape(
+      html,
+      "number-stepper",
+      'aria-label="耐久回数"',
+      attackStepper.end,
+    );
+    const survivalInputStart = survivalStepper.block.indexOf("<input");
+    const survivalInputEnd = survivalStepper.block.indexOf(">", survivalInputStart);
+    expect(survivalStepper.block.slice(survivalInputStart, survivalInputEnd + 1)).not.toContain('disabled=""');
+    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1下げる", true);
+    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1上げる", false);
   });
 
   it("keeps HP events collapsed in attack cards and summarizes them on mobile", () => {

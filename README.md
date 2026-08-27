@@ -11,8 +11,6 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計
 
 プライバシーとデータの取り扱い: <https://championcreator.suisui-swimmy.com/privacy/>
 
-Wiki: <https://github.com/suisui-swimmy/ChampionCreator/wiki>
-
 画面の操作手順は使い方ガイド、計算・保存・同期の詳細仕様と対応範囲はこのREADMEを参照してください。
 
 ## 実装機能
