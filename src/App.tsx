@@ -7732,18 +7732,21 @@ function AttackCard({
                       onChange={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "opponent")}
                     />
                     <span>{speedPrimaryConditionLabel}</span>
-                    <strong>{isManualSpeedTarget ? "-" : actualStats?.spe ?? "-"}</strong>
-                    <span className="speed-offset-sign">{isTrickRoomSpeed ? "-" : "+"}</span>
                   </label>
-                  <NumberStepper
-                    className="speed-offset-input"
-                    value={attack.speedRequiredOffset}
-                    label={`${attackLabel} ${speedPrimaryConditionLabel}差分値`}
-                    min={0}
-                    max={10000}
-                    disabled={isManualSpeedTarget}
-                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedRequiredOffset", value)}
-                  />
+                  <span className="speed-target-mode-control">
+                    <span className="speed-target-mode-operator" aria-hidden="true">
+                      {isTrickRoomSpeed ? "-" : "+"}
+                    </span>
+                    <NumberStepper
+                      className="speed-offset-input"
+                      value={attack.speedRequiredOffset}
+                      label={`${attackLabel} ${speedPrimaryConditionLabel}差分値`}
+                      min={0}
+                      max={10000}
+                      disabled={isManualSpeedTarget}
+                      onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedRequiredOffset", value)}
+                    />
+                  </span>
                 </div>
                 <div className="speed-target-mode-option speed-target-mode-manual">
                   <label className="speed-target-radio-label">
@@ -7755,16 +7758,19 @@ function AttackCard({
                     />
                     <span>任意S値</span>
                   </label>
-                  <ScenarioNumberField
-                    className="speed-manual-target-input"
-                    label={`${attackLabel} 任意S値`}
-                    showLabel={false}
-                    value={attack.speedTargetValue}
-                    min={0}
-                    max={10000}
-                    onFocus={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
-                    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetValue", value)}
-                  />
+                  <span className="speed-target-mode-control">
+                    <span className="speed-target-mode-control-label">S値</span>
+                    <ScenarioNumberField
+                      className="speed-manual-target-input"
+                      label={`${attackLabel} 任意S値`}
+                      showLabel={false}
+                      value={attack.speedTargetValue}
+                      min={0}
+                      max={10000}
+                      onFocus={() => onUpdateAttack(scenarioId, attack.id, "speedTargetMode", "manual")}
+                      onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetValue", value)}
+                    />
+                  </span>
                 </div>
               </div>
             </div>

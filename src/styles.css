@@ -4056,9 +4056,10 @@ textarea {
 }
 
 .speed-target-mode-option {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   min-height: 31px;
   color: var(--muted);
@@ -4072,7 +4073,6 @@ textarea {
 
 .speed-target-mode-primary,
 .speed-target-mode-manual {
-  justify-content: flex-start;
   width: 100%;
 }
 
@@ -4082,8 +4082,34 @@ textarea {
   align-items: center;
   gap: 5px;
   min-width: 0;
+  width: fit-content;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.speed-target-mode-control {
+  display: grid;
+  grid-template-columns: max-content auto;
+  align-items: center;
+  justify-content: end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.speed-target-mode-control-label,
+.speed-target-mode-operator {
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.speed-target-mode-control-label {
+  font-size: 11px;
+}
+
+.speed-target-mode-operator {
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .speed-target-mode-option input[type="radio"] {
@@ -4109,23 +4135,8 @@ textarea {
   color: #ead8ff;
 }
 
-.speed-target-mode-option strong,
-.speed-offset-sign {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 900;
-}
-
-.speed-offset-sign {
-  display: inline;
-  line-height: 1;
-}
-
-.scenario-row.speed.trick-room .speed-offset-sign {
-  color: var(--text);
-}
-
-.speed-offset-input {
+.speed-offset-input,
+.speed-manual-target-input {
   width: 82px;
 }
 
@@ -4184,7 +4195,6 @@ textarea {
 }
 
 .speed-manual-target-input {
-  width: 82px;
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -5677,7 +5687,8 @@ textarea {
     width: var(--desktop-control-compact);
   }
 
-  .speed-offset-input {
+  .speed-offset-input,
+  .speed-manual-target-input {
     width: 112px;
   }
 
@@ -5777,7 +5788,7 @@ textarea {
   .hp-event-enable input,
   .bulk-nature-toggle input,
   .scenario-options input,
-  .speed-target-mode-option input {
+  .speed-target-mode-option input[type="radio"] {
     width: 18px;
     height: 18px;
   }
@@ -7372,8 +7383,13 @@ textarea {
     height: var(--mobile-control-standard);
   }
 
-  .mobile-scenarios-open .speed-offset-input {
+  .mobile-scenarios-open .speed-offset-input,
+  .mobile-scenarios-open .speed-manual-target-input {
     width: 120px;
+  }
+
+  .mobile-scenarios-open .speed-manual-target-input {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .mobile-scenarios-open .number-stepper button {
@@ -8166,6 +8182,14 @@ textarea {
 }
 
 @media (max-width: 380px) {
+  .mobile-scenarios-open .speed-target-mode-option {
+    gap: 6px;
+  }
+
+  .mobile-scenarios-open .speed-target-mode-control {
+    gap: 2px;
+  }
+
   .mobile-scenarios-open .scenario-options label {
     gap: 0;
     padding: 0 2px;

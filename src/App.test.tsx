@@ -330,7 +330,7 @@ describe("App", () => {
     expect(desktopCss).toMatch(/\.mechanic-icon-button\s*\{[^}]*width:\s*var\(--desktop-control-standard\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.mechanic-icon-button img\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
     expect(desktopCss).toMatch(/\.number-stepper\s*\{[^}]*grid-template-columns:\s*var\(--desktop-control-compact\) minmax\(38px, 1fr\) var\(--desktop-control-compact\);[^}]*height:\s*var\(--desktop-control-standard\);/s);
-    expect(desktopCss).toMatch(/\.speed-offset-input\s*\{[^}]*width:\s*112px;/s);
+    expect(desktopCss).toMatch(/\.speed-offset-input,\s*\.speed-manual-target-input\s*\{[^}]*width:\s*112px;/s);
     expect(desktopCss).toMatch(/\.move-power-inline-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--desktop-control-compact\);/s);
     expect(desktopCss).toMatch(/\.move-power-trigger,[\s\S]*?\.move-power-inline-control\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--desktop-control-compact\);/s);
@@ -465,8 +465,9 @@ describe("App", () => {
       /\.bulk-nature-toggle\s*\{[^}]*min-height:\s*var\(--desktop-control-compact\);/s,
     );
     expect(nonMobileCss).toMatch(
-      /\.hp-event-enable input,\s*\.bulk-nature-toggle input,\s*\.scenario-options input,\s*\.speed-target-mode-option input\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
+      /\.hp-event-enable input,\s*\.bulk-nature-toggle input,\s*\.scenario-options input,\s*\.speed-target-mode-option input\[type="radio"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
     );
+    expect(nonMobileCss).not.toMatch(/\.speed-target-mode-option input\s*\{[^}]*width:/s);
     expect(nonMobileCss).toMatch(/\.bulk-nature-toggle:focus-within\s*\{[^}]*outline:/s);
 
     expect(nonMobileCss).toMatch(
@@ -476,6 +477,37 @@ describe("App", () => {
       /\.hp-event-help a\s*\{[^}]*display:\s*inline-flex;[^}]*min-height:\s*24px;[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s,
     );
     expect(nonMobileCss).toMatch(/\.hp-event-help a:focus-visible\s*\{[^}]*outline:/s);
+  });
+
+  it("keeps speed target controls aligned across responsive size tiers", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const nonMobileStart = css.indexOf("@media (min-width: 721px)");
+    const mobileStart = css.indexOf("@media (max-width: 720px)");
+    const narrowStart = css.indexOf("@media (max-width: 380px)", mobileStart);
+    const nonMobileCss = css.slice(nonMobileStart, mobileStart);
+    const mobileCss = css.slice(mobileStart, narrowStart);
+    const narrowCss = css.slice(narrowStart);
+
+    const hasWidthRule = (source: string, selector: string, width: string): boolean =>
+      Array.from(source.matchAll(/([^{}]*\.[^{}]+)\{([^}]*)\}/g)).some((match) => {
+        const selectors = match[1] ?? "";
+        const declarations = match[2] ?? "";
+        return selectors.includes(selector) && new RegExp(`width:\\s*${width};`).test(declarations);
+      });
+
+    expect(nonMobileStart).toBeGreaterThanOrEqual(0);
+    expect(mobileStart).toBeGreaterThan(nonMobileStart);
+    expect(narrowStart).toBeGreaterThan(mobileStart);
+    expect(hasWidthRule(nonMobileCss, ".speed-offset-input", "112px")).toBe(true);
+    expect(hasWidthRule(nonMobileCss, ".speed-manual-target-input", "112px")).toBe(true);
+    expect(hasWidthRule(mobileCss, ".mobile-scenarios-open .speed-offset-input", "120px")).toBe(true);
+    expect(hasWidthRule(mobileCss, ".mobile-scenarios-open .speed-manual-target-input", "120px")).toBe(true);
+    expect(mobileCss).toMatch(
+      /\.mobile-scenarios-open \.speed-manual-target-input\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s,
+    );
+    expect(narrowCss).toMatch(/\.mobile-scenarios-open \.speed-target-mode-option\s*\{[^}]*gap:\s*6px;/s);
+    expect(narrowCss).toMatch(/\.mobile-scenarios-open \.speed-target-mode-control\s*\{[^}]*gap:\s*2px;/s);
+    expect(narrowCss).not.toMatch(/\.speed-(?:offset-input|manual-target-input)\s*\{[^}]*width:/s);
   });
 
   it("keeps the mobile SP summary on one stable two-row layout", () => {
@@ -1618,6 +1650,55 @@ describe("App", () => {
     expect(html).not.toContain("pokemon-artwork-meta");
     expect(html).not.toContain("将来の詳細パネル用空き領域");
     expect(html.indexOf('aria-label="探索操作"')).toBeLessThan(html.indexOf('id="results-title"'));
+  });
+
+  it("keeps speed target mode rows structured and shows a readable zero manual value", () => {
+    const html = renderExampleApp();
+    const modeStart = html.indexOf(
+      '<div class="speed-target-mode" role="radiogroup" aria-label="素早さ調整A 素早さ条件">',
+    );
+    const modeEnd = html.indexOf(
+      '<section class="attack-setting-section attack-setting-section--indented speed-condition-section"',
+      modeStart,
+    );
+    expect(modeStart).toBeGreaterThanOrEqual(0);
+    expect(modeEnd).toBeGreaterThan(modeStart);
+
+    const modeHtml = html.slice(modeStart, modeEnd);
+    const opponentStart = modeHtml.indexOf(
+      '<div class="speed-target-mode-option speed-target-mode-primary">',
+    );
+    const manualStart = modeHtml.indexOf(
+      '<div class="speed-target-mode-option speed-target-mode-manual">',
+    );
+    expect(opponentStart).toBeGreaterThanOrEqual(0);
+    expect(manualStart).toBeGreaterThan(opponentStart);
+    expect(modeHtml.match(/class="speed-target-mode-option/g)).toHaveLength(2);
+
+    const opponentRowHtml = modeHtml.slice(opponentStart, manualStart);
+    const manualRowHtml = modeHtml.slice(manualStart);
+    for (const rowHtml of [opponentRowHtml, manualRowHtml]) {
+      expect(rowHtml.match(/class="speed-target-radio-label"/g)).toHaveLength(1);
+      expect(rowHtml.match(/class="speed-target-mode-control"/g)).toHaveLength(1);
+      expect(rowHtml.indexOf('class="speed-target-radio-label"')).toBeLessThan(
+        rowHtml.indexOf('class="speed-target-mode-control"'),
+      );
+    }
+
+    expect(opponentRowHtml).toContain('class="speed-target-mode-operator" aria-hidden="true">+</span>');
+    expect(opponentRowHtml).not.toContain(">差分</span>");
+    expect(manualRowHtml).toContain('class="speed-target-mode-control-label">S値</span>');
+    expect(modeHtml).not.toContain('tabindex="-1"');
+    expect(modeHtml).not.toContain('class="speed-offset-sign"');
+    expect(modeHtml).not.toMatch(/<strong>/);
+    expect(opponentRowHtml).toContain('class="number-stepper speed-offset-input"');
+    expect(manualRowHtml).toContain('class="scenario-cell number-cell number-labeled-field speed-manual-target-input"');
+
+    const manualInput = manualRowHtml.match(
+      /<input(?=[^>]*aria-label="素早さ調整A 任意S値")(?=[^>]*value="0")[^>]*>/,
+    )?.[0] ?? "";
+    expect(manualInput).not.toBe("");
+    expect(manualInput).not.toContain('disabled=""');
   });
 
   it("shows manual badges inside S fields and decorates the overridden source inputs", () => {
@@ -2763,6 +2844,8 @@ describe("App", () => {
 
     expect(html).toContain('class="mobile-scenario-flow-row speed trick-room"');
     expect(html).toContain('aria-label="シナリオ3: 素早さ調整（トリックルーム）。タップで次の調整種別に切り替え"');
+    expect(html).toContain(">確定トリル先制</span>");
+    expect(html).toContain('class="speed-target-mode-operator" aria-hidden="true">-</span>');
   });
 
   it("does not overwrite manually edited opponent S SP for Trick Room", () => {
