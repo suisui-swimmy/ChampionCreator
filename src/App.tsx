@@ -654,6 +654,142 @@ const formatKoPhraseJa = (count: string): string => (
   count === "O" ? "1発" : `${count}発`
 );
 
+const damageDescriptionResidualLabels = {
+  "Dry Skin damage": "かんそうはだダメージ",
+  "Solar Power damage": "サンパワーダメージ",
+  "Dry Skin recovery": "かんそうはだ回復",
+  "Rain Dish recovery": "あめうけざら回復",
+  "sandstorm damage": "すなあらしダメージ",
+  "Ice Body recovery": "アイスボディ回復",
+  "Leftovers recovery": "たべのこし回復",
+  "Black Sludge recovery": "くろいヘドロ回復",
+  "Black Sludge damage": "くろいヘドロダメージ",
+  "Sticky Barb damage": "くっつきバリダメージ",
+  "Grassy Terrain recovery": "グラスフィールド回復",
+  "Poison Heal": "ポイズンヒール",
+  "poison damage": "どくダメージ",
+  "toxic damage": "もうどくダメージ",
+  "reduced burn damage": "やけどダメージ（たいねつ）",
+  "burn damage": "やけどダメージ",
+  "Bad Dreams": "ナイトメア",
+  "trapping damage": "バインドダメージ",
+  "Vine Lash damage": "キョダイベンタツダメージ",
+  "Wildfire damage": "キョダイゴクエンダメージ",
+  "Cannonade damage": "キョダイホウゲキダメージ",
+  "Volcalith damage": "キョダイフンセキダメージ",
+} as const satisfies Record<string, string>;
+
+type LocalizedKoClause = {
+  readonly kind: "guaranteed" | "possible" | "chance";
+  readonly hitCount: string;
+  readonly chance?: string;
+  readonly residualLabel?: string;
+  readonly approximate: boolean;
+};
+
+const formatDamageDescriptionResidualList = (value: string): string | undefined => {
+  const atoms = value
+    .replace(/,\s+and\s+/g, ", ")
+    .replace(/\s+and\s+/g, ", ")
+    .split(/,\s*/)
+    .map((atom) => atom.trim())
+    .filter(Boolean);
+  if (atoms.length === 0) return undefined;
+
+  const translated: string[] = [];
+  for (const atom of atoms) {
+    const label = damageDescriptionResidualLabels[
+      atom as keyof typeof damageDescriptionResidualLabels
+    ];
+    if (!label) return undefined;
+    translated.push(label);
+  }
+  return translated.join("・");
+};
+
+const parseLocalizedKoClause = (value: string): LocalizedKoClause | undefined => {
+  const approximate = value.startsWith("approx. ");
+  const withoutApproximation = approximate ? value.slice("approx. ".length) : value;
+  const afterIndex = withoutApproximation.lastIndexOf(" after ");
+  const clause = afterIndex >= 0
+    ? withoutApproximation.slice(0, afterIndex)
+    : withoutApproximation;
+  const residualLabel = afterIndex >= 0
+    ? formatDamageDescriptionResidualList(withoutApproximation.slice(afterIndex + " after ".length))
+    : undefined;
+  if (afterIndex >= 0 && !residualLabel) return undefined;
+
+  const guaranteed = /^guaranteed\s+(O|\d+)HKO$/i.exec(clause);
+  if (guaranteed) {
+    return { kind: "guaranteed", hitCount: guaranteed[1], residualLabel, approximate };
+  }
+
+  const possible = /^possible\s+(O|\d+)HKO$/i.exec(clause);
+  if (possible) {
+    return { kind: "possible", hitCount: possible[1], residualLabel, approximate };
+  }
+
+  const chance = /^(\d+(?:\.\d+)?)%\s+chance\s+to\s+(O|\d+)HKO$/i.exec(clause);
+  if (chance) {
+    return {
+      kind: "chance",
+      hitCount: chance[2],
+      chance: chance[1],
+      residualLabel,
+      approximate,
+    };
+  }
+
+  return undefined;
+};
+
+const formatLocalizedSimpleKoClause = (clause: LocalizedKoClause): string => {
+  const hitLabel = formatKoPhraseJa(clause.hitCount);
+  if (clause.kind === "guaranteed") {
+    const annotation = clause.residualLabel ? `${clause.residualLabel}込み` : "";
+    return `確定${hitLabel}${annotation ? `（${annotation}）` : ""}`;
+  }
+
+  const annotations = [
+    ...(clause.kind === "chance" && clause.chance ? [`${clause.chance}%`] : []),
+    ...(clause.residualLabel ? [`${clause.residualLabel}込み`] : []),
+    ...(clause.approximate ? ["概算"] : []),
+  ];
+  return `乱数${hitLabel}${annotations.length > 0 ? `（${annotations.join("・")}）` : ""}`;
+};
+
+const formatLocalizedKoText = (value: string): string | undefined => {
+  const parenthetical = /^(.+?)\s+\((.+)\)$/.exec(value);
+  if (parenthetical) {
+    const outer = parseLocalizedKoClause(parenthetical[1]);
+    const inner = parseLocalizedKoClause(parenthetical[2]);
+    if (
+      outer?.kind === "chance"
+      && outer.chance
+      && formatKoPhraseJa(outer.hitCount) === "1発"
+      && inner?.residualLabel
+      && formatKoPhraseJa(inner.hitCount) === "1発"
+    ) {
+      const innerOutcome = inner.kind === "guaranteed"
+        ? "確定1発"
+        : inner.kind === "chance" && inner.chance
+          ? `${inner.chance}%`
+          : undefined;
+      if (innerOutcome) {
+        const annotations = [
+          `${outer.chance}%`,
+          `${inner.residualLabel}込みで${innerOutcome}`,
+          ...(outer.approximate || inner.approximate ? ["概算"] : []),
+        ];
+        return `乱数1発（${annotations.join("・")}）`;
+      }
+    }
+  }
+
+  const clause = parseLocalizedKoClause(value);
+  return clause ? formatLocalizedSimpleKoClause(clause) : undefined;
+};
+
 const localizeDamageDescriptionNames = (description: string): string =>
   damageDescriptionNameReplacements.reduce(
     (current, replacement) => current.replace(replacement.pattern, (_match, prefix: string) => `${prefix}${replacement.label}`),
@@ -662,6 +798,49 @@ const localizeDamageDescriptionNames = (description: string): string =>
 
 const formatDamageDescriptionPowerLabels = (description: string): string =>
   description.replace(/\((\d+(?:\.\d+)?)\s+BP\)/g, "(威力$1)");
+
+const damageDescriptionWeatherLabels = {
+  Sun: "晴れ",
+  Rain: "雨",
+  Sand: "砂",
+  Snow: "雪",
+} as const satisfies Record<string, string>;
+
+const formatLocalizedDamageDescriptionBody = (description: string): string => {
+  const localizedNames = localizeDamageDescriptionNames(description);
+  return formatDamageDescriptionPowerLabels(localizedNames)
+    .replace(/\bLvl\s+(\d+)\b/g, "Lv.$1")
+    .replace(/\bburned\b/g, "やけど状態")
+    .replace(/\s+buffed\b/g, "（強化）")
+    .replace(/\s+nerfed\b/g, "（弱化）")
+    .replace(/\bTera\s+([^\s]+)/g, "テラスタル（$1）")
+    .replace(/\bDynamax\b/g, "ダイマックス")
+    .replace(/\((\d+(?:\.\d+)?)\s+BP\s+([^)]+)\)/g, "（威力$1・$2）")
+    .replace(/\((\d+)\s+hits\)/g, "（$1ヒット）")
+    .replace(/バッテリー\s+boosted/g, "味方のバッテリー補正")
+    .replace(/パワースポット\s+boosted/g, "味方のパワースポット補正")
+    .replace(/with an ally's\s+フラワーギフト/g, "味方のフラワーギフト補正")
+    .replace(/with an ally's\s+はがねのせいしん/g, "味方のはがねのせいしん補正")
+    .replace(/with an ally's\s+フレンドガード/g, "味方のフレンドガード補正")
+    .replace(/with an ally's\s+オーロラベール/g, "オーロラベール")
+    .replace(
+      /\s+in\s+(Sun|Rain|Sand|Snow)\s+and\s+(エレキフィールド|グラスフィールド|ミストフィールド|サイコフィールド)/g,
+      (_match, weather: keyof typeof damageDescriptionWeatherLabels, terrain: string) => (
+        `（${damageDescriptionWeatherLabels[weather]}・${terrain}）`
+      ),
+    )
+    .replace(
+      /\s+in\s+(Sun|Rain|Sand|Snow)/g,
+      (_match, weather: keyof typeof damageDescriptionWeatherLabels) => `（${damageDescriptionWeatherLabels[weather]}）`,
+    )
+    .replace(
+      /\s+in\s+(エレキフィールド|グラスフィールド|ミストフィールド|サイコフィールド)/g,
+      (_match, terrain: string) => `（${terrain}）`,
+    )
+    .replace(/\s+through\s+リフレクター/g, "（リフレクター）")
+    .replace(/\s+through\s+ひかりのかべ/g, "（ひかりのかべ）")
+    .replace(/\s+on a critical hit/g, "（急所）");
+};
 
 const stripLocalizedDamagePowerLabel = (description: string): string =>
   description.replace(/\s*\(威力\d+(?:\.\d+)?\)/g, "");
@@ -766,24 +945,31 @@ export const shouldInvalidateAccountOperationOnUidChange = (
   nextUid: string | null,
 ): boolean => expectedUid === undefined || expectedUid !== nextUid;
 
-const formatLocalizedDamageResult = (resultText: string): string =>
-  resultText
-    .replace(/\s+-\s+/g, "-")
-    .replace(/\s+--\s+guaranteed\s+(O|\d+)HKO/gi, (_match, count: string) => ` / 確定${formatKoPhraseJa(count)}`)
-    .replace(/\s+--\s+possible\s+(O|\d+)HKO/gi, (_match, count: string) => ` / ${formatKoPhraseJa(count)}の可能性`)
-    .replace(/\s+--\s+(\d+(?:\.\d+)?)%\s+chance\s+to\s+(O|\d+)HKO/gi, (_match, chance: string, count: string) => (
-      ` / ${chance}%で${formatKoPhraseJa(count)}`
-    ));
+const formatLocalizedDamageResult = (resultText: string): string => {
+  const normalized = resultText.replace(/\s+-\s+/g, "-");
+  const separator = normalized.indexOf(" -- ");
+  if (separator < 0) return normalized;
 
-const formatFallbackLocalizedDamageDescription = (description: string): string =>
-  Object.entries(damageDescriptionStatCodes)
+  const damageText = normalized.slice(0, separator);
+  const koText = normalized.slice(separator + " -- ".length);
+  const localizedKoText = formatLocalizedKoText(koText);
+  return localizedKoText ? `${damageText} / ${localizedKoText}` : normalized;
+};
+
+const formatFallbackLocalizedDamageDescription = (description: string): string => {
+  const separator = description.lastIndexOf(": ");
+  const bodyText = separator >= 0 ? description.slice(0, separator) : description;
+  const resultText = separator >= 0 ? description.slice(separator + 2) : undefined;
+  const localizedBody = Object.entries(damageDescriptionStatCodes)
     .reduce(
       (current, [english, japanese]) => current.replace(new RegExp(`\\b${english}\\b`, "g"), japanese),
-      formatDamageDescriptionPowerLabels(localizeDamageDescriptionNames(description)),
+      formatLocalizedDamageDescriptionBody(bodyText),
     )
-    .replace(/\s+vs\.\s+/g, " → ")
-    .replace(/:\s+/g, " : ")
-    .replace(/\s+-\s+/g, "-");
+    .replace(/\s+vs\.\s+/g, " → ");
+  return resultText
+    ? `${localizedBody} : ${formatLocalizedDamageResult(resultText)}`
+    : localizedBody;
+};
 
 export const formatLocalizedDamageDescription = (description: string): string => {
   const match = damageDescriptionPattern.exec(description);
@@ -807,12 +993,12 @@ export const formatLocalizedDamageDescription = (description: string): string =>
 
   return [
     `${formatDamageDescriptionStatCode(attackStat)}${formatDamageDescriptionStatPoint(attackInvestment)}${attackNature}`,
-    formatDamageDescriptionPowerLabels(localizeDamageDescriptionNames(attackerAndMove)),
+    formatLocalizedDamageDescriptionBody(attackerAndMove),
     "→",
     `H${formatDamageDescriptionStatPoint(defenderHpInvestment)}`,
     "/",
     `${formatDamageDescriptionStatCode(defenderStat)}${formatDamageDescriptionStatPoint(defenderInvestment)}${defenderNature}`,
-    localizeDamageDescriptionNames(defenderPokemon.trim()),
+    formatLocalizedDamageDescriptionBody(defenderPokemon.trim()),
     ":",
     formatLocalizedDamageResult(resultText),
   ].join(" ");

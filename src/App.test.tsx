@@ -3630,6 +3630,156 @@ describe("App", () => {
     )).toContain("(威力97.5)");
   });
 
+  it("localizes the reported burn and Leftovers annotations with battle terminology", () => {
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Adaptability Basculegion Last Respects vs. 0 HP / 0 Def Garchomp: 56-66 (30.6 - 36%) -- guaranteed 3HKO after burn damage",
+    )).toBe(
+      "A32 てきおうりょく イダイトウ オスのすがた おはかまいり → H0 / B0 ガブリアス : 56-66 (30.6-36%) / 確定3発（やけどダメージ込み）",
+    );
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Garchomp Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- 57.4% chance to 2HKO after Leftovers recovery",
+    )).toBe(
+      "A32 ガブリアス じしん → H0 / B0 ガブリアス : 90-106 (49.1-57.9%) / 乱数2発（57.4%・たべのこし回復込み）",
+    );
+  });
+
+  it.each([
+    ["Dry Skin damage", "かんそうはだダメージ"],
+    ["Solar Power damage", "サンパワーダメージ"],
+    ["Dry Skin recovery", "かんそうはだ回復"],
+    ["Rain Dish recovery", "あめうけざら回復"],
+    ["sandstorm damage", "すなあらしダメージ"],
+    ["Ice Body recovery", "アイスボディ回復"],
+    ["Leftovers recovery", "たべのこし回復"],
+    ["Black Sludge recovery", "くろいヘドロ回復"],
+    ["Black Sludge damage", "くろいヘドロダメージ"],
+    ["Sticky Barb damage", "くっつきバリダメージ"],
+    ["Grassy Terrain recovery", "グラスフィールド回復"],
+    ["Poison Heal", "ポイズンヒール"],
+    ["poison damage", "どくダメージ"],
+    ["toxic damage", "もうどくダメージ"],
+    ["reduced burn damage", "やけどダメージ（たいねつ）"],
+    ["burn damage", "やけどダメージ"],
+    ["Bad Dreams", "ナイトメア"],
+    ["trapping damage", "バインドダメージ"],
+    ["Vine Lash damage", "キョダイベンタツダメージ"],
+    ["Wildfire damage", "キョダイゴクエンダメージ"],
+    ["Cannonade damage", "キョダイホウゲキダメージ"],
+    ["Volcalith damage", "キョダイフンセキダメージ"],
+  ])("localizes the reachable residual annotation %s", (english, japanese) => {
+    expect(formatLocalizedDamageDescription(
+      `252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO after ${english}`,
+    )).toContain(`/ 確定2発（${japanese}込み）`);
+  });
+
+  it("localizes combined, approximate, and nested KO annotations", () => {
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 40-48 (21.8 - 26.2%) -- possible 5HKO",
+    )).toContain("/ 乱数5発");
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- 30.5% chance to 2HKO",
+    )).toContain("/ 乱数2発（30.5%）");
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- 8.9% chance to 4HKO after sandstorm damage, Leftovers recovery, Grassy Terrain recovery, and burn damage",
+    )).toContain(
+      "/ 乱数4発（8.9%・すなあらしダメージ・たべのこし回復・グラスフィールド回復・やけどダメージ込み）",
+    );
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Bullet Seed (5 hits) vs. 0 HP / 0 Def Garchomp: 15-20 (46.8 - 62.5%) -- approx. possible 8HKO",
+    )).toContain("/ 乱数8発（概算）");
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Bullet Seed (5 hits) vs. 0 HP / 0 Def Garchomp: 15-20 (46.8 - 62.5%) -- approx. 95.6% chance to 2HKO after sandstorm damage and poison damage",
+    )).toContain("/ 乱数2発（95.6%・すなあらしダメージ・どくダメージ込み・概算）");
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- 81.3% chance to OHKO (guaranteed OHKO after burn damage)",
+    )).toContain("/ 乱数1発（81.3%・やけどダメージ込みで確定1発）");
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- 25% chance to OHKO (62.5% chance to OHKO after burn damage)",
+    )).toContain("/ 乱数1発（25%・やけどダメージ込みで62.5%）");
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Bullet Seed (5 hits) vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- approx. 25% chance to OHKO (approx. 62.5% chance to OHKO after burn damage)",
+    )).toContain("/ 乱数1発（25%・やけどダメージ込みで62.5%・概算）");
+  });
+
+  it("localizes reachable Smogon description modifiers without changing entity names", () => {
+    const formatted = formatLocalizedDamageDescription(
+      "252 Atk Rivalry buffed burned Tera Fire Mew Battery boosted with an ally's Flower Gift Earthquake (100 BP Water) (3 hits) vs. 0 HP / 0 Def Dynamax Tera Steel Garchomp in Sun and Electric Terrain through Reflect with an ally's Friend Guard on a critical hit: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO",
+    );
+    for (const expected of [
+      "とうそうしん（強化）",
+      "やけど状態",
+      "テラスタル（ほのお）",
+      "味方のバッテリー補正",
+      "味方のフラワーギフト補正",
+      "（威力100・みず）",
+      "（3ヒット）",
+      "ダイマックス",
+      "テラスタル（はがね）",
+      "（晴れ・エレキフィールド）",
+      "（リフレクター）",
+      "味方のフレンドガード補正",
+      "（急所）",
+    ]) {
+      expect(formatted).toContain(expected);
+    }
+    expect(formatted).not.toMatch(/\b(?:Rivalry|buffed|burned|Tera|Battery|boosted|with|ally|BP|hits|Dynamax|Sun|Electric|Terrain|through|Reflect|critical)\b/);
+  });
+
+  it.each([
+    ["Rivalry nerfed Mew Earthquake", "とうそうしん（弱化）"],
+    ["Mew Power Spot boosted Earthquake", "味方のパワースポット補正"],
+    ["Mew with an ally's Steely Spirit Iron Head", "味方のはがねのせいしん補正"],
+    ["Mew Earthquake vs. 0 HP / 0 Def Garchomp with an ally's Aurora Veil", "オーロラベール"],
+    ["Mew Psychic vs. 0 HP / 0 SpD Garchomp through Light Screen", "ひかりのかべ"],
+  ])("localizes the remaining description modifier in %s", (body, expected) => {
+    const description = body.includes(" vs. ")
+      ? `252 Atk ${body}: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO`
+      : `252 Atk ${body} vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO`;
+    expect(formatLocalizedDamageDescription(description)).toContain(expected);
+  });
+
+  it.each([
+    ["Sun", "晴れ"],
+    ["Rain", "雨"],
+    ["Sand", "砂"],
+    ["Snow", "雪"],
+    ["Electric Terrain", "エレキフィールド"],
+    ["Grassy Terrain", "グラスフィールド"],
+    ["Misty Terrain", "ミストフィールド"],
+    ["Psychic Terrain", "サイコフィールド"],
+  ])("localizes the field condition %s", (english, japanese) => {
+    expect(formatLocalizedDamageDescription(
+      `252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp in ${english}: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO`,
+    )).toContain(`ガブリアス（${japanese}）`);
+  });
+
+  it("localizes manual levels and preserves unknown future residual text", () => {
+    const levels = formatLocalizedDamageDescription(
+      "Lvl 73 252 Atk Mew Earthquake vs. Lvl 50 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO",
+    );
+    expect(levels).toContain("Lv.73");
+    expect(levels).toContain("Lv.50");
+    expect(levels).not.toContain("Lvl");
+
+    expect(formatLocalizedDamageDescription(
+      "252 Atk Mew Earthquake vs. 0 HP / 0 Def Garchomp: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO after future effect",
+    )).toContain("-- guaranteed 2HKO after future effect");
+  });
+
+  it("does not treat canonical move names as standalone Tera or Dynamax modifiers", () => {
+    const dynamaxCannon = formatLocalizedDamageDescription(
+      "252 SpA Eternatus Dynamax Cannon vs. 0 HP / 0 SpD Garchomp: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO",
+    );
+    expect(dynamaxCannon).toContain("ムゲンダイナ ダイマックスほう");
+    expect(dynamaxCannon).not.toContain("ダイマックス Cannon");
+
+    const teraBlast = formatLocalizedDamageDescription(
+      "252 SpA Mew Tera Blast vs. 0 HP / 0 SpD Garchomp: 90-106 (49.1 - 57.9%) -- guaranteed 2HKO",
+    );
+    expect(teraBlast).toContain("ミュウ テラバースト");
+    expect(teraBlast).not.toContain("テラスタル（Blast）");
+  });
+
   it("integrates the selected candidate detail into the candidate list", () => {
     const candidate: CandidateResult = {
       id: "candidate-2",
