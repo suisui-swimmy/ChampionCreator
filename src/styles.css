@@ -20,6 +20,14 @@
   --red-soft: rgba(230, 40, 41, 0.14);
   --orange: #fba82f;
   --blue: #2980ef;
+  --sp-marker-red: #ff2500;
+  --sp-marker-blue: #0098ff;
+  --sp-marker-red-fill-start: #ff8604;
+  --sp-marker-red-fill-end: #ffff12;
+  --sp-marker-blue-fill-start: #749efe;
+  --sp-marker-blue-fill-end: #30ffd6;
+  --sp-marker-outer-edge: rgba(255, 255, 255, 0.82);
+  --sp-marker-outer-glow: rgba(255, 255, 255, 0.48);
   --purple: #704170;
   --shadow-card: 0 12px 26px rgba(0, 0, 0, 0.28);
   --radius: 8px;
@@ -2859,7 +2867,7 @@ textarea {
   border: 1px solid #3d474b;
   border-radius: 5px;
   background: #1f2628;
-  overflow: hidden;
+  overflow: visible;
   touch-action: none;
   cursor: pointer;
 }
@@ -2876,13 +2884,66 @@ textarea {
 }
 
 .sp-cell-bar span {
+  position: relative;
   min-width: 0;
   background: var(--surface);
+}
+
+.sp-cell-bar span:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.sp-cell-bar span:last-child {
+  border-radius: 0 4px 4px 0;
 }
 
 .sp-cell-bar span.active {
   background: var(--stat-color);
   opacity: 0.82;
+}
+
+.sp-cell-bar span[data-marker] {
+  z-index: 1;
+}
+
+.sp-cell-bar span[data-marker]::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 3px 0;
+  box-sizing: border-box;
+  border-radius: 2px;
+  background: var(--sp-marker-fill);
+  box-shadow: none;
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.sp-cell-bar span[data-marker-state="reached"] {
+  opacity: 1;
+}
+
+.sp-cell-bar span[data-marker-state="reached"]::after {
+  inset: 2px -1px;
+  border: 2px solid var(--sp-marker-color);
+  border-radius: 4px;
+  background: var(--sp-marker-fill);
+  box-shadow:
+    0 0 0 1px var(--sp-marker-outer-edge),
+    0 0 4px var(--sp-marker-outer-glow);
+  opacity: 1;
+}
+
+.sp-cell-bar span[data-marker="red"] {
+  --sp-marker-color: var(--sp-marker-red);
+  --sp-marker-glow: rgba(255, 37, 0, 0.78);
+  --sp-marker-fill: linear-gradient(180deg, var(--sp-marker-red-fill-start) 30%, var(--sp-marker-red-fill-end) 100%);
+}
+
+.sp-cell-bar span[data-marker="blue"] {
+  --sp-marker-color: var(--sp-marker-blue);
+  --sp-marker-glow: rgba(0, 152, 255, 0.82);
+  --sp-marker-fill: linear-gradient(180deg, var(--sp-marker-blue-fill-start) 30%, var(--sp-marker-blue-fill-end) 100%);
 }
 
 .sp-cell-bar.hp {

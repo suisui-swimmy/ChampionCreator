@@ -8,6 +8,7 @@ import {
   smogonEvToStatPoints,
   sumStatPoints,
 } from "./domain/championsStats";
+import type { StatPointMarkerRow, StatPointMarkerTable } from "./calc/statPointMarkers";
 import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
 import { getMovePowerCatalogEntry, type MovePowerCatalogEntry } from "./domain/movePowerCatalog";
 import { getHpEventRuleDefinition } from "./calc/hpEventRules";
@@ -1590,6 +1591,7 @@ export function App({
   const [appliedCandidateId, setAppliedCandidateId] = useState<string | null>(null);
   const [appliedAdjustmentId, setAppliedAdjustmentId] = useState<string | null>(null);
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
+  const [statPointMarkers, setStatPointMarkers] = useState<StatPointMarkerTable | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [boxOpen, setBoxOpen] = useState(false);
   const [enemyBoxOpen, setEnemyBoxOpen] = useState(false);
@@ -1945,16 +1947,21 @@ export function App({
 
     if (!targetBuildPreview) {
       setActualStats(null);
+      setStatPointMarkers(null);
       setAttackerActualStats({});
       return () => {
         canceled = true;
       };
     }
 
-    void import("./calc/smogonAdapter").then(({ toSmogonPokemon }) => {
+    void Promise.all([
+      import("./calc/smogonAdapter"),
+      import("./calc/statPointMarkers"),
+    ]).then(([{ toSmogonPokemon }, { calculateStatPointMarkerTable }]) => {
       if (!canceled) {
         const pokemon = toSmogonPokemon(targetBuildPreview);
         setActualStats({ ...pokemon.stats, hp: pokemon.maxHP() });
+        setStatPointMarkers(calculateStatPointMarkerTable(targetBuildPreview));
         setAttackerActualStats(Object.fromEntries(
           scenarioForms.flatMap((scenario) => scenario.attacks.flatMap((attack) => {
             try {
@@ -1973,6 +1980,7 @@ export function App({
     }).catch(() => {
       if (!canceled) {
         setActualStats(null);
+        setStatPointMarkers(null);
         setAttackerActualStats({});
       }
     });
@@ -4002,6 +4010,7 @@ export function App({
           canonicalPokemon={targetBuildPreview?.pokemon.canonicalName}
           artwork={targetArtwork}
           actualStats={actualStats}
+          statPointMarkers={statPointMarkers}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
           speedOverrideCounts={targetSpeedOverrideCounts}
           bulkMaximizeState={bulkMaximizeState}
@@ -5018,6 +5027,7 @@ type TargetPanelProps = {
   canonicalPokemon?: string;
   artwork: PokemonArtworkMatch | null;
   actualStats: StatTable | null;
+  statPointMarkers: StatPointMarkerTable | null;
   totalStatPoints: number;
   speedOverrideCounts: TargetSpeedOverrideCounts;
   bulkMaximizeState: BulkMaximizeUiState;
@@ -5941,6 +5951,7 @@ function TargetPanel({
   canonicalPokemon,
   artwork,
   actualStats,
+  statPointMarkers,
   totalStatPoints,
   speedOverrideCounts,
   bulkMaximizeState,
@@ -6086,6 +6097,7 @@ function TargetPanel({
               <StatPointCellBar
                 stat={key}
                 value={targetForm.statPoints[key]}
+                markers={statPointMarkers?.[key]}
                 onChange={(value) => onUpdateEv(key, value)}
               />
               {key === "hp" ? (
@@ -6147,12 +6159,20 @@ function TargetPanel({
 type StatPointCellBarProps = {
   stat: StatKey;
   value: number;
+  markers?: StatPointMarkerRow;
   onChange: (value: number) => void;
 };
 
-function StatPointCellBar({ stat, value, onChange }: StatPointCellBarProps) {
+export function StatPointCellBar({ stat, value, markers, onChange }: StatPointCellBarProps) {
   const pointerIdRef = useRef<number | null>(null);
   const normalizedValue = clampStatPointValue(value);
+  const markerDescription = (["red", "blue"] as const).flatMap((marker) => {
+    const positions = statPointCells.filter((statPoints) => markers?.[statPoints] === marker);
+    if (positions.length === 0) {
+      return [];
+    }
+    return [`${marker === "red" ? "赤" : "青"}マーク位置: ${positions.join("、")} SP`];
+  }).join("。") || undefined;
 
   const updateFromPointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -6205,6 +6225,7 @@ function StatPointCellBar({ stat, value, onChange }: StatPointCellBarProps) {
       aria-valuemin={0}
       aria-valuemax={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
       aria-valuenow={normalizedValue}
+      aria-description={markerDescription}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
@@ -6212,13 +6233,21 @@ function StatPointCellBar({ stat, value, onChange }: StatPointCellBarProps) {
       onLostPointerCapture={handlePointerEnd}
       onKeyDown={handleKeyDown}
     >
-      {statPointCells.map((cellValue) => (
-        <span
-          className={cellValue <= normalizedValue ? "active" : ""}
-          key={cellValue}
-          aria-hidden="true"
-        />
-      ))}
+      {statPointCells.map((cellValue) => {
+        const marker = markers?.[cellValue] ?? null;
+        const markerState = marker
+          ? cellValue <= normalizedValue ? "reached" : "pending"
+          : undefined;
+        return (
+          <span
+            className={cellValue <= normalizedValue ? "active" : ""}
+            data-marker={marker ?? undefined}
+            data-marker-state={markerState}
+            key={cellValue}
+            aria-hidden="true"
+          />
+        );
+      })}
     </div>
   );
 }

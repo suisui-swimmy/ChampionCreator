@@ -9,6 +9,7 @@ import {
   createAccountBoundaryForms,
   DraftRecoveryDialog,
   ResultsPanel,
+  StatPointCellBar,
   SuggestionFormatToggle,
   applyScenarioAdjustmentTypeDefaults,
   applySpeedOrderModeDefaults,
@@ -43,6 +44,7 @@ import {
   normalizeNumericInputText,
   syncScenarioGameTypesToSuggestionFormat,
 } from "./App";
+import type { StatPointMarker, StatPointMarkerRow } from "./calc/statPointMarkers";
 import { formatUsageDataDateJst, type ChampionsUsageData } from "./usage";
 import {
   applyMoveInputDefaults,
@@ -3286,6 +3288,142 @@ describe("App", () => {
     expect(html).not.toContain("固定状態");
     expect(html).not.toContain('aria-label="状態異常: なし"');
     expect(html).toContain(">耐久調整A 調整対象の状態異常</span>");
+  });
+
+  it("renders game-style red and blue nature gain markers without changing slider interaction", () => {
+    const createMarkers = (
+      marker: StatPointMarker,
+      positions: number[],
+    ): StatPointMarkerRow => Array.from({ length: 33 }, (_value, statPoints) => (
+      positions.includes(statPoints) ? marker : null
+    ));
+    const redMarkers = createMarkers("red", [5, 15, 25]);
+    const blueMarkers = createMarkers("blue", [2, 12, 22, 32]);
+    const edgeMarkers = createMarkers("blue", [1, 32]);
+    const getCells = (html: string): string[] => (
+      Array.from(html.matchAll(/<span([^>]*)><\/span>/g), (match) => match[1] ?? "")
+    );
+    const redBeforeHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="atk"
+        value={24}
+        markers={redMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const redReachedHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="atk"
+        value={25}
+        markers={redMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const blueBeforeHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="spa"
+        value={21}
+        markers={blueMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const blueReachedHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="spa"
+        value={22}
+        markers={blueMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const blueEndHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="spa"
+        value={32}
+        markers={blueMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const edgeStartHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="spa"
+        value={1}
+        markers={edgeMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const edgeEndHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="spa"
+        value={32}
+        markers={edgeMarkers}
+        onChange={() => undefined}
+      />,
+    );
+    const plainHtml = renderToStaticMarkup(
+      <StatPointCellBar stat="hp" value={0} onChange={() => undefined} />,
+    );
+    const candidateHtml = renderToStaticMarkup(<CandidateStatPointBars statPoints={{
+      hp: 0,
+      atk: 15,
+      def: 0,
+      spa: 21,
+      spd: 0,
+      spe: 0,
+    }} />);
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+
+    expect(redBeforeHtml.match(/<span/g)).toHaveLength(32);
+    expect(blueBeforeHtml.match(/<span/g)).toHaveLength(32);
+    expect(redBeforeHtml.match(/data-marker="red"/g)).toHaveLength(3);
+    expect(blueBeforeHtml.match(/data-marker="blue"/g)).toHaveLength(4);
+    expect(redBeforeHtml.match(/data-marker-state="reached"/g)).toHaveLength(2);
+    expect(redBeforeHtml.match(/data-marker-state="pending"/g)).toHaveLength(1);
+    expect(redReachedHtml.match(/data-marker-state="reached"/g)).toHaveLength(3);
+    expect(redReachedHtml).not.toContain('data-marker-state="pending"');
+    expect(blueBeforeHtml.match(/data-marker-state="reached"/g)).toHaveLength(2);
+    expect(blueBeforeHtml.match(/data-marker-state="pending"/g)).toHaveLength(2);
+    expect(blueReachedHtml.match(/data-marker-state="reached"/g)).toHaveLength(3);
+    expect(blueReachedHtml.match(/data-marker-state="pending"/g)).toHaveLength(1);
+    expect(blueEndHtml.match(/data-marker-state="reached"/g)).toHaveLength(4);
+    expect(blueEndHtml).not.toContain('data-marker-state="pending"');
+    expect(getCells(edgeStartHtml)[0]).toContain('data-marker="blue"');
+    expect(getCells(edgeStartHtml)[0]).toContain('data-marker-state="reached"');
+    expect(getCells(edgeStartHtml).at(-1)).toContain('data-marker-state="pending"');
+    expect(getCells(edgeEndHtml).at(-1)).toContain('data-marker="blue"');
+    expect(getCells(edgeEndHtml).at(-1)).toContain('data-marker-state="reached"');
+    expect(plainHtml.match(/<span/g)).toHaveLength(32);
+    expect(plainHtml).not.toContain("data-marker");
+    expect(plainHtml).not.toContain("data-marker-state");
+    expect(redBeforeHtml).toContain('role="slider"');
+    expect(redBeforeHtml).toContain('tabindex="0"');
+    expect(redBeforeHtml).toContain('aria-valuemin="0"');
+    expect(redBeforeHtml).toContain('aria-valuemax="32"');
+    expect(redBeforeHtml).toContain('aria-valuenow="24"');
+    expect(redBeforeHtml).toContain('aria-description="赤マーク位置: 5、15、25 SP"');
+    expect(blueBeforeHtml).toContain('aria-description="青マーク位置: 2、12、22、32 SP"');
+    expect(candidateHtml).not.toContain("data-marker");
+
+    expect(css).toMatch(/--sp-marker-red:\s*#ff2500;/);
+    expect(css).toMatch(/--sp-marker-blue:\s*#0098ff;/);
+    expect(css).toMatch(/--sp-marker-red-fill-start:\s*#ff8604;/);
+    expect(css).toMatch(/--sp-marker-red-fill-end:\s*#ffff12;/);
+    expect(css).toMatch(/--sp-marker-blue-fill-start:\s*#749efe;/);
+    expect(css).toMatch(/--sp-marker-blue-fill-end:\s*#30ffd6;/);
+    expect(css).toMatch(/--sp-marker-outer-edge:\s*rgba\(255, 255, 255, 0\.82\);/);
+    expect(css).toMatch(/--sp-marker-outer-glow:\s*rgba\(255, 255, 255, 0\.48\);/);
+    expect(css).toMatch(/\.sp-cell-bar\s*\{[^}]*overflow:\s*visible;/s);
+    expect(css).toMatch(/\.sp-cell-bar span:first-child\s*\{[^}]*border-radius:\s*4px 0 0 4px;/s);
+    expect(css).toMatch(/\.sp-cell-bar span:last-child\s*\{[^}]*border-radius:\s*0 4px 4px 0;/s);
+    expect(css).toMatch(/\.sp-cell-bar span\[data-marker\]::after\s*\{[^}]*inset:\s*3px 0;[^}]*background:\s*var\(--sp-marker-fill\);[^}]*box-shadow:\s*none;[^}]*opacity:\s*0\.82;[^}]*pointer-events:\s*none;/s);
+    expect(css).toMatch(/\.sp-cell-bar span\[data-marker-state="reached"\]::after\s*\{[^}]*inset:\s*2px -1px;[^}]*border:\s*2px solid var\(--sp-marker-color\);[^}]*box-shadow:\s*0 0 0 1px var\(--sp-marker-outer-edge\),\s*0 0 4px var\(--sp-marker-outer-glow\);[^}]*opacity:\s*1;/s);
+    expect(css).not.toContain('span:first-child[data-marker-state="reached"]');
+    expect(css).not.toContain('span:last-child[data-marker-state="reached"]');
+    expect(css).toMatch(/\.sp-cell-bar span\[data-marker="red"\]\s*\{[^}]*--sp-marker-color:\s*var\(--sp-marker-red\);[^}]*--sp-marker-fill:\s*linear-gradient\(180deg, var\(--sp-marker-red-fill-start\) 30%, var\(--sp-marker-red-fill-end\) 100%\);/s);
+    expect(css).toMatch(/\.sp-cell-bar span\[data-marker="blue"\]\s*\{[^}]*--sp-marker-color:\s*var\(--sp-marker-blue\);[^}]*--sp-marker-fill:\s*linear-gradient\(180deg, var\(--sp-marker-blue-fill-start\) 30%, var\(--sp-marker-blue-fill-end\) 100%\);/s);
+    expect(guideHtml).toContain("赤マークは、性格上昇補正によって、そのSPで性格無補正時より実数値が多く伸びる位置です。");
+    expect(guideHtml).toContain("青マークは、性格下降補正によって、そのSPで性格無補正時より実数値の伸びが少なくなる位置です。");
+    expect(guideHtml).toContain("マーク位置へ到達する前は控えめに、到達すると枠と発光を強く表示します。");
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {
