@@ -9,6 +9,18 @@ import {
   sumStatPoints,
 } from "./domain/championsStats";
 import type { StatPointMarkerRow, StatPointMarkerTable } from "./calc/statPointMarkers";
+import {
+  buildHpStatMarkerDisplay,
+  calculateHpStatMarkerRow,
+  type HpStatMarkerDisplayRow,
+  type HpStatMarkerRow,
+} from "./calc/hpStatMarkers";
+import {
+  getHpStatMarkerRule,
+  hpStatMarkerRuleGroups,
+  type HpStatMarkerRuleId,
+  type HpStatMarkerRuleKind,
+} from "./domain/hpStatMarkerRules";
 import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
 import { getMovePowerCatalogEntry, type MovePowerCatalogEntry } from "./domain/movePowerCatalog";
 import { getHpEventRuleDefinition } from "./calc/hpEventRules";
@@ -1592,6 +1604,7 @@ export function App({
   const [appliedAdjustmentId, setAppliedAdjustmentId] = useState<string | null>(null);
   const [actualStats, setActualStats] = useState<StatTable | null>(null);
   const [statPointMarkers, setStatPointMarkers] = useState<StatPointMarkerTable | null>(null);
+  const [hpStatMarkerRow, setHpStatMarkerRow] = useState<HpStatMarkerRow | null>(null);
   const [attackerActualStats, setAttackerActualStats] = useState<Record<string, StatTable>>({});
   const [boxOpen, setBoxOpen] = useState(false);
   const [enemyBoxOpen, setEnemyBoxOpen] = useState(false);
@@ -1948,6 +1961,7 @@ export function App({
     if (!targetBuildPreview) {
       setActualStats(null);
       setStatPointMarkers(null);
+      setHpStatMarkerRow(null);
       setAttackerActualStats({});
       return () => {
         canceled = true;
@@ -1962,6 +1976,7 @@ export function App({
         const pokemon = toSmogonPokemon(targetBuildPreview);
         setActualStats({ ...pokemon.stats, hp: pokemon.maxHP() });
         setStatPointMarkers(calculateStatPointMarkerTable(targetBuildPreview));
+        setHpStatMarkerRow(calculateHpStatMarkerRow(targetBuildPreview));
         setAttackerActualStats(Object.fromEntries(
           scenarioForms.flatMap((scenario) => scenario.attacks.flatMap((attack) => {
             try {
@@ -1981,6 +1996,7 @@ export function App({
       if (!canceled) {
         setActualStats(null);
         setStatPointMarkers(null);
+        setHpStatMarkerRow(null);
         setAttackerActualStats({});
       }
     });
@@ -4011,6 +4027,7 @@ export function App({
           artwork={targetArtwork}
           actualStats={actualStats}
           statPointMarkers={statPointMarkers}
+          hpStatMarkerRow={hpStatMarkerRow}
           totalStatPoints={sumStatPoints(targetForm.statPoints)}
           speedOverrideCounts={targetSpeedOverrideCounts}
           bulkMaximizeState={bulkMaximizeState}
@@ -5028,6 +5045,7 @@ type TargetPanelProps = {
   artwork: PokemonArtworkMatch | null;
   actualStats: StatTable | null;
   statPointMarkers: StatPointMarkerTable | null;
+  hpStatMarkerRow: HpStatMarkerRow | null;
   totalStatPoints: number;
   speedOverrideCounts: TargetSpeedOverrideCounts;
   bulkMaximizeState: BulkMaximizeUiState;
@@ -5043,6 +5061,83 @@ type TargetPanelProps = {
   onOpenBoxPanel: () => void;
   onCloseMobileSheet?: () => void;
 };
+
+type HpStatMarkerSelection = HpStatMarkerRuleId | "none";
+
+type HpStatMarkerControlProps = {
+  value: HpStatMarkerSelection;
+  row: HpStatMarkerRow | null;
+  onChange: (value: HpStatMarkerSelection) => void;
+};
+
+function HpStatMarkerControl({
+  value,
+  row,
+  onChange,
+}: HpStatMarkerControlProps) {
+  const selectedRule = value === "none" ? null : getHpStatMarkerRule(value);
+
+  return (
+    <UiPopover.Root>
+      <UiPopover.Trigger asChild>
+        <button
+          className={`hp-marker-trigger${selectedRule ? " selected" : ""}`}
+          type="button"
+          aria-label={`HP基準: ${selectedRule?.label ?? "表示なし"}`}
+          disabled={!row}
+        >
+          {selectedRule?.compactLabel ?? "HP"}
+        </button>
+      </UiPopover.Trigger>
+      <UiPopover.Portal>
+        <UiPopover.Content className="hp-marker-popover" sideOffset={6} align="end" collisionPadding={8}>
+          <div className="hp-marker-popover-heading">
+            <strong>HP基準</strong>
+            <span>通常HPで判定（Dmax増加は除外）</span>
+          </div>
+          <div className="hp-marker-rule-options" role="radiogroup" aria-label="HP基準を選択">
+            <UiPopover.Close asChild>
+              <button
+                className={`hp-marker-rule-option wide${value === "none" ? " selected" : ""}`}
+                type="button"
+                role="radio"
+                aria-checked={value === "none"}
+                onClick={() => onChange("none")}
+              >
+                表示なし
+              </button>
+            </UiPopover.Close>
+            {hpStatMarkerRuleGroups.map((group) => (
+              <section className="hp-marker-rule-group" key={group.id} aria-label={group.label}>
+                <span>{group.label}</span>
+                <div className="hp-marker-rule-grid">
+                  {group.ruleIds.map((ruleId) => {
+                    const rule = getHpStatMarkerRule(ruleId);
+                    const selected = value === ruleId;
+                    return (
+                      <UiPopover.Close asChild key={rule.id}>
+                        <button
+                          className={`hp-marker-rule-option${selected ? " selected" : ""}`}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          aria-label={`HP基準 ${rule.label}`}
+                          onClick={() => onChange(rule.id)}
+                        >
+                          {rule.label}
+                        </button>
+                      </UiPopover.Close>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        </UiPopover.Content>
+      </UiPopover.Portal>
+    </UiPopover.Root>
+  );
+}
 
 type MobileOverviewProps = {
   targetForm: TargetFormState;
@@ -5952,6 +6047,7 @@ function TargetPanel({
   artwork,
   actualStats,
   statPointMarkers,
+  hpStatMarkerRow,
   totalStatPoints,
   speedOverrideCounts,
   bulkMaximizeState,
@@ -5968,6 +6064,18 @@ function TargetPanel({
   onCloseMobileSheet,
 }: TargetPanelProps) {
   const isSpLimitReached = totalStatPoints >= CHAMPIONS_TOTAL_STAT_POINTS;
+  const [hpStatMarkerRuleId, setHpStatMarkerRuleId] = useState<HpStatMarkerSelection>("none");
+  const selectedHpStatMarkerRule = hpStatMarkerRuleId === "none"
+    ? null
+    : getHpStatMarkerRule(hpStatMarkerRuleId);
+  const hpStatMarkerDisplay = useMemo(() => (
+    hpStatMarkerRow && selectedHpStatMarkerRule
+      ? buildHpStatMarkerDisplay(hpStatMarkerRow, selectedHpStatMarkerRule.id)
+      : undefined
+  ), [hpStatMarkerRow, selectedHpStatMarkerRule]);
+  const hpStatMarkerDescription = selectedHpStatMarkerRule
+    ? `HP基準 ${selectedHpStatMarkerRule.label}`
+    : undefined;
   const rankingOwnerPokemon = canonicalPokemon
     ?? resolveCanonicalEntityName("pokemon", targetForm.pokemonInput);
   const pokemonAbilityOptions = getPokemonAbilityInputOptions(rankingOwnerPokemon);
@@ -6098,10 +6206,17 @@ function TargetPanel({
                 stat={key}
                 value={targetForm.statPoints[key]}
                 markers={statPointMarkers?.[key]}
+                hpMarkerDisplay={key === "hp" ? hpStatMarkerDisplay : undefined}
+                hpMarkerKind={key === "hp" ? selectedHpStatMarkerRule?.kind : undefined}
+                hpMarkerDescription={key === "hp" ? hpStatMarkerDescription : undefined}
                 onChange={(value) => onUpdateEv(key, value)}
               />
               {key === "hp" ? (
-                <span className="target-rank-placeholder" aria-hidden="true" />
+                <HpStatMarkerControl
+                  value={hpStatMarkerRuleId}
+                  row={hpStatMarkerRow}
+                  onChange={setHpStatMarkerRuleId}
+                />
               ) : (
                 <RankSelectField
                   label={`${statLabels[key]}ランク`}
@@ -6160,19 +6275,32 @@ type StatPointCellBarProps = {
   stat: StatKey;
   value: number;
   markers?: StatPointMarkerRow;
+  hpMarkerDisplay?: HpStatMarkerDisplayRow;
+  hpMarkerKind?: HpStatMarkerRuleKind;
+  hpMarkerDescription?: string;
   onChange: (value: number) => void;
 };
 
-export function StatPointCellBar({ stat, value, markers, onChange }: StatPointCellBarProps) {
+export function StatPointCellBar({
+  stat,
+  value,
+  markers,
+  hpMarkerDisplay,
+  hpMarkerKind,
+  hpMarkerDescription,
+  onChange,
+}: StatPointCellBarProps) {
   const pointerIdRef = useRef<number | null>(null);
   const normalizedValue = clampStatPointValue(value);
-  const markerDescription = (["red", "blue"] as const).flatMap((marker) => {
+  const natureMarkerDescription = (["red", "blue"] as const).flatMap((marker) => {
     const positions = statPointCells.filter((statPoints) => markers?.[statPoints] === marker);
     if (positions.length === 0) {
       return [];
     }
     return [`${marker === "red" ? "赤" : "青"}マーク位置: ${positions.join("、")} SP`];
   }).join("。") || undefined;
+  const markerDescription = [natureMarkerDescription, hpMarkerDescription].filter(Boolean).join("。") || undefined;
+  const hpZeroMarker = hpMarkerDisplay?.[0];
 
   const updateFromPointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -6226,6 +6354,9 @@ export function StatPointCellBar({ stat, value, markers, onChange }: StatPointCe
       aria-valuemax={CHAMPIONS_MAX_STAT_POINTS_PER_STAT}
       aria-valuenow={normalizedValue}
       aria-description={markerDescription}
+      data-hp-zero-match={hpZeroMarker?.matched ? "true" : undefined}
+      data-hp-zero-boundary={hpZeroMarker?.boundary ? "true" : undefined}
+      data-hp-marker-kind={hpMarkerKind}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
@@ -6238,11 +6369,15 @@ export function StatPointCellBar({ stat, value, markers, onChange }: StatPointCe
         const markerState = marker
           ? cellValue <= normalizedValue ? "reached" : "pending"
           : undefined;
+        const hpMarkerCell = hpMarkerDisplay?.[cellValue];
         return (
           <span
             className={cellValue <= normalizedValue ? "active" : ""}
             data-marker={marker ?? undefined}
             data-marker-state={markerState}
+            data-hp-marker-match={hpMarkerCell?.matched ? "true" : undefined}
+            data-hp-marker-boundary={hpMarkerCell?.boundary ? "true" : undefined}
+            data-hp-marker-kind={hpMarkerCell?.matched || hpMarkerCell?.boundary ? hpMarkerKind : undefined}
             key={cellValue}
             aria-hidden="true"
           />

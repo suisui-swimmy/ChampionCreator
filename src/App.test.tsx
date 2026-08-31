@@ -45,6 +45,7 @@ import {
   syncScenarioGameTypesToSuggestionFormat,
 } from "./App";
 import type { StatPointMarker, StatPointMarkerRow } from "./calc/statPointMarkers";
+import type { HpStatMarkerDisplayRow } from "./calc/hpStatMarkers";
 import { formatUsageDataDateJst, type ChampionsUsageData } from "./usage";
 import {
   applyMoveInputDefaults,
@@ -892,7 +893,7 @@ describe("App", () => {
     expect(narrowMedia).not.toMatch(/\.mobile-scenario-state\s*\{[^}]*width:\s*(?:28|30)px;/s);
     expect(narrowMedia).not.toMatch(/\.mobile-scenario-state\s*\{[^}]*height:\s*16px;/s);
     expect(narrowMedia).not.toMatch(/\.mobile-scenario-state\.on span\s*\{[^}]*transform:\s*translateX\(12px\);/s);
-    expect(narrowMedia).not.toMatch(/\.mobile-scenario-title strong(?:\s*,[\s\S]*?)?\s*\{[^}]*font-size:\s*12px;/s);
+    expect(narrowMedia).not.toMatch(/\.mobile-scenario-title strong(?:\s*,[^{}]*?)?\s*\{[^}]*font-size:\s*12px;/s);
     expect(narrowMedia).not.toMatch(/\.mobile-scenario-adjustment-label\s*\{[^}]*font-size:\s*10px;/s);
   });
 
@@ -3424,6 +3425,57 @@ describe("App", () => {
     expect(guideHtml).toContain("赤マークは、性格上昇補正によって、そのSPで性格無補正時より実数値が多く伸びる位置です。");
     expect(guideHtml).toContain("青マークは、性格下降補正によって、そのSPで性格無補正時より実数値の伸びが少なくなる位置です。");
     expect(guideHtml).toContain("マーク位置へ到達する前は控えめに、到達すると枠と発光を強く表示します。");
+  });
+
+  it("renders one selected HP criterion without adding per-cell controls", () => {
+    const createHpDisplay = (
+      matches: number[],
+      boundaries: number[],
+    ): HpStatMarkerDisplayRow => Array.from({ length: 33 }, (_value, sp) => ({
+      matched: matches.includes(sp),
+      boundary: boundaries.includes(sp),
+    }));
+    const pointHtml = renderToStaticMarkup(
+      <StatPointCellBar
+        stat="hp"
+        value={8}
+        hpMarkerDisplay={createHpDisplay([0, 8, 24], [0, 8, 24])}
+        hpMarkerKind="point"
+        hpMarkerDescription="HP基準 16n"
+        onChange={() => undefined}
+      />,
+    );
+    const appHtml = renderExampleApp();
+    const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
+
+    expect(appHtml).toContain('class="hp-marker-trigger"');
+    expect(appHtml).toContain('aria-label="HP基準: 表示なし"');
+    expect(appHtml).not.toContain('class="target-rank-placeholder"');
+    expect(pointHtml.match(/<span/g)).toHaveLength(32);
+    expect(pointHtml).toContain('data-hp-zero-match="true"');
+    expect(pointHtml).toContain('data-hp-zero-boundary="true"');
+    expect(pointHtml.match(/data-hp-marker-boundary="true"/g)).toHaveLength(2);
+    expect(pointHtml).toContain('data-hp-marker-kind="point"');
+    expect(pointHtml).toContain('aria-description="HP基準 16n"');
+    expect(appSource).toContain("通常HPで判定（Dmax増加は除外）");
+    expect(appSource).not.toContain("hp-marker-rule-summary");
+    expect(appSource).not.toContain("特殊しきい値");
+
+    expect(css).toMatch(/\.hp-marker-trigger\s*\{[^}]*height:\s*28px;[^}]*font-size:\s*11px;/s);
+    expect(css).toMatch(/\.hp-marker-popover\s*\{[^}]*width:\s*min\(310px, calc\(100vw - 16px\)\);[^}]*max-height:\s*min\(440px, var\(--radix-popover-content-available-height, 72vh\)\);/s);
+    expect(css).toMatch(/\.hp-marker-rule-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);/s);
+    expect(css).toMatch(/\.sp-cell-bar span\[data-hp-marker-boundary="true"\]::before\s*\{[^}]*background:\s*linear-gradient\(180deg, var\(--gold\) 30%, var\(--hp-marker-fill-end\) 100%\);[^}]*pointer-events:\s*none;/s);
+    expect(css).toMatch(/--hp-marker-edge:\s*#ffa100;/);
+    expect(css).toMatch(/\.sp-cell-bar span\.active\[data-hp-marker-boundary="true"\]\s*\{[^}]*opacity:\s*1;/s);
+    expect(css).toMatch(/\.sp-cell-bar span\.active\[data-hp-marker-boundary="true"\]::before\s*\{[^}]*border:\s*2px solid var\(--hp-marker-edge\);[^}]*box-shadow:\s*0 0 0 1px var\(--sp-marker-outer-edge\),\s*0 0 4px var\(--sp-marker-outer-glow\);/s);
+    expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-boundary="true"\]::before\s*\{[^}]*left:\s*0;[^}]*width:\s*calc\(\(100% - 31px\) \/ 32 \+ 2px\);[^}]*transform:\s*translateX\(-50%\);[^}]*pointer-events:\s*none;/s);
+    expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-boundary="true"\]::before\s*\{[^}]*border:\s*2px solid var\(--hp-marker-edge\);[^}]*box-shadow:\s*0 0 0 1px var\(--sp-marker-outer-edge\),\s*0 0 4px var\(--sp-marker-outer-glow\);/s);
+    expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-match="true"\]:not\(\[data-hp-zero-boundary="true"\]\)::after\s*\{[^}]*left:\s*-1px;[^}]*width:\s*2px;[^}]*opacity:\s*0\.5;[^}]*pointer-events:\s*none;/s);
+    expect(guideHtml).toContain("H行の「HP」ボタンでは、");
+    expect(guideHtml).toContain("HP基準はDmax増加を除外した通常HPをSP 0〜32で実計算します。");
+    expect(guideHtml).toContain("SP0が該当するときは、SP1と混同しないようバー左端の外側へ表示します。");
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {
