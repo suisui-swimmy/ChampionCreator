@@ -2855,6 +2855,8 @@ textarea {
 }
 
 .hp-marker-trigger {
+  display: grid;
+  place-items: center;
   width: 100%;
   min-width: 0;
   height: 28px;
@@ -2867,6 +2869,12 @@ textarea {
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
+}
+
+.hp-marker-trigger-icon {
+  display: block;
+  width: var(--desktop-icon-compact);
+  height: var(--desktop-icon-compact);
 }
 
 .hp-marker-trigger.selected {
@@ -7985,6 +7993,11 @@ textarea {
   .mobile-target-open .hp-marker-trigger {
     height: var(--mobile-control-standard);
     font-size: 12px;
+  }
+
+  .mobile-target-open .hp-marker-trigger-icon {
+    width: var(--mobile-icon-standard);
+    height: var(--mobile-icon-standard);
   }
 
   .mobile-target-open input:not([type="checkbox"]):not([type="radio"]),

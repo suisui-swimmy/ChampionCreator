@@ -36,6 +36,7 @@ import {
   getMobileScenarioDirectionIconPath,
   getNatureModifierDirection,
   getNatureUsageOverlayOpacity,
+  HpStatMarkerControl,
   getScenarioPanelVisibleScenarios,
   isAbilitySupportCard,
   isBoxStorageSourceReady,
@@ -3446,12 +3447,27 @@ describe("App", () => {
       />,
     );
     const appHtml = renderExampleApp();
+    const unselectedControlHtml = renderToStaticMarkup(
+      <HpStatMarkerControl value="none" row={[]} onChange={() => undefined} />,
+    );
+    const selectedControlHtml = renderToStaticMarkup(
+      <HpStatMarkerControl value="16n" row={[]} onChange={() => undefined} />,
+    );
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
 
     expect(appHtml).toContain('class="hp-marker-trigger"');
     expect(appHtml).toContain('aria-label="HP基準: 表示なし"');
+    expect(unselectedControlHtml).toContain('class="hp-marker-trigger-icon"');
+    expect(unselectedControlHtml).toContain('assets/ui/sliders-horizontal.svg');
+    expect(unselectedControlHtml).toContain('alt=""');
+    expect(unselectedControlHtml).toContain('aria-hidden="true"');
+    expect(unselectedControlHtml).not.toContain('>HP</button>');
+    expect(selectedControlHtml).toContain('class="hp-marker-trigger selected"');
+    expect(selectedControlHtml).toContain('aria-label="HP基準: 16n"');
+    expect(selectedControlHtml).toContain('>16n</button>');
+    expect(selectedControlHtml).not.toContain('sliders-horizontal.svg');
     expect(appHtml).not.toContain('class="target-rank-placeholder"');
     expect(pointHtml.match(/<span/g)).toHaveLength(32);
     expect(pointHtml).toContain('data-hp-zero-match="true"');
@@ -3463,7 +3479,9 @@ describe("App", () => {
     expect(appSource).not.toContain("hp-marker-rule-summary");
     expect(appSource).not.toContain("特殊しきい値");
 
-    expect(css).toMatch(/\.hp-marker-trigger\s*\{[^}]*height:\s*28px;[^}]*font-size:\s*11px;/s);
+    expect(css).toMatch(/\.hp-marker-trigger\s*\{[^}]*display:\s*grid;[^}]*place-items:\s*center;[^}]*height:\s*28px;[^}]*font-size:\s*11px;/s);
+    expect(css).toMatch(/\.hp-marker-trigger-icon\s*\{[^}]*width:\s*var\(--desktop-icon-compact\);[^}]*height:\s*var\(--desktop-icon-compact\);/s);
+    expect(css).toMatch(/\.mobile-target-open \.hp-marker-trigger-icon\s*\{[^}]*width:\s*var\(--mobile-icon-standard\);[^}]*height:\s*var\(--mobile-icon-standard\);/s);
     expect(css).toMatch(/\.hp-marker-popover\s*\{[^}]*width:\s*min\(310px, calc\(100vw - 16px\)\);[^}]*max-height:\s*min\(440px, var\(--radix-popover-content-available-height, 72vh\)\);/s);
     expect(css).toMatch(/\.hp-marker-rule-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);/s);
     expect(css).toMatch(/\.sp-cell-bar span\[data-hp-marker-boundary="true"\]::before\s*\{[^}]*background:\s*linear-gradient\(180deg, var\(--gold\) 30%, var\(--hp-marker-fill-end\) 100%\);[^}]*pointer-events:\s*none;/s);
@@ -3473,7 +3491,7 @@ describe("App", () => {
     expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-boundary="true"\]::before\s*\{[^}]*left:\s*0;[^}]*width:\s*calc\(\(100% - 31px\) \/ 32 \+ 2px\);[^}]*transform:\s*translateX\(-50%\);[^}]*pointer-events:\s*none;/s);
     expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-boundary="true"\]::before\s*\{[^}]*border:\s*2px solid var\(--hp-marker-edge\);[^}]*box-shadow:\s*0 0 0 1px var\(--sp-marker-outer-edge\),\s*0 0 4px var\(--sp-marker-outer-glow\);/s);
     expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-match="true"\]:not\(\[data-hp-zero-boundary="true"\]\)::after\s*\{[^}]*left:\s*-1px;[^}]*width:\s*2px;[^}]*opacity:\s*0\.5;[^}]*pointer-events:\s*none;/s);
-    expect(guideHtml).toContain("H行の「HP」ボタンでは、");
+    expect(guideHtml).toContain("H行のHP基準ボタン（未選択時はスライダーアイコン）では、");
     expect(guideHtml).toContain("HP基準はDmax増加を除外した通常HPをSP 0〜32で実計算します。");
     expect(guideHtml).toContain("SP0が該当するときは、SP1と混同しないようバー左端の外側へ表示します。");
   });

@@ -5070,7 +5070,7 @@ type HpStatMarkerControlProps = {
   onChange: (value: HpStatMarkerSelection) => void;
 };
 
-function HpStatMarkerControl({
+export function HpStatMarkerControl({
   value,
   row,
   onChange,
@@ -5086,7 +5086,14 @@ function HpStatMarkerControl({
           aria-label={`HP基準: ${selectedRule?.label ?? "表示なし"}`}
           disabled={!row}
         >
-          {selectedRule?.compactLabel ?? "HP"}
+          {selectedRule ? selectedRule.compactLabel : (
+            <img
+              className="hp-marker-trigger-icon"
+              src={getAssetSrc("assets/ui/sliders-horizontal.svg")}
+              alt=""
+              aria-hidden="true"
+            />
+          )}
         </button>
       </UiPopover.Trigger>
       <UiPopover.Portal>
