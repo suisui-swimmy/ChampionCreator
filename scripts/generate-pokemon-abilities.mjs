@@ -110,6 +110,24 @@ const findUniquePokemonMatch = (matches) => {
     : undefined;
 };
 
+const findUniqueDefaultPokeapiPokemon = (showdownName) => {
+  const normalized = normalizeIdentifier(showdownName);
+  return findUniquePokemonMatch(pokeapiCandidates.filter((candidate) => (
+    candidate.source === "pokeapi-pokemon"
+    && candidate.isDefault
+    && candidate.normalized.startsWith(normalized)
+  )));
+};
+
+const getPokeapiAbilityIds = (pokemonId) => (
+  (pokeapiAbilityRowsByPokemonId.get(pokemonId) ?? [])
+    .slice()
+    .sort((a, b) => Number(a.slot) - Number(b.slot))
+    .map((row) => pokeapiAbilityById.get(row.ability_id))
+    .filter(Boolean)
+    .map((ability) => normalizeIdentifier(ability.identifier))
+);
+
 const findPokeapiMatch = (showdownName) => {
   const normalized = normalizeIdentifier(showdownName);
   const exactMatch = pokeapiMatchesByIdentifier.get(normalized);
@@ -258,11 +276,49 @@ const toPokeapiAbilityEntries = (pokemonOption) => {
   return pokeapiAbilityEntries;
 };
 
-const entries = pokemonOptions.entries.map((pokemonOption) => ({
-  id: pokemonOption.id,
-  showdownName: pokemonOption.showdownName,
-  abilities: toPokeapiAbilityEntries(pokemonOption),
-}));
+// Source-level assertions stay with generation so CI validation does not depend on local-only others/ CSVs.
+const assertPokeapiSourceSelection = (pokemonOption, abilities) => {
+  if (!abilities.every((ability) => ability.source === "calc-fallback")) {
+    return;
+  }
+
+  if (abilities.some((ability) => ability.fallback?.reason === "missing-pokeapi-match")) {
+    const defaultPokeapiMatch = findUniqueDefaultPokeapiPokemon(pokemonOption.showdownName);
+    if (defaultPokeapiMatch) {
+      throw new Error(
+        `${pokemonOption.showdownName} should use PokeAPI species default ${defaultPokeapiMatch.identifier} instead of calc fallback`,
+      );
+    }
+  }
+
+  if (pokemonOption.fallback?.reason !== "same-form-family" || !pokemonOption.fallback.from) {
+    return;
+  }
+
+  const formFamilyMatch = pokeapiMatchesByIdentifier.get(normalizeIdentifier(pokemonOption.fallback.from));
+  if (!formFamilyMatch) {
+    return;
+  }
+
+  const pokeapiAbilityIds = getPokeapiAbilityIds(formFamilyMatch.pokemonId);
+  const calcAbilityIds = Object.values(speciesData[pokemonOption.showdownName]?.abilities ?? {}).map(toID);
+  const containsCalcAbilities = calcAbilityIds.every((id) => pokeapiAbilityIds.includes(id));
+  if (containsCalcAbilities && pokeapiAbilityIds.length > 0) {
+    throw new Error(
+      `${pokemonOption.showdownName} should use PokeAPI form-family match ${formFamilyMatch.identifier} instead of calc fallback`,
+    );
+  }
+};
+
+const entries = pokemonOptions.entries.map((pokemonOption) => {
+  const abilities = toPokeapiAbilityEntries(pokemonOption);
+  assertPokeapiSourceSelection(pokemonOption, abilities);
+  return {
+    id: pokemonOption.id,
+    showdownName: pokemonOption.showdownName,
+    abilities,
+  };
+});
 
 const totalAbilityRefs = entries.reduce((total, entry) => total + entry.abilities.length, 0);
 const uniqueAbilityIds = new Set(entries.flatMap((entry) => entry.abilities.map((ability) => ability.id)));
