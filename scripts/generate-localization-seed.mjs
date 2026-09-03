@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 
 const payload = {
   schemaVersion: 1,
-  dataVersion: "m1-seed-2026-05-26",
+  dataVersion: "m1-seed-2026-09-04",
   generatedBy: "scripts/generate-localization-seed.mjs",
   source: "m1 hand-maintained seed source for resolver wiring",
   entries: [
@@ -34,8 +34,8 @@ const payload = {
       kind: "pokemon",
       id: "landorustherian",
       canonicalName: "Landorus-Therian",
-      displayNameJa: "ランドロス(霊獣)",
-      searchText: ["ランドロス霊獣", "ランドロスれいじゅう"],
+      displayNameJa: "ランドロス れいじゅうフォルム",
+      searchText: [],
       sourceStatus: "seed",
     },
     {

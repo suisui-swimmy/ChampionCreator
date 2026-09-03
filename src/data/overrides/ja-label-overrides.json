@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "manual-overrides-2026-08-15",
+  "dataVersion": "manual-overrides-2026-09-04",
   "entries": [
     {
       "kind": "pokemon",
@@ -8,6 +8,62 @@
       "displayNameJa": "イッカネズミ",
       "sourceStatus": "manual",
       "note": "Avoids the generated duplicate 4-family label so イッカネズミ ４ひきかぞく resolves to Maushold-Four."
+    },
+    {
+      "kind": "pokemon",
+      "id": "landorus",
+      "displayNameJa": "ランドロス けしんフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "landorustherian",
+      "displayNameJa": "ランドロス れいじゅうフォルム",
+      "sourceStatus": "manual",
+      "note": "Replaces the legacy parenthesized M1 seed label with the shared Japanese form-name format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "tornadus",
+      "displayNameJa": "トルネロス けしんフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "tornadustherian",
+      "displayNameJa": "トルネロス れいじゅうフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "thundurus",
+      "displayNameJa": "ボルトロス けしんフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "thundurustherian",
+      "displayNameJa": "ボルトロス れいじゅうフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "enamorus",
+      "displayNameJa": "ラブトロス けしんフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
+    },
+    {
+      "kind": "pokemon",
+      "id": "enamorustherian",
+      "displayNameJa": "ラブトロス れいじゅうフォルム",
+      "sourceStatus": "manual",
+      "note": "Keeps all Forces of Nature form labels in the same Japanese format."
     },
     {
       "kind": "pokemon",

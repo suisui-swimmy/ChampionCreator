@@ -2,6 +2,44 @@ import { readFile } from "node:fs/promises";
 import { SPECIES, toID } from "@smogon/calc";
 
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
+const readText = async (path) => readFile(path, "utf8");
+
+const parseCsvLine = (line) => {
+  const values = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+    if (char === "\"" && quoted && next === "\"") {
+      current += "\"";
+      index += 1;
+      continue;
+    }
+    if (char === "\"") {
+      quoted = !quoted;
+      continue;
+    }
+    if (char === "," && !quoted) {
+      values.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  values.push(current);
+  return values;
+};
+
+const readCsv = async (path) => {
+  const rows = (await readText(path)).trim().split(/\r?\n/);
+  const headers = parseCsvLine(rows.shift() ?? "");
+  return rows
+    .filter(Boolean)
+    .map((line) => Object.fromEntries(parseCsvLine(line).map((value, index) => [headers[index], value])));
+};
 
 const fail = (messages) => {
   for (const message of messages) {
@@ -14,6 +52,7 @@ const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.js
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
 const pokemonAbilities = await readJson("src/data/generated/pokemon-abilities.gen.json");
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
+const pokeapiPokemon = await readCsv("others/pokeapi/data/v2/csv/pokemon.csv");
 
 const errors = [];
 const warnings = [];
@@ -23,6 +62,22 @@ const missingAbilityOptionIds = new Set();
 const pokemonOptionsById = new Map(pokemonOptions.entries.map((entry) => [entry.id, entry]));
 const abilityEntriesByPokemonId = new Map();
 const validSources = new Set(["pokeapi", "calc-fallback"]);
+const defaultPokeapiPokemon = pokeapiPokemon
+  .filter((entry) => entry.is_default === "1")
+  .map((entry) => ({
+    pokemonId: entry.id,
+    identifier: entry.identifier,
+    normalized: toID(entry.identifier),
+  }));
+
+const findUniqueDefaultPokeapiPokemon = (showdownName) => {
+  const normalized = toID(showdownName);
+  const matches = defaultPokeapiPokemon.filter((candidate) => candidate.normalized.startsWith(normalized));
+  const uniqueByPokemonId = new Map(matches.map((candidate) => [candidate.pokemonId, candidate]));
+  return uniqueByPokemonId.size === 1
+    ? Array.from(uniqueByPokemonId.values())[0]
+    : undefined;
+};
 
 const calcExpectedAbilities = (pokemonOption) => (
   Object.entries(speciesData[pokemonOption.showdownName]?.abilities ?? {}).flatMap(([slot, showdownName]) => {
@@ -126,6 +181,14 @@ for (const entry of pokemonAbilities.entries ?? []) {
     const expectedSignature = expectedCalcAbilities.map((ability) => `${ability.id}:${ability.slot}`).join("|");
     if (actualSignature !== expectedSignature) {
       errors.push(`${key} calc fallback mismatch: ${actualSignature} != ${expectedSignature}`);
+    }
+    if (entry.abilities.some((ability) => ability.fallback?.reason === "missing-pokeapi-match")) {
+      const defaultPokeapiMatch = findUniqueDefaultPokeapiPokemon(entry.showdownName);
+      if (defaultPokeapiMatch) {
+        errors.push(
+          `${key} should use PokeAPI species default ${defaultPokeapiMatch.identifier} instead of calc fallback`,
+        );
+      }
     }
     warnings.push(`${entry.showdownName} uses @smogon/calc fallback abilities`);
   }

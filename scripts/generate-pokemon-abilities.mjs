@@ -98,6 +98,13 @@ const pokeapiCandidates = [
   })),
 ];
 
+const findUniquePokemonMatch = (matches) => {
+  const uniqueByPokemonId = new Map(matches.map((candidate) => [candidate.pokemonId, candidate]));
+  return uniqueByPokemonId.size === 1
+    ? Array.from(uniqueByPokemonId.values())[0]
+    : undefined;
+};
+
 const findPokeapiMatch = (showdownName) => {
   const normalized = normalizeIdentifier(showdownName);
   const exactMatch = pokeapiMatchesByIdentifier.get(normalized);
@@ -121,9 +128,16 @@ const findPokeapiMatch = (showdownName) => {
     candidate.normalized.startsWith(normalized)
     && (candidate.isDefault || candidate.source === "pokeapi-form")
   ));
-  const uniqueByPokemonId = new Map(prefixMatches.map((candidate) => [candidate.pokemonId, candidate]));
-  if (uniqueByPokemonId.size === 1) {
-    return Array.from(uniqueByPokemonId.values())[0];
+  const uniquePrefixMatch = findUniquePokemonMatch(prefixMatches);
+  if (uniquePrefixMatch) {
+    return uniquePrefixMatch;
+  }
+
+  const uniqueSpeciesDefaultMatch = findUniquePokemonMatch(prefixMatches.filter((candidate) => (
+    candidate.source === "pokeapi-pokemon" && candidate.isDefault
+  )));
+  if (uniqueSpeciesDefaultMatch) {
+    return uniqueSpeciesDefaultMatch;
   }
 
   return undefined;

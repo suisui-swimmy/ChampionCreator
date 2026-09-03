@@ -44,6 +44,36 @@ describe("resolveEntity", () => {
     });
   });
 
+  it("uses one Japanese label format for all Forces of Nature forms", () => {
+    const cases = [
+      ["ランドロス けしんフォルム", "Landorus"],
+      ["ランドロス れいじゅうフォルム", "Landorus-Therian"],
+      ["トルネロス けしんフォルム", "Tornadus"],
+      ["トルネロス れいじゅうフォルム", "Tornadus-Therian"],
+      ["ボルトロス けしんフォルム", "Thundurus"],
+      ["ボルトロス れいじゅうフォルム", "Thundurus-Therian"],
+      ["ラブトロス けしんフォルム", "Enamorus"],
+      ["ラブトロス れいじゅうフォルム", "Enamorus-Therian"],
+    ] as const;
+    const inputOptions = getEntityInputOptions("pokemon");
+
+    for (const [displayNameJa, canonicalName] of cases) {
+      expect(resolveEntity("pokemon", displayNameJa)).toMatchObject({
+        status: "exact",
+        canonicalName,
+        displayNameJa,
+      });
+      expect(inputOptions).toContainEqual(expect.objectContaining({
+        value: displayNameJa,
+        canonicalName,
+      }));
+    }
+
+    expect(resolveEntity("pokemon", "ランドロス(霊獣)").status).toBe("not-found");
+    expect(resolveEntity("pokemon", "ランドロス霊獣").status).toBe("not-found");
+    expect(resolveEntity("pokemon", "ランドロスれいじゅう").status).toBe("not-found");
+  });
+
   it("uses concise display labels for mega Pokemon while keeping long generated labels searchable", () => {
     expect(resolveEntity("pokemon", "メガスターミー")).toMatchObject({
       status: "exact",
@@ -333,6 +363,50 @@ describe("resolveEntity", () => {
     ]);
     expect(starmieMegaOptions?.some((option) => option.value === "もうか")).toBe(false);
     expect(getPokemonAbilityInputOptions(undefined)).toBeUndefined();
+  });
+
+  it("uses PokeAPI species-default forms for Showdown base-form ability suggestions", () => {
+    const cases: Array<{
+      pokemon: string;
+      expectedAbilities: Array<{ value: string; canonicalName: string }>;
+    }> = [
+      { pokemon: "Basculegion", expectedAbilities: [
+        { value: "すいすい", canonicalName: "Swift Swim" },
+        { value: "てきおうりょく", canonicalName: "Adaptability" },
+        { value: "かたやぶり", canonicalName: "Mold Breaker" },
+      ] },
+      { pokemon: "Meowstic", expectedAbilities: [
+        { value: "するどいめ", canonicalName: "Keen Eye" },
+        { value: "すりぬけ", canonicalName: "Infiltrator" },
+        { value: "いたずらごころ", canonicalName: "Prankster" },
+      ] },
+      { pokemon: "Tatsugiri", expectedAbilities: [
+        { value: "しれいとう", canonicalName: "Commander" },
+        { value: "よびみず", canonicalName: "Storm Drain" },
+      ] },
+      { pokemon: "Toxtricity", expectedAbilities: [
+        { value: "パンクロック", canonicalName: "Punk Rock" },
+        { value: "プラス", canonicalName: "Plus" },
+        { value: "テクニシャン", canonicalName: "Technician" },
+      ] },
+      { pokemon: "Maushold", expectedAbilities: [
+        { value: "フレンドガード", canonicalName: "Friend Guard" },
+        { value: "ほおぶくろ", canonicalName: "Cheek Pouch" },
+        { value: "テクニシャン", canonicalName: "Technician" },
+      ] },
+      { pokemon: "Lycanroc", expectedAbilities: [
+        { value: "するどいめ", canonicalName: "Keen Eye" },
+        { value: "すなかき", canonicalName: "Sand Rush" },
+        { value: "ふくつのこころ", canonicalName: "Steadfast" },
+      ] },
+    ];
+
+    for (const { pokemon, expectedAbilities } of cases) {
+      expect(getPokemonAbilityInputOptions(pokemon)?.map(({ value, canonicalName }) => ({
+        value,
+        canonicalName,
+      }))).toEqual(expectedAbilities);
+    }
   });
 
   it("keeps Pokemon ability dropdown options unfiltered while free-text completion can still narrow", () => {
