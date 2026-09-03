@@ -62,6 +62,7 @@ import {
   getMatchingEntityInputOptions,
   getPokemonAbilityInputOptions,
   resolveEntity,
+  resolveEntityWithCanonicalHint,
   type EntityInputOption,
 } from "./localization/resolver";
 import {
@@ -129,11 +130,13 @@ import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwor
 import { getPublicAssetUrl } from "./ui/publicAssetUrl";
 import {
   getPokemonBaseFormValue,
+  getMegaStoneForPokemonForm,
   getPokemonFormVariantOptions,
   isPokemonFormVariant,
   type PokemonFormVariantKind,
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
+import { normalizeSearchText } from "./localization/normalize";
 import {
   createBoxBackupFileName,
   createBoxEntryFromState,
@@ -482,8 +485,12 @@ const hpEventPresetIds = new Set<HpEventPresetId>(
   hpEventPresetOptions.map((option) => option.value),
 );
 
-const resolveCanonicalEntityName = (kind: EntityKind, input: string): string | undefined => {
-  const result = resolveEntity(kind, input);
+const resolveCanonicalEntityName = (
+  kind: EntityKind,
+  input: string,
+  canonicalNameHint?: string,
+): string | undefined => {
+  const result = resolveEntityWithCanonicalHint(kind, input, canonicalNameHint);
   return result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined;
 };
 
@@ -541,11 +548,15 @@ export const isAbilitySupportCard = (
   && isActiveAllyAbilityCanonicalName(resolveCanonicalEntityName("ability", abilityInput))
 );
 
-export const isUnresolvedEntityInput = (kind: EntityKind, input: string): boolean => {
+export const isUnresolvedEntityInput = (
+  kind: EntityKind,
+  input: string,
+  canonicalNameHint?: string,
+): boolean => {
   if (!input.trim()) {
     return false;
   }
-  const result = resolveEntity(kind, input);
+  const result = resolveEntityWithCanonicalHint(kind, input, canonicalNameHint);
   return result.status !== "exact" && result.status !== "alias";
 };
 
@@ -2645,13 +2656,25 @@ export function App({
     onSuggestionFormatChange?.(format);
   };
 
-  const updateTargetField = <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => {
+  const updateTargetField = <K extends keyof TargetFormState>(
+    key: K,
+    value: TargetFormState[K],
+    canonicalName?: string,
+  ) => {
     resetActiveSearch();
-    setTargetForm((current) => (
-      key === "levelMode"
-        ? applyTargetLevelMode(current, value as TargetFormState["levelMode"])
-        : { ...current, [key]: value }
-    ));
+    setTargetForm((current) => {
+      if (key === "levelMode") {
+        return applyTargetLevelMode(current, value as TargetFormState["levelMode"]);
+      }
+      if (key === "pokemonInput") {
+        return {
+          ...current,
+          pokemonInput: value as TargetFormState["pokemonInput"],
+          pokemonCanonicalName: canonicalName,
+        };
+      }
+      return { ...current, [key]: value };
+    });
   };
 
   const updateTargetEv = (key: StatKey, value: number) => {
@@ -2713,6 +2736,7 @@ export function App({
     attackId: string,
     key: K,
     value: ScenarioAttackFormState[K],
+    canonicalName?: string,
   ) => {
     resetActiveSearch();
     setScenarioForms((current) => current.map((scenario) => (
@@ -2721,7 +2745,13 @@ export function App({
             ...scenario,
             attacks: scenario.attacks.map((attack) => (
               attack.id === attackId
-                ? key === "moveInput"
+                ? key === "attackerPokemonInput"
+                  ? {
+                      ...attack,
+                      attackerPokemonInput: value as ScenarioAttackFormState["attackerPokemonInput"],
+                      attackerPokemonCanonicalName: canonicalName,
+                    }
+                : key === "moveInput"
                   ? applyMoveInputDefaults(
                       attack,
                       String(value),
@@ -4215,11 +4245,12 @@ type EntityTextFieldProps = {
   kind: EntityKind;
   label: string;
   value: string;
+  canonicalNameHint?: string;
   className?: string;
   description?: string;
   options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onSelectValue?: (value: string) => void;
+  onSelectValue?: (value: string, canonicalName?: string) => void;
 };
 
 export function getDropdownEntityOptions(
@@ -4234,6 +4265,7 @@ function EntityTextField({
   kind,
   label,
   value,
+  canonicalNameHint,
   className,
   description,
   options: suggestedOptions,
@@ -4241,7 +4273,7 @@ function EntityTextField({
   onSelectValue,
 }: EntityTextFieldProps) {
   const datalistId = `entity-options-${kind}-${useId()}`;
-  const invalid = isUnresolvedEntityInput(kind, value);
+  const invalid = isUnresolvedEntityInput(kind, value, canonicalNameHint);
 
   if (kind === "pokemon" && onSelectValue) {
     return (
@@ -4250,6 +4282,7 @@ function EntityTextField({
         label={label}
         value={value}
         invalid={invalid}
+        canonicalNameHint={canonicalNameHint}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -4265,6 +4298,7 @@ function EntityTextField({
         kind={kind}
         options={getDropdownEntityOptions(kind, value, suggestedOptions)}
         description={description}
+        canonicalNameHint={canonicalNameHint}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -4300,10 +4334,11 @@ function EntityTextField({
 type PokemonAutocompleteFieldProps = {
   label: string;
   value: string;
+  canonicalNameHint?: string;
   className?: string;
   invalid?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onSelectValue: (value: string) => void;
+  onSelectValue: (value: string, canonicalName?: string) => void;
 };
 
 type PokemonSuggestionKeyAction =
@@ -4343,6 +4378,7 @@ export const getPokemonSuggestionKeyAction = (
 function PokemonAutocompleteField({
   label,
   value,
+  canonicalNameHint,
   className,
   invalid = false,
   onChange,
@@ -4351,16 +4387,32 @@ function PokemonAutocompleteField({
   const listboxId = `pokemon-suggestions-${useId()}`;
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const options = useMemo(
-    () => value.trim() ? getMatchingEntityInputOptions("pokemon", value, 8) : [],
-    [value],
-  );
+  const options = useMemo(() => {
+    const matchingOptions = value.trim()
+      ? getMatchingEntityInputOptions("pokemon", value, 8)
+      : [];
+    if (!canonicalNameHint) {
+      return matchingOptions;
+    }
+    const hintedResult = resolveEntityWithCanonicalHint("pokemon", value, canonicalNameHint);
+    if ((hintedResult.status === "exact" || hintedResult.status === "alias")
+      && hintedResult.canonicalName
+      && hintedResult.displayNameJa) {
+      return [{
+        kind: "pokemon" as const,
+        value: hintedResult.displayNameJa,
+        canonicalName: hintedResult.canonicalName,
+        displayNameJa: hintedResult.displayNameJa,
+      }];
+    }
+    return matchingOptions;
+  }, [canonicalNameHint, value]);
   const open = focused && options.length > 0;
   const activeOption = options[Math.min(activeIndex, options.length - 1)];
   const fieldClassName = ["pokemon-autocomplete-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
 
   const selectOption = (option: EntityInputOption) => {
-    onSelectValue(option.value);
+    onSelectValue(option.value, option.canonicalName);
     setActiveIndex(0);
     setFocused(false);
   };
@@ -4454,10 +4506,11 @@ type DropdownTextFieldProps = {
   label: string;
   value: string;
   options: EntityInputOption[];
+  canonicalNameHint?: string;
   className?: string;
   description?: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onSelectValue: (value: string) => void;
+  onSelectValue: (value: string, canonicalName?: string) => void;
 };
 
 function DropdownTextField({
@@ -4465,6 +4518,7 @@ function DropdownTextField({
   label,
   value,
   options,
+  canonicalNameHint,
   className,
   description,
   onChange,
@@ -4479,11 +4533,11 @@ function DropdownTextField({
   const inputRef = useRef<HTMLInputElement>(null);
   const activeOption = options[Math.min(activeIndex, options.length - 1)];
   const listOpen = open && options.length > 0;
-  const invalid = isUnresolvedEntityInput(kind, value);
+  const invalid = isUnresolvedEntityInput(kind, value, canonicalNameHint);
   const fieldClassName = ["dropdown-text-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
 
   const selectOption = (option: EntityInputOption) => {
-    onSelectValue(option.value);
+    onSelectValue(option.value, option.canonicalName);
     setActiveIndex(0);
     setOpen(false);
   };
@@ -4763,47 +4817,83 @@ function NatureMatrixField({
 
 type MechanicControlsProps = {
   pokemonInput: string;
+  pokemonCanonicalName?: string;
+  itemInput: string;
   teraEnabled: boolean;
   dmaxEnabled: boolean;
   teraTypeInput: string;
   teraLabel: string;
-  onPokemonInputChange: (value: string) => void;
+  onPokemonInputChange: (value: string, canonicalName?: string) => void;
+  onItemInputChange: (value: string) => void;
   onTeraEnabledChange: (value: boolean) => void;
   onDmaxEnabledChange: (value: boolean) => void;
   onTeraTypeInputChange: (value: string) => void;
 };
 
+type MegaStoneOption = NonNullable<PokemonFormVariantOption["megaStone"]>;
+
+const getNormalizedItemInputValues = (input: string): Set<string> => {
+  const result = resolveEntity("item", input);
+  return new Set(
+    [
+      input,
+      result.status === "exact" || result.status === "alias" ? result.canonicalName : undefined,
+      result.status === "exact" || result.status === "alias" ? result.calcId : undefined,
+      result.status === "exact" || result.status === "alias" ? result.displayNameJa : undefined,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .map(normalizeSearchText),
+  );
+};
+
+export const doesItemMatchMegaStone = (itemInput: string, megaStone: MegaStoneOption): boolean => {
+  const itemValues = getNormalizedItemInputValues(itemInput);
+  return [megaStone.id, megaStone.value, megaStone.showdownName]
+    .map(normalizeSearchText)
+    .some((value) => value.length > 0 && itemValues.has(value));
+};
+
 function MechanicControls({
   pokemonInput,
+  pokemonCanonicalName,
+  itemInput,
   teraEnabled,
   dmaxEnabled,
   teraTypeInput,
   teraLabel,
   onPokemonInputChange,
+  onItemInputChange,
   onTeraEnabledChange,
   onDmaxEnabledChange,
   onTeraTypeInputChange,
 }: MechanicControlsProps) {
   const [choiceKind, setChoiceKind] = useState<PokemonFormVariantKind | null>(null);
-  const megaOptions = getPokemonFormVariantOptions(pokemonInput, "mega");
-  const gmaxOptions = getPokemonFormVariantOptions(pokemonInput, "gmax");
-  const megaActive = isPokemonFormVariant(pokemonInput, "mega");
-  const gmaxActive = isPokemonFormVariant(pokemonInput, "gmax");
+  const megaOptions = getPokemonFormVariantOptions(pokemonInput, "mega", pokemonCanonicalName);
+  const gmaxOptions = getPokemonFormVariantOptions(pokemonInput, "gmax", pokemonCanonicalName);
+  const megaActive = isPokemonFormVariant(pokemonInput, "mega", pokemonCanonicalName);
+  const gmaxActive = isPokemonFormVariant(pokemonInput, "gmax", pokemonCanonicalName);
   const dmaxActive = dmaxEnabled || gmaxActive;
   const activeChoices = choiceKind === "mega" ? megaOptions : choiceKind === "gmax" ? gmaxOptions : [];
 
   const applyBaseForm = () => {
-    const baseValue = getPokemonBaseFormValue(pokemonInput);
+    const megaStone = getMegaStoneForPokemonForm(pokemonInput, pokemonCanonicalName);
+    const baseValue = getPokemonBaseFormValue(pokemonInput, pokemonCanonicalName);
     if (baseValue) {
       onPokemonInputChange(baseValue);
+    }
+    if (megaStone && doesItemMatchMegaStone(itemInput, megaStone)) {
+      onItemInputChange("");
     }
     setChoiceKind(null);
   };
 
   const applyVariant = (kind: PokemonFormVariantKind, option: PokemonFormVariantOption) => {
-    onPokemonInputChange(option.value);
+    onPokemonInputChange(option.value, option.showdownName);
     setChoiceKind(null);
     if (kind === "mega") {
+      if (option.megaStone) {
+        onItemInputChange(option.megaStone.value);
+      }
       onTeraEnabledChange(false);
       onDmaxEnabledChange(false);
     } else {
@@ -5052,7 +5142,11 @@ type TargetPanelProps = {
   allowBulkNatureChange: boolean;
   bulkMaximizeApplied: boolean;
   isBoxPanelOpen: boolean;
-  onUpdateField: <K extends keyof TargetFormState>(key: K, value: TargetFormState[K]) => void;
+  onUpdateField: <K extends keyof TargetFormState>(
+    key: K,
+    value: TargetFormState[K],
+    canonicalName?: string,
+  ) => void;
   onUpdateEv: (key: StatKey, value: number) => void;
   onAllowBulkNatureChange: (value: boolean) => void;
   onRunBulkMaximize: () => void;
@@ -5569,7 +5663,11 @@ function MobileOverview({
               match={targetArtwork}
               fallbackLabel={targetForm.pokemonInput}
               variant="target"
-              dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
+              dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(
+                targetForm.pokemonInput,
+                "gmax",
+                targetForm.pokemonCanonicalName,
+              )}
             />
             <span className="mobile-target-mini-main">
               <strong>{targetForm.pokemonInput || "調整対象"}</strong>
@@ -5736,7 +5834,10 @@ function MobileOverview({
 
                     <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
                       {scenario.attacks.map((attack, attackIndex) => {
-                        const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
+                        const attackerArtwork = findPokemonArtwork({
+                          input: attack.attackerPokemonInput,
+                          canonicalName: attack.attackerPokemonCanonicalName,
+                        });
                         return (
                           <button
                             className="mobile-attack-summary"
@@ -5748,7 +5849,11 @@ function MobileOverview({
                               match={attackerArtwork}
                               fallbackLabel={attack.attackerPokemonInput}
                               variant="attack"
-                              dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
+                              dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(
+                                attack.attackerPokemonInput,
+                                "gmax",
+                                attack.attackerPokemonCanonicalName,
+                              )}
                             />
                             <span>
                               <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
@@ -6084,7 +6189,11 @@ function TargetPanel({
     ? `HP基準 ${selectedHpStatMarkerRule.label}`
     : undefined;
   const rankingOwnerPokemon = canonicalPokemon
-    ?? resolveCanonicalEntityName("pokemon", targetForm.pokemonInput);
+    ?? resolveCanonicalEntityName(
+      "pokemon",
+      targetForm.pokemonInput,
+      targetForm.pokemonCanonicalName,
+    );
   const pokemonAbilityOptions = getPokemonAbilityInputOptions(rankingOwnerPokemon);
   const itemOptions = useUsageSuggestionOptions(
     "item",
@@ -6132,15 +6241,20 @@ function TargetPanel({
             match={artwork}
             fallbackLabel={targetForm.pokemonInput}
             variant="target"
-            dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(targetForm.pokemonInput, "gmax")}
+            dynamaxEffect={targetForm.dmaxEnabled || isPokemonFormVariant(
+              targetForm.pokemonInput,
+              "gmax",
+              targetForm.pokemonCanonicalName,
+            )}
           />
           <div className="target-summary compact">
             <EntityTextField
               kind="pokemon"
               label="ポケモン"
               value={targetForm.pokemonInput}
+              canonicalNameHint={targetForm.pokemonCanonicalName}
               onChange={(event) => onUpdateField("pokemonInput", event.target.value)}
-              onSelectValue={(value) => onUpdateField("pokemonInput", value)}
+              onSelectValue={(value, canonicalName) => onUpdateField("pokemonInput", value, canonicalName)}
             />
             <NatureMatrixField
               label="性格"
@@ -6177,11 +6291,14 @@ function TargetPanel({
             />
             <MechanicControls
               pokemonInput={targetForm.pokemonInput}
+              pokemonCanonicalName={targetForm.pokemonCanonicalName}
+              itemInput={targetForm.itemInput}
               teraEnabled={targetForm.teraEnabled}
               dmaxEnabled={targetForm.dmaxEnabled}
               teraTypeInput={targetForm.teraTypeInput}
               teraLabel={targetForm.teraEnabled ? "テラスタル解除" : "テラスタル"}
-              onPokemonInputChange={(value) => onUpdateField("pokemonInput", value)}
+              onPokemonInputChange={(value, canonicalName) => onUpdateField("pokemonInput", value, canonicalName)}
+              onItemInputChange={(value) => onUpdateField("itemInput", value)}
               onTeraEnabledChange={(value) => onUpdateField("teraEnabled", value)}
               onDmaxEnabledChange={(value) => onUpdateField("dmaxEnabled", value)}
               onTeraTypeInputChange={(value) => onUpdateField("teraTypeInput", value)}
@@ -6452,6 +6569,7 @@ type ScenarioPanelProps = {
     attackId: string,
     key: K,
     value: ScenarioAttackFormState[K],
+    canonicalName?: string,
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
   mobileFocusedScenarioId?: string | null;
@@ -6656,6 +6774,7 @@ type ScenarioRowProps = {
     attackId: string,
     key: K,
     value: ScenarioAttackFormState[K],
+    canonicalName?: string,
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
   mobileFocusedAttackId?: string | null;
@@ -6833,6 +6952,7 @@ type AttackCardProps = {
     attackId: string,
     key: K,
     value: ScenarioAttackFormState[K],
+    canonicalName?: string,
   ) => void;
   onUpdateAttackerEv: (id: string, key: StatKey, value: number) => void;
 };
@@ -7782,9 +7902,20 @@ function AttackCard({
     attack.moveInput,
     attack.attackerAbilityInput,
   );
-  const attackerArtwork = findPokemonArtwork({ input: attack.attackerPokemonInput });
-  const attackerCanonicalPokemon = resolveCanonicalEntityName("pokemon", attack.attackerPokemonInput);
-  const targetCanonicalPokemon = resolveCanonicalEntityName("pokemon", targetForm.pokemonInput);
+  const attackerArtwork = findPokemonArtwork({
+    input: attack.attackerPokemonInput,
+    canonicalName: attack.attackerPokemonCanonicalName,
+  });
+  const attackerCanonicalPokemon = resolveCanonicalEntityName(
+    "pokemon",
+    attack.attackerPokemonInput,
+    attack.attackerPokemonCanonicalName,
+  );
+  const targetCanonicalPokemon = resolveCanonicalEntityName(
+    "pokemon",
+    targetForm.pokemonInput,
+    targetForm.pokemonCanonicalName,
+  );
   const suggestionRankingOwners = getAttackSuggestionRankingOwners(
     adjustmentType,
     targetCanonicalPokemon,
@@ -7950,7 +8081,11 @@ function AttackCard({
           match={attackerArtwork}
           fallbackLabel={attack.attackerPokemonInput}
           variant="attack"
-          dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(attack.attackerPokemonInput, "gmax")}
+          dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(
+            attack.attackerPokemonInput,
+            "gmax",
+            attack.attackerPokemonCanonicalName,
+          )}
         />
         <input
           className="inline-title-input"
@@ -7977,8 +8112,15 @@ function AttackCard({
             label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
             showLabel
             value={attack.attackerPokemonInput}
+            canonicalNameHint={attack.attackerPokemonCanonicalName}
             onChange={onInput("attackerPokemonInput")}
-            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+            onSelectValue={(value, canonicalName) => onUpdateAttack(
+              scenarioId,
+              attack.id,
+              "attackerPokemonInput",
+              value,
+              canonicalName,
+            )}
           />
           {!isAbilitySupport ? (
             <LevelLockField
@@ -8084,6 +8226,8 @@ function AttackCard({
         {!isAbilitySupport ? (
           <MechanicControls
             pokemonInput={attack.attackerPokemonInput}
+            pokemonCanonicalName={attack.attackerPokemonCanonicalName}
+            itemInput={attack.attackerItemInput}
             teraEnabled={attack.attackerTeraEnabled}
             dmaxEnabled={attack.attackerDmaxEnabled}
             teraTypeInput={attack.attackerTeraTypeInput}
@@ -8092,7 +8236,14 @@ function AttackCard({
                 ? attack.attackerTeraEnabled ? "仮想敵テラス解除" : "仮想敵テラス"
                 : attack.attackerTeraEnabled ? "攻撃テラス解除" : "攻撃テラス"
             }
-            onPokemonInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerPokemonInput", value)}
+            onPokemonInputChange={(value, canonicalName) => onUpdateAttack(
+              scenarioId,
+              attack.id,
+              "attackerPokemonInput",
+              value,
+              canonicalName,
+            )}
+            onItemInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
             onTeraEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraEnabled", value)}
             onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
             onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
@@ -8558,12 +8709,13 @@ type ScenarioTextFieldProps = {
   label: string;
   showLabel: boolean;
   value: string;
+  canonicalNameHint?: string;
   className?: string;
   description?: string;
   placeholder?: string;
   options?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onSelectValue?: (value: string) => void;
+  onSelectValue?: (value: string, canonicalName?: string) => void;
 };
 
 function ScenarioTextField({
@@ -8571,6 +8723,7 @@ function ScenarioTextField({
   label,
   showLabel,
   value,
+  canonicalNameHint,
   className,
   description,
   placeholder,
@@ -8587,7 +8740,8 @@ function ScenarioTextField({
         className={scenarioFieldClassName}
         label={label}
         value={value}
-        invalid={isUnresolvedEntityInput("pokemon", value)}
+        invalid={isUnresolvedEntityInput("pokemon", value, canonicalNameHint)}
+        canonicalNameHint={canonicalNameHint}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -8603,6 +8757,7 @@ function ScenarioTextField({
         value={value}
         options={suggestedOptions ?? getMatchingEntityInputOptions(kind, value)}
         description={description}
+        canonicalNameHint={canonicalNameHint}
         onChange={onChange}
         onSelectValue={onSelectValue}
       />
@@ -8612,7 +8767,7 @@ function ScenarioTextField({
   const options = kind ? suggestedOptions ?? getMatchingEntityInputOptions(kind, value) : [];
 
   return (
-    <label className={`${scenarioFieldClassName} placeholder-field${kind && isUnresolvedEntityInput(kind, value) ? " is-invalid" : ""}`} title={description}>
+    <label className={`${scenarioFieldClassName} placeholder-field${kind && isUnresolvedEntityInput(kind, value, canonicalNameHint) ? " is-invalid" : ""}`} title={description}>
       <input
         value={value}
         placeholder={showLabel ? label : placeholder}

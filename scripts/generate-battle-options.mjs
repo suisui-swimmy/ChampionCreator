@@ -25,6 +25,8 @@ const optionPaths = {
   types: join(outputDir, "type-options.gen.json"),
 };
 
+const megaStoneLabelOverridePath = join(projectRoot, "src", "data", "overrides", "mega-stone-labels-ja.json");
+
 const TYPE_LABELS_JA = {
   "???": "???",
   Bug: "むし",
@@ -327,6 +329,20 @@ const previous = {
 const previousById = Object.fromEntries(Object.entries(previous).map(([key, payload]) => [key, byId(payload)]));
 const previousByName = Object.fromEntries(Object.entries(previous).map(([key, payload]) => [key, byShowdownName(payload)]));
 
+const megaStoneLabelOverrides = await readOptionalJson(megaStoneLabelOverridePath);
+const megaStoneLabelOverrideById = new Map();
+const megaStoneLabelOverrideByShowdownName = new Map();
+for (const entry of megaStoneLabelOverrides.entries ?? []) {
+  if (!entry?.id || !entry?.showdownName || !entry?.labelJa) {
+    throw new Error(`Invalid Mega Stone label override: ${JSON.stringify(entry)}`);
+  }
+  if (megaStoneLabelOverrideById.has(entry.id) || megaStoneLabelOverrideByShowdownName.has(entry.showdownName)) {
+    throw new Error(`Duplicate Mega Stone label override: ${entry.id} / ${entry.showdownName}`);
+  }
+  megaStoneLabelOverrideById.set(entry.id, entry);
+  megaStoneLabelOverrideByShowdownName.set(entry.showdownName, entry);
+}
+
 const previousPokemonLabelByBaseName = new Map();
 for (const entry of previous.pokemon.entries ?? []) {
   const baseName = String(entry.showdownName ?? "").split("-")[0];
@@ -508,12 +524,45 @@ const makeMoveOptions = () => {
   });
 };
 
-const mapMegaStone = (megaStone) => {
-  if (!megaStone) {
-    return undefined;
+const mapMegaStoneMappings = (megaStone) =>
+  Object.entries(megaStone ?? {}).map(([baseSpecies, megaSpecies]) => ({
+    baseSpecies,
+    megaSpecies,
+  }));
+
+const mapMegaStone = (megaStone) => mapMegaStoneMappings(megaStone)[0];
+
+const validateMegaStoneLabelOverrides = (items) => {
+  const officialMegaStoneItems = items.filter((item) => {
+    const id = item.id || toID(item.name);
+    return item.megaStone && !UNSUPPORTED_ITEM_IDS.has(id);
+  });
+  if (officialMegaStoneItems.length !== 92) {
+    throw new Error(`Expected 92 official Mega Stones, found ${officialMegaStoneItems.length}`);
   }
-  const [[baseSpecies, megaSpecies]] = Object.entries(megaStone);
-  return { baseSpecies, megaSpecies };
+
+  const officialIds = new Set(officialMegaStoneItems.map((item) => item.id || toID(item.name)));
+  for (const item of officialMegaStoneItems) {
+    const id = item.id || toID(item.name);
+    const override = megaStoneLabelOverrideById.get(id);
+    if (!override) {
+      throw new Error(`Missing Mega Stone label override for ${id} (${item.name})`);
+    }
+    if (override.showdownName !== item.name) {
+      throw new Error(
+        `Mega Stone label override canonical mismatch for ${id}: ${override.showdownName} !== ${item.name}`,
+      );
+    }
+    if (toID(override.showdownName) !== id) {
+      throw new Error(`Mega Stone label override id mismatch for ${id}: ${override.showdownName}`);
+    }
+  }
+
+  for (const override of megaStoneLabelOverrides.entries ?? []) {
+    if (!officialIds.has(override.id)) {
+      throw new Error(`Unexpected Mega Stone label override ${override.id} (${override.showdownName})`);
+    }
+  }
 };
 
 const itemTags = (item) => {
@@ -563,16 +612,35 @@ const inferMegaStoneLabel = (item) => {
   };
 };
 
-const inferItemLabel = (item, previousOption) => {
-  if (previousOption?.label && previousOption.sourceStatus !== "needs-confirmation") {
-    return { label: previousOption.label };
+const inferItemLabel = (item, previousOption, megaStoneLabelOverride) => {
+  if (megaStoneLabelOverride?.labelJa) {
+    return {
+      label: megaStoneLabelOverride.labelJa,
+      sourceStatus: megaStoneLabelOverride.sourceStatus ?? "manual",
+      searchAliases: [megaStoneLabelOverride.championCreatorCurrentLabel],
+    };
   }
+
   const id = toID(item.name);
+  if (UNSUPPORTED_ITEM_IDS.has(id)) {
+    return {
+      label: previousOption?.label ?? item.name,
+      sourceStatus: "unsupported-temporary",
+      fallback: { reason: "cap-item-no-japanese-label" },
+    };
+  }
+  if (previousOption?.label && previousOption.sourceStatus !== "needs-confirmation") {
+    return {
+      label: previousOption.label,
+      sourceStatus: previousOption.sourceStatus,
+      fallback: previousOption.fallback,
+    };
+  }
   const manualLabel = MANUAL_ITEM_LABELS_JA[id];
   if (manualLabel) {
     return { label: manualLabel };
   }
-  const inferredMegaStoneLabel = UNSUPPORTED_ITEM_IDS.has(id) ? undefined : inferMegaStoneLabel(item);
+  const inferredMegaStoneLabel = inferMegaStoneLabel(item);
   if (inferredMegaStoneLabel) {
     return {
       label: inferredMegaStoneLabel.label,
@@ -583,32 +651,36 @@ const inferItemLabel = (item, previousOption) => {
       },
     };
   }
-  if (UNSUPPORTED_ITEM_IDS.has(id)) {
-    return {
-      label: item.name,
-      sourceStatus: "unsupported-temporary",
-      fallback: { reason: "cap-item-no-japanese-label" },
-    };
-  }
   return { label: previousOption?.label ?? item.name, sourceStatus: "needs-confirmation" };
 };
 
 const makeItemOptions = () => {
+  const calcItems = Array.from(generation.items);
+  validateMegaStoneLabelOverrides(calcItems);
   const entries = sortByLabel(
-    Array.from(generation.items).map((item) => {
+    calcItems.map((item) => {
       const id = toID(item.name);
       const previousOption = getPreviousOption("items", id, item.name);
-      const localized = inferItemLabel(item, previousOption);
-      const megaStone = mapMegaStone(item.megaStone);
+      const megaStoneLabelOverride = megaStoneLabelOverrideById.get(id) ?? megaStoneLabelOverrideByShowdownName.get(item.name);
+      const localized = inferItemLabel(item, previousOption, megaStoneLabelOverride);
+      const megaStoneMappings = mapMegaStoneMappings(item.megaStone);
+      const megaStone = megaStoneMappings[0];
       return withOptional({
         id,
         label: localized.label,
         showdownName: item.name,
-        searchText: makeSearchText([localized.label, item.name, id, megaStone?.baseSpecies]),
+        searchText: makeSearchText([
+          localized.label,
+          ...(localized.searchAliases ?? []),
+          item.name,
+          id,
+          ...megaStoneMappings.map((mapping) => mapping.baseSpecies),
+        ]),
         sourceStatus: localized.sourceStatus,
         fallback: localized.fallback,
         tags: itemTags(item),
         megaStone,
+        megaStoneMappings,
         naturalGift: item.naturalGift
           ? {
               type: item.naturalGift.type,
@@ -625,10 +697,12 @@ const makeItemOptions = () => {
     source: {
       previousOptions: "src/data/generated/item-options.gen.json",
       manualLabels: "scripts/generate-battle-options.mjs",
+      megaStoneLabels: "src/data/overrides/mega-stone-labels-ja.json",
     },
     summary: {
       totalOptions: entries.length,
       localized: entries.filter((entry) => !entry.sourceStatus).length,
+      manual: entries.filter((entry) => entry.sourceStatus === "manual").length,
       adapterTemporary: entries.filter((entry) => entry.sourceStatus === "adapter-temporary").length,
       unsupportedTemporary: entries.filter((entry) => entry.sourceStatus === "unsupported-temporary").length,
       needsConfirmation: entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length,

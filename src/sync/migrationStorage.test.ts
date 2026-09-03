@@ -11,6 +11,7 @@ import {
   stringifyEnemyBoxStorageDocument,
 } from "../ui/enemyBoxStorage";
 import { createDefaultScenarioForms } from "../ui/defenceSearchUi";
+import { SHARE_SCHEMA_VERSION } from "../ui/shareState";
 import {
   MIGRATION_STATE_SCHEMA_VERSION,
   createMigrationStateRepository,
@@ -135,7 +136,7 @@ describe("migrationStorage snapshots", () => {
       [BOX_STORAGE_KEY]: JSON.stringify({ schemaVersion: 1, entries: [rawEntry] }),
     }).storage);
 
-    expect(snapshot.targetEntries[0]?.payload.schemaVersion).toBe(11);
+    expect(snapshot.targetEntries[0]?.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
     expect(snapshot.targetBox.defaultDisposition).toBe("untouched");
   });
 

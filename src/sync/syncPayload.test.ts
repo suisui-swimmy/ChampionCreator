@@ -9,6 +9,7 @@ import {
   stringifyEnemyBoxStorageDocument,
 } from "../ui/enemyBoxStorage";
 import { createDefaultScenarioForms, createDefaultTargetForm } from "../ui/defenceSearchUi";
+import { SHARE_SCHEMA_VERSION } from "../ui/shareState";
 import {
   decodeSyncPayload,
   encodeSyncPayload,
@@ -30,7 +31,7 @@ describe("syncPayload", () => {
     expect(result).toMatchObject({ status: "success", kind: "target-box", entryId: entry.id });
     if (result.status === "success") {
       expect(result.entry.id).toBe(entry.id);
-      expect(result.entry.payload.schemaVersion).toBe(11);
+      expect(result.entry.payload.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
     }
   });
 
@@ -103,4 +104,3 @@ describe("syncPayload", () => {
     });
   });
 });
-

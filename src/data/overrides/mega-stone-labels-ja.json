@@ -1,0 +1,767 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-03",
+  "scope": {
+    "officialMegaStones": 92,
+    "legacyMegaStones": 47,
+    "newMegaStones": 45,
+    "championCreatorCurrentMismatches": 20,
+    "formalJapaneseNamesNotSafelyInferableByConcatenation": 26
+  },
+  "displayPolicy": {
+    "canonicalName": "Keep the exact @smogon/calc / Showdown English item name.",
+    "japaneseLabel": "Use the formal Japanese in-game item name.",
+    "suffixTypography": "Use full-width Ｘ / Ｙ / Ｚ in Japanese labels; canonical English names remain ASCII X / Y / Z."
+  },
+  "implementationNote": "Use id-keyed explicit labels in the generator or an override source. Do not infer formal Japanese Mega Stone names from the Pokémon label.",
+  "entries": [
+    {
+      "id": "abomasite",
+      "showdownName": "Abomasite",
+      "labelJa": "ユキノオナイト",
+      "baseSpecies": "Abomasnow",
+      "group": "legacy"
+    },
+    {
+      "id": "absolite",
+      "showdownName": "Absolite",
+      "labelJa": "アブソルナイト",
+      "baseSpecies": "Absol",
+      "group": "legacy"
+    },
+    {
+      "id": "aerodactylite",
+      "showdownName": "Aerodactylite",
+      "labelJa": "プテラナイト",
+      "baseSpecies": "Aerodactyl",
+      "group": "legacy"
+    },
+    {
+      "id": "aggronite",
+      "showdownName": "Aggronite",
+      "labelJa": "ボスゴドラナイト",
+      "baseSpecies": "Aggron",
+      "group": "legacy"
+    },
+    {
+      "id": "alakazite",
+      "showdownName": "Alakazite",
+      "labelJa": "フーディナイト",
+      "baseSpecies": "Alakazam",
+      "group": "legacy"
+    },
+    {
+      "id": "altarianite",
+      "showdownName": "Altarianite",
+      "labelJa": "チルタリスナイト",
+      "baseSpecies": "Altaria",
+      "group": "legacy"
+    },
+    {
+      "id": "ampharosite",
+      "showdownName": "Ampharosite",
+      "labelJa": "デンリュウナイト",
+      "baseSpecies": "Ampharos",
+      "group": "legacy"
+    },
+    {
+      "id": "audinite",
+      "showdownName": "Audinite",
+      "labelJa": "タブンネナイト",
+      "baseSpecies": "Audino",
+      "group": "legacy"
+    },
+    {
+      "id": "banettite",
+      "showdownName": "Banettite",
+      "labelJa": "ジュペッタナイト",
+      "baseSpecies": "Banette",
+      "group": "legacy"
+    },
+    {
+      "id": "beedrillite",
+      "showdownName": "Beedrillite",
+      "labelJa": "スピアナイト",
+      "baseSpecies": "Beedrill",
+      "group": "legacy"
+    },
+    {
+      "id": "blastoisinite",
+      "showdownName": "Blastoisinite",
+      "labelJa": "カメックスナイト",
+      "baseSpecies": "Blastoise",
+      "group": "legacy"
+    },
+    {
+      "id": "blazikenite",
+      "showdownName": "Blazikenite",
+      "labelJa": "バシャーモナイト",
+      "baseSpecies": "Blaziken",
+      "group": "legacy"
+    },
+    {
+      "id": "cameruptite",
+      "showdownName": "Cameruptite",
+      "labelJa": "バクーダナイト",
+      "baseSpecies": "Camerupt",
+      "group": "legacy"
+    },
+    {
+      "id": "charizarditex",
+      "showdownName": "Charizardite X",
+      "labelJa": "リザードナイトＸ",
+      "baseSpecies": "Charizard",
+      "group": "legacy"
+    },
+    {
+      "id": "charizarditey",
+      "showdownName": "Charizardite Y",
+      "labelJa": "リザードナイトＹ",
+      "baseSpecies": "Charizard",
+      "group": "legacy"
+    },
+    {
+      "id": "diancite",
+      "showdownName": "Diancite",
+      "labelJa": "ディアンシナイト",
+      "baseSpecies": "Diancie",
+      "group": "legacy"
+    },
+    {
+      "id": "galladite",
+      "showdownName": "Galladite",
+      "labelJa": "エルレイドナイト",
+      "baseSpecies": "Gallade",
+      "group": "legacy"
+    },
+    {
+      "id": "garchompite",
+      "showdownName": "Garchompite",
+      "labelJa": "ガブリアスナイト",
+      "baseSpecies": "Garchomp",
+      "group": "legacy"
+    },
+    {
+      "id": "gardevoirite",
+      "showdownName": "Gardevoirite",
+      "labelJa": "サーナイトナイト",
+      "baseSpecies": "Gardevoir",
+      "group": "legacy"
+    },
+    {
+      "id": "gengarite",
+      "showdownName": "Gengarite",
+      "labelJa": "ゲンガナイト",
+      "baseSpecies": "Gengar",
+      "group": "legacy"
+    },
+    {
+      "id": "glalitite",
+      "showdownName": "Glalitite",
+      "labelJa": "オニゴーリナイト",
+      "baseSpecies": "Glalie",
+      "group": "legacy"
+    },
+    {
+      "id": "gyaradosite",
+      "showdownName": "Gyaradosite",
+      "labelJa": "ギャラドスナイト",
+      "baseSpecies": "Gyarados",
+      "group": "legacy"
+    },
+    {
+      "id": "heracronite",
+      "showdownName": "Heracronite",
+      "labelJa": "ヘラクロスナイト",
+      "baseSpecies": "Heracross",
+      "group": "legacy"
+    },
+    {
+      "id": "houndoominite",
+      "showdownName": "Houndoominite",
+      "labelJa": "ヘルガナイト",
+      "baseSpecies": "Houndoom",
+      "group": "legacy"
+    },
+    {
+      "id": "kangaskhanite",
+      "showdownName": "Kangaskhanite",
+      "labelJa": "ガルーラナイト",
+      "baseSpecies": "Kangaskhan",
+      "group": "legacy"
+    },
+    {
+      "id": "latiasite",
+      "showdownName": "Latiasite",
+      "labelJa": "ラティアスナイト",
+      "baseSpecies": "Latias",
+      "group": "legacy"
+    },
+    {
+      "id": "latiosite",
+      "showdownName": "Latiosite",
+      "labelJa": "ラティオスナイト",
+      "baseSpecies": "Latios",
+      "group": "legacy"
+    },
+    {
+      "id": "lopunnite",
+      "showdownName": "Lopunnite",
+      "labelJa": "ミミロップナイト",
+      "baseSpecies": "Lopunny",
+      "group": "legacy"
+    },
+    {
+      "id": "lucarionite",
+      "showdownName": "Lucarionite",
+      "labelJa": "ルカリオナイト",
+      "baseSpecies": "Lucario",
+      "group": "legacy"
+    },
+    {
+      "id": "manectite",
+      "showdownName": "Manectite",
+      "labelJa": "ライボルトナイト",
+      "baseSpecies": "Manectric",
+      "group": "legacy"
+    },
+    {
+      "id": "mawilite",
+      "showdownName": "Mawilite",
+      "labelJa": "クチートナイト",
+      "baseSpecies": "Mawile",
+      "group": "legacy"
+    },
+    {
+      "id": "medichamite",
+      "showdownName": "Medichamite",
+      "labelJa": "チャーレムナイト",
+      "baseSpecies": "Medicham",
+      "group": "legacy"
+    },
+    {
+      "id": "metagrossite",
+      "showdownName": "Metagrossite",
+      "labelJa": "メタグロスナイト",
+      "baseSpecies": "Metagross",
+      "group": "legacy"
+    },
+    {
+      "id": "mewtwonitex",
+      "showdownName": "Mewtwonite X",
+      "labelJa": "ミュウツナイトＸ",
+      "baseSpecies": "Mewtwo",
+      "group": "legacy"
+    },
+    {
+      "id": "mewtwonitey",
+      "showdownName": "Mewtwonite Y",
+      "labelJa": "ミュウツナイトＹ",
+      "baseSpecies": "Mewtwo",
+      "group": "legacy"
+    },
+    {
+      "id": "pidgeotite",
+      "showdownName": "Pidgeotite",
+      "labelJa": "ピジョットナイト",
+      "baseSpecies": "Pidgeot",
+      "group": "legacy"
+    },
+    {
+      "id": "pinsirite",
+      "showdownName": "Pinsirite",
+      "labelJa": "カイロスナイト",
+      "baseSpecies": "Pinsir",
+      "group": "legacy"
+    },
+    {
+      "id": "sablenite",
+      "showdownName": "Sablenite",
+      "labelJa": "ヤミラミナイト",
+      "baseSpecies": "Sableye",
+      "group": "legacy"
+    },
+    {
+      "id": "salamencite",
+      "showdownName": "Salamencite",
+      "labelJa": "ボーマンダナイト",
+      "baseSpecies": "Salamence",
+      "group": "legacy"
+    },
+    {
+      "id": "sceptilite",
+      "showdownName": "Sceptilite",
+      "labelJa": "ジュカインナイト",
+      "baseSpecies": "Sceptile",
+      "group": "legacy"
+    },
+    {
+      "id": "scizorite",
+      "showdownName": "Scizorite",
+      "labelJa": "ハッサムナイト",
+      "baseSpecies": "Scizor",
+      "group": "legacy"
+    },
+    {
+      "id": "sharpedonite",
+      "showdownName": "Sharpedonite",
+      "labelJa": "サメハダナイト",
+      "baseSpecies": "Sharpedo",
+      "group": "legacy"
+    },
+    {
+      "id": "slowbronite",
+      "showdownName": "Slowbronite",
+      "labelJa": "ヤドランナイト",
+      "baseSpecies": "Slowbro",
+      "group": "legacy"
+    },
+    {
+      "id": "steelixite",
+      "showdownName": "Steelixite",
+      "labelJa": "ハガネールナイト",
+      "baseSpecies": "Steelix",
+      "group": "legacy"
+    },
+    {
+      "id": "swampertite",
+      "showdownName": "Swampertite",
+      "labelJa": "ラグラージナイト",
+      "baseSpecies": "Swampert",
+      "group": "legacy"
+    },
+    {
+      "id": "tyranitarite",
+      "showdownName": "Tyranitarite",
+      "labelJa": "バンギラスナイト",
+      "baseSpecies": "Tyranitar",
+      "group": "legacy"
+    },
+    {
+      "id": "venusaurite",
+      "showdownName": "Venusaurite",
+      "labelJa": "フシギバナイト",
+      "baseSpecies": "Venusaur",
+      "group": "legacy"
+    },
+    {
+      "id": "absolitez",
+      "showdownName": "Absolite Z",
+      "labelJa": "アブソルナイトＺ",
+      "baseSpecies": "Absol",
+      "group": "new",
+      "championCreatorCurrentLabel": "アブソルナイトZ",
+      "championCreatorMismatchType": "suffix-width"
+    },
+    {
+      "id": "barbaracite",
+      "showdownName": "Barbaracite",
+      "labelJa": "ガメノデスナイト",
+      "baseSpecies": "Barbaracle",
+      "group": "new"
+    },
+    {
+      "id": "baxcalibrite",
+      "showdownName": "Baxcalibrite",
+      "labelJa": "セグレイブナイト",
+      "baseSpecies": "Baxcalibur",
+      "group": "new"
+    },
+    {
+      "id": "chandelurite",
+      "showdownName": "Chandelurite",
+      "labelJa": "シャンデラナイト",
+      "baseSpecies": "Chandelure",
+      "group": "new"
+    },
+    {
+      "id": "chesnaughtite",
+      "showdownName": "Chesnaughtite",
+      "labelJa": "ブリガロナイト",
+      "baseSpecies": "Chesnaught",
+      "group": "new",
+      "championCreatorCurrentLabel": "ブリガロンナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "chimechite",
+      "showdownName": "Chimechite",
+      "labelJa": "チリーンナイト",
+      "baseSpecies": "Chimecho",
+      "group": "new"
+    },
+    {
+      "id": "clefablite",
+      "showdownName": "Clefablite",
+      "labelJa": "ピクシナイト",
+      "baseSpecies": "Clefable",
+      "group": "new",
+      "championCreatorCurrentLabel": "ピクシーナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "crabominite",
+      "showdownName": "Crabominite",
+      "labelJa": "ケケンカニナイト",
+      "baseSpecies": "Crabominable",
+      "group": "new"
+    },
+    {
+      "id": "darkranite",
+      "showdownName": "Darkranite",
+      "labelJa": "ダークライナイト",
+      "baseSpecies": "Darkrai",
+      "group": "new"
+    },
+    {
+      "id": "delphoxite",
+      "showdownName": "Delphoxite",
+      "labelJa": "マフォクシナイト",
+      "baseSpecies": "Delphox",
+      "group": "new",
+      "championCreatorCurrentLabel": "マフォクシーナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "dragalgite",
+      "showdownName": "Dragalgite",
+      "labelJa": "ドラミドナイト",
+      "baseSpecies": "Dragalge",
+      "group": "new",
+      "championCreatorCurrentLabel": "ドラミドロナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "dragoninite",
+      "showdownName": "Dragoninite",
+      "labelJa": "カイリュナイト",
+      "baseSpecies": "Dragonite",
+      "group": "new",
+      "championCreatorCurrentLabel": "カイリューナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "drampanite",
+      "showdownName": "Drampanite",
+      "labelJa": "ジジーロナイト",
+      "baseSpecies": "Drampa",
+      "group": "new",
+      "championCreatorCurrentLabel": "ジジーロンナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "eelektrossite",
+      "showdownName": "Eelektrossite",
+      "labelJa": "シビルドナイト",
+      "baseSpecies": "Eelektross",
+      "group": "new",
+      "championCreatorCurrentLabel": "シビルドンナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "emboarite",
+      "showdownName": "Emboarite",
+      "labelJa": "エンブオナイト",
+      "baseSpecies": "Emboar",
+      "group": "new",
+      "championCreatorCurrentLabel": "エンブオーナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "excadrite",
+      "showdownName": "Excadrite",
+      "labelJa": "ドリュウズナイト",
+      "baseSpecies": "Excadrill",
+      "group": "new"
+    },
+    {
+      "id": "falinksite",
+      "showdownName": "Falinksite",
+      "labelJa": "タイレーツナイト",
+      "baseSpecies": "Falinks",
+      "group": "new"
+    },
+    {
+      "id": "feraligite",
+      "showdownName": "Feraligite",
+      "labelJa": "オーダイルナイト",
+      "baseSpecies": "Feraligatr",
+      "group": "new"
+    },
+    {
+      "id": "floettite",
+      "showdownName": "Floettite",
+      "labelJa": "フラエッテナイト",
+      "baseSpecies": "Floette-Eternal",
+      "group": "new"
+    },
+    {
+      "id": "froslassite",
+      "showdownName": "Froslassite",
+      "labelJa": "ユキメノコナイト",
+      "baseSpecies": "Froslass",
+      "group": "new"
+    },
+    {
+      "id": "garchompitez",
+      "showdownName": "Garchompite Z",
+      "labelJa": "ガブリアスナイトＺ",
+      "baseSpecies": "Garchomp",
+      "group": "new",
+      "championCreatorCurrentLabel": "ガブリアスナイトZ",
+      "championCreatorMismatchType": "suffix-width"
+    },
+    {
+      "id": "glimmoranite",
+      "showdownName": "Glimmoranite",
+      "labelJa": "キラフロルナイト",
+      "baseSpecies": "Glimmora",
+      "group": "new"
+    },
+    {
+      "id": "golisopite",
+      "showdownName": "Golisopite",
+      "labelJa": "グソクムシャナイト",
+      "baseSpecies": "Golisopod",
+      "group": "new"
+    },
+    {
+      "id": "golurkite",
+      "showdownName": "Golurkite",
+      "labelJa": "ゴルーグナイト",
+      "baseSpecies": "Golurk",
+      "group": "new"
+    },
+    {
+      "id": "greninjite",
+      "showdownName": "Greninjite",
+      "labelJa": "ゲッコウガナイト",
+      "baseSpecies": "Greninja",
+      "group": "new"
+    },
+    {
+      "id": "hawluchanite",
+      "showdownName": "Hawluchanite",
+      "labelJa": "ルチャブルナイト",
+      "baseSpecies": "Hawlucha",
+      "group": "new"
+    },
+    {
+      "id": "heatranite",
+      "showdownName": "Heatranite",
+      "labelJa": "ヒードラナイト",
+      "baseSpecies": "Heatran",
+      "group": "new",
+      "championCreatorCurrentLabel": "ヒードランナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "lucarionitez",
+      "showdownName": "Lucarionite Z",
+      "labelJa": "ルカリオナイトＺ",
+      "baseSpecies": "Lucario",
+      "group": "new",
+      "championCreatorCurrentLabel": "ルカリオナイトZ",
+      "championCreatorMismatchType": "suffix-width"
+    },
+    {
+      "id": "magearnite",
+      "showdownName": "Magearnite",
+      "labelJa": "マギアナイト",
+      "baseSpecies": "Magearna",
+      "group": "new",
+      "championCreatorCurrentLabel": "マギアナナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "malamarite",
+      "showdownName": "Malamarite",
+      "labelJa": "カラマネナイト",
+      "baseSpecies": "Malamar",
+      "group": "new",
+      "championCreatorCurrentLabel": "カラマネロナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "meganiumite",
+      "showdownName": "Meganiumite",
+      "labelJa": "メガニウムナイト",
+      "baseSpecies": "Meganium",
+      "group": "new"
+    },
+    {
+      "id": "meowsticite",
+      "showdownName": "Meowsticite",
+      "labelJa": "ニャオニクスナイト",
+      "baseSpecies": "Meowstic",
+      "group": "new"
+    },
+    {
+      "id": "pyroarite",
+      "showdownName": "Pyroarite",
+      "labelJa": "カエンジシナイト",
+      "baseSpecies": "Pyroar",
+      "group": "new"
+    },
+    {
+      "id": "raichunitex",
+      "showdownName": "Raichunite X",
+      "labelJa": "ライチュウナイトＸ",
+      "baseSpecies": "Raichu",
+      "group": "new",
+      "championCreatorCurrentLabel": "ライチュウナイトX",
+      "championCreatorMismatchType": "suffix-width"
+    },
+    {
+      "id": "raichunitey",
+      "showdownName": "Raichunite Y",
+      "labelJa": "ライチュウナイトＹ",
+      "baseSpecies": "Raichu",
+      "group": "new",
+      "championCreatorCurrentLabel": "ライチュウナイトY",
+      "championCreatorMismatchType": "suffix-width"
+    },
+    {
+      "id": "scolipite",
+      "showdownName": "Scolipite",
+      "labelJa": "ペンドラナイト",
+      "baseSpecies": "Scolipede",
+      "group": "new",
+      "championCreatorCurrentLabel": "ペンドラーナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "scovillainite",
+      "showdownName": "Scovillainite",
+      "labelJa": "スコヴィラナイト",
+      "baseSpecies": "Scovillain",
+      "group": "new",
+      "championCreatorCurrentLabel": "スコヴィランナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "scraftinite",
+      "showdownName": "Scraftinite",
+      "labelJa": "ズルズキナイト",
+      "baseSpecies": "Scrafty",
+      "group": "new",
+      "championCreatorCurrentLabel": "ズルズキンナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "skarmorite",
+      "showdownName": "Skarmorite",
+      "labelJa": "エアームドナイト",
+      "baseSpecies": "Skarmory",
+      "group": "new"
+    },
+    {
+      "id": "staraptite",
+      "showdownName": "Staraptite",
+      "labelJa": "ムクホークナイト",
+      "baseSpecies": "Staraptor",
+      "group": "new"
+    },
+    {
+      "id": "starminite",
+      "showdownName": "Starminite",
+      "labelJa": "スターミナイト",
+      "baseSpecies": "Starmie",
+      "group": "new",
+      "championCreatorCurrentLabel": "スターミーナイト",
+      "championCreatorMismatchType": "formal-name"
+    },
+    {
+      "id": "tatsugirinite",
+      "showdownName": "Tatsugirinite",
+      "labelJa": "シャリタツナイト",
+      "baseSpecies": "Tatsugiri",
+      "group": "new"
+    },
+    {
+      "id": "victreebelite",
+      "showdownName": "Victreebelite",
+      "labelJa": "ウツボットナイト",
+      "baseSpecies": "Victreebel",
+      "group": "new"
+    },
+    {
+      "id": "zeraorite",
+      "showdownName": "Zeraorite",
+      "labelJa": "ゼラオラナイト",
+      "baseSpecies": "Zeraora",
+      "group": "new"
+    },
+    {
+      "id": "zygardite",
+      "showdownName": "Zygardite",
+      "labelJa": "ジガルデナイト",
+      "baseSpecies": "Zygarde-Complete",
+      "group": "new"
+    }
+  ],
+  "excludedNonOfficial": [
+    {
+      "id": "crucibellite",
+      "showdownName": "Crucibellite",
+      "reason": "Smogon CAP fan-format item; not an official Pokémon game Mega Stone.",
+      "recommendedHandling": "Keep excluded/unsupported for ChampionCreator's official-game catalog."
+    }
+  ],
+  "sources": [
+    {
+      "name": "Pokémon official Japanese site",
+      "role": "Primary confirmation for Japanese names and full-width suffix typography",
+      "url": "https://www.pokemon.co.jp/ex/legends_z-a/ja/news/251202_01/"
+    },
+    {
+      "name": "Pokémon official English site",
+      "role": "Primary confirmation for English names of newly added Mega Stones",
+      "url": "https://legends.pokemon.com/en-us/news/mega-stones"
+    },
+    {
+      "name": "Bulbapedia — Mega Stone",
+      "role": "Complete English inventory and total count cross-check",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Mega_Stone"
+    },
+    {
+      "name": "GameWith — Pokémon Legends Z-A Mega Stone list",
+      "role": "Bulk Japanese list cross-check against in-game labels",
+      "url": "https://gamewith.jp/pokemon-za/520947"
+    },
+    {
+      "name": "ChampionCreator pinned @smogon/calc source",
+      "role": "Canonical English names and Mega Stone metadata used by the app",
+      "url": "https://github.com/smogon/damage-calc/blob/49d4d8696bf138b101cc47be8432489c3ac192aa/calc/src/data/items.ts"
+    }
+  ],
+  "nonInferableByPokemonNameConcatenation": [
+    "abomasite",
+    "alakazite",
+    "beedrillite",
+    "charizarditex",
+    "charizarditey",
+    "diancite",
+    "gengarite",
+    "houndoominite",
+    "mewtwonitex",
+    "mewtwonitey",
+    "sharpedonite",
+    "chesnaughtite",
+    "clefablite",
+    "delphoxite",
+    "dragalgite",
+    "dragoninite",
+    "drampanite",
+    "eelektrossite",
+    "emboarite",
+    "heatranite",
+    "magearnite",
+    "malamarite",
+    "scolipite",
+    "scovillainite",
+    "scraftinite",
+    "starminite"
+  ]
+}
+

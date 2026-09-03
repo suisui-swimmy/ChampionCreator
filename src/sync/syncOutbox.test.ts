@@ -3,6 +3,7 @@ import {
   createBoxEntryFromState,
 } from "../ui/boxStorage";
 import { createDefaultScenarioForms, createDefaultTargetForm } from "../ui/defenceSearchUi";
+import { SHARE_SCHEMA_VERSION } from "../ui/shareState";
 import { createEmptyLocalSyncState, makeSyncRecordKey } from "./syncTypes";
 import {
   enqueueSyncMutation,
@@ -88,7 +89,7 @@ describe("syncOutbox", () => {
         statPointSummary: "0シナリオ / 0攻撃",
       },
       payload: {
-        schemaVersion: 11 as const,
+        schemaVersion: SHARE_SCHEMA_VERSION as typeof SHARE_SCHEMA_VERSION,
         scenarios: createDefaultScenarioForms(),
       },
     };

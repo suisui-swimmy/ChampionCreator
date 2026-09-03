@@ -340,6 +340,54 @@ export const resolveEntity = (kind: EntityKind, input: string): ResolveResult =>
   return { status: "not-found", kind, input, candidates: [] };
 };
 
+const exactMatchTypes = new Set<ResolveMatchedBy>(["displayNameJa", "canonicalName", "id"]);
+
+/**
+ * Resolve a visible input while retaining a previously selected canonical form.
+ *
+ * Several forms can intentionally share one Japanese display label. In that
+ * case the normal resolver returns all matching candidates; a canonical hint
+ * can select the one the user previously chose. A hint is only trusted when it
+ * identifies exactly one of the current candidates, so stale hints cannot
+ * silently resolve a different entity after the input changes or the catalog
+ * is updated.
+ */
+export const resolveEntityWithCanonicalHint = (
+  kind: EntityKind,
+  input: string,
+  canonicalHint?: string,
+): ResolveResult => {
+  const result = resolveEntity(kind, input);
+  if (!canonicalHint?.trim()) {
+    return result;
+  }
+
+  const matchingCandidates = result.candidates.filter((candidate) => (
+    candidate.kind === kind && candidate.canonicalName === canonicalHint
+  ));
+
+  if (matchingCandidates.length !== 1) {
+    return {
+      status: "not-found",
+      kind,
+      input,
+      candidates: result.candidates,
+    };
+  }
+
+  const [candidate] = matchingCandidates;
+  return {
+    status: exactMatchTypes.has(candidate.matchedBy) ? "exact" : "alias",
+    kind,
+    input,
+    canonicalName: candidate.canonicalName,
+    calcId: candidate.calcId,
+    displayNameJa: candidate.displayNameJa,
+    sourceStatus: candidate.sourceStatus,
+    candidates: [candidate],
+  };
+};
+
 export const getDisplayNameJa = (kind: EntityKind, canonicalName: string): string => {
   const result = resolveEntity(kind, canonicalName);
   return result.displayNameJa ?? canonicalName;

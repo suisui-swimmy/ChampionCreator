@@ -136,6 +136,142 @@ describe("shareState", () => {
     expect(parsed).not.toHaveProperty("offenseAdjustment");
   });
 
+  it("keeps schema v11 speed state while migrating to the current schema", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 11,
+      target: createDefaultTargetForm(),
+      scenarios: [{
+        ...scenario,
+        adjustmentType: "speed",
+        attacks: [{
+          ...scenario.attacks[0],
+          speedTargetMode: "manual",
+          speedComparison: "tie",
+          speedTargetValue: 217,
+          speedTargetStatus: "par",
+          speedTargetItemMultiplier: "0.5",
+          speedTargetAbilityMultiplier: "1.5",
+          speedTargetTailwind: true,
+          speedOpponentTailwind: true,
+          speedOrderMode: "trick-room",
+          speedItemMultiplier: "2",
+          speedAbilityMultiplier: "1.5",
+        }],
+      }],
+    }));
+
+    expect(parsed.schemaVersion).toBe(SHARE_SCHEMA_VERSION);
+    expect(parsed.scenarios[0].attacks[0]).toMatchObject({
+      speedTargetMode: "manual",
+      speedComparison: "tie",
+      speedTargetValue: 217,
+      speedTargetStatus: "par",
+      speedTargetItemMultiplier: "0.5",
+      speedTargetAbilityMultiplier: "1.5",
+      speedTargetTailwind: true,
+      speedOpponentTailwind: true,
+      speedOrderMode: "trick-room",
+      speedItemMultiplier: "2",
+      speedAbilityMultiplier: "1.5",
+    });
+  });
+
+  it("round-trips canonical Pokemon hints for ambiguous visible inputs", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "メガマギアナ",
+      pokemonCanonicalName: "Magearna-Original-Mega",
+    };
+    const scenarios = [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        attackerPokemonInput: "メガシャリタツ",
+        attackerPokemonCanonicalName: "Tatsugiri-Droopy-Mega",
+      }],
+    }];
+
+    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios));
+
+    expect(parsed.target.pokemonCanonicalName).toBe("Magearna-Original-Mega");
+    expect(parsed.scenarios[0].attacks[0].attackerPokemonCanonicalName).toBe("Tatsugiri-Droopy-Mega");
+  });
+
+  it("drops canonical Pokemon hints from schema v1-v11 during migration", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const parsed = parseShareStateDocument(JSON.stringify({
+      schemaVersion: 11,
+      target: {
+        ...createDefaultTargetForm(),
+        pokemonInput: "メガマギアナ",
+        pokemonCanonicalName: "Magearna-Original-Mega",
+      },
+      scenarios: [{
+        ...scenario,
+        attacks: [{
+          ...scenario.attacks[0],
+          attackerPokemonInput: "メガシャリタツ",
+          attackerPokemonCanonicalName: "Tatsugiri-Droopy-Mega",
+        }],
+      }],
+    }));
+
+    expect(parsed.target.pokemonCanonicalName).toBeUndefined();
+    expect(parsed.scenarios[0].attacks[0].attackerPokemonCanonicalName).toBeUndefined();
+  });
+
+  it.each([
+    ["target", "pokemonCanonicalName"],
+    ["attack", "attackerPokemonCanonicalName"],
+  ] as const)("rejects a non-string %s canonical hint", (owner, field) => {
+    const [scenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      ...(owner === "target" ? { pokemonCanonicalName: 123 } : {}),
+    };
+    const scenarios = [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        ...(owner === "attack" ? { attackerPokemonCanonicalName: 123 } : {}),
+      }],
+    }];
+
+    expect(() => parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target,
+      scenarios,
+    }))).toThrow(field);
+  });
+
+  it.each([
+    ["target", "pokemonCanonicalName"],
+    ["attack", "attackerPokemonCanonicalName"],
+  ] as const)("rejects a canonical hint not found among the input candidates for %s", (owner, field) => {
+    const [scenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: owner === "target" ? "メガマギアナ" : createDefaultTargetForm().pokemonInput,
+      ...(owner === "target" ? { pokemonCanonicalName: "Pikachu" } : {}),
+    };
+    const scenarios = [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        attackerPokemonInput: owner === "attack" ? "メガシャリタツ" : scenario.attacks[0].attackerPokemonInput,
+        ...(owner === "attack" ? { attackerPokemonCanonicalName: "Pikachu" } : {}),
+      }],
+    }];
+
+    expect(() => parseShareStateDocument(JSON.stringify({
+      schemaVersion: SHARE_SCHEMA_VERSION,
+      target,
+      scenarios,
+    }))).toThrow(field);
+  });
+
   it("imports schema v6 JSON while dropping the unused offense adjustment", () => {
     const parsed = parseShareStateDocument(JSON.stringify({
       schemaVersion: 6,

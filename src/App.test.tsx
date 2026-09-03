@@ -7,6 +7,7 @@ import {
   CandidateStatPointBars,
   CandidateStatPointSpread,
   createAccountBoundaryForms,
+  doesItemMatchMegaStone,
   DraftRecoveryDialog,
   ResultsPanel,
   StatPointCellBar,
@@ -233,6 +234,24 @@ const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => (
 });
 
 describe("App", () => {
+  it("matches a selected mega stone by Japanese label, canonical name, or item id", () => {
+    const garchompiteZ = {
+      id: "garchompitez",
+      value: "ガブリアスナイトZ",
+      showdownName: "Garchompite Z",
+    };
+
+    expect(doesItemMatchMegaStone("ガブリアスナイトＺ", garchompiteZ)).toBe(true);
+    expect(doesItemMatchMegaStone("Garchompite Z", garchompiteZ)).toBe(true);
+    expect(doesItemMatchMegaStone("garchompitez", garchompiteZ)).toBe(true);
+    expect(doesItemMatchMegaStone("こだわりスカーフ", garchompiteZ)).toBe(false);
+  });
+
+  it("accepts a duplicate Pokemon display label when its canonical hint identifies the branch", () => {
+    expect(isUnresolvedEntityInput("pokemon", "メガマギアナ", "Magearna-Original-Mega")).toBe(false);
+    expect(isUnresolvedEntityInput("pokemon", "メガマギアナ")).toBe(true);
+  });
+
   it("rejects stale account operation results after a newer operation or UID switch", () => {
     expect(isCurrentAccountOperation(4, 4, "alice", "alice")).toBe(true);
     expect(isCurrentAccountOperation(4, 5, "alice", "alice")).toBe(false);

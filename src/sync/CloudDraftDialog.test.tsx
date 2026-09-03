@@ -7,12 +7,13 @@ import {
   type CloudDraftDialogProps,
 } from "./CloudDraftDialog";
 import type { CloudDraftRecord } from "./cloudDraftTypes";
+import { SHARE_SCHEMA_VERSION } from "../ui/shareState";
 
 const makePayload = (targetPokemon: string, scenarioCount: number): string => JSON.stringify({
   schemaVersion: 1,
   savedAt: "2026-08-21T00:00:00.000Z",
   payload: {
-    schemaVersion: 11,
+    schemaVersion: SHARE_SCHEMA_VERSION,
     target: { pokemonInput: targetPokemon },
     scenarios: Array.from({ length: scenarioCount }, () => ({})),
   },

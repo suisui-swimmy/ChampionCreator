@@ -10,11 +10,17 @@ type PokemonOptionEntry = {
   artwork?: string;
 };
 
+type MegaStoneMapping = {
+  baseSpecies: string;
+  megaSpecies: string;
+};
+
 type ItemOptionEntry = {
-  megaStone?: {
-    baseSpecies: string;
-    megaSpecies: string;
-  };
+  id: string;
+  label: string;
+  showdownName: string;
+  megaStone?: MegaStoneMapping;
+  megaStoneMappings?: MegaStoneMapping[];
 };
 
 export type PokemonFormVariantKind = "mega" | "gmax";
@@ -24,6 +30,13 @@ export type PokemonFormVariantOption = {
   value: string;
   label: string;
   showdownName: string;
+  megaStone?: PokemonFormVariantMegaStone;
+};
+
+export type PokemonFormVariantMegaStone = {
+  id: string;
+  value: string;
+  showdownName: string;
 };
 
 const pokemonOptions = pokemonOptionsPayload.entries as PokemonOptionEntry[];
@@ -32,6 +45,7 @@ const itemOptions = itemOptionsPayload.entries as ItemOptionEntry[];
 const optionByExactKey = new Map<string, PokemonOptionEntry>();
 const optionByShowdownName = new Map<string, PokemonOptionEntry>();
 const megaBaseByVariantShowdownName = new Map<string, string>();
+const megaStoneByVariantShowdownName = new Map<string, PokemonFormVariantMegaStone>();
 const megaSearchPrefix = normalizeSearchText("メガ");
 
 const addExactKey = (rawKey: string, option: PokemonOptionEntry) => {
@@ -47,10 +61,18 @@ const getMegaDisplayLabel = (option: PokemonOptionEntry): string | undefined => 
 };
 
 for (const item of itemOptions) {
-  if (!item.megaStone) {
-    continue;
+  const mappings = [
+    ...(item.megaStone ? [item.megaStone] : []),
+    ...(item.megaStoneMappings ?? []),
+  ];
+  for (const mapping of mappings) {
+    megaBaseByVariantShowdownName.set(mapping.megaSpecies, mapping.baseSpecies);
+    megaStoneByVariantShowdownName.set(mapping.megaSpecies, {
+      id: item.id,
+      value: item.label,
+      showdownName: item.showdownName,
+    });
   }
-  megaBaseByVariantShowdownName.set(item.megaStone.megaSpecies, item.megaStone.baseSpecies);
 }
 
 for (const option of pokemonOptions) {
@@ -61,7 +83,7 @@ for (const option of pokemonOptions) {
   for (const text of option.searchText.split(/\s+/u)) {
     addExactKey(text, option);
   }
-  if (/-Mega(?:-[XY])?$/u.test(option.showdownName)) {
+  if (/-Mega(?:-[XYZ])?$/u.test(option.showdownName)) {
     const megaDisplayLabel = getMegaDisplayLabel(option);
     if (megaDisplayLabel) {
       addExactKey(megaDisplayLabel, option);
@@ -70,13 +92,23 @@ for (const option of pokemonOptions) {
 }
 
 const getBaseShowdownName = (showdownName: string): string =>
-  megaBaseByVariantShowdownName.get(showdownName) ?? showdownName.replace(/-(Mega(?:-[XY])?|Gmax)$/u, "");
+  megaBaseByVariantShowdownName.get(showdownName) ?? showdownName.replace(/-(Mega(?:-[XYZ])?|Gmax)$/u, "");
 
-const findOption = (input: string): PokemonOptionEntry | undefined =>
-  optionByExactKey.get(normalizeSearchText(input));
+const findOption = (
+  input: string,
+  canonicalNameHint?: string,
+): PokemonOptionEntry | undefined => {
+  const hintedOption = canonicalNameHint
+    ? optionByShowdownName.get(canonicalNameHint)
+    : undefined;
+  return hintedOption ?? optionByExactKey.get(normalizeSearchText(input));
+};
 
-const getBaseOption = (input: string): PokemonOptionEntry | undefined => {
-  const option = findOption(input);
+const getBaseOption = (
+  input: string,
+  canonicalNameHint?: string,
+): PokemonOptionEntry | undefined => {
+  const option = findOption(input, canonicalNameHint);
   if (!option) {
     return undefined;
   }
@@ -85,7 +117,7 @@ const getBaseOption = (input: string): PokemonOptionEntry | undefined => {
 
 const isVariant = (option: PokemonOptionEntry, kind: PokemonFormVariantKind): boolean => {
   if (kind === "mega") {
-    return /-Mega(?:-[XY])?$/u.test(option.showdownName);
+    return /-Mega(?:-[XYZ])?$/u.test(option.showdownName);
   }
   return option.showdownName.endsWith("-Gmax") && Boolean(option.artwork);
 };
@@ -97,23 +129,36 @@ const toMegaDisplayValue = (option: PokemonOptionEntry): string => {
 const toVariantOption = (
   option: PokemonOptionEntry,
   kind: PokemonFormVariantKind,
-): PokemonFormVariantOption => ({
-  id: option.id,
-  value: kind === "mega" ? toMegaDisplayValue(option) : option.label,
-  label: option.label,
-  showdownName: option.showdownName,
-});
+): PokemonFormVariantOption => {
+  const variantOption: PokemonFormVariantOption = {
+    id: option.id,
+    value: kind === "mega" ? toMegaDisplayValue(option) : option.label,
+    label: option.label,
+    showdownName: option.showdownName,
+  };
+  if (kind === "mega") {
+    const megaStone = megaStoneByVariantShowdownName.get(option.showdownName);
+    if (megaStone) {
+      variantOption.megaStone = megaStone;
+    }
+  }
+  return variantOption;
+};
 
-export const getPokemonBaseFormValue = (input: string): string | null => {
-  const baseOption = getBaseOption(input);
+export const getPokemonBaseFormValue = (
+  input: string,
+  canonicalNameHint?: string,
+): string | null => {
+  const baseOption = getBaseOption(input, canonicalNameHint);
   return baseOption?.label ?? null;
 };
 
 export const getPokemonFormVariantOptions = (
   input: string,
   kind: PokemonFormVariantKind,
+  canonicalNameHint?: string,
 ): PokemonFormVariantOption[] => {
-  const baseOption = getBaseOption(input);
+  const baseOption = getBaseOption(input, canonicalNameHint);
   if (!baseOption) {
     return [];
   }
@@ -133,7 +178,19 @@ export const getPokemonFormVariantOptions = (
     .map((option) => toVariantOption(option, kind));
 };
 
-export const isPokemonFormVariant = (input: string, kind: PokemonFormVariantKind): boolean => {
-  const option = findOption(input);
+export const isPokemonFormVariant = (
+  input: string,
+  kind: PokemonFormVariantKind,
+  canonicalNameHint?: string,
+): boolean => {
+  const option = findOption(input, canonicalNameHint);
   return option ? isVariant(option, kind) : false;
+};
+
+export const getMegaStoneForPokemonForm = (
+  input: string,
+  canonicalNameHint?: string,
+): PokemonFormVariantMegaStone | null => {
+  const option = findOption(input, canonicalNameHint);
+  return option ? megaStoneByVariantShowdownName.get(option.showdownName) ?? null : null;
 };

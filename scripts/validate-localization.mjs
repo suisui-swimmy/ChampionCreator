@@ -19,6 +19,7 @@ const fail = (messages) => {
 const catalog = await readJson("src/data/generated/localized-catalog.gen.json");
 const aliasOverrides = await readJson("src/data/overrides/ja-aliases.json");
 const labelOverrides = await readJson("src/data/overrides/ja-label-overrides.json");
+const megaStoneLabels = await readJson("src/data/overrides/mega-stone-labels-ja.json");
 const optionFiles = [
   "src/data/generated/pokemon-options.gen.json",
   "src/data/generated/move-options.gen.json",
@@ -33,6 +34,7 @@ const warnings = [];
 const catalogKeys = new Set();
 const resolverKeys = new Set();
 const indexKeys = new Map();
+let itemOptionsPayload;
 
 if (catalog.schemaVersion !== 1) {
   errors.push("localized catalog schemaVersion must be 1");
@@ -80,6 +82,10 @@ for (const file of optionFiles) {
   if (!["pokemon", "move", "item", "ability", "nature", "type"].includes(kind)) {
     errors.push(`${file} kind must be an entity option kind`);
     continue;
+  }
+
+  if (kind === "item") {
+    itemOptionsPayload = payload;
   }
 
   for (const entry of payload.entries ?? []) {
@@ -130,6 +136,48 @@ const validateOverridePayload = (payload, label) => {
 
 validateOverridePayload(aliasOverrides, "ja-aliases");
 validateOverridePayload(labelOverrides, "ja-label-overrides");
+
+if (megaStoneLabels.schemaVersion !== 1) {
+  errors.push("mega-stone-labels-ja schemaVersion must be 1");
+}
+if (megaStoneLabels.scope?.officialMegaStones !== megaStoneLabels.entries?.length) {
+  errors.push("mega-stone-labels-ja officialMegaStones must match its entry count");
+}
+
+const itemOptionsById = new Map((itemOptionsPayload?.entries ?? []).map((entry) => [entry.id, entry]));
+const megaStoneLabelIds = new Set();
+for (const entry of megaStoneLabels.entries ?? []) {
+  if (megaStoneLabelIds.has(entry.id)) {
+    errors.push(`mega-stone-labels-ja has duplicate id: ${entry.id}`);
+    continue;
+  }
+  megaStoneLabelIds.add(entry.id);
+
+  const generated = itemOptionsById.get(entry.id);
+  if (!generated) {
+    errors.push(`mega-stone-labels-ja references missing item option: ${entry.id}`);
+    continue;
+  }
+  if (generated.showdownName !== entry.showdownName) {
+    errors.push(`mega-stone-labels-ja canonical mismatch for ${entry.id}`);
+  }
+  if (generated.label !== entry.labelJa || generated.sourceStatus !== "manual") {
+    errors.push(`generated Mega Stone label is stale for ${entry.id}`);
+  }
+  if (!Array.isArray(generated.megaStoneMappings) || generated.megaStoneMappings.length === 0) {
+    errors.push(`generated Mega Stone mappings are missing for ${entry.id}`);
+  }
+  if (entry.championCreatorCurrentLabel) {
+    const aliases = String(generated.searchText ?? "").split(/\s+/).map(normalize);
+    if (!aliases.includes(normalize(entry.championCreatorCurrentLabel))) {
+      errors.push(`generated Mega Stone legacy alias is missing for ${entry.id}`);
+    }
+  }
+}
+
+if (megaStoneLabelIds.has("crucibellite")) {
+  errors.push("mega-stone-labels-ja must not include the non-official Crucibellite");
+}
 
 for (const entry of aliasOverrides.entries ?? []) {
   const aliases = new Set();

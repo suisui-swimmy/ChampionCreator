@@ -310,6 +310,40 @@ describe("buildDefenceSearchInput", () => {
     expect(mixedInput.searchStatKeys).toEqual(["hp", "def", "spd"]);
   });
 
+  it("keeps shared Mega display labels on their selected canonical forms", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "メガマギアナ",
+      pokemonCanonicalName: "Magearna-Original-Mega",
+    };
+    const [scenario] = createDefaultScenarioForms();
+    const scenarios = [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        attackerPokemonInput: "メガシャリタツ",
+        attackerPokemonCanonicalName: "Tatsugiri-Droopy-Mega",
+      }],
+    }];
+
+    const input = buildDefenceSearchInput(target, scenarios);
+
+    expect(input.build.pokemon.canonicalName).toBe("Magearna-Original-Mega");
+    expect(input.scenarios[0].hits[0].attacker.pokemon.canonicalName).toBe("Tatsugiri-Droopy-Mega");
+  });
+
+  it("rejects a stale canonical hint instead of resolving another shared-label form", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "メガマギアナ",
+      pokemonCanonicalName: "Pikachu",
+    };
+
+    expect(() => buildDefenceSearchInput(target, createDefaultScenarioForms())).toThrow(
+      "canonical name に解決できません",
+    );
+  });
+
   it("maps defence HP event effects to their automatic battle roles", () => {
     const [defaultScenario] = createDefaultScenarioForms();
     const input = buildDefenceSearchInput(createDefaultTargetForm(), [{

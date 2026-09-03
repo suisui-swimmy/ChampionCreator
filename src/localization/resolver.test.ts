@@ -5,6 +5,7 @@ import {
   getMatchingPokemonAbilityInputOptions,
   getPokemonAbilityInputOptions,
   resolveEntity,
+  resolveEntityWithCanonicalHint,
 } from "./resolver";
 
 describe("resolveEntity", () => {
@@ -62,6 +63,59 @@ describe("resolveEntity", () => {
         }),
       ]),
     );
+  });
+
+  it("uses explicit formal Mega Stone labels while keeping former generated labels searchable", () => {
+    expect(resolveEntity("item", "マフォクシナイト")).toMatchObject({
+      status: "exact",
+      canonicalName: "Delphoxite",
+      displayNameJa: "マフォクシナイト",
+      sourceStatus: "manual",
+    });
+    expect(resolveEntity("item", "マフォクシーナイト")).toMatchObject({
+      status: "alias",
+      canonicalName: "Delphoxite",
+      displayNameJa: "マフォクシナイト",
+    });
+    expect(resolveEntity("item", "ガブリアスナイトZ")).toMatchObject({
+      status: "exact",
+      canonicalName: "Garchompite Z",
+      displayNameJa: "ガブリアスナイトＺ",
+    });
+    expect(getEntityInputOptions("item")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: "ガブリアスナイトＺ",
+          canonicalName: "Garchompite Z",
+        }),
+      ]),
+    );
+  });
+
+  it("uses a canonical hint to resolve intentionally shared Mega display labels", () => {
+    expect(resolveEntityWithCanonicalHint(
+      "pokemon",
+      "メガマギアナ",
+      "Magearna-Original-Mega",
+    )).toMatchObject({
+      status: "exact",
+      canonicalName: "Magearna-Original-Mega",
+      displayNameJa: "メガマギアナ",
+    });
+    expect(resolveEntityWithCanonicalHint(
+      "pokemon",
+      "メガシャリタツ",
+      "Tatsugiri-Droopy-Mega",
+    )).toMatchObject({
+      status: "exact",
+      canonicalName: "Tatsugiri-Droopy-Mega",
+      displayNameJa: "メガシャリタツ",
+    });
+    expect(resolveEntityWithCanonicalHint(
+      "pokemon",
+      "メガマギアナ",
+      "Pikachu",
+    ).status).toBe("not-found");
   });
 
   it("resolves generated Pokemon form labels that would otherwise collide with internal variants", () => {

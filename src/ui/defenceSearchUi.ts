@@ -46,7 +46,7 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 import { toEntityRef } from "../domain/model";
-import { resolveEntity } from "../localization/resolver";
+import { resolveEntity, resolveEntityWithCanonicalHint } from "../localization/resolver";
 import {
   buildOffenseHit,
   calculateOffenseAdjustment,
@@ -100,6 +100,7 @@ export interface HpEventFormState {
 
 export interface TargetFormState {
   pokemonInput: string;
+  pokemonCanonicalName?: string;
   natureInput: string;
   abilityInput: string;
   itemInput: string;
@@ -116,6 +117,7 @@ export interface ScenarioAttackFormState {
   id: string;
   label: string;
   attackerPokemonInput: string;
+  attackerPokemonCanonicalName?: string;
   attackerNatureInput: string;
   attackerAbilityInput: string;
   attackerItemInput: string;
@@ -839,7 +841,18 @@ const toBuild = (form: BuildFormState, id: string): Build => {
   const teraType = form.teraEnabled
     ? mustResolve("type", form.teraTypeInput, "テラスタイプ")
     : undefined;
-  const pokemon = mustResolve("pokemon", form.pokemonInput, "ポケモン");
+  const pokemonResult = resolveEntityWithCanonicalHint(
+    "pokemon",
+    form.pokemonInput,
+    form.pokemonCanonicalName,
+  );
+  const pokemon = toEntityRef(pokemonResult, "pokemon");
+  if (!pokemon) {
+    const suffix = pokemonResult.candidates.length > 0
+      ? `候補: ${pokemonResult.candidates.map((candidate) => candidate.displayNameJa).join(", ")}`
+      : "候補なし";
+    throw new Error(`ポケモン「${form.pokemonInput}」を canonical name に解決できません (${pokemonResult.status}, ${suffix})`);
+  }
   const isGmaxForm = pokemon.canonicalName.endsWith("-Gmax");
 
   return {
@@ -869,6 +882,7 @@ export const buildScenarioAttackBuildFromUi = (
 ): Build => toBuild(
   {
     pokemonInput: attackForm.attackerPokemonInput,
+    pokemonCanonicalName: attackForm.attackerPokemonCanonicalName,
     natureInput: attackForm.attackerNatureInput,
     abilityInput: attackForm.attackerAbilityInput,
     itemInput: attackForm.attackerItemInput,

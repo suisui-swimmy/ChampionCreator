@@ -23,7 +23,13 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 11;
+export const SHARE_SCHEMA_VERSION = 12;
+
+/** Schema version in which the current speed-state fields were introduced. */
+export const SPEED_STATE_SCHEMA_VERSION = 11;
+
+/** Schema version in which canonical Pokemon hints became part of share state. */
+export const CANONICAL_POKEMON_HINT_SCHEMA_VERSION = 12;
 
 export interface ShareStateDocument {
   schemaVersion: typeof SHARE_SCHEMA_VERSION;
@@ -48,7 +54,50 @@ const speedManualMultipliers = new Set<ScenarioAttackFormState["speedItemMultipl
 const speedOrderModes = new Set<ScenarioAttackFormState["speedOrderMode"]>(["normal", "trick-room"]);
 const movePowerModes = new Set<MovePowerMode>(["auto", "assisted", "manual"]);
 const levelInputModes = new Set<LevelInputMode>(["auto", "manual"]);
-type SupportedShareSchemaVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | typeof SHARE_SCHEMA_VERSION;
+type SupportedShareSchemaVersion =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | typeof SHARE_SCHEMA_VERSION;
+
+type PokemonCanonicalHintField = "pokemonCanonicalName" | "attackerPokemonCanonicalName";
+
+const normalizePokemonCanonicalHint = (
+  value: unknown,
+  field: PokemonCanonicalHintField,
+  pokemonInput: unknown,
+  fieldLabel: string,
+  sourceSchemaVersion: SupportedShareSchemaVersion,
+): string | undefined => {
+  if (sourceSchemaVersion < CANONICAL_POKEMON_HINT_SCHEMA_VERSION) {
+    return undefined;
+  }
+  if (!isRecord(value) || !(field in value)) {
+    return undefined;
+  }
+
+  const canonicalHint = value[field];
+  if (typeof canonicalHint !== "string") {
+    throw new Error(`条件JSONの${fieldLabel}に不正な ${field} があります`);
+  }
+  if (typeof pokemonInput !== "string") {
+    throw new Error(`条件JSONの${fieldLabel}と ${field} が一致しません`);
+  }
+
+  const resolved = resolveEntity("pokemon", pokemonInput);
+  if (!resolved.candidates.some((candidate) => candidate.canonicalName === canonicalHint)) {
+    throw new Error(`条件JSONの${fieldLabel}と一致しない ${field} があります`);
+  }
+  return canonicalHint;
+};
 
 const normalizeBeatUpParticipants = (
   value: unknown,
@@ -181,6 +230,13 @@ const normalizeTarget = (
 ): TargetFormState => {
   const defaults = createDefaultTargetForm();
   const input = mergeObject(defaults, value) as TargetFormState & Record<string, unknown>;
+  const pokemonCanonicalName = normalizePokemonCanonicalHint(
+    value,
+    "pokemonCanonicalName",
+    input.pokemonInput,
+    "調整対象",
+    sourceSchemaVersion,
+  );
   const hasLevel = isRecord(value) && "level" in value;
   const hasLevelMode = isRecord(value) && "levelMode" in value;
   let level = Number.isInteger(input.level) && input.level >= 1 && input.level <= 100
@@ -213,9 +269,13 @@ const normalizeTarget = (
     ...input,
     statPoints: mergeObject(defaults.statPoints, input.statPoints),
     boosts: mergeObject(defaults.boosts, input.boosts),
+    pokemonCanonicalName,
     level,
     levelMode,
   } as TargetFormState;
+  if (pokemonCanonicalName === undefined) {
+    delete normalized.pokemonCanonicalName;
+  }
   delete (normalized as TargetFormState & { status?: unknown }).status;
   return normalized;
 };
@@ -228,6 +288,13 @@ const normalizeAttack = (
 ): ScenarioAttackFormState => {
   const defaults = createDefaultScenarioAttackForm(`attack-${index + 1}`, `攻撃${String.fromCharCode(65 + index)}`);
   const input = mergeObject(defaults, value) as ScenarioAttackFormState & Record<string, unknown>;
+  const attackerPokemonCanonicalName = normalizePokemonCanonicalHint(
+    value,
+    "attackerPokemonCanonicalName",
+    input.attackerPokemonInput,
+    `攻撃${index + 1}`,
+    sourceSchemaVersion,
+  );
   const hasDefenderStatus = isRecord(value) && "defenderStatus" in value;
   const hasSpeedTargetMode = isRecord(value) && "speedTargetMode" in value;
   const hasSpeedComparison = isRecord(value) && "speedComparison" in value;
@@ -328,14 +395,14 @@ const normalizeAttack = (
   const legacySpeedModifier = hasValidLegacySpeedMoveModifier
     ? legacySpeedMoveModifier as LegacySpeedMoveModifier
     : undefined;
-  const speedOrderMode = sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+  const speedOrderMode = sourceSchemaVersion >= SPEED_STATE_SCHEMA_VERSION
     ? hasSpeedOrderMode
       && typeof input.speedOrderMode === "string"
       && speedOrderModes.has(input.speedOrderMode as ScenarioAttackFormState["speedOrderMode"])
       ? input.speedOrderMode as ScenarioAttackFormState["speedOrderMode"]
       : defaults.speedOrderMode
     : legacySpeedModifier === "trick-room" ? "trick-room" : "normal";
-  const speedOpponentTailwind = sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+  const speedOpponentTailwind = sourceSchemaVersion >= SPEED_STATE_SCHEMA_VERSION
     ? hasSpeedOpponentTailwind && typeof input.speedOpponentTailwind === "boolean"
       ? input.speedOpponentTailwind
       : defaults.speedOpponentTailwind
@@ -357,22 +424,22 @@ const normalizeAttack = (
       && speedComparisons.has(input.speedComparison as ScenarioAttackFormState["speedComparison"])
       ? input.speedComparison as ScenarioAttackFormState["speedComparison"]
       : defaults.speedComparison,
-    speedTargetStatus: sourceSchemaVersion >= SHARE_SCHEMA_VERSION && hasSpeedTargetStatus
+    speedTargetStatus: sourceSchemaVersion >= SPEED_STATE_SCHEMA_VERSION && hasSpeedTargetStatus
       ? normalizePokemonStatus(input.speedTargetStatus, defaults.speedTargetStatus)
       : defaults.speedTargetStatus,
-    speedTargetItemMultiplier: sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+    speedTargetItemMultiplier: sourceSchemaVersion >= SPEED_STATE_SCHEMA_VERSION
       && hasSpeedTargetItemMultiplier
       && typeof input.speedTargetItemMultiplier === "string"
       && speedManualMultipliers.has(input.speedTargetItemMultiplier as ScenarioAttackFormState["speedTargetItemMultiplier"])
       ? input.speedTargetItemMultiplier as ScenarioAttackFormState["speedTargetItemMultiplier"]
       : defaults.speedTargetItemMultiplier,
-    speedTargetAbilityMultiplier: sourceSchemaVersion >= SHARE_SCHEMA_VERSION
+    speedTargetAbilityMultiplier: sourceSchemaVersion >= SPEED_STATE_SCHEMA_VERSION
       && hasSpeedTargetAbilityMultiplier
       && typeof input.speedTargetAbilityMultiplier === "string"
       && speedManualMultipliers.has(input.speedTargetAbilityMultiplier as ScenarioAttackFormState["speedTargetAbilityMultiplier"])
       ? input.speedTargetAbilityMultiplier as ScenarioAttackFormState["speedTargetAbilityMultiplier"]
       : defaults.speedTargetAbilityMultiplier,
-    speedTargetTailwind: sourceSchemaVersion >= SHARE_SCHEMA_VERSION && hasSpeedTargetTailwind
+    speedTargetTailwind: sourceSchemaVersion >= SPEED_STATE_SCHEMA_VERSION && hasSpeedTargetTailwind
       && typeof input.speedTargetTailwind === "boolean"
       ? input.speedTargetTailwind
       : defaults.speedTargetTailwind,
@@ -391,6 +458,7 @@ const normalizeAttack = (
     movePowerMode,
     movePowerValue,
     beatUpParticipants,
+    attackerPokemonCanonicalName,
     gameType,
     defenderStatus: hasDefenderStatus
       ? normalizePokemonStatus(input.defenderStatus, defaults.defenderStatus)
@@ -400,6 +468,9 @@ const normalizeAttack = (
     attackerBoosts: mergeObject(defaults.attackerBoosts, input.attackerBoosts),
     defenderBoosts: mergeObject(defaults.defenderBoosts, input.defenderBoosts),
   } as ScenarioAttackFormState;
+  if (attackerPokemonCanonicalName === undefined) {
+    delete normalized.attackerPokemonCanonicalName;
+  }
   // speedMoveModifier was part of schema <=10 only. Do not let an unknown
   // legacy key leak back into the current form state after migration.
   delete (normalized as ScenarioAttackFormState & Record<string, unknown>).speedMoveModifier;
@@ -453,6 +524,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 11
       && parsed.schemaVersion !== 10
       && parsed.schemaVersion !== 9
       && parsed.schemaVersion !== 8

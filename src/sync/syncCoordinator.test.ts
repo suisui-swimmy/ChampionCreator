@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createDefaultBoxExampleEntry, type BoxEntry } from "../ui/boxStorage";
 import { createDefaultScenarioForms } from "../ui/defenceSearchUi";
 import type { EnemyBoxEntry } from "../ui/enemyBoxStorage";
+import { SHARE_SCHEMA_VERSION } from "../ui/shareState";
 import { createMemorySyncRepository } from "./localSyncRepository";
 import {
   createSyncCoordinator,
@@ -34,7 +35,7 @@ const enemyEntry = (id: string, name = id): EnemyBoxEntry => ({
     statPointSummary: "0シナリオ / 0攻撃",
   },
   payload: {
-    schemaVersion: 11,
+    schemaVersion: SHARE_SCHEMA_VERSION,
     scenarios: createDefaultScenarioForms(),
   },
 });
