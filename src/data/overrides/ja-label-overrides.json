@@ -5,9 +5,11 @@
     {
       "kind": "pokemon",
       "id": "maushold",
-      "displayNameJa": "イッカネズミ",
+      "displayNameJa": "イッカネズミ ３びきかぞく",
+      "artwork": "/assets/official-artwork/925-family-of-three.png",
+      "artworkSource": "others/sprites-master/sprites/pokemon/other/official-artwork/10257.png",
       "sourceStatus": "manual",
-      "note": "Avoids the generated duplicate 4-family label so イッカネズミ ４ひきかぞく resolves to Maushold-Four."
+      "note": "Makes the Showdown base Three-family form explicit and keeps Four-family mapped to Maushold-Four."
     },
     {
       "kind": "pokemon",

@@ -199,6 +199,34 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0].attackerPokemonCanonicalName).toBe("Tatsugiri-Droopy-Mega");
   });
 
+  it("round-trips display-only female forms through their shared calculation canonical", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "カエンジシ メスのすがた",
+      pokemonCanonicalName: "Pyroar",
+    };
+    const scenarios = [{
+      ...scenario,
+      attacks: [{
+        ...scenario.attacks[0],
+        attackerPokemonInput: "ブルンゲル メスのすがた",
+        attackerPokemonCanonicalName: "Jellicent",
+      }],
+    }];
+
+    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios));
+
+    expect(parsed.target).toMatchObject({
+      pokemonInput: "カエンジシ メスのすがた",
+      pokemonCanonicalName: "Pyroar",
+    });
+    expect(parsed.scenarios[0].attacks[0]).toMatchObject({
+      attackerPokemonInput: "ブルンゲル メスのすがた",
+      attackerPokemonCanonicalName: "Jellicent",
+    });
+  });
+
   it("drops canonical Pokemon hints from schema v1-v11 during migration", () => {
     const [scenario] = createDefaultScenarioForms();
     const parsed = parseShareStateDocument(JSON.stringify({

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "manual-overrides-2026-06-13",
+  "dataVersion": "manual-overrides-2026-09-04",
   "entries": [
     {
       "kind": "pokemon",
@@ -15,6 +15,55 @@
       "aliasesJa": ["ドラゴン"],
       "sourceStatus": "manual",
       "note": "Used to verify ambiguous resolver output."
+    },
+    {
+      "kind": "pokemon",
+      "id": "maushold",
+      "aliasesJa": ["イッカネズミ"],
+      "sourceStatus": "manual",
+      "note": "Preserves the former generic label after exposing the Three- and Four-family forms explicitly."
+    },
+    {
+      "kind": "pokemon",
+      "id": "frillish",
+      "aliasesJa": [],
+      "displayAliasesJa": [
+        {
+          "displayNameJa": "プルリル メスのすがた",
+          "artwork": "/assets/pokemon-home/592-female.png",
+          "artworkSource": "others/sprites-master/sprites/pokemon/other/home/female/592.png"
+        }
+      ],
+      "sourceStatus": "manual",
+      "note": "Exposes the visual female form while sharing the Frillish calculation canonical."
+    },
+    {
+      "kind": "pokemon",
+      "id": "jellicent",
+      "aliasesJa": [],
+      "displayAliasesJa": [
+        {
+          "displayNameJa": "ブルンゲル メスのすがた",
+          "artwork": "/assets/pokemon-home/593-female.png",
+          "artworkSource": "others/sprites-master/sprites/pokemon/other/home/female/593.png"
+        }
+      ],
+      "sourceStatus": "manual",
+      "note": "Exposes the visual female form while sharing the Jellicent calculation canonical."
+    },
+    {
+      "kind": "pokemon",
+      "id": "pyroar",
+      "aliasesJa": [],
+      "displayAliasesJa": [
+        {
+          "displayNameJa": "カエンジシ メスのすがた",
+          "artwork": "/assets/pokemon-home/668-female.png",
+          "artworkSource": "others/sprites-master/sprites/pokemon/other/home/female/668.png"
+        }
+      ],
+      "sourceStatus": "manual",
+      "note": "Exposes the visual female form while sharing the Pyroar calculation canonical."
     },
     {
       "kind": "move",

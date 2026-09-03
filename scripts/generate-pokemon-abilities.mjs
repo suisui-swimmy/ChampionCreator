@@ -98,6 +98,11 @@ const pokeapiCandidates = [
   })),
 ];
 
+const explicitPokeapiIdentifierByPokemonOptionId = new Map([
+  ["maushold", "maushold-family-of-three"],
+  ["mausholdfour", "maushold-family-of-four"],
+]);
+
 const findUniquePokemonMatch = (matches) => {
   const uniqueByPokemonId = new Map(matches.map((candidate) => [candidate.pokemonId, candidate]));
   return uniqueByPokemonId.size === 1
@@ -199,7 +204,19 @@ const toCalcAbilityEntries = (pokemonOption, fallbackReason = "missing-pokeapi-m
 };
 
 const toPokeapiAbilityEntries = (pokemonOption) => {
-  const pokeapiMatch = findPokeapiMatch(pokemonOption.showdownName);
+  const explicitPokeapiIdentifier = explicitPokeapiIdentifierByPokemonOptionId.get(pokemonOption.id);
+  const formFamilyPokeapiIdentifier = pokemonOption.fallback?.reason === "same-form-family"
+    ? pokemonOption.fallback.from
+    : undefined;
+  const canonicalPokeapiMatch = findPokeapiMatch(pokemonOption.showdownName);
+  const preferredPokeapiIdentifier = explicitPokeapiIdentifier
+    ?? (canonicalPokeapiMatch ? undefined : formFamilyPokeapiIdentifier);
+  const pokeapiMatch = preferredPokeapiIdentifier
+    ? pokeapiMatchesByIdentifier.get(normalizeIdentifier(preferredPokeapiIdentifier))
+    : canonicalPokeapiMatch;
+  if (preferredPokeapiIdentifier && !pokeapiMatch) {
+    throw new Error(`Missing preferred PokeAPI match ${preferredPokeapiIdentifier} for ${pokemonOption.showdownName}`);
+  }
   if (!pokeapiMatch) {
     return toCalcAbilityEntries(pokemonOption);
   }

@@ -6,7 +6,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
 const publicRoot = resolve(projectRoot, "public");
 const pokemonOptionsPath = resolve(projectRoot, "src/data/generated/pokemon-options.gen.json");
+const aliasOverridesPath = resolve(projectRoot, "src/data/overrides/ja-aliases.json");
+const labelOverridesPath = resolve(projectRoot, "src/data/overrides/ja-label-overrides.json");
 const officialArtworkDir = resolve(publicRoot, "assets/official-artwork");
+const pokemonHomeArtworkDir = resolve(publicRoot, "assets/pokemon-home");
 
 const toPublicPath = (assetPath) =>
   resolve(publicRoot, String(assetPath).replace(/^\/+/, "").replaceAll("/", sep));
@@ -33,9 +36,21 @@ const collectFiles = async (dirPath) => {
 };
 
 const payload = JSON.parse(await readFile(pokemonOptionsPath, "utf8"));
+const aliasOverrides = JSON.parse(await readFile(aliasOverridesPath, "utf8"));
+const labelOverrides = JSON.parse(await readFile(labelOverridesPath, "utf8"));
 const entries = Array.isArray(payload.entries) ? payload.entries : [];
+const displayAliasArtworkRefs = (aliasOverrides.entries ?? []).flatMap((entry) => (
+  (entry.displayAliasesJa ?? []).map((displayAlias) => displayAlias.artwork)
+)).filter((artwork) => typeof artwork === "string");
+const labelOverrideArtworkRefs = (labelOverrides.entries ?? [])
+  .map((entry) => entry.artwork)
+  .filter((artwork) => typeof artwork === "string");
 const artworkRefs = new Set(
-  entries.map((entry) => entry.artwork).filter((artwork) => typeof artwork === "string"),
+  [
+    ...entries.map((entry) => entry.artwork),
+    ...displayAliasArtworkRefs,
+    ...labelOverrideArtworkRefs,
+  ].filter((artwork) => typeof artwork === "string"),
 );
 
 const invalidRefs = [];
@@ -59,11 +74,13 @@ for (const artworkRef of artworkRefs) {
   }
 }
 
-let assetFiles = [];
-try {
-  assetFiles = await collectFiles(officialArtworkDir);
-} catch {
-  assetFiles = [];
+const assetFiles = [];
+for (const artworkDir of [officialArtworkDir, pokemonHomeArtworkDir]) {
+  try {
+    assetFiles.push(...(await collectFiles(artworkDir)));
+  } catch {
+    // An optional artwork directory may not exist until it has its first asset.
+  }
 }
 
 const pngAssetFiles = assetFiles.filter((filePath) => filePath.toLowerCase().endsWith(".png"));
@@ -75,6 +92,8 @@ const totalAssetBytes = (
 
 const summary = {
   optionEntries: entries.length,
+  displayAliasArtworkRefs: displayAliasArtworkRefs.length,
+  labelOverrideArtworkRefs: labelOverrideArtworkRefs.length,
   uniqueArtworkRefs: artworkRefs.size,
   availablePngAssets: pngAssetFiles.length,
   missingRefs: missingRefs.length,

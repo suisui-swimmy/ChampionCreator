@@ -56,6 +56,7 @@ interface SearchEntry {
   matchedBy: ResolveMatchedBy;
   matchText: string;
   sourceStatus?: SourceStatus;
+  displayNameJa?: string;
 }
 
 interface PokemonAbilityPayload {
@@ -210,6 +211,15 @@ const buildIndex = (entries: LocalizedCatalogEntry[]) => {
         sourceStatus: aliasOverride?.sourceStatus,
       });
     }
+    for (const displayAlias of aliasOverride?.displayAliasesJa ?? []) {
+      addIndexValue(aliasIndex, displayAlias.displayNameJa, {
+        entry,
+        matchedBy: "manualAlias",
+        matchText: displayAlias.displayNameJa,
+        sourceStatus: aliasOverride?.sourceStatus,
+        displayNameJa: displayAlias.displayNameJa,
+      });
+    }
   }
 
   return { exactIndex, aliasIndex };
@@ -256,6 +266,15 @@ const buildInputOptions = (entries: LocalizedCatalogEntry[]): EntityInputOption[
       canonicalName: entry.canonicalName,
       displayNameJa: entry.displayNameJa,
     });
+    const aliasOverride = aliasOverridesByKey.get(`${entry.kind}:${entry.id}`);
+    for (const displayAlias of aliasOverride?.displayAliasesJa ?? []) {
+      addInputOption(optionsByKey, {
+        kind: entry.kind,
+        value: displayAlias.displayNameJa,
+        canonicalName: entry.canonicalName,
+        displayNameJa: displayAlias.displayNameJa,
+      });
+    }
   }
 
   return Array.from(optionsByKey.values()).sort((a, b) => (
@@ -281,11 +300,11 @@ const pokemonAbilityOptionsByCanonicalName = new Map(
   ]),
 );
 
-const toCandidate = ({ entry, matchedBy, matchText, sourceStatus }: SearchEntry): ResolveCandidate => ({
+const toCandidate = ({ entry, matchedBy, matchText, sourceStatus, displayNameJa }: SearchEntry): ResolveCandidate => ({
   kind: entry.kind,
   canonicalName: entry.canonicalName,
   calcId: entry.id,
-  displayNameJa: entry.displayNameJa,
+  displayNameJa: displayNameJa ?? entry.displayNameJa,
   sourceStatus: sourceStatus ?? entry.sourceStatus,
   matchedBy,
   matchText,

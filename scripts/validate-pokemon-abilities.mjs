@@ -53,6 +53,9 @@ const abilityOptions = await readJson("src/data/generated/ability-options.gen.js
 const pokemonAbilities = await readJson("src/data/generated/pokemon-abilities.gen.json");
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 const pokeapiPokemon = await readCsv("others/pokeapi/data/v2/csv/pokemon.csv");
+const pokeapiForms = await readCsv("others/pokeapi/data/v2/csv/pokemon_forms.csv");
+const pokeapiAbilities = await readCsv("others/pokeapi/data/v2/csv/abilities.csv");
+const pokeapiPokemonAbilities = await readCsv("others/pokeapi/data/v2/csv/pokemon_abilities.csv");
 
 const errors = [];
 const warnings = [];
@@ -62,6 +65,25 @@ const missingAbilityOptionIds = new Set();
 const pokemonOptionsById = new Map(pokemonOptions.entries.map((entry) => [entry.id, entry]));
 const abilityEntriesByPokemonId = new Map();
 const validSources = new Set(["pokeapi", "calc-fallback"]);
+const pokeapiAbilityIdByNumericId = new Map(
+  pokeapiAbilities.map((entry) => [entry.id, toID(entry.identifier)]),
+);
+const pokeapiAbilityRowsByPokemonId = new Map();
+for (const row of pokeapiPokemonAbilities) {
+  const rows = pokeapiAbilityRowsByPokemonId.get(row.pokemon_id) ?? [];
+  rows.push(row);
+  pokeapiAbilityRowsByPokemonId.set(row.pokemon_id, rows);
+}
+const pokeapiMatchByIdentifier = new Map();
+for (const entry of pokeapiPokemon) {
+  pokeapiMatchByIdentifier.set(toID(entry.identifier), { pokemonId: entry.id, identifier: entry.identifier });
+}
+for (const entry of pokeapiForms) {
+  const identifier = toID(entry.identifier);
+  if (!pokeapiMatchByIdentifier.has(identifier)) {
+    pokeapiMatchByIdentifier.set(identifier, { pokemonId: entry.pokemon_id, identifier: entry.identifier });
+  }
+}
 const defaultPokeapiPokemon = pokeapiPokemon
   .filter((entry) => entry.is_default === "1")
   .map((entry) => ({
@@ -78,6 +100,14 @@ const findUniqueDefaultPokeapiPokemon = (showdownName) => {
     ? Array.from(uniqueByPokemonId.values())[0]
     : undefined;
 };
+
+const getPokeapiAbilityIds = (pokemonId) => (
+  (pokeapiAbilityRowsByPokemonId.get(pokemonId) ?? [])
+    .slice()
+    .sort((a, b) => Number(a.slot) - Number(b.slot))
+    .map((row) => pokeapiAbilityIdByNumericId.get(row.ability_id))
+    .filter(Boolean)
+);
 
 const calcExpectedAbilities = (pokemonOption) => (
   Object.entries(speciesData[pokemonOption.showdownName]?.abilities ?? {}).flatMap(([slot, showdownName]) => {
@@ -188,6 +218,18 @@ for (const entry of pokemonAbilities.entries ?? []) {
         errors.push(
           `${key} should use PokeAPI species default ${defaultPokeapiMatch.identifier} instead of calc fallback`,
         );
+      }
+    }
+    if (pokemonOption.fallback?.reason === "same-form-family" && pokemonOption.fallback.from) {
+      const formFamilyMatch = pokeapiMatchByIdentifier.get(toID(pokemonOption.fallback.from));
+      if (formFamilyMatch) {
+        const pokeapiAbilityIds = getPokeapiAbilityIds(formFamilyMatch.pokemonId);
+        const containsCalcAbilities = expectedCalcAbilities.every(({ id }) => pokeapiAbilityIds.includes(id));
+        if (containsCalcAbilities && pokeapiAbilityIds.length > 0) {
+          errors.push(
+            `${key} should use PokeAPI form-family match ${formFamilyMatch.identifier} instead of calc fallback`,
+          );
+        }
       }
     }
     warnings.push(`${entry.showdownName} uses @smogon/calc fallback abilities`);

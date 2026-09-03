@@ -192,11 +192,41 @@ for (const entry of aliasOverrides.entries ?? []) {
     }
     aliases.add(normalized);
   }
+  if (entry.displayAliasesJa !== undefined && !Array.isArray(entry.displayAliasesJa)) {
+    errors.push(`ja-aliases ${entry.kind}:${entry.id} displayAliasesJa must be an array`);
+    continue;
+  }
+  for (const displayAlias of entry.displayAliasesJa ?? []) {
+    if (entry.kind !== "pokemon") {
+      errors.push(`ja-aliases ${entry.kind}:${entry.id} displayAliasesJa is only supported for pokemon`);
+    }
+    if (!displayAlias || typeof displayAlias.displayNameJa !== "string") {
+      errors.push(`ja-aliases ${entry.kind}:${entry.id} has invalid display alias`);
+      continue;
+    }
+    const normalized = normalize(displayAlias.displayNameJa);
+    if (!normalized) {
+      errors.push(`ja-aliases ${entry.kind}:${entry.id} has empty display alias`);
+      continue;
+    }
+    if (aliases.has(normalized)) {
+      errors.push(`ja-aliases ${entry.kind}:${entry.id} has duplicate alias: ${displayAlias.displayNameJa}`);
+    }
+    aliases.add(normalized);
+    if (displayAlias.artwork !== undefined
+      && (typeof displayAlias.artwork !== "string" || !displayAlias.artwork.startsWith("/assets/"))) {
+      errors.push(`ja-aliases ${entry.kind}:${entry.id} has invalid display alias artwork`);
+    }
+  }
 }
 
 for (const entry of labelOverrides.entries ?? []) {
   if (typeof entry.displayNameJa !== "string" || entry.displayNameJa.trim() === "") {
     errors.push(`ja-label-overrides ${entry.kind}:${entry.id} has empty displayNameJa`);
+  }
+  if (entry.artwork !== undefined
+    && (entry.kind !== "pokemon" || typeof entry.artwork !== "string" || !entry.artwork.startsWith("/assets/"))) {
+    errors.push(`ja-label-overrides ${entry.kind}:${entry.id} has invalid artwork`);
   }
 }
 

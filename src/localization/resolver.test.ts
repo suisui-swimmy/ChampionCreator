@@ -149,10 +149,15 @@ describe("resolveEntity", () => {
   });
 
   it("resolves generated Pokemon form labels that would otherwise collide with internal variants", () => {
-    expect(resolveEntity("pokemon", "イッカネズミ")).toMatchObject({
+    expect(resolveEntity("pokemon", "イッカネズミ ３びきかぞく")).toMatchObject({
       status: "exact",
       canonicalName: "Maushold",
-      displayNameJa: "イッカネズミ",
+      displayNameJa: "イッカネズミ ３びきかぞく",
+    });
+    expect(resolveEntity("pokemon", "イッカネズミ")).toMatchObject({
+      status: "alias",
+      canonicalName: "Maushold",
+      displayNameJa: "イッカネズミ ３びきかぞく",
     });
     expect(resolveEntity("pokemon", "イッカネズミ ４ひきかぞく")).toMatchObject({
       status: "exact",
@@ -198,6 +203,67 @@ describe("resolveEntity", () => {
       canonicalName: "Vivillon-Pokeball",
       displayNameJa: "ビビヨン ボールのもよう",
     });
+  });
+
+  it.each([
+    ["プルリル メスのすがた", "Frillish"],
+    ["ブルンゲル メスのすがた", "Jellicent"],
+    ["カエンジシ メスのすがた", "Pyroar"],
+  ] as const)("exposes the display-only female form %s with shared canonical %s", (displayNameJa, canonicalName) => {
+    expect(resolveEntity("pokemon", displayNameJa)).toMatchObject({
+      status: "alias",
+      canonicalName,
+      displayNameJa,
+      sourceStatus: "manual",
+    });
+    expect(getEntityInputOptions("pokemon")).toContainEqual(expect.objectContaining({
+      value: displayNameJa,
+      canonicalName,
+      displayNameJa,
+    }));
+    expect(resolveEntity("pokemon", canonicalName)).toMatchObject({
+      status: "exact",
+      canonicalName,
+    });
+  });
+
+  it("normalizes the user-provided full-width separator for female Pyroar", () => {
+    expect(resolveEntity("pokemon", "カエンジシ　メスのすがた")).toMatchObject({
+      status: "alias",
+      canonicalName: "Pyroar",
+      displayNameJa: "カエンジシ メスのすがた",
+    });
+  });
+
+  it("keeps every explicit PokeAPI male/female form pair selectable", () => {
+    const cases = [
+      ["プルリル オスのすがた", "Frillish"],
+      ["プルリル メスのすがた", "Frillish"],
+      ["ブルンゲル オスのすがた", "Jellicent"],
+      ["ブルンゲル メスのすがた", "Jellicent"],
+      ["カエンジシ オスのすがた", "Pyroar"],
+      ["カエンジシ メスのすがた", "Pyroar"],
+      ["ニャオニクス オスのすがた", "Meowstic"],
+      ["ニャオニクス メスのすがた", "Meowstic-F"],
+      ["イエッサン オスのすがた", "Indeedee"],
+      ["イエッサン メスのすがた", "Indeedee-F"],
+      ["イダイトウ オスのすがた", "Basculegion"],
+      ["イダイトウ メスのすがた", "Basculegion-F"],
+      ["パフュートン オスのすがた", "Oinkologne"],
+      ["パフュートン メスのすがた", "Oinkologne-F"],
+    ] as const;
+    const inputOptions = getEntityInputOptions("pokemon");
+
+    for (const [displayNameJa, canonicalName] of cases) {
+      expect(inputOptions).toContainEqual(expect.objectContaining({
+        value: displayNameJa,
+        canonicalName,
+      }));
+      expect(resolveEntity("pokemon", displayNameJa)).toMatchObject({
+        canonicalName,
+        displayNameJa,
+      });
+    }
   });
 
   it("keeps tea Pokemon form suggestions unique and resolvable", () => {
@@ -407,6 +473,31 @@ describe("resolveEntity", () => {
         canonicalName,
       }))).toEqual(expectedAbilities);
     }
+  });
+
+  it("uses the complete legal ability list for both Maushold forms", () => {
+    const expectedAbilities = [
+      { value: "フレンドガード", canonicalName: "Friend Guard" },
+      { value: "ほおぶくろ", canonicalName: "Cheek Pouch" },
+      { value: "テクニシャン", canonicalName: "Technician" },
+    ];
+
+    for (const pokemon of ["Maushold", "Maushold-Four"]) {
+      expect(getPokemonAbilityInputOptions(pokemon)?.map(({ value, canonicalName }) => ({
+        value,
+        canonicalName,
+      }))).toEqual(expectedAbilities);
+    }
+  });
+
+  it("uses the complete legal ability list for Galarian Darmanitan's standard form", () => {
+    expect(getPokemonAbilityInputOptions("Darmanitan-Galar")?.map(({ value, canonicalName }) => ({
+      value,
+      canonicalName,
+    }))).toEqual([
+      { value: "ごりむちゅう", canonicalName: "Gorilla Tactics" },
+      { value: "ダルマモード", canonicalName: "Zen Mode" },
+    ]);
   });
 
   it("keeps Pokemon ability dropdown options unfiltered while free-text completion can still narrow", () => {

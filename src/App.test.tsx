@@ -1697,7 +1697,11 @@ describe("App", () => {
   });
 
   it("does not mark selectable Pokemon form suggestions as unresolved", () => {
+    expect(isUnresolvedEntityInput("pokemon", "イッカネズミ ３びきかぞく")).toBe(false);
     expect(isUnresolvedEntityInput("pokemon", "イッカネズミ ４ひきかぞく")).toBe(false);
+    expect(isUnresolvedEntityInput("pokemon", "プルリル メスのすがた")).toBe(false);
+    expect(isUnresolvedEntityInput("pokemon", "ブルンゲル メスのすがた")).toBe(false);
+    expect(isUnresolvedEntityInput("pokemon", "カエンジシ メスのすがた")).toBe(false);
     expect(isUnresolvedEntityInput("pokemon", "オーガポン いしずえのめん")).toBe(false);
     expect(isUnresolvedEntityInput("pokemon", "オーガポン いしずえのかめん")).toBe(false);
     for (const input of [

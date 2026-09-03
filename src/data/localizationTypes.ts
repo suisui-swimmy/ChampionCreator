@@ -56,8 +56,15 @@ export interface JaAliasOverrideEntry {
   kind: EntityKind;
   id: string;
   aliasesJa: string[];
+  displayAliasesJa?: JaDisplayAlias[];
   sourceStatus: SourceStatus;
   note?: string;
+}
+
+export interface JaDisplayAlias {
+  displayNameJa: string;
+  artwork?: string;
+  artworkSource?: string;
 }
 
 export interface JaAliasOverridePayload {
@@ -70,6 +77,8 @@ export interface JaLabelOverrideEntry {
   kind: EntityKind;
   id: string;
   displayNameJa: string;
+  artwork?: string;
+  artworkSource?: string;
   sourceStatus: SourceStatus;
   note?: string;
 }

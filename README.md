@@ -128,6 +128,7 @@ Pokemon Champions の Stat Points / SP を探索単位にしています。
 - `src/data/overrides/ja-label-overrides.json`
 
 生成済み JSON は直接編集せず、必要な補正は scripts または overrides 側で扱います。
+能力値・特性・計算canonicalを共有する見た目違いのフォームは、`ja-aliases.json`の`displayAliasesJa`で独立した入力候補と画像だけを追加し、計算層では既存canonicalを再利用します。
 
 `npm run check` は次をまとめて確認します。
 
