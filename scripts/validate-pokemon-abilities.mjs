@@ -16,6 +16,7 @@ const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.js
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
 const pokemonAbilities = await readJson("src/data/generated/pokemon-abilities.gen.json");
 const userOptionExclusions = await readJson("src/data/overrides/user-option-exclusions.json");
+const unconfirmedMegaAbilities = await readJson("src/data/overrides/unconfirmed-mega-abilities.json");
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 
 const errors = [];
@@ -30,6 +31,9 @@ const excludedAbilityIds = new Set((userOptionExclusions.entries ?? [])
   .map((entry) => entry.id));
 const missingAbilityOptionIds = new Set();
 const pokemonOptionsById = new Map(pokemonOptions.entries.map((entry) => [entry.id, entry]));
+const pokemonOptionsByShowdownName = new Map(
+  pokemonOptions.entries.map((entry) => [entry.showdownName, entry]),
+);
 const abilityEntriesByPokemonId = new Map();
 const validSources = new Set(["pokeapi", "calc-fallback"]);
 
@@ -46,6 +50,14 @@ if (pokemonAbilities.schemaVersion !== 1) {
 
 if (pokemonAbilities.kind !== "pokemon-abilities") {
   errors.push("pokemon-abilities.gen.json kind must be pokemon-abilities");
+}
+
+if (unconfirmedMegaAbilities.schemaVersion !== 1) {
+  errors.push("unconfirmed-mega-abilities.json schemaVersion must be 1");
+}
+
+if (unconfirmedMegaAbilities.kind !== "unconfirmed-mega-abilities") {
+  errors.push("unconfirmed-mega-abilities.json kind must be unconfirmed-mega-abilities");
 }
 
 const expectedDataVersion = pokemonOptions.dataVersion ?? `calc-${calcPackage.version}-gen9`;
@@ -149,6 +161,37 @@ for (const entry of pokemonAbilities.entries ?? []) {
 for (const pokemonOption of pokemonOptions.entries ?? []) {
   if (!abilityEntriesByPokemonId.has(pokemonOption.id)) {
     errors.push(`missing pokemon ability entry for pokemon:${pokemonOption.id}`);
+  }
+}
+
+const seenUnconfirmedMegaAbilities = new Set();
+for (const showdownName of unconfirmedMegaAbilities.entries ?? []) {
+  if (typeof showdownName !== "string" || showdownName.trim() === "") {
+    errors.push("unconfirmed-mega-abilities.json entries must be non-empty strings");
+    continue;
+  }
+  if (seenUnconfirmedMegaAbilities.has(showdownName)) {
+    errors.push(`duplicate unconfirmed Mega ability entry: ${showdownName}`);
+    continue;
+  }
+  seenUnconfirmedMegaAbilities.add(showdownName);
+
+  const pokemonOption = pokemonOptionsByShowdownName.get(showdownName);
+  if (!pokemonOption || !/-Mega(?:-[XYZ])?$/u.test(showdownName)) {
+    errors.push(`unconfirmed Mega ability references unsupported Mega form: ${showdownName}`);
+    continue;
+  }
+  const generatedEntry = abilityEntriesByPokemonId.get(pokemonOption.id);
+  if (!generatedEntry?.abilities?.every((ability) => ability.source === "calc-fallback")) {
+    errors.push(`unconfirmed Mega ability no longer uses only calc fallback: ${showdownName}`);
+  }
+
+  const species = speciesData[showdownName];
+  const baseSpecies = species?.baseSpecies ? speciesData[species.baseSpecies] : undefined;
+  const baseAbilityIds = new Set(Object.values(baseSpecies?.abilities ?? {}).map(toID));
+  const megaAbilityIds = Object.values(species?.abilities ?? {}).map(toID);
+  if (megaAbilityIds.length === 0 || megaAbilityIds.some((id) => !baseAbilityIds.has(id))) {
+    errors.push(`unconfirmed Mega ability may now be resolved in @smogon/calc: ${showdownName}`);
   }
 }
 

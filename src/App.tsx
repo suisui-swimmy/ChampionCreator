@@ -64,7 +64,6 @@ import {
 import {
   getEntityInputOptions,
   getMatchingEntityInputOptions,
-  getPokemonAbilityInputOptions,
   resolveEntity,
   resolveEntityWithCanonicalHint,
   type EntityInputOption,
@@ -142,6 +141,7 @@ import {
   type PokemonFormVariantKind,
   type PokemonFormVariantOption,
 } from "./ui/pokemonFormVariants";
+import { getPokemonAbilityInputPlan } from "./ui/pokemonAbilityOptions";
 import { normalizeSearchText } from "./localization/normalize";
 import {
   createBoxBackupFileName,
@@ -1423,6 +1423,7 @@ export const getPokemonUsageDefaultInputValues = (
       .map((entry) => entry.canonicalName)
     : undefined;
   const megaStone = getMegaStoneForPokemonForm(pokemonCanonicalName, pokemonCanonicalName);
+  const abilityInputPlan = getPokemonAbilityInputPlan(pokemonCanonicalName);
 
   return {
     moveInput: getRankedValue("move", usageDefaultMoveOptions),
@@ -1430,10 +1431,9 @@ export const getPokemonUsageDefaultInputValues = (
       usageDefaultNatureOptions,
       rankedNatureCanonicalNames,
     )?.value,
-    abilityInput: getRankedValue(
-      "ability",
-      getPokemonAbilityInputOptions(pokemonCanonicalName) ?? [],
-    ),
+    abilityInput: abilityInputPlan.isMega
+      ? abilityInputPlan.defaultInput
+      : getRankedValue("ability", abilityInputPlan.options ?? []),
     itemInput: megaStone?.value ?? getRankedValue("item", usageDefaultItemOptions),
   };
 };
@@ -6663,7 +6663,7 @@ function TargetPanel({
       targetForm.pokemonInput,
       targetForm.pokemonCanonicalName,
     );
-  const pokemonAbilityOptions = getPokemonAbilityInputOptions(rankingOwnerPokemon);
+  const pokemonAbilityOptions = getPokemonAbilityInputPlan(rankingOwnerPokemon).options;
   const itemOptions = useUsageSuggestionOptions(
     "item",
     targetForm.itemInput,
@@ -8390,7 +8390,7 @@ function AttackCard({
     targetCanonicalPokemon,
     attackerCanonicalPokemon,
   );
-  const pokemonAbilityOptions = getPokemonAbilityInputOptions(attackerCanonicalPokemon);
+  const pokemonAbilityOptions = getPokemonAbilityInputPlan(attackerCanonicalPokemon).options;
   const moveOptions = useUsageSuggestionOptions(
     "move",
     attack.moveInput,

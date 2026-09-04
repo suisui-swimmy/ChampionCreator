@@ -277,6 +277,12 @@ const usageAutofillDataFixture = (): ChampionsUsageData => ({
         item: ["Charizardite Y", "Charizardite X"],
         nature: [{ canonicalName: "Modest", rank: 1, percentage: 60 }],
       },
+      tatsugiri: {
+        move: [],
+        ability: ["Commander", "Storm Drain"],
+        item: [],
+        nature: [],
+      },
       whimsicott: {
         move: ["Protect", "Moonblast", "Encore"],
         ability: [],
@@ -586,15 +592,31 @@ describe("App", () => {
     expect(getPokemonUsageDefaultInputValues("Charizard-Mega-X", { data, format: "Singles" })).toEqual({
       moveInput: "ソーラービーム",
       natureInput: "ひかえめ",
-      abilityInput: undefined,
+      abilityInput: "かたいツメ",
       itemInput: "リザードナイトＸ",
     });
     expect(getPokemonUsageDefaultInputValues("Charizard-Mega-Y", { data, format: "Singles" })).toEqual({
       moveInput: "ソーラービーム",
       natureInput: "ひかえめ",
-      abilityInput: undefined,
+      abilityInput: "ひでり",
       itemInput: "リザードナイトＹ",
     });
+    expect(getPokemonUsageDefaultInputValues("Charizard-Mega-X", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBe("かたいツメ");
+    expect(getPokemonUsageDefaultInputValues("Meowstic-M-Mega", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBe("トレース");
+    expect(getPokemonUsageDefaultInputValues("Tatsugiri-Curly-Mega", {
+      data,
+      format: "Singles",
+    }).abilityInput).toBeUndefined();
+    expect(getPokemonUsageDefaultInputValues("Magearna-Mega", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBeUndefined();
     expect(getPokemonUsageDefaultInputValues("Whimsicott", { data, format: "Singles" })).toEqual({
       moveInput: "ムーンフォース",
       natureInput: undefined,
@@ -731,6 +753,17 @@ describe("App", () => {
       context,
     );
     expect(megaSwitch.target.itemInput).toBe("リザードナイトＸ");
+    expect(megaSwitch.target.abilityInput).toBe("かたいツメ");
+    const megaBranchSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      megaSwitch.target,
+      megaSwitch.scenarios,
+      "メガリザードンY",
+      "Charizard-Mega-Y",
+      context,
+      "Charizard-Mega-X",
+    );
+    expect(megaBranchSwitch.target.itemInput).toBe("リザードナイトＹ");
+    expect(megaBranchSwitch.target.abilityInput).toBe("ひでり");
     const baseSwitch = applyUsageDefaultsForTargetPokemonSelection(
       megaSwitch.target,
       megaSwitch.scenarios,
@@ -740,6 +773,7 @@ describe("App", () => {
       "Charizard-Mega-X",
     );
     expect(baseSwitch.target.itemInput).toBe("");
+    expect(baseSwitch.target.abilityInput).toBe("もうか");
     const manualItemBaseSwitch = applyUsageDefaultsForTargetPokemonSelection(
       { ...megaSwitch.target, itemInput: "こだわりスカーフ" },
       megaSwitch.scenarios,
@@ -749,6 +783,14 @@ describe("App", () => {
       "Charizard-Mega-X",
     );
     expect(manualItemBaseSwitch.target.itemInput).toBe("こだわりスカーフ");
+    const manualAbilityMegaSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      { ...pikachu.target, abilityInput: "せいでんき" },
+      pikachu.scenarios,
+      "メガリザードンX",
+      "Charizard-Mega-X",
+      context,
+    );
+    expect(manualAbilityMegaSwitch.target.abilityInput).toBe("せいでんき");
     const differentPokemonSwitch = applyUsageDefaultsForTargetPokemonSelection(
       megaSwitch.target,
       megaSwitch.scenarios,
@@ -824,7 +866,25 @@ describe("App", () => {
       context,
     );
     expect(megaAttacker.attackerItemInput).toBe("リザードナイトＸ");
-    expect(megaAttacker.attackerAbilityInput).toBe("");
+    expect(megaAttacker.attackerAbilityInput).toBe("かたいツメ");
+
+    const tatsugiriAttacker = applyUsageDefaultsForAttackPokemonSelection(
+      blankAttack,
+      "シャリタツ そったすがた",
+      "Tatsugiri",
+      "defence",
+      context,
+    );
+    expect(tatsugiriAttacker.attackerAbilityInput).toBe("しれいとう");
+    const unconfirmedMegaAttacker = applyUsageDefaultsForAttackPokemonSelection(
+      tatsugiriAttacker,
+      "メガシャリタツ",
+      "Tatsugiri-Curly-Mega",
+      "defence",
+      context,
+      "Tatsugiri",
+    );
+    expect(unconfirmedMegaAttacker.attackerAbilityInput).toBe("");
 
     const previousAutoSupport = applyUsageDefaultsForAttackPokemonSelection(
       {
@@ -1922,6 +1982,8 @@ describe("App", () => {
     expect(guideHtml).toContain('href="https://championsbattledata.com/" target="_blank" rel="noreferrer">Pokemon Champions Battle Data</a>の使用率データを参考に並び替えます。');
     expect(guideHtml).toContain("使用率データの取得後にポケモンを候補から選ぶと、その形式で最上位かつ、そのポケモンで有効な技・性格・特性・持ち物を初期入力します。");
     expect(guideHtml).toContain("技は変化技を除外し、ランキング内で最上位の物理技または特殊技を入力します。");
+    expect(guideHtml).toContain("確定済みのメガシンカ後の特性だけは、使用率データの取得状況や順位に関係なく、そのフォームで唯一の特性を入力します。");
+    expect(guideHtml).toContain("現行データでメガシンカ後の特性が未確定のメガマギアナとメガシャリタツは、特性を自動入力せず空欄を維持し、ドロップダウンにはメガシンカ前の特性候補を表示します。");
     expect(guideHtml).not.toContain("最上位が変化技の場合はその技が入る");
     expect(guideHtml).toContain("空欄または、現在値が直前のポケモンにおける同形式の1位と一致する欄だけを更新するため、別の値へ手動変更した欄は残ります。");
     expect(guideHtml).toContain("形式や調整種別を切り替えただけでは既存入力を変更せず、その後にポケモンを候補から選んだ時点で新しい基準を使います。");
