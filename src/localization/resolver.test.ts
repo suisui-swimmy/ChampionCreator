@@ -7,6 +7,7 @@ import {
   resolveEntity,
   resolveEntityWithCanonicalHint,
 } from "./resolver";
+import { userOptionExclusions } from "./userOptionExclusions";
 
 describe("resolveEntity", () => {
   it("resolves a Japanese exact label to a Showdown canonical name", () => {
@@ -325,6 +326,38 @@ describe("resolveEntity", () => {
       status: "exact",
       canonicalName: "Dark",
       calcId: "dark",
+    });
+  });
+
+  it("keeps Smogon CAP data and calc-only placeholders out of new user input", () => {
+    for (const exclusion of userOptionExclusions) {
+      expect(resolveEntity(exclusion.kind, exclusion.showdownName), `${exclusion.kind}:${exclusion.id}`).toMatchObject({
+        status: "not-found",
+        candidates: [],
+      });
+      expect(getEntityInputOptions(exclusion.kind), `${exclusion.kind}:${exclusion.id}`).not.toContainEqual(
+        expect.objectContaining({ canonicalName: exclusion.showdownName }),
+      );
+      expect(getMatchingEntityInputOptions(exclusion.kind, exclusion.showdownName), `${exclusion.kind}:${exclusion.id}`)
+        .not.toContainEqual(expect.objectContaining({ canonicalName: exclusion.showdownName }));
+    }
+  });
+
+  it.each([
+    ["move", "無に帰す光", "Nihil Light"],
+    ["move", "めざめるパワー(ほのお)", "Hidden Power Fire"],
+    ["move", "キョダイゴクエン", "G-Max Wildfire"],
+    ["move", "はめつのひかり", "Light of Ruin"],
+    ["ability", "ドラゴンスキン", "Dragonize"],
+    ["ability", "うなぎのぼり", "Eelevate"],
+    ["ability", "ほのおのたてがみ", "Fire Mane"],
+    ["ability", "メガソーラー", "Mega Sol"],
+    ["ability", "かんつうドリル", "Piercing Drill"],
+    ["ability", "とびだすハバネロ", "Spicy Spray"],
+  ] as const)("keeps non-CAP official data %s selectable", (kind, input, canonicalName) => {
+    expect(resolveEntity(kind, input)).toMatchObject({
+      status: "exact",
+      canonicalName,
     });
   });
 

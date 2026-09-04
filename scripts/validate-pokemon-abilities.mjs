@@ -15,12 +15,19 @@ const fail = (messages) => {
 const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.json");
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
 const pokemonAbilities = await readJson("src/data/generated/pokemon-abilities.gen.json");
+const userOptionExclusions = await readJson("src/data/overrides/user-option-exclusions.json");
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 
 const errors = [];
 const warnings = [];
 const speciesData = SPECIES[9];
 const abilityOptionIds = new Set(abilityOptions.entries.map((entry) => entry.id));
+const excludedPokemonIds = new Set((userOptionExclusions.entries ?? [])
+  .filter((entry) => entry.kind === "pokemon")
+  .map((entry) => entry.id));
+const excludedAbilityIds = new Set((userOptionExclusions.entries ?? [])
+  .filter((entry) => entry.kind === "ability")
+  .map((entry) => entry.id));
 const missingAbilityOptionIds = new Set();
 const pokemonOptionsById = new Map(pokemonOptions.entries.map((entry) => [entry.id, entry]));
 const abilityEntriesByPokemonId = new Map();
@@ -48,6 +55,9 @@ if (pokemonAbilities.dataVersion !== expectedDataVersion) {
 
 for (const entry of pokemonAbilities.entries ?? []) {
   const key = `pokemon:${entry.id}`;
+  if (excludedPokemonIds.has(entry.id)) {
+    errors.push(`pokemon-abilities exposes excluded ${key}`);
+  }
   const pokemonOption = pokemonOptionsById.get(entry.id);
   if (!pokemonOption) {
     errors.push(`pokemon-abilities references missing pokemon option: ${key}`);
@@ -77,6 +87,9 @@ for (const entry of pokemonAbilities.entries ?? []) {
   const seenAbilityIds = new Set();
   for (const ability of entry.abilities) {
     const abilityKey = `ability:${ability.id}`;
+    if (excludedAbilityIds.has(ability.id)) {
+      errors.push(`${key} exposes excluded ${abilityKey}`);
+    }
     for (const field of ["id", "label", "showdownName", "slot", "source"]) {
       if (typeof ability[field] !== "string" || ability[field].trim() === "") {
         errors.push(`${key} has ability with empty ${field}`);

@@ -26,6 +26,8 @@ const optionPaths = {
 };
 
 const megaStoneLabelOverridePath = join(projectRoot, "src", "data", "overrides", "mega-stone-labels-ja.json");
+const userOptionExclusionPath = join(projectRoot, "src", "data", "overrides", "user-option-exclusions.json");
+const userOptionExclusionPayload = JSON.parse(await readFile(userOptionExclusionPath, "utf8"));
 
 const TYPE_LABELS_JA = {
   "???": "???",
@@ -114,8 +116,6 @@ const MANUAL_MOVE_LABELS_JA = {
   nihillight: "無に帰す光",
 };
 
-const UNSUPPORTED_MOVE_IDS = new Set(["nomove", "paleowave", "polarflare", "shadowstrike"]);
-
 const SPECIAL_ABILITY_LABELS_JA = {
   noability: "とくせいなし",
   dragonize: "ドラゴンスキン",
@@ -125,8 +125,6 @@ const SPECIAL_ABILITY_LABELS_JA = {
   piercingdrill: "かんつうドリル",
   spicyspray: "とびだすハバネロ",
 };
-
-const UNSUPPORTED_ABILITY_IDS = new Set(["mountaineer", "persistent", "rebound"]);
 
 const ABILITY_VARIANT_BASE_LABELS_JA = {
   asone: "じんばいったい",
@@ -160,91 +158,6 @@ const MANUAL_ITEM_LABELS_JA = {
   unremarkableteacup: "ボンサクのちゃわん",
 };
 
-const UNSUPPORTED_ITEM_IDS = new Set(["crucibellite", "vilevial"]);
-
-const SHOWDOWN_ORIGINAL_SPECIES_IDS = new Set([
-  "ababo",
-  "arghonaut",
-  "argalis",
-  "astrolotl",
-  "aurumoth",
-  "brattler",
-  "breezi",
-  "caimanoe",
-  "caribolt",
-  "cawdet",
-  "cawmodore",
-  "chromera",
-  "chuggalong",
-  "chuggon",
-  "colossoil",
-  "coribalis",
-  "cresceidon",
-  "crucibelle",
-  "crucibellemega",
-  "cupra",
-  "cyclohm",
-  "dorsoil",
-  "draggalong",
-  "duohm",
-  "electrelk",
-  "embirch",
-  "equilibra",
-  "fawnifer",
-  "fidgit",
-  "flarelm",
-  "floatoy",
-  "hemogoblin",
-  "jumbao",
-  "justyke",
-  "kerfluffle",
-  "kitsunoh",
-  "krilowatt",
-  "malaconda",
-  "miasmaw",
-  "miasmite",
-  "mollux",
-  "monohm",
-  "mumbao",
-  "naviathan",
-  "necturine",
-  "necturna",
-  "nohface",
-  "obliteryx",
-  "pajantom",
-  "plasmanta",
-  "pluffle",
-  "privatyke",
-  "protowatt",
-  "pyroak",
-  "ramnarok",
-  "ramnarokradiant",
-  "rebble",
-  "revenankh",
-  "saharaja",
-  "saharascal",
-  "scattervein",
-  "scratchet",
-  "shox",
-  "smogecko",
-  "smoguana",
-  "smokomodo",
-  "snaelstrom",
-  "snugglow",
-  "solotl",
-  "stratagem",
-  "swirlpool",
-  "syclant",
-  "syclar",
-  "tactite",
-  "tomohawk",
-  "venomicon",
-  "venomiconepilogue",
-  "voodoll",
-  "voodoom",
-  "volkraken",
-  "volkritter",
-]);
 
 const readOptionalJson = async (path) => {
   try {
@@ -292,6 +205,107 @@ const withOptional = (entry) =>
 const sortByLabel = (entries) =>
   entries.sort((a, b) => a.label.localeCompare(b.label, "ja") || a.id.localeCompare(b.id, "en"));
 
+const entityKinds = ["pokemon", "move", "item", "ability", "nature", "type"];
+const exclusionCategories = ["smogon-cap", "calc-internal"];
+const exclusionEntriesByKind = Object.fromEntries(entityKinds.map((kind) => [kind, []]));
+const exclusionKeys = new Set();
+
+if (userOptionExclusionPayload.schemaVersion !== 1) {
+  throw new Error("user-option-exclusions schemaVersion must be 1");
+}
+
+for (const entry of userOptionExclusionPayload.entries ?? []) {
+  if (!entityKinds.includes(entry?.kind) || !exclusionCategories.includes(entry?.category)) {
+    throw new Error(`Invalid user option exclusion: ${JSON.stringify(entry)}`);
+  }
+  if (typeof entry.id !== "string" || !entry.id || typeof entry.showdownName !== "string" || !entry.showdownName) {
+    throw new Error(`Invalid user option exclusion identity: ${JSON.stringify(entry)}`);
+  }
+  const expectedId = entry.kind === "type" && entry.showdownName === "???"
+    ? "unknown"
+    : toID(entry.showdownName);
+  if (entry.id !== expectedId) {
+    throw new Error(`User option exclusion id mismatch: ${entry.kind}:${entry.id} / ${entry.showdownName}`);
+  }
+  const key = `${entry.kind}:${entry.id}`;
+  if (exclusionKeys.has(key)) {
+    throw new Error(`Duplicate user option exclusion: ${key}`);
+  }
+  exclusionKeys.add(key);
+  exclusionEntriesByKind[entry.kind].push(entry);
+}
+
+for (const category of exclusionCategories) {
+  for (const kind of entityKinds) {
+    const expectedCount = userOptionExclusionPayload.expectedCounts?.[category]?.[kind];
+    const actualCount = exclusionEntriesByKind[kind].filter((entry) => entry.category === category).length;
+    if (expectedCount !== actualCount) {
+      throw new Error(`user-option-exclusions ${category}:${kind} count mismatch: ${actualCount} / ${expectedCount}`);
+    }
+  }
+}
+
+const rawOptionEntriesByKind = {
+  pokemon: Array.from(generation.species),
+  move: Array.from(generation.moves),
+  item: Array.from(generation.items),
+  ability: Array.from(generation.abilities),
+  nature: Array.from(generation.natures),
+  type: Array.from(generation.types),
+};
+
+const getRawOptionId = (kind, entry) => (
+  kind === "type" ? entry.id || toID(entry.name) || "unknown" : toID(entry.name)
+);
+
+const rawOptionEntriesByIdByKind = Object.fromEntries(entityKinds.map((kind) => [
+  kind,
+  new Map(rawOptionEntriesByKind[kind].map((entry) => [getRawOptionId(kind, entry), entry])),
+]));
+
+for (const kind of entityKinds) {
+  for (const exclusion of exclusionEntriesByKind[kind]) {
+    const rawEntry = rawOptionEntriesByIdByKind[kind].get(exclusion.id);
+    if (rawEntry && rawEntry.name !== exclusion.showdownName) {
+      throw new Error(`User option exclusion canonical mismatch: ${kind}:${exclusion.id}`);
+    }
+  }
+}
+
+const actualAbsentExclusionKeys = entityKinds.flatMap((kind) => (
+  exclusionEntriesByKind[kind]
+    .filter((entry) => !rawOptionEntriesByIdByKind[kind].has(entry.id))
+    .map((entry) => `${kind}:${entry.id}`)
+)).sort();
+const expectedAbsentExclusionKeys = [...(userOptionExclusionPayload.expectedAbsentFromCurrentCalc ?? [])].sort();
+if (JSON.stringify(actualAbsentExclusionKeys) !== JSON.stringify(expectedAbsentExclusionKeys)) {
+  throw new Error(
+    `user-option-exclusions current calc absence changed: ${actualAbsentExclusionKeys.join(", ") || "none"}`,
+  );
+}
+
+const getUserOptionEntries = (kind) => {
+  const excludedIds = new Set(exclusionEntriesByKind[kind].map((entry) => entry.id));
+  return rawOptionEntriesByKind[kind].filter((entry) => !excludedIds.has(getRawOptionId(kind, entry)));
+};
+
+const getExclusionSummary = (kind) => {
+  const presentExclusions = exclusionEntriesByKind[kind].filter((entry) => (
+    rawOptionEntriesByIdByKind[kind].has(entry.id)
+  ));
+  const absentSmogonOriginalIds = exclusionEntriesByKind[kind]
+    .filter((entry) => entry.category === "smogon-cap" && !rawOptionEntriesByIdByKind[kind].has(entry.id))
+    .map((entry) => entry.id)
+    .sort();
+
+  return withOptional({
+    excludedSmogonOriginal: presentExclusions.filter((entry) => entry.category === "smogon-cap").length,
+    excludedInternal: presentExclusions.filter((entry) => entry.category === "calc-internal").length,
+    knownSmogonOriginalAbsentFromCalc: absentSmogonOriginalIds.length,
+    knownSmogonOriginalAbsentFromCalcIds: absentSmogonOriginalIds,
+  });
+};
+
 const makePayload = ({ kind, entries, summary, source }) => ({
   schemaVersion: 1,
   dataVersion,
@@ -301,6 +315,7 @@ const makePayload = ({ kind, entries, summary, source }) => ({
     upstreamCommit,
     generation: generationNumber,
     previousGeneratedLabels: "src/data/generated",
+    userOptionExclusions: "src/data/overrides/user-option-exclusions.json",
     ...source,
   },
   generatedBy: "scripts/generate-battle-options.mjs",
@@ -398,9 +413,8 @@ const inferPokemonArtwork = (species, previousOption) => {
 };
 
 const makePokemonOptions = () => {
-  const speciesEntries = Array.from(generation.species).filter((species) => (
-    !SHOWDOWN_ORIGINAL_SPECIES_IDS.has(toID(species.name))
-  ));
+  const speciesEntries = getUserOptionEntries("pokemon");
+  const exclusionSummary = getExclusionSummary("pokemon");
   const entries = sortByLabel(
     speciesEntries.map((species) => {
       const id = toID(species.name);
@@ -429,7 +443,8 @@ const makePokemonOptions = () => {
     },
     summary: {
       totalOptions: entries.length,
-      excludedShowdownOriginal: Array.from(generation.species).length - speciesEntries.length,
+      excludedShowdownOriginal: exclusionSummary.excludedSmogonOriginal,
+      ...exclusionSummary,
       withArtwork: entries.filter((entry) => entry.artwork).length,
       previousLocalized: entries.filter((entry) => previousById.pokemon.has(entry.id)).length,
       needsConfirmation: entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length,
@@ -462,13 +477,6 @@ const inferMoveLabel = (move, previousOption) => {
   if (manualLabel) {
     return { label: manualLabel };
   }
-  if (UNSUPPORTED_MOVE_IDS.has(move.id)) {
-    return {
-      label: move.name,
-      sourceStatus: "unsupported-temporary",
-      fallback: { reason: move.id === "nomove" ? "showdown-placeholder" : "cap-move-no-japanese-label" },
-    };
-  }
   if (move.name.startsWith("Hidden Power ")) {
     const baseLabel = previousById.moves.get("hiddenpower")?.label ?? "めざめるパワー";
     const typeLabel = TYPE_LABELS_JA[move.type] ?? move.type;
@@ -483,7 +491,7 @@ const inferMoveLabel = (move, previousOption) => {
 
 const makeMoveOptions = () => {
   const entries = sortByLabel(
-    Array.from(generation.moves).map((move) => {
+    getUserOptionEntries("move").map((move) => {
       const id = toID(move.name);
       const previousOption = getPreviousOption("moves", id, move.name);
       const localized = inferMoveLabel(move, previousOption);
@@ -515,6 +523,7 @@ const makeMoveOptions = () => {
     },
     summary: {
       totalOptions: entries.length,
+      ...getExclusionSummary("move"),
       localized: entries.filter((entry) => !entry.sourceStatus).length,
       adapterTemporary: entries.filter((entry) => entry.sourceStatus === "adapter-temporary").length,
       unsupportedTemporary: entries.filter((entry) => entry.sourceStatus === "unsupported-temporary").length,
@@ -535,7 +544,7 @@ const mapMegaStone = (megaStone) => mapMegaStoneMappings(megaStone)[0];
 const validateMegaStoneLabelOverrides = (items) => {
   const officialMegaStoneItems = items.filter((item) => {
     const id = item.id || toID(item.name);
-    return item.megaStone && !UNSUPPORTED_ITEM_IDS.has(id);
+    return item.megaStone && !exclusionKeys.has(`item:${id}`);
   });
   if (officialMegaStoneItems.length !== 92) {
     throw new Error(`Expected 92 official Mega Stones, found ${officialMegaStoneItems.length}`);
@@ -622,13 +631,6 @@ const inferItemLabel = (item, previousOption, megaStoneLabelOverride) => {
   }
 
   const id = toID(item.name);
-  if (UNSUPPORTED_ITEM_IDS.has(id)) {
-    return {
-      label: previousOption?.label ?? item.name,
-      sourceStatus: "unsupported-temporary",
-      fallback: { reason: "cap-item-no-japanese-label" },
-    };
-  }
   if (previousOption?.label && previousOption.sourceStatus !== "needs-confirmation") {
     return {
       label: previousOption.label,
@@ -655,10 +657,10 @@ const inferItemLabel = (item, previousOption, megaStoneLabelOverride) => {
 };
 
 const makeItemOptions = () => {
-  const calcItems = Array.from(generation.items);
+  const calcItems = rawOptionEntriesByKind.item;
   validateMegaStoneLabelOverrides(calcItems);
   const entries = sortByLabel(
-    calcItems.map((item) => {
+    getUserOptionEntries("item").map((item) => {
       const id = toID(item.name);
       const previousOption = getPreviousOption("items", id, item.name);
       const megaStoneLabelOverride = megaStoneLabelOverrideById.get(id) ?? megaStoneLabelOverrideByShowdownName.get(item.name);
@@ -701,6 +703,7 @@ const makeItemOptions = () => {
     },
     summary: {
       totalOptions: entries.length,
+      ...getExclusionSummary("item"),
       localized: entries.filter((entry) => !entry.sourceStatus).length,
       manual: entries.filter((entry) => entry.sourceStatus === "manual").length,
       adapterTemporary: entries.filter((entry) => entry.sourceStatus === "adapter-temporary").length,
@@ -774,13 +777,6 @@ const inferAbilityLabel = (ability, previousOption) => {
     return { label: previousOption.label };
   }
   const id = toID(ability.name);
-  if (UNSUPPORTED_ABILITY_IDS.has(id)) {
-    return {
-      label: ability.name,
-      sourceStatus: "unsupported-temporary",
-      fallback: { reason: "cap-ability-no-japanese-label" },
-    };
-  }
   const specialLabel = SPECIAL_ABILITY_LABELS_JA[id];
   if (specialLabel) {
     return { label: specialLabel };
@@ -805,7 +801,7 @@ const inferAbilityLabel = (ability, previousOption) => {
 
 const makeAbilityOptions = () => {
   const entries = sortByLabel(
-    Array.from(generation.abilities).map((ability) => {
+    getUserOptionEntries("ability").map((ability) => {
       const id = toID(ability.name);
       const previousOption = getPreviousOption("abilities", id, ability.name);
       const localized = inferAbilityLabel(ability, previousOption);
@@ -830,6 +826,7 @@ const makeAbilityOptions = () => {
     },
     summary: {
       totalOptions: entries.length,
+      ...getExclusionSummary("ability"),
       localized: entries.filter((entry) => !entry.sourceStatus).length,
       adapterTemporary: entries.filter((entry) => entry.sourceStatus === "adapter-temporary").length,
       unsupportedTemporary: entries.filter((entry) => entry.sourceStatus === "unsupported-temporary").length,
@@ -844,7 +841,7 @@ const makeAbilityOptions = () => {
 
 const makeNatureOptions = () => {
   const entries = sortByLabel(
-    Array.from(generation.natures).map((nature) => {
+    getUserOptionEntries("nature").map((nature) => {
       const id = toID(nature.name);
       const label = NATURE_LABELS_JA[nature.name] ?? nature.name;
       return withOptional({
@@ -871,6 +868,7 @@ const makeNatureOptions = () => {
     source: { manualLabels: "scripts/generate-battle-options.mjs" },
     summary: {
       totalOptions: entries.length,
+      ...getExclusionSummary("nature"),
       localized: entries.filter((entry) => !entry.sourceStatus).length,
       needsConfirmation: entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length,
     },
@@ -879,7 +877,7 @@ const makeNatureOptions = () => {
 
 const makeTypeOptions = () => {
   const entries = sortByLabel(
-    Array.from(generation.types).map((type) => {
+    getUserOptionEntries("type").map((type) => {
       const id = type.id || toID(type.name) || "unknown";
       const label = TYPE_LABELS_JA[type.name] ?? type.name;
       return withOptional({
@@ -900,6 +898,7 @@ const makeTypeOptions = () => {
     source: { manualLabels: "scripts/generate-battle-options.mjs" },
     summary: {
       totalOptions: entries.length,
+      ...getExclusionSummary("type"),
       localized: entries.filter((entry) => !entry.sourceStatus).length,
       needsConfirmation: entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length,
     },

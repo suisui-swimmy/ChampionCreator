@@ -19,6 +19,7 @@ import type {
 } from "../data/localizationTypes";
 import { applyDisplayNameRules } from "./displayNameRules";
 import { normalizeSearchText } from "./normalize";
+import { getUserOptionExclusion } from "./userOptionExclusions";
 
 export type ResolveStatus = "exact" | "alias" | "ambiguous" | "not-found";
 export type ResolveMatchedBy = "displayNameJa" | "canonicalName" | "id" | "searchText" | "manualAlias";
@@ -149,7 +150,9 @@ const mergeResolverEntries = (): LocalizedCatalogEntry[] => {
     });
   }
 
-  return Array.from(byKey.values());
+  return Array.from(byKey.values()).filter((entry) => (
+    !getUserOptionExclusion(entry.kind, entry.canonicalName)
+  ));
 };
 
 const resolverEntries = mergeResolverEntries();

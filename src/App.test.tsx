@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { CandidateResult } from "./domain/model";
+import type { EntityKind } from "./data/localizationTypes";
 import {
   App,
   CandidateStatPointBars,
@@ -1678,13 +1679,22 @@ describe("App", () => {
     expect(guideCss).toMatch(/@media \(max-width: 380px\)[\s\S]*?\.guide-brand img\s*\{[^}]*width:\s*min\(150px, 46vw\);/s);
   });
 
-  it("keeps type and item dropdown candidates separated", () => {
-    const typeOptions = getDropdownEntityOptions("type", "");
-    const itemOptions = getDropdownEntityOptions("item", "");
+  it("keeps official dropdown candidates while hiding CAP and calc-only entries", () => {
+    const hasOption = (kind: EntityKind, input: string, value: string) => (
+      getDropdownEntityOptions(kind, input).some((option) => option.value === value)
+    );
 
-    expect(typeOptions.some((option) => option.value === "ほのお")).toBe(true);
-    expect(typeOptions.some((option) => option.value === "Crucibellite")).toBe(false);
-    expect(itemOptions.some((option) => option.value === "Crucibellite")).toBe(true);
+    expect(hasOption("move", "じしん", "じしん")).toBe(true);
+    expect(hasOption("type", "ほのお", "ほのお")).toBe(true);
+    expect(hasOption("item", "たべのこし", "たべのこし")).toBe(true);
+    expect(hasOption("ability", "いかく", "いかく")).toBe(true);
+
+    expect(hasOption("move", "(No Move)", "(No Move)")).toBe(false);
+    expect(hasOption("move", "Paleo Wave", "Paleo Wave")).toBe(false);
+    expect(hasOption("type", "???", "???")).toBe(false);
+    expect(hasOption("item", "Crucibellite", "Crucibellite")).toBe(false);
+    expect(hasOption("item", "Vile Vial", "Vile Vial")).toBe(false);
+    expect(hasOption("ability", "Mountaineer", "Mountaineer")).toBe(false);
   });
 
   it("supports keyboard navigation and Tab selection for Pokemon suggestions", () => {

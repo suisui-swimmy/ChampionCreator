@@ -110,6 +110,71 @@ describe("boxStorage", () => {
     });
   });
 
+  it("keeps unavailable legacy inputs readable in browser storage and backups", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "Arghonaut",
+      pokemonCanonicalName: "Arghonaut",
+      abilityInput: "Mountaineer",
+      itemInput: "Vile Vial",
+      teraTypeInput: "???",
+      teraEnabled: true,
+    };
+    const scenarios = createDefaultScenarioForms().map((scenario, scenarioIndex) => ({
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => scenarioIndex === 0
+        ? {
+            ...attack,
+            attackerPokemonInput: "Ramnarok",
+            attackerPokemonCanonicalName: "Ramnarok",
+            attackerAbilityInput: "Rebound",
+            attackerItemInput: "Crucibellite",
+            attackerTeraTypeInput: "???",
+            attackerTeraEnabled: true,
+            moveInput: "Polar Flare",
+            movePowerMode: "manual" as const,
+            movePowerValue: 75,
+          }
+        : scenarioIndex === 1
+          ? {
+              ...attack,
+              moveInput: "(No Move)",
+            }
+          : attack),
+    }));
+    const entry = createBoxEntryFromState(target, scenarios, {
+      id: "legacy-unavailable-box",
+      now: "2026-09-04T00:00:00.000Z",
+    });
+
+    const [storedEntry] = parseBoxStorageDocument(stringifyBoxStorageDocument([entry]));
+    const backup = parseBoxBackupDocument(stringifyBoxBackupDocument([entry]));
+
+    expect(storedEntry?.payload.target).toMatchObject({
+      pokemonInput: "Arghonaut",
+      pokemonCanonicalName: "Arghonaut",
+      abilityInput: "Mountaineer",
+      itemInput: "Vile Vial",
+      teraTypeInput: "???",
+    });
+    expect(storedEntry?.payload.scenarios[0].attacks[0]).toMatchObject({
+      attackerPokemonInput: "Ramnarok",
+      attackerPokemonCanonicalName: "Ramnarok",
+      attackerAbilityInput: "Rebound",
+      attackerItemInput: "Crucibellite",
+      attackerTeraTypeInput: "???",
+      moveInput: "Polar Flare",
+      movePowerMode: "manual",
+      movePowerValue: 75,
+    });
+    expect(storedEntry?.payload.scenarios[1].attacks[0].moveInput).toBe("(No Move)");
+    expect(backup).toMatchObject({
+      status: "success",
+      skippedCount: 0,
+      entries: [{ id: "legacy-unavailable-box" }],
+    });
+  });
+
   it("migrates legacy speed fields through the box storage parser", () => {
     const scenarios = createDefaultScenarioForms().map((scenario) => ({
       ...scenario,

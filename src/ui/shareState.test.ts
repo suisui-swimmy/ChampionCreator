@@ -109,6 +109,54 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0]).not.toHaveProperty("speedMoveModifier");
   });
 
+  it("preserves unavailable legacy CAP and calc-internal inputs without silently deleting them", () => {
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "Arghonaut",
+      pokemonCanonicalName: "Arghonaut",
+      abilityInput: "Mountaineer",
+      itemInput: "Vile Vial",
+      teraTypeInput: "???",
+      teraEnabled: true,
+    };
+    const [scenario] = createDefaultScenarioForms();
+    const scenarios = [{
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({
+        ...attack,
+        attackerPokemonInput: "Ramnarok",
+        attackerPokemonCanonicalName: "Ramnarok",
+        attackerAbilityInput: "Rebound",
+        attackerItemInput: "Crucibellite",
+        attackerTeraTypeInput: "???",
+        attackerTeraEnabled: true,
+        moveInput: "Polar Flare",
+        movePowerMode: "manual" as const,
+        movePowerValue: 75,
+      })),
+    }];
+
+    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios));
+
+    expect(parsed.target).toMatchObject({
+      pokemonInput: "Arghonaut",
+      pokemonCanonicalName: "Arghonaut",
+      abilityInput: "Mountaineer",
+      itemInput: "Vile Vial",
+      teraTypeInput: "???",
+    });
+    expect(parsed.scenarios[0].attacks[0]).toMatchObject({
+      attackerPokemonInput: "Ramnarok",
+      attackerPokemonCanonicalName: "Ramnarok",
+      attackerAbilityInput: "Rebound",
+      attackerItemInput: "Crucibellite",
+      attackerTeraTypeInput: "???",
+      moveInput: "Polar Flare",
+      movePowerMode: "manual",
+      movePowerValue: 75,
+    });
+  });
+
   it("rejects unsupported schema versions", () => {
     expect(() => parseShareStateDocument(JSON.stringify({
       schemaVersion: 999,

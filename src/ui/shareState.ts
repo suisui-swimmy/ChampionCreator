@@ -18,6 +18,7 @@ import { toEntityRef } from "../domain/model";
 import { isSupportedHpEventEffectId } from "../domain/hpEvents";
 import { resolveAllowedMovePowerOverride } from "../calc/movePowerRules";
 import { resolveEntity } from "../localization/resolver";
+import { getUserOptionExclusion } from "../localization/userOptionExclusions";
 import {
   BEAT_UP_CANONICAL_NAME,
   getBeatUpParticipantLimit,
@@ -94,6 +95,15 @@ const normalizePokemonCanonicalHint = (
 
   const resolved = resolveEntity("pokemon", pokemonInput);
   if (!resolved.candidates.some((candidate) => candidate.canonicalName === canonicalHint)) {
+    const excludedInput = getUserOptionExclusion("pokemon", pokemonInput);
+    const excludedHint = getUserOptionExclusion("pokemon", canonicalHint);
+    if (
+      excludedInput?.category === "smogon-cap"
+      && excludedHint?.id === excludedInput.id
+      && canonicalHint === excludedHint.showdownName
+    ) {
+      return canonicalHint;
+    }
     throw new Error(`条件JSONの${fieldLabel}と一致しない ${field} があります`);
   }
   return canonicalHint;
@@ -143,6 +153,7 @@ const normalizeBeatUpParticipants = (
     if (
       source === "party"
       && !toEntityRef(resolveEntity("pokemon", pokemonInput), "pokemon")
+      && !getUserOptionExclusion("pokemon", pokemonInput)
     ) {
       throw new Error(`条件JSONの攻撃${attackIndex + 1}の参加ポケモン${participantIndex + 1}を解決できません`);
     }
@@ -311,8 +322,12 @@ const normalizeAttack = (
   const hasAttackerLevel = isRecord(value) && "attackerLevel" in value;
   const hasAttackerLevelMode = isRecord(value) && "attackerLevelMode" in value;
   const attackId = typeof input.id === "string" && input.id ? input.id : defaults.id;
+  const excludedMove = typeof input.moveInput === "string"
+    ? getUserOptionExclusion("move", input.moveInput)
+    : undefined;
   const canonicalMoveName = typeof input.moveInput === "string"
     ? toEntityRef(resolveEntity("move", input.moveInput), "move")?.canonicalName
+      ?? excludedMove?.showdownName
     : undefined;
   let attackerLevel = Number.isInteger(input.attackerLevel)
     && input.attackerLevel >= 1
@@ -368,7 +383,7 @@ const normalizeAttack = (
     }
     movePowerMode = input.movePowerMode as MovePowerMode;
     movePowerValue = input.movePowerValue;
-    if (movePowerMode !== "auto") {
+    if (movePowerMode !== "auto" && !excludedMove) {
       const allowedOverride = canonicalMoveName
         ? resolveAllowedMovePowerOverride(canonicalMoveName, {
             value: movePowerValue,

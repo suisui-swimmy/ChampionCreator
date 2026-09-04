@@ -20,6 +20,7 @@ const catalog = await readJson("src/data/generated/localized-catalog.gen.json");
 const aliasOverrides = await readJson("src/data/overrides/ja-aliases.json");
 const labelOverrides = await readJson("src/data/overrides/ja-label-overrides.json");
 const megaStoneLabels = await readJson("src/data/overrides/mega-stone-labels-ja.json");
+const userOptionExclusions = await readJson("src/data/overrides/user-option-exclusions.json");
 const optionFiles = [
   "src/data/generated/pokemon-options.gen.json",
   "src/data/generated/move-options.gen.json",
@@ -34,6 +35,7 @@ const warnings = [];
 const catalogKeys = new Set();
 const resolverKeys = new Set();
 const indexKeys = new Map();
+const optionPayloadsByKind = new Map();
 let itemOptionsPayload;
 
 if (catalog.schemaVersion !== 1) {
@@ -87,6 +89,11 @@ for (const file of optionFiles) {
   if (kind === "item") {
     itemOptionsPayload = payload;
   }
+  optionPayloadsByKind.set(kind, payload);
+
+  if (payload.summary?.totalOptions !== payload.entries?.length) {
+    errors.push(`${file} summary.totalOptions must match its entry count`);
+  }
 
   for (const entry of payload.entries ?? []) {
     const key = `${kind}:${entry.id}`;
@@ -118,6 +125,106 @@ for (const file of optionFiles) {
       current.add(key);
       indexKeys.set(indexKey, current);
     }
+  }
+}
+
+const entityKinds = ["pokemon", "move", "item", "ability", "nature", "type"];
+const exclusionCategories = ["smogon-cap", "calc-internal"];
+const exclusionEntriesByKind = Object.fromEntries(entityKinds.map((kind) => [kind, []]));
+const exclusionKeys = new Set();
+
+if (userOptionExclusions.schemaVersion !== 1) {
+  errors.push("user-option-exclusions schemaVersion must be 1");
+}
+if (typeof userOptionExclusions.source?.pokemonShowdownCommit !== "string"
+  || !/^[0-9a-f]{40}$/u.test(userOptionExclusions.source.pokemonShowdownCommit)) {
+  errors.push("user-option-exclusions must record a full Pokemon Showdown commit");
+}
+
+for (const entry of userOptionExclusions.entries ?? []) {
+  if (!entityKinds.includes(entry?.kind) || !exclusionCategories.includes(entry?.category)) {
+    errors.push(`invalid user option exclusion: ${JSON.stringify(entry)}`);
+    continue;
+  }
+  if (typeof entry.id !== "string" || !entry.id || typeof entry.showdownName !== "string" || !entry.showdownName) {
+    errors.push(`invalid user option exclusion identity: ${JSON.stringify(entry)}`);
+    continue;
+  }
+  const expectedId = entry.kind === "type" && entry.showdownName === "???"
+    ? "unknown"
+    : entry.showdownName.toLowerCase().replace(/[^a-z0-9]+/gu, "");
+  if (entry.id !== expectedId) {
+    errors.push(`user option exclusion id mismatch: ${entry.kind}:${entry.id} / ${entry.showdownName}`);
+  }
+  const key = `${entry.kind}:${entry.id}`;
+  if (exclusionKeys.has(key)) {
+    errors.push(`duplicate user option exclusion: ${key}`);
+    continue;
+  }
+  exclusionKeys.add(key);
+  exclusionEntriesByKind[entry.kind].push(entry);
+}
+
+for (const catalogEntry of catalog.entries ?? []) {
+  if (exclusionKeys.has(`${catalogEntry.kind}:${catalogEntry.id}`)) {
+    errors.push(`localized catalog exposes excluded entry: ${catalogEntry.kind}:${catalogEntry.id}`);
+  }
+}
+
+const expectedAbsentExclusionKeys = new Set(userOptionExclusions.expectedAbsentFromCurrentCalc ?? []);
+for (const key of expectedAbsentExclusionKeys) {
+  if (!exclusionKeys.has(key)) {
+    errors.push(`user-option-exclusions expectedAbsentFromCurrentCalc references missing entry: ${key}`);
+  }
+}
+
+for (const category of exclusionCategories) {
+  for (const kind of entityKinds) {
+    const expectedCount = userOptionExclusions.expectedCounts?.[category]?.[kind];
+    const actualCount = exclusionEntriesByKind[kind].filter((entry) => entry.category === category).length;
+    if (expectedCount !== actualCount) {
+      errors.push(`user-option-exclusions ${category}:${kind} count mismatch: ${actualCount} / ${expectedCount}`);
+    }
+  }
+}
+
+for (const kind of entityKinds) {
+  const payload = optionPayloadsByKind.get(kind);
+  if (!payload) {
+    errors.push(`missing generated option payload for ${kind}`);
+    continue;
+  }
+  if (payload.source?.userOptionExclusions !== "src/data/overrides/user-option-exclusions.json") {
+    errors.push(`${kind} options must record the user option exclusion source`);
+  }
+  const generatedIds = new Set((payload.entries ?? []).map((entry) => entry.id));
+  for (const exclusion of exclusionEntriesByKind[kind]) {
+    if (generatedIds.has(exclusion.id)) {
+      errors.push(`${kind} options expose excluded entry: ${exclusion.id}`);
+    }
+  }
+
+  const presentExclusions = exclusionEntriesByKind[kind].filter((entry) => (
+    !expectedAbsentExclusionKeys.has(`${kind}:${entry.id}`)
+  ));
+  const expectedSmogonOriginalCount = presentExclusions.filter((entry) => entry.category === "smogon-cap").length;
+  const expectedInternalCount = presentExclusions.filter((entry) => entry.category === "calc-internal").length;
+  const expectedAbsentSmogonOriginalIds = exclusionEntriesByKind[kind]
+    .filter((entry) => entry.category === "smogon-cap"
+      && expectedAbsentExclusionKeys.has(`${kind}:${entry.id}`))
+    .map((entry) => entry.id)
+    .sort();
+  const generatedAbsentSmogonOriginalIds = [...(payload.summary?.knownSmogonOriginalAbsentFromCalcIds ?? [])].sort();
+
+  if (payload.summary?.excludedSmogonOriginal !== expectedSmogonOriginalCount) {
+    errors.push(`${kind} options excludedSmogonOriginal is stale`);
+  }
+  if (payload.summary?.excludedInternal !== expectedInternalCount) {
+    errors.push(`${kind} options excludedInternal is stale`);
+  }
+  if (payload.summary?.knownSmogonOriginalAbsentFromCalc !== expectedAbsentSmogonOriginalIds.length
+    || JSON.stringify(generatedAbsentSmogonOriginalIds) !== JSON.stringify(expectedAbsentSmogonOriginalIds)) {
+    errors.push(`${kind} options known Smogon-original absence is stale`);
   }
 }
 
