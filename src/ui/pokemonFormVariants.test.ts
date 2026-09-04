@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getMegaBasePokemonCanonicalName,
   getMegaStoneForPokemonForm,
+  getPokemonBaseFormCanonicalName,
   getPokemonBaseFormValue,
   getPokemonFormVariantOptions,
   isPokemonFormVariant,
@@ -183,6 +184,7 @@ describe("pokemonFormVariants", () => {
   it("returns from a variant form to the base label", () => {
     expect(isPokemonFormVariant("メガフシギバナ", "mega")).toBe(true);
     expect(getPokemonBaseFormValue("メガフシギバナ")).toBe("フシギバナ");
+    expect(getPokemonBaseFormCanonicalName("メガフシギバナ")).toBe("Venusaur");
     expect(isPokemonFormVariant("フシギバナ キョダイマックスのすがた", "gmax")).toBe(false);
     expect(getPokemonBaseFormValue("フシギバナ キョダイマックスのすがた")).toBeNull();
   });
@@ -196,6 +198,8 @@ describe("pokemonFormVariants", () => {
     ]);
     expect(isPokemonFormVariant("メガマギアナ", "mega", "Magearna-Original-Mega")).toBe(true);
     expect(getPokemonBaseFormValue("メガマギアナ", "Magearna-Original-Mega")).toBe("マギアナ ５００ねんまえのいろ");
+    expect(getPokemonBaseFormCanonicalName("メガマギアナ", "Magearna-Original-Mega"))
+      .toBe("Magearna-Original");
     expect(getMegaStoneForPokemonForm("メガマギアナ", "Magearna-Original-Mega")).toEqual({
       id: "magearnite",
       value: "マギアナイト",

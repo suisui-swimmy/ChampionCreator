@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyUsageRanking,
   getMatchingEntityInputOptionsWithUsage,
+  getTopUsageRankedCandidate,
   getUsagePokemonEntry,
   getUsageRanking,
   getUsageNatureRanking,
@@ -121,6 +122,20 @@ describe("applyUsageRanking", () => {
     ]);
   });
 
+  it("returns only the highest-ranked candidate that exists in the valid option set", () => {
+    expect(getTopUsageRankedCandidate(
+      candidates,
+      ["Unknown Move", "Thunderbolt", "Protect"],
+    )).toEqual(candidates[1]);
+    expect(getTopUsageRankedCandidate(candidates, ["Unknown Move"])).toBeUndefined();
+    expect(getTopUsageRankedCandidate(
+      [{ canonicalName: "Thunderbolt", value: "" }, candidates[0]],
+      ["Thunderbolt", "Protect"],
+    )).toEqual(candidates[0]);
+    expect(getTopUsageRankedCandidate(candidates, undefined)).toBeUndefined();
+    expect(getTopUsageRankedCandidate([], ["Thunderbolt"])).toBeUndefined();
+  });
+
   it("does not mutate candidates and preserves the original order without a ranking", () => {
     const original = [...candidates];
     expect(applyUsageRanking(candidates, undefined)).toEqual(candidates);
@@ -141,5 +156,23 @@ describe("applyUsageRanking", () => {
     ).map((candidate) => candidate.canonicalName)).toEqual(["Move44", "Move43"]);
     expect(getMatchingEntityInputOptionsWithUsage(candidates, "ま", ["Protect"], 1))
       .toEqual([candidates[0]]);
+  });
+
+  it("keeps status moves in autocomplete ranking order", () => {
+    const moveCandidates = [
+      { canonicalName: "Encore", value: "アンコール" },
+      { canonicalName: "Moonblast", value: "ムーンフォース" },
+      { canonicalName: "Protect", value: "まもる" },
+    ];
+
+    expect(getMatchingEntityInputOptionsWithUsage(
+      moveCandidates,
+      "",
+      ["Protect", "Moonblast", "Encore"],
+    ).map((candidate) => candidate.canonicalName)).toEqual([
+      "Protect",
+      "Moonblast",
+      "Encore",
+    ]);
   });
 });

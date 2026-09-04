@@ -153,6 +153,14 @@ export const getPokemonBaseFormValue = (
   return baseOption?.label ?? null;
 };
 
+export const getPokemonBaseFormCanonicalName = (
+  input: string,
+  canonicalNameHint?: string,
+): string | null => {
+  const baseOption = getBaseOption(input, canonicalNameHint);
+  return baseOption?.showdownName ?? null;
+};
+
 /**
  * Resolve only a Mega form to the canonical Pokemon that enters battle before
  * Mega Evolution. Other forms deliberately return null so callers cannot

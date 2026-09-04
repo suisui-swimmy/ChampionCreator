@@ -25,6 +25,7 @@ export {
   getUsageRanking,
   getUsageNatureRanking,
   getNatureUsageState,
+  getTopUsageRankedCandidate,
   getUsageNatureState,
   sortCandidatesByUsage,
   toUsagePokemonKey,

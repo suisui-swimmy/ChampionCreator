@@ -13,6 +13,9 @@ import {
   ResultsPanel,
   StatPointCellBar,
   SuggestionFormatToggle,
+  applyUsageDefaultInputValue,
+  applyUsageDefaultsForAttackPokemonSelection,
+  applyUsageDefaultsForTargetPokemonSelection,
   applyScenarioAdjustmentTypeDefaults,
   applySpeedOrderModeDefaults,
   clampTargetStatPointChange,
@@ -25,7 +28,9 @@ import {
   getAccountSyncStatusIconPath,
   isCurrentAccountOperation,
   shouldInvalidateAccountOperationOnUidChange,
+  shouldAutoFillUsageMoveForAttack,
   getOffenseDefenderStatKeys,
+  getPokemonUsageDefaultInputValues,
   getPokemonSuggestionKeyAction,
   resolveUsageSuggestionOwner,
   resolveDraftStorageScope,
@@ -237,6 +242,57 @@ const usageDataFixture = (dataVersion = "test-version"): ChampionsUsageData => (
   dataVersion,
   sourceGeneratedAt: "2026-08-13T15:30:00Z",
   formats: { Singles: {}, Doubles: {} },
+});
+
+const usageAutofillDataFixture = (): ChampionsUsageData => ({
+  schemaVersion: 1,
+  dataVersion: "autofill-test",
+  sourceGeneratedAt: "2026-09-04T00:00:00Z",
+  formats: {
+    Singles: {
+      pikachu: {
+        move: ["Thunderbolt", "Fake Out"],
+        ability: ["Lightning Rod", "Static"],
+        item: ["Light Ball", "Focus Sash"],
+        nature: [
+          { canonicalName: "Jolly", rank: 2, percentage: 20 },
+          { canonicalName: "Timid", rank: 1, percentage: null },
+        ],
+      },
+      garchomp: {
+        move: ["Earthquake"],
+        ability: ["Rough Skin"],
+        item: ["Life Orb"],
+        nature: [{ canonicalName: "Jolly", rank: 1, percentage: 80 }],
+      },
+      xerneas: {
+        move: ["Moonblast"],
+        ability: ["Fairy Aura"],
+        item: ["Power Herb"],
+        nature: [{ canonicalName: "Timid", rank: 1, percentage: 75 }],
+      },
+      charizard: {
+        move: ["Solar Beam"],
+        ability: ["Blaze"],
+        item: ["Charizardite Y", "Charizardite X"],
+        nature: [{ canonicalName: "Modest", rank: 1, percentage: 60 }],
+      },
+      whimsicott: {
+        move: ["Protect", "Moonblast", "Encore"],
+        ability: [],
+        item: [],
+        nature: [],
+      },
+    },
+    Doubles: {
+      pikachu: {
+        move: ["Fake Out", "Thunderbolt"],
+        ability: ["Static", "Lightning Rod"],
+        item: ["Focus Sash", "Light Ball"],
+        nature: [{ canonicalName: "Jolly", rank: 1, percentage: 55 }],
+      },
+    },
+  },
 });
 
 describe("App", () => {
@@ -513,6 +569,296 @@ describe("App", () => {
     }
   });
 
+  it("builds format-specific top usage defaults without inventing incompatible values", () => {
+    const data = usageAutofillDataFixture();
+    expect(getPokemonUsageDefaultInputValues("Pikachu", { data, format: "Singles" })).toEqual({
+      moveInput: "10まんボルト",
+      natureInput: "おくびょう",
+      abilityInput: "ひらいしん",
+      itemInput: "でんきだま",
+    });
+    expect(getPokemonUsageDefaultInputValues("Pikachu", { data, format: "Doubles" })).toEqual({
+      moveInput: "ねこだまし",
+      natureInput: "ようき",
+      abilityInput: "せいでんき",
+      itemInput: "きあいのタスキ",
+    });
+    expect(getPokemonUsageDefaultInputValues("Charizard-Mega-X", { data, format: "Singles" })).toEqual({
+      moveInput: "ソーラービーム",
+      natureInput: "ひかえめ",
+      abilityInput: undefined,
+      itemInput: "リザードナイトＸ",
+    });
+    expect(getPokemonUsageDefaultInputValues("Charizard-Mega-Y", { data, format: "Singles" })).toEqual({
+      moveInput: "ソーラービーム",
+      natureInput: "ひかえめ",
+      abilityInput: undefined,
+      itemInput: "リザードナイトＹ",
+    });
+    expect(getPokemonUsageDefaultInputValues("Whimsicott", { data, format: "Singles" })).toEqual({
+      moveInput: "ムーンフォース",
+      natureInput: undefined,
+      abilityInput: undefined,
+      itemInput: undefined,
+    });
+    data.formats.Singles.whimsicott.move = ["Protect", "Encore"];
+    expect(getPokemonUsageDefaultInputValues("Whimsicott", { data, format: "Singles" }).moveInput)
+      .toBeUndefined();
+    expect(getPokemonUsageDefaultInputValues("Pikachu", { data: null, format: "Singles" })).toEqual({
+      moveInput: undefined,
+      natureInput: undefined,
+      abilityInput: undefined,
+      itemInput: undefined,
+    });
+  });
+
+  it("replaces blank or previous defaults while preserving a manually changed value", () => {
+    expect(applyUsageDefaultInputValue("", undefined, "new")).toBe("new");
+    expect(applyUsageDefaultInputValue("old", "old", "new")).toBe("new");
+    expect(applyUsageDefaultInputValue("manual", "old", "new")).toBe("manual");
+    expect(applyUsageDefaultInputValue("old", "old", undefined)).toBe("");
+  });
+
+  it("fills target fields and target-owned offense moves without replacing manual edits", () => {
+    const data = usageAutofillDataFixture();
+    const context = { data, format: "Singles" as const };
+    const [defenceTemplate, offenseTemplate] = createDefaultScenarioForms();
+    const blankAttack = {
+      ...defenceTemplate.attacks[0],
+      attackerPokemonInput: "",
+      attackerPokemonCanonicalName: undefined,
+      attackerNatureInput: "",
+      attackerAbilityInput: "",
+      attackerItemInput: "",
+      moveInput: "",
+    };
+    const target = {
+      ...createDefaultTargetForm(),
+      pokemonInput: "",
+      pokemonCanonicalName: undefined,
+      natureInput: "",
+      abilityInput: "",
+      itemInput: "",
+    };
+    const scenarios = [
+      { ...defenceTemplate, attacks: [{ ...blankAttack }] },
+      { ...offenseTemplate, attacks: [{ ...blankAttack, id: "offense-attack" }] },
+    ];
+    const pikachu = applyUsageDefaultsForTargetPokemonSelection(
+      target,
+      scenarios,
+      "ピカチュウ",
+      "Pikachu",
+      context,
+    );
+
+    expect(pikachu.target).toMatchObject({
+      pokemonInput: "ピカチュウ",
+      pokemonCanonicalName: "Pikachu",
+      natureInput: "おくびょう",
+      abilityInput: "ひらいしん",
+      itemInput: "でんきだま",
+    });
+    expect(pikachu.scenarios[0].attacks[0].moveInput).toBe("");
+    expect(pikachu.scenarios[1].attacks[0].moveInput).toBe("10まんボルト");
+
+    const doublesReselect = applyUsageDefaultsForTargetPokemonSelection(
+      pikachu.target,
+      pikachu.scenarios,
+      "ピカチュウ",
+      "Pikachu",
+      { data, format: "Doubles" },
+      "Pikachu",
+      context,
+    );
+    expect(doublesReselect.target).toMatchObject({
+      natureInput: "ようき",
+      abilityInput: "せいでんき",
+      itemInput: "きあいのタスキ",
+    });
+    expect(doublesReselect.scenarios[1].attacks[0].moveInput).toBe("ねこだまし");
+
+    const automaticSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      pikachu.target,
+      pikachu.scenarios,
+      "ガブリアス",
+      "Garchomp",
+      context,
+    );
+    expect(automaticSwitch.target).toMatchObject({
+      natureInput: "ようき",
+      abilityInput: "さめはだ",
+      itemInput: "いのちのたま",
+    });
+    expect(automaticSwitch.scenarios[1].attacks[0].moveInput).toBe("じしん");
+
+    const switchAfterRawTyping = applyUsageDefaultsForTargetPokemonSelection(
+      {
+        ...pikachu.target,
+        pokemonInput: "ガブリアス",
+        pokemonCanonicalName: undefined,
+      },
+      pikachu.scenarios,
+      "ガブリアス",
+      "Garchomp",
+      context,
+      "Pikachu",
+    );
+    expect(switchAfterRawTyping.target).toMatchObject({
+      natureInput: "ようき",
+      abilityInput: "さめはだ",
+      itemInput: "いのちのたま",
+    });
+    expect(switchAfterRawTyping.scenarios[1].attacks[0].moveInput).toBe("じしん");
+
+    const manualSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      { ...pikachu.target, abilityInput: "せいでんき" },
+      pikachu.scenarios.map((scenario) => scenario.adjustmentType === "offense"
+        ? { ...scenario, attacks: scenario.attacks.map((attack) => ({ ...attack, moveInput: "ねこだまし" })) }
+        : scenario),
+      "ガブリアス",
+      "Garchomp",
+      context,
+    );
+    expect(manualSwitch.target.abilityInput).toBe("せいでんき");
+    expect(manualSwitch.scenarios[1].attacks[0].moveInput).toBe("ねこだまし");
+
+    const megaSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      { ...pikachu.target, itemInput: "こだわりスカーフ" },
+      pikachu.scenarios,
+      "メガリザードンX",
+      "Charizard-Mega-X",
+      context,
+    );
+    expect(megaSwitch.target.itemInput).toBe("リザードナイトＸ");
+    const baseSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      megaSwitch.target,
+      megaSwitch.scenarios,
+      "リザードン",
+      "Charizard",
+      context,
+      "Charizard-Mega-X",
+    );
+    expect(baseSwitch.target.itemInput).toBe("");
+    const manualItemBaseSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      { ...megaSwitch.target, itemInput: "こだわりスカーフ" },
+      megaSwitch.scenarios,
+      "リザードン",
+      "Charizard",
+      context,
+      "Charizard-Mega-X",
+    );
+    expect(manualItemBaseSwitch.target.itemInput).toBe("こだわりスカーフ");
+    const differentPokemonSwitch = applyUsageDefaultsForTargetPokemonSelection(
+      megaSwitch.target,
+      megaSwitch.scenarios,
+      "ピカチュウ",
+      "Pikachu",
+      context,
+      "Charizard-Mega-X",
+    );
+    expect(differentPokemonSwitch.target.itemInput).toBe("でんきだま");
+  });
+
+  it("fills all attacker-owned defaults only when the card owns the move", () => {
+    const data = usageAutofillDataFixture();
+    const context = { data, format: "Singles" as const };
+    const blankAttack = {
+      ...createDefaultScenarioForms()[0].attacks[0],
+      attackerPokemonInput: "",
+      attackerPokemonCanonicalName: undefined,
+      attackerNatureInput: "",
+      attackerAbilityInput: "",
+      attackerItemInput: "",
+      moveInput: "",
+    };
+    const defenceAttack = applyUsageDefaultsForAttackPokemonSelection(
+      blankAttack,
+      "ピカチュウ",
+      "Pikachu",
+      "defence",
+      context,
+    );
+    expect(defenceAttack).toMatchObject({
+      attackerPokemonInput: "ピカチュウ",
+      attackerPokemonCanonicalName: "Pikachu",
+      attackerNatureInput: "おくびょう",
+      attackerAbilityInput: "ひらいしん",
+      attackerItemInput: "でんきだま",
+      moveInput: "10まんボルト",
+    });
+
+    const switchedAttack = applyUsageDefaultsForAttackPokemonSelection(
+      defenceAttack,
+      "ガブリアス",
+      "Garchomp",
+      "defence",
+      context,
+    );
+    expect(switchedAttack).toMatchObject({
+      attackerNatureInput: "ようき",
+      attackerAbilityInput: "さめはだ",
+      attackerItemInput: "いのちのたま",
+      moveInput: "じしん",
+    });
+
+    const offenseDefender = applyUsageDefaultsForAttackPokemonSelection(
+      blankAttack,
+      "ピカチュウ",
+      "Pikachu",
+      "offense",
+      context,
+    );
+    expect(offenseDefender.moveInput).toBe("");
+    expect(offenseDefender).toMatchObject({
+      attackerNatureInput: "おくびょう",
+      attackerAbilityInput: "ひらいしん",
+      attackerItemInput: "でんきだま",
+    });
+
+    const megaAttacker = applyUsageDefaultsForAttackPokemonSelection(
+      { ...defenceAttack, attackerItemInput: "こだわりスカーフ" },
+      "メガリザードンX",
+      "Charizard-Mega-X",
+      "defence",
+      context,
+    );
+    expect(megaAttacker.attackerItemInput).toBe("リザードナイトＸ");
+    expect(megaAttacker.attackerAbilityInput).toBe("");
+
+    const previousAutoSupport = applyUsageDefaultsForAttackPokemonSelection(
+      {
+        ...blankAttack,
+        attackerPokemonInput: "ゼルネアス",
+        attackerPokemonCanonicalName: "Xerneas",
+        attackerAbilityInput: "フェアリーオーラ",
+      },
+      "ピカチュウ",
+      "Pikachu",
+      "defence",
+      context,
+      "Xerneas",
+    );
+    expect(previousAutoSupport.attackerAbilityInput).toBe("ひらいしん");
+    expect(previousAutoSupport.moveInput).toBe("10まんボルト");
+
+    const manualSupport = applyUsageDefaultsForAttackPokemonSelection(
+      {
+        ...blankAttack,
+        attackerPokemonInput: "ガブリアス",
+        attackerPokemonCanonicalName: "Garchomp",
+        attackerAbilityInput: "フェアリーオーラ",
+      },
+      "ピカチュウ",
+      "Pikachu",
+      "defence",
+      context,
+      "Garchomp",
+    );
+    expect(manualSupport.attackerAbilityInput).toBe("フェアリーオーラ");
+    expect(manualSupport.moveInput).toBe("");
+  });
+
   it("only treats field-wide or ally-targeting abilities as move-less support cards", () => {
     for (const skinAbility of [
       "フェアリースキン",
@@ -530,6 +876,10 @@ describe("App", () => {
     expect(isAbilitySupportCard("defence", "", "オーラブレイク")).toBe(true);
     expect(isAbilitySupportCard("defence", "ムーンフォース", "フェアリーオーラ")).toBe(false);
     expect(isAbilitySupportCard("offense", "", "フェアリーオーラ")).toBe(false);
+    expect(shouldAutoFillUsageMoveForAttack("defence", "", "フェアリーオーラ")).toBe(false);
+    expect(shouldAutoFillUsageMoveForAttack("defence", "", "もうか")).toBe(true);
+    expect(shouldAutoFillUsageMoveForAttack("offense", "", "もうか")).toBe(false);
+    expect(shouldAutoFillUsageMoveForAttack("speed", "", "もうか")).toBe(false);
   });
 
   it("keeps mobile text controls large enough to avoid iOS focus zoom", () => {
@@ -1570,6 +1920,12 @@ describe("App", () => {
     expect(guideHtml).toContain("「この相手より速くする」「この相手より遅くする」という条件です。");
     expect(guideHtml).toContain("ポケモン・技・特性・持ち物の入力欄に文字を入力、または「&gt;」ボタンを押すと、入力候補が表示されます。");
     expect(guideHtml).toContain('href="https://championsbattledata.com/" target="_blank" rel="noreferrer">Pokemon Champions Battle Data</a>の使用率データを参考に並び替えます。');
+    expect(guideHtml).toContain("使用率データの取得後にポケモンを候補から選ぶと、その形式で最上位かつ、そのポケモンで有効な技・性格・特性・持ち物を初期入力します。");
+    expect(guideHtml).toContain("技は変化技を除外し、ランキング内で最上位の物理技または特殊技を入力します。");
+    expect(guideHtml).not.toContain("最上位が変化技の場合はその技が入る");
+    expect(guideHtml).toContain("空欄または、現在値が直前のポケモンにおける同形式の1位と一致する欄だけを更新するため、別の値へ手動変更した欄は残ります。");
+    expect(guideHtml).toContain("形式や調整種別を切り替えただけでは既存入力を変更せず、その後にポケモンを候補から選んだ時点で新しい基準を使います。");
+    expect(guideHtml).toContain("対応するメガストーンがある姿では、使用率1位の持ち物より対応石を優先します。");
     expect(guideHtml).toContain("個体値は全能力31固定で計算します。現在、個体値を変更する入力欄はありません。");
     expect(guideHtml).not.toContain("レベル、性格、SP、個体値");
     expect(guideHtml).toContain("現在HPで威力が変わる技は、ロック中に各攻撃時点のHPから自動計算されます。");

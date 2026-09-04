@@ -47,9 +47,12 @@ import type { EntityKind } from "./data/localizationTypes";
 import { appVersionInfo, formatAppVersionLabel } from "./appVersion";
 import {
   formatUsageDataDateJst,
+  getTopUsageRankedCandidate,
   getUsageMatchingEntityInputOptions,
+  getUsageNatureRanking,
   getNatureUsageState,
   getUsagePokemonEntry,
+  getUsageRanking,
   loadChampionsUsageData,
   loadSuggestionFormat,
   saveSuggestionFormat,
@@ -131,6 +134,7 @@ import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwor
 import { getPublicAssetUrl } from "./ui/publicAssetUrl";
 import {
   getMegaBasePokemonCanonicalName,
+  getPokemonBaseFormCanonicalName,
   getPokemonBaseFormValue,
   getMegaStoneForPokemonForm,
   getPokemonFormVariantOptions,
@@ -548,6 +552,15 @@ export const isAbilitySupportCard = (
   adjustmentType === "defence"
   && !moveInput.trim()
   && isActiveAllyAbilityCanonicalName(resolveCanonicalEntityName("ability", abilityInput))
+);
+
+export const shouldAutoFillUsageMoveForAttack = (
+  adjustmentType: ScenarioAdjustmentType,
+  moveInput: string,
+  abilityInput: string,
+): boolean => (
+  adjustmentType === "defence"
+  && !isAbilitySupportCard(adjustmentType, moveInput, abilityInput)
 );
 
 export const isUnresolvedEntityInput = (
@@ -1351,6 +1364,284 @@ export const resolveUsageSuggestionOwner = (
   return preMegaOwner;
 };
 
+export type UsageDefaultInputValues = {
+  moveInput?: string;
+  natureInput?: string;
+  abilityInput?: string;
+  itemInput?: string;
+};
+
+export type UsageDefaultContext = {
+  data: ChampionsUsageData | null | undefined;
+  format: SuggestionFormat;
+  ownerAliases?: Readonly<Record<string, string>>;
+};
+
+const usageDefaultMoveOptions = getEntityInputOptions("move").filter((option) => {
+  const category = getMovePowerCatalogEntry(option.canonicalName)?.category;
+  return category === "Physical" || category === "Special";
+});
+const usageDefaultNatureOptions = getEntityInputOptions("nature");
+const usageDefaultItemOptions = getEntityInputOptions("item");
+
+export const getPokemonUsageDefaultInputValues = (
+  pokemonCanonicalName: string | undefined,
+  { data, format, ownerAliases = {} }: UsageDefaultContext,
+): UsageDefaultInputValues => {
+  if (!pokemonCanonicalName) {
+    return {};
+  }
+
+  const getRankedValue = (
+    category: UsageRankingCategory,
+    options: readonly EntityInputOption[],
+  ): string | undefined => {
+    const owner = resolveUsageSuggestionOwner(
+      pokemonCanonicalName,
+      ownerAliases,
+      data,
+      format,
+      category,
+    );
+    return getTopUsageRankedCandidate(
+      options,
+      getUsageRanking(data, format, owner, category),
+    )?.value;
+  };
+
+  const natureOwner = resolveUsageSuggestionOwner(
+    pokemonCanonicalName,
+    ownerAliases,
+    data,
+    format,
+    "nature",
+  );
+  const natureRanking = getUsageNatureRanking(data, format, natureOwner);
+  const rankedNatureCanonicalNames = natureRanking
+    ? [...natureRanking]
+      .sort((left, right) => left.rank - right.rank)
+      .map((entry) => entry.canonicalName)
+    : undefined;
+  const megaStone = getMegaStoneForPokemonForm(pokemonCanonicalName, pokemonCanonicalName);
+
+  return {
+    moveInput: getRankedValue("move", usageDefaultMoveOptions),
+    natureInput: getTopUsageRankedCandidate(
+      usageDefaultNatureOptions,
+      rankedNatureCanonicalNames,
+    )?.value,
+    abilityInput: getRankedValue(
+      "ability",
+      getPokemonAbilityInputOptions(pokemonCanonicalName) ?? [],
+    ),
+    itemInput: megaStone?.value ?? getRankedValue("item", usageDefaultItemOptions),
+  };
+};
+
+export const applyUsageDefaultInputValue = (
+  currentValue: string,
+  previousDefault: string | undefined,
+  nextDefault: string | undefined,
+): string => (
+  !currentValue.trim() || (previousDefault !== undefined && currentValue === previousDefault)
+    ? nextDefault ?? ""
+    : currentValue
+);
+
+const applyPokemonSelectionItemDefault = (
+  currentValue: string,
+  previousPokemonCanonicalName: string | undefined,
+  nextPokemonCanonicalName: string,
+  previousDefault: string | undefined,
+  nextDefault: string | undefined,
+): string => {
+  const previousMegaStone = previousPokemonCanonicalName
+    ? getMegaStoneForPokemonForm(previousPokemonCanonicalName, previousPokemonCanonicalName)
+    : null;
+  const nextMegaStone = getMegaStoneForPokemonForm(
+    nextPokemonCanonicalName,
+    nextPokemonCanonicalName,
+  );
+  const previousMegaBasePokemon = previousPokemonCanonicalName
+    ? getMegaBasePokemonCanonicalName(previousPokemonCanonicalName, previousPokemonCanonicalName)
+    : null;
+  if (
+    previousMegaStone
+    && !nextMegaStone
+    && previousMegaBasePokemon === nextPokemonCanonicalName
+    && doesItemMatchMegaStone(currentValue, previousMegaStone)
+  ) {
+    return "";
+  }
+  if (nextMegaStone && previousPokemonCanonicalName !== nextPokemonCanonicalName) {
+    return nextMegaStone.value;
+  }
+  return applyUsageDefaultInputValue(currentValue, previousDefault, nextDefault);
+};
+
+export const applyUsageDefaultsForTargetPokemonSelection = (
+  target: TargetFormState,
+  scenarios: ScenarioFormState[],
+  pokemonInput: string,
+  pokemonCanonicalName: string,
+  context: UsageDefaultContext,
+  previousPokemonCanonicalNameOverride?: string,
+  previousContextOverride?: UsageDefaultContext,
+): { target: TargetFormState; scenarios: ScenarioFormState[] } => {
+  const previousPokemonCanonicalName = previousPokemonCanonicalNameOverride
+    ?? resolveCanonicalEntityName(
+      "pokemon",
+      target.pokemonInput,
+      target.pokemonCanonicalName,
+    );
+  const previousDefaults = getPokemonUsageDefaultInputValues(
+    previousPokemonCanonicalName,
+    previousContextOverride ?? context,
+  );
+  const nextDefaults = getPokemonUsageDefaultInputValues(pokemonCanonicalName, context);
+  const nextTarget = {
+    ...target,
+    pokemonInput,
+    pokemonCanonicalName,
+    natureInput: applyUsageDefaultInputValue(
+      target.natureInput,
+      previousDefaults.natureInput,
+      nextDefaults.natureInput,
+    ),
+    abilityInput: applyUsageDefaultInputValue(
+      target.abilityInput,
+      previousDefaults.abilityInput,
+      nextDefaults.abilityInput,
+    ),
+    itemInput: applyPokemonSelectionItemDefault(
+      target.itemInput,
+      previousPokemonCanonicalName,
+      pokemonCanonicalName,
+      previousDefaults.itemInput,
+      nextDefaults.itemInput,
+    ),
+  };
+
+  let scenariosChanged = false;
+  const nextScenarios = scenarios.map((scenario) => {
+    if (scenario.adjustmentType !== "offense") {
+      return scenario;
+    }
+    let attacksChanged = false;
+    const attacks = scenario.attacks.map((attack) => {
+      const moveInput = applyUsageDefaultInputValue(
+        attack.moveInput,
+        previousDefaults.moveInput,
+        nextDefaults.moveInput,
+      );
+      if (moveInput === attack.moveInput) {
+        return attack;
+      }
+      attacksChanged = true;
+      return applyMoveInputDefaults(attack, moveInput, false);
+    });
+    if (!attacksChanged) {
+      return scenario;
+    }
+    scenariosChanged = true;
+    return { ...scenario, attacks };
+  });
+
+  return {
+    target: nextTarget,
+    scenarios: scenariosChanged ? nextScenarios : scenarios,
+  };
+};
+
+export const applyUsageDefaultsForAttackPokemonSelection = (
+  attack: ScenarioAttackFormState,
+  pokemonInput: string,
+  pokemonCanonicalName: string,
+  adjustmentType: ScenarioAdjustmentType,
+  context: UsageDefaultContext,
+  previousPokemonCanonicalNameOverride?: string,
+  previousContextOverride?: UsageDefaultContext,
+): ScenarioAttackFormState => {
+  const previousPokemonCanonicalName = previousPokemonCanonicalNameOverride
+    ?? resolveCanonicalEntityName(
+      "pokemon",
+      attack.attackerPokemonInput,
+      attack.attackerPokemonCanonicalName,
+    );
+  const previousDefaults = getPokemonUsageDefaultInputValues(
+    previousPokemonCanonicalName,
+    previousContextOverride ?? context,
+  );
+  const nextDefaults = getPokemonUsageDefaultInputValues(pokemonCanonicalName, context);
+  const abilityInput = applyUsageDefaultInputValue(
+    attack.attackerAbilityInput,
+    previousDefaults.abilityInput,
+    nextDefaults.abilityInput,
+  );
+  const moveInput = shouldAutoFillUsageMoveForAttack(
+    adjustmentType,
+    attack.moveInput,
+    abilityInput,
+  )
+    ? applyUsageDefaultInputValue(
+      attack.moveInput,
+      previousDefaults.moveInput,
+      nextDefaults.moveInput,
+    )
+    : attack.moveInput;
+  const withMoveDefaults = moveInput === attack.moveInput
+    ? attack
+    : applyMoveInputDefaults(attack, moveInput, true);
+
+  return {
+    ...withMoveDefaults,
+    attackerPokemonInput: pokemonInput,
+    attackerPokemonCanonicalName: pokemonCanonicalName,
+    attackerNatureInput: applyUsageDefaultInputValue(
+      attack.attackerNatureInput,
+      previousDefaults.natureInput,
+      nextDefaults.natureInput,
+    ),
+    attackerAbilityInput: abilityInput,
+    attackerItemInput: applyPokemonSelectionItemDefault(
+      attack.attackerItemInput,
+      previousPokemonCanonicalName,
+      pokemonCanonicalName,
+      previousDefaults.itemInput,
+      nextDefaults.itemInput,
+    ),
+  };
+};
+
+const getUsageDefaultAttackKey = (scenarioId: string, attackId: string): string => (
+  `${scenarioId}:${attackId}`
+);
+
+type CommittedUsageDefaultPokemon = {
+  canonicalName: string;
+  format: SuggestionFormat;
+};
+
+const collectCommittedAttackPokemonCanonicalNames = (
+  scenarios: readonly ScenarioFormState[],
+  format: SuggestionFormat,
+): Map<string, CommittedUsageDefaultPokemon> => {
+  const result = new Map<string, CommittedUsageDefaultPokemon>();
+  for (const scenario of scenarios) {
+    for (const attack of scenario.attacks) {
+      const canonicalName = resolveCanonicalEntityName(
+        "pokemon",
+        attack.attackerPokemonInput,
+        attack.attackerPokemonCanonicalName,
+      );
+      if (canonicalName) {
+        result.set(getUsageDefaultAttackKey(scenario.id, attack.id), { canonicalName, format });
+      }
+    }
+  }
+  return result;
+};
+
 const useUsageSuggestionOptions = (
   category: UsageRankingCategory,
   input: string,
@@ -1713,6 +2004,42 @@ export function App({
     return result.status === "empty" ? null : result;
   });
   const [draftSaveState, setDraftSaveState] = useState<DraftSaveUiState>({ status: "idle" });
+  const initialCommittedTargetPokemonCanonicalName = resolveCanonicalEntityName(
+    "pokemon",
+    targetForm.pokemonInput,
+    targetForm.pokemonCanonicalName,
+  );
+  const committedTargetPokemonCanonicalNameRef = useRef<CommittedUsageDefaultPokemon | undefined>(
+    initialCommittedTargetPokemonCanonicalName
+      ? { canonicalName: initialCommittedTargetPokemonCanonicalName, format: activeSuggestionFormat }
+      : undefined,
+  );
+  const committedAttackPokemonCanonicalNamesRef = useRef<Map<string, CommittedUsageDefaultPokemon>>(
+    collectCommittedAttackPokemonCanonicalNames(scenarioForms, activeSuggestionFormat),
+  );
+  const syncCommittedPokemonCanonicalNames = (
+    target: TargetFormState,
+    scenarios: readonly ScenarioFormState[],
+  ) => {
+    const canonicalName = resolveCanonicalEntityName(
+      "pokemon",
+      target.pokemonInput,
+      target.pokemonCanonicalName,
+    );
+    committedTargetPokemonCanonicalNameRef.current = canonicalName
+      ? { canonicalName, format: activeSuggestionFormat }
+      : undefined;
+    committedAttackPokemonCanonicalNamesRef.current = collectCommittedAttackPokemonCanonicalNames(
+      scenarios,
+      activeSuggestionFormat,
+    );
+  };
+  const syncCommittedAttackPokemonCanonicalNames = (scenarios: readonly ScenarioFormState[]) => {
+    committedAttackPokemonCanonicalNamesRef.current = collectCommittedAttackPokemonCanonicalNames(
+      scenarios,
+      activeSuggestionFormat,
+    );
+  };
   const draftBaselineKindRef = useRef<DraftBaselineKind>(
     draftRecovery?.status === "success" ? "draft" : null,
   );
@@ -1781,6 +2108,7 @@ export function App({
     pendingBoxCommitFingerprintRef.current = null;
     draftBaselineKindRef.current = null;
     const blank = createAccountBoundaryForms(activeSuggestionFormat);
+    syncCommittedPokemonCanonicalNames(blank.target, blank.scenarios);
     setTargetForm(blank.target);
     setScenarioForms([...blank.scenarios]);
     setDraftSaveState({ status: "idle" });
@@ -2266,6 +2594,7 @@ export function App({
     const { target, scenarios } = draftRecovery.draft.payload;
     const fingerprint = createDraftFingerprint(target, scenarios);
     resetActiveSearch();
+    syncCommittedPokemonCanonicalNames(target, scenarios);
     setTargetForm(target);
     setScenarioForms(scenarios);
     applyCurrentDraftSaveResult(fingerprint, {
@@ -2332,6 +2661,7 @@ export function App({
       return;
     }
     resetActiveSearch();
+    syncCommittedPokemonCanonicalNames(target, scenarios);
     setTargetForm(target);
     setScenarioForms(scenarios);
     applyCurrentDraftSaveResult(fingerprint, saveResult);
@@ -2668,6 +2998,7 @@ export function App({
       accountDeletionLockedRef.current = false;
       suspendDraftPersistenceRef.current = true;
       const blank = createAccountBoundaryForms(activeSuggestionFormat);
+      syncCommittedPokemonCanonicalNames(blank.target, blank.scenarios);
       setTargetForm(blank.target);
       setScenarioForms([...blank.scenarios]);
       setDraftSaveState({ status: "idle" });
@@ -2724,6 +3055,38 @@ export function App({
     canonicalName?: string,
   ) => {
     resetActiveSearch();
+    if (key === "pokemonInput" && canonicalName) {
+      const previousCommittedPokemon = committedTargetPokemonCanonicalNameRef.current;
+      const nextCommittedPokemon = {
+        canonicalName,
+        format: activeSuggestionFormat,
+      };
+      const nextState = applyUsageDefaultsForTargetPokemonSelection(
+        targetForm,
+        scenarioForms,
+        value as TargetFormState["pokemonInput"],
+        canonicalName,
+        {
+          data: activeUsageData,
+          format: activeSuggestionFormat,
+          ownerAliases: usagePokemonAliases,
+        },
+        previousCommittedPokemon?.canonicalName,
+        previousCommittedPokemon
+          ? {
+              data: activeUsageData,
+              format: previousCommittedPokemon.format,
+              ownerAliases: usagePokemonAliases,
+            }
+          : undefined,
+      );
+      committedTargetPokemonCanonicalNameRef.current = nextCommittedPokemon;
+      setTargetForm(nextState.target);
+      if (nextState.scenarios !== scenarioForms) {
+        setScenarioForms(nextState.scenarios);
+      }
+      return;
+    }
     setTargetForm((current) => {
       if (key === "levelMode") {
         return applyTargetLevelMode(current, value as TargetFormState["levelMode"]);
@@ -2801,6 +3164,10 @@ export function App({
     canonicalName?: string,
   ) => {
     resetActiveSearch();
+    const usageDefaultAttackKey = getUsageDefaultAttackKey(scenarioId, attackId);
+    const previousCommittedPokemon = key === "attackerPokemonInput" && canonicalName
+      ? committedAttackPokemonCanonicalNamesRef.current.get(usageDefaultAttackKey)
+      : undefined;
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
         ? {
@@ -2808,11 +3175,31 @@ export function App({
             attacks: scenario.attacks.map((attack) => (
               attack.id === attackId
                 ? key === "attackerPokemonInput"
-                  ? {
-                      ...attack,
-                      attackerPokemonInput: value as ScenarioAttackFormState["attackerPokemonInput"],
-                      attackerPokemonCanonicalName: canonicalName,
-                    }
+                  ? canonicalName
+                    ? applyUsageDefaultsForAttackPokemonSelection(
+                        attack,
+                        value as ScenarioAttackFormState["attackerPokemonInput"],
+                        canonicalName,
+                        scenario.adjustmentType,
+                        {
+                          data: activeUsageData,
+                          format: activeSuggestionFormat,
+                          ownerAliases: usagePokemonAliases,
+                        },
+                        previousCommittedPokemon?.canonicalName,
+                        previousCommittedPokemon
+                          ? {
+                              data: activeUsageData,
+                              format: previousCommittedPokemon.format,
+                              ownerAliases: usagePokemonAliases,
+                            }
+                          : undefined,
+                      )
+                    : {
+                        ...attack,
+                        attackerPokemonInput: value as ScenarioAttackFormState["attackerPokemonInput"],
+                        attackerPokemonCanonicalName: undefined,
+                      }
                 : key === "moveInput"
                   ? applyMoveInputDefaults(
                       attack,
@@ -2845,6 +3232,13 @@ export function App({
           }
         : scenario
     )));
+    if (key === "attackerPokemonInput" && canonicalName) {
+      const nextCommittedPokemon = {
+        canonicalName,
+        format: activeSuggestionFormat,
+      };
+      committedAttackPokemonCanonicalNamesRef.current.set(usageDefaultAttackKey, nextCommittedPokemon);
+    }
   };
 
   const handleAddAttack = (scenarioId: string) => {
@@ -3188,6 +3582,7 @@ export function App({
         });
       }
       resetActiveSearch();
+      syncCommittedPokemonCanonicalNames(blankTarget, blankScenarios);
       setTargetForm(blankTarget);
       setScenarioForms(blankScenarios);
       setBoxMessage(null);
@@ -3202,6 +3597,7 @@ export function App({
     }
 
     resetActiveSearch();
+    syncCommittedPokemonCanonicalNames(entry.payload.target, entry.payload.scenarios);
     setTargetForm(entry.payload.target);
     setScenarioForms(entry.payload.scenarios);
     setBoxMessage(null);
@@ -3389,8 +3785,10 @@ export function App({
   const handleLoadEnemyBoxEntry = (entryId: string) => {
     if (!ensureBoxSourceReady("enemy")) return;
     if (entryId === BLANK_ENEMY_BOX_SLOT_ID) {
+      const blankScenarios = [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))];
       resetActiveSearch();
-      setScenarioForms([createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]);
+      syncCommittedAttackPokemonCanonicalNames(blankScenarios);
+      setScenarioForms(blankScenarios);
       setEnemyBoxMessage(null);
       setEnemyBoxOpen(false);
       return;
@@ -3403,6 +3801,7 @@ export function App({
     }
 
     resetActiveSearch();
+    syncCommittedAttackPokemonCanonicalNames(entry.payload.scenarios);
     setScenarioForms(entry.payload.scenarios);
     setEnemyBoxMessage(null);
     setEnemyBoxOpen(false);
@@ -4947,8 +5346,9 @@ function MechanicControls({
   const applyBaseForm = () => {
     const megaStone = getMegaStoneForPokemonForm(pokemonInput, pokemonCanonicalName);
     const baseValue = getPokemonBaseFormValue(pokemonInput, pokemonCanonicalName);
+    const baseCanonicalName = getPokemonBaseFormCanonicalName(pokemonInput, pokemonCanonicalName);
     if (baseValue) {
-      onPokemonInputChange(baseValue);
+      onPokemonInputChange(baseValue, baseCanonicalName ?? undefined);
     }
     if (megaStone && doesItemMatchMegaStone(itemInput, megaStone)) {
       onItemInputChange("");

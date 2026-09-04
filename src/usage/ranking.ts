@@ -155,6 +155,35 @@ export const applyUsageRanking = <T extends UsageRankableCandidate>(
     .map(({ candidate }) => candidate);
 };
 
+/**
+ * Return the highest-ranked candidate that already exists in the caller's
+ * valid option set. Unknown or inapplicable ranking values never create a new
+ * option, and a missing ranking never falls back to alphabetical order.
+ */
+export const getTopUsageRankedCandidate = <T extends UsageRankableCandidate & { value: string }>(
+  candidates: readonly T[],
+  ranking: readonly string[] | undefined,
+): T | undefined => {
+  if (!ranking || ranking.length === 0 || candidates.length === 0) {
+    return undefined;
+  }
+
+  const candidateByCanonicalName = new Map<string, T>();
+  for (const candidate of candidates) {
+    if (!candidateByCanonicalName.has(candidate.canonicalName)) {
+      candidateByCanonicalName.set(candidate.canonicalName, candidate);
+    }
+  }
+
+  for (const canonicalName of ranking) {
+    const candidate = candidateByCanonicalName.get(canonicalName);
+    if (candidate?.value.trim()) {
+      return candidate;
+    }
+  }
+  return undefined;
+};
+
 /** Alias with an explicit name for call sites that sort autocomplete options. */
 export const sortCandidatesByUsage = applyUsageRanking;
 
