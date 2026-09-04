@@ -53,26 +53,40 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 
 ## 最重要の設計境界
 
-### 1. 直接ダメージ計算の正は `@smogon/calc`
+### 1. 直接ダメージ計算の基盤は `@smogon/calc`
 
-`@smogon/calc` を、直接攻撃のダメージロール、タイプ相性、ランク補正、乱数分布などの唯一の計算元とする。
+`@smogon/calc` を、直接攻撃のダメージロール、タイプ相性、ランク補正、乱数分布、補正順、丸め処理などを評価する基盤エンジンとする。直接ダメージの最終結果は、次のいずれかの監査済み経路で確定する。
+
+- upstream native: 固定した upstream commit の `@smogon/calc` が直接対応する
+- exact alias: 表示・保存上の canonical name を維持しつつ、戦闘中の挙動が完全に同一と確認した既存 mechanics へ計算時だけ投影する
+- CC compatibility patch: 固定した upstream full SHA に対し、再現可能な fork commit または patch queue と回帰テストを適用した `@smogon/calc` build を使う
+
+ポケモン・フォーム・技・特性・持ち物の存在、フォームとの組み合わせ、ゲーム内の実装状況、表示名・別名、使用率の参照元は、`@smogon/calc` のデータ更新を待つ必要はない。権威ある出典と対象version / 確認日を記録したゲームデータまたは明示された仕様を、source data・override・generator・validation の境界で先行反映できる。種族値・タイプ・威力・効果など計算へ影響するmetadataは、監査済みCalc経路が実際にその値を消費するまで`calculation-supported`としない。metadata の対応可否と、mechanics / calculation の対応可否は分けて扱う。
+
+新規 mechanics を既存 mechanics と完全に同一と証明できない場合は、近い特性や技へ代用しない。表示や入力候補だけを先行対応する場合も、効果なしとして黙って計算せず、`計算未対応`または既存の待機表示を返す。公式仕様、適用順、丸め、無効化条件まで確認できる場合は、アプリ外側でdamage配列を後補正せず、上記CC compatibility patchとしてCalc内部の適用境界へ実装する。
 
 禁止:
 
 - 独自のダメージ計算式を主計算として実装する
 - 独自のタイプ相性、乱数分布、ランク補正で最終結果を決める
-- `@smogon/calc` と異なる独自補正で候補の合否を上書きする
-- upstream や vendor package を直接改変する
+- `@smogon/calc` の返したdamage配列へ、アプリ側で倍率や丸めを後付けして候補の合否を上書きする
+- 効果が似ているだけの技・特性を exact alias として扱う
+- `node_modules`、既存tarball、生成済みvendor内容を手作業で改変する
+- upstream native と CC compatibility patch を二重適用する
+- mechanics未対応のcanonicalを効果なしや無関係な既存効果として黙って計算する
 - UI 表示用の日本語名や画像を計算条件として使う
 
 許可:
 
 - domain model を `@smogon/calc` の `Pokemon` / `Move` / `Field` / `Side` へ変換する薄い adapter
+- 出典・対象version / 確認日・validatorを持つ確認済みmetadataをsource data・override・generatorから更新し、既存のCalc対応canonicalを明示的に渡す
+- 効果の完全一致を根拠と回帰テストで固定した、限定的なengine alias
+- upstreamへ提出可能で、対象full SHA・根拠・active / inactiveテスト・sunset条件を持つ再現可能なCC compatibility patch
 - 複数攻撃と HP イベントを順番に処理する管理層
 - 探索の事前フィルタ、候補列挙の絞り込み、キャッシュ、バッチ化
 - `@smogon/calc` の結果を日本語 UI 向けに整形する表示層
 
-最終候補は必ず `@smogon/calc` ベースで再評価し、不合格候補を返さない。
+対応状態は最低でも `metadata-supported` / `engine-supported` / `calculation-supported` を区別する。最終候補は、同じ監査済みCalc経路で必ず再評価し、不合格候補や未対応mechanicsを無効果として通した候補を返さない。
 
 現在の主な境界:
 
@@ -81,7 +95,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系の計算に準拠
 - `src/calc/simulateHpSequence.ts`: 直接ダメージと HP イベントの順序付き評価
 - `src/calc/moveHpMechanics.ts`: 現在 HP に依存する技などの判定
 
-`@smogon/calc` の更新調査では、npm の公開バージョンだけで判断しない。repo 内の `.agents/skills/audit-smogon-calc-upstream/SKILL.md` に従い、現在の pin と upstream 最新コミットの差分、runtime 影響、採用方法を確認する。
+`@smogon/calc` の更新調査では、npm の公開バージョンだけで判断しない。repo 内の `.agents/skills/audit-smogon-calc-upstream/SKILL.md` に従い、現在の pin と upstream 最新コミットの差分、runtime 影響、metadata / exact alias / CC compatibility patch の対応状況、native化したpatchの撤去可否、採用方法を確認する。audit-only依頼では実装や依存更新を行わない。
 
 ### 2. 日本語表示と Showdown canonical name を混ぜない
 

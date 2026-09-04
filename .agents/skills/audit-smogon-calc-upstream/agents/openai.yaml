@@ -1,4 +1,4 @@
 interface:
   display_name: "Audit Smogon Calc Upstream"
-  short_description: "Audit pinned calc against latest upstream commit"
-  default_prompt: "Use $audit-smogon-calc-upstream to compare the pinned @smogon/calc upstream commit with the latest smogon/damage-calc commit and recommend a safe adoption plan."
+  short_description: "Audit upstream calc and CC compatibility patches"
+  default_prompt: "Use $audit-smogon-calc-upstream to compare the pinned calculator and local compatibility paths with frozen upstream HEAD, then recommend native adoption, patch retention, rebase, retirement, or deferral."
