@@ -49,6 +49,7 @@ import {
   formatUsageDataDateJst,
   getUsageMatchingEntityInputOptions,
   getNatureUsageState,
+  getUsagePokemonEntry,
   loadChampionsUsageData,
   loadSuggestionFormat,
   saveSuggestionFormat,
@@ -129,6 +130,7 @@ import { getMoveDefenderStatKeys, getMoveStatReferencePlan } from "./ui/moveStat
 import { findPokemonArtwork, type PokemonArtworkMatch } from "./ui/pokemonArtwork";
 import { getPublicAssetUrl } from "./ui/publicAssetUrl";
 import {
+  getMegaBasePokemonCanonicalName,
   getPokemonBaseFormValue,
   getMegaStoneForPokemonForm,
   getPokemonFormVariantOptions,
@@ -1282,12 +1284,72 @@ const SuggestionUsageContext = createContext<SuggestionUsageContextValue>({
   ownerAliases: {},
 });
 
+type UsageSuggestionOwnerCategory = UsageRankingCategory | "nature";
+
+/**
+ * The usage API groups Mega Floette under Floette even though calc identifies
+ * Floette-Eternal as the form immediately before Mega Evolution. Prefer an
+ * exact form entry whenever the loaded payload has one, and use this only as a
+ * final, Mega-only aggregate fallback.
+ */
+const USAGE_AGGREGATE_OWNER_BY_PRE_MEGA_CANONICAL_NAME: Readonly<Record<string, string>> = {
+  "Floette-Eternal": "Floette",
+};
+
+const hasUsageSuggestionOwnerData = (
+  data: ChampionsUsageData,
+  format: SuggestionFormat,
+  ownerPokemonCanonicalName: string,
+  category: UsageSuggestionOwnerCategory | undefined,
+): boolean => {
+  const entry = getUsagePokemonEntry(data, format, ownerPokemonCanonicalName);
+  if (!entry) {
+    return false;
+  }
+  if (category) {
+    return (entry[category]?.length ?? 0) > 0;
+  }
+  return entry.move.length > 0
+    || entry.ability.length > 0
+    || entry.item.length > 0
+    || (entry.nature?.length ?? 0) > 0;
+};
+
 export const resolveUsageSuggestionOwner = (
   ownerPokemonCanonicalName: string | undefined,
   ownerAliases: Readonly<Record<string, string>>,
-): string | undefined => ownerPokemonCanonicalName
-  ? ownerAliases[ownerPokemonCanonicalName] ?? ownerPokemonCanonicalName
-  : undefined;
+  data?: ChampionsUsageData | null,
+  format: SuggestionFormat = "Singles",
+  category?: UsageSuggestionOwnerCategory,
+): string | undefined => {
+  if (!ownerPokemonCanonicalName) {
+    return undefined;
+  }
+
+  const explicitOwner = ownerAliases[ownerPokemonCanonicalName];
+  if (explicitOwner) {
+    return explicitOwner;
+  }
+
+  const preMegaOwner = getMegaBasePokemonCanonicalName(ownerPokemonCanonicalName);
+  if (!preMegaOwner) {
+    return ownerPokemonCanonicalName;
+  }
+
+  const aggregateOwner = USAGE_AGGREGATE_OWNER_BY_PRE_MEGA_CANONICAL_NAME[preMegaOwner];
+  const candidates = [ownerPokemonCanonicalName, preMegaOwner, aggregateOwner]
+    .filter((candidate): candidate is string => Boolean(candidate));
+  if (data) {
+    const availableOwner = candidates.find((candidate) => (
+      hasUsageSuggestionOwnerData(data, format, candidate, category)
+    ));
+    if (availableOwner) {
+      return availableOwner;
+    }
+  }
+
+  return preMegaOwner;
+};
 
 const useUsageSuggestionOptions = (
   category: UsageRankingCategory,
@@ -1302,7 +1364,7 @@ const useUsageSuggestionOptions = (
     input,
     data,
     format,
-    resolveUsageSuggestionOwner(ownerPokemonCanonicalName, ownerAliases),
+    resolveUsageSuggestionOwner(ownerPokemonCanonicalName, ownerAliases, data, format, category),
     category,
     limit,
   );
@@ -4730,12 +4792,19 @@ function NatureMatrixField({
     enabled: usageEnabled,
     ownerAliases,
   } = useContext(SuggestionUsageContext);
+  const usageOwnerPokemon = resolveUsageSuggestionOwner(
+    ownerPokemonCanonicalName,
+    ownerAliases,
+    data,
+    format,
+    "nature",
+  );
 
   const getUsageState = (option: NatureOption): NatureUsageState => (
     getNatureUsageState(
       data,
       format,
-      resolveUsageSuggestionOwner(ownerPokemonCanonicalName, ownerAliases),
+      usageOwnerPokemon,
       option.showdownName,
     )
   );

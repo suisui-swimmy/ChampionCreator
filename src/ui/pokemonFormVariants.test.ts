@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  getMegaBasePokemonCanonicalName,
   getMegaStoneForPokemonForm,
   getPokemonBaseFormValue,
   getPokemonFormVariantOptions,
   isPokemonFormVariant,
 } from "./pokemonFormVariants";
+import pokemonOptionsPayload from "../data/generated/pokemon-options.gen.json";
 
 describe("pokemonFormVariants", () => {
   it("returns a single mega form for Pokemon with one mega option", () => {
@@ -31,6 +33,27 @@ describe("pokemonFormVariants", () => {
         }),
       ]),
     );
+  });
+
+  it("maps every supported Mega form to its exact pre-Mega canonical", () => {
+    const megaCanonicalNames = (pokemonOptionsPayload.entries as Array<{ showdownName: string }>)
+      .map((option) => option.showdownName)
+      .filter((showdownName) => /-Mega(?:-[XYZ])?$/u.test(showdownName));
+    const unresolved = megaCanonicalNames.filter((showdownName) => (
+      getMegaBasePokemonCanonicalName(showdownName) === null
+    ));
+
+    expect(megaCanonicalNames.length).toBeGreaterThan(0);
+    expect(unresolved).toEqual([]);
+    expect(getMegaBasePokemonCanonicalName("Charizard-Mega-X")).toBe("Charizard");
+    expect(getMegaBasePokemonCanonicalName("Charizard-Mega-Y")).toBe("Charizard");
+    expect(getMegaBasePokemonCanonicalName("Garchomp-Mega-Z")).toBe("Garchomp");
+    expect(getMegaBasePokemonCanonicalName("Magearna-Original-Mega")).toBe("Magearna-Original");
+    expect(getMegaBasePokemonCanonicalName("Meowstic-F-Mega")).toBe("Meowstic-F");
+    expect(getMegaBasePokemonCanonicalName("Tatsugiri-Droopy-Mega")).toBe("Tatsugiri-Droopy");
+    expect(getMegaBasePokemonCanonicalName("Rayquaza-Mega")).toBe("Rayquaza");
+    expect(getMegaBasePokemonCanonicalName("Aegislash-Blade")).toBeNull();
+    expect(getMegaBasePokemonCanonicalName("Unknown-Mega")).toBeNull();
   });
 
   it.each([

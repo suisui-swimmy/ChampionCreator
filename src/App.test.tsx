@@ -49,7 +49,12 @@ import {
 } from "./App";
 import type { StatPointMarker, StatPointMarkerRow } from "./calc/statPointMarkers";
 import type { HpStatMarkerDisplayRow } from "./calc/hpStatMarkers";
-import { formatUsageDataDateJst, type ChampionsUsageData } from "./usage";
+import {
+  formatUsageDataDateJst,
+  getNatureUsageState,
+  getUsageMatchingEntityInputOptions,
+  type ChampionsUsageData,
+} from "./usage";
 import {
   applyMoveInputDefaults,
   createDefaultScenarioForms,
@@ -371,6 +376,141 @@ describe("App", () => {
       ability: "Virtual Enemy",
       item: "Virtual Enemy",
     });
+  });
+
+  it("uses pre-Mega usage data only for deterministic Mega forms", () => {
+    expect(resolveUsageSuggestionOwner("Charizard-Mega-X", {})).toBe("Charizard");
+    expect(resolveUsageSuggestionOwner("Charizard-Mega-Y", {})).toBe("Charizard");
+    expect(resolveUsageSuggestionOwner("Garchomp-Mega-Z", {})).toBe("Garchomp");
+    expect(resolveUsageSuggestionOwner("Rayquaza-Mega", {})).toBe("Rayquaza");
+    expect(resolveUsageSuggestionOwner("Aegislash-Blade", {})).toBe("Aegislash-Blade");
+    expect(resolveUsageSuggestionOwner("Unknown-Mega", {})).toBe("Unknown-Mega");
+    expect(resolveUsageSuggestionOwner("Charizard-Mega-X", {
+      "Charizard-Mega-X": "Explicit-Owner",
+    })).toBe("Explicit-Owner");
+  });
+
+  it("prefers available Mega, pre-Mega, then aggregate owner data", () => {
+    const entry = (item: string) => ({ move: [], ability: [], item: [item] });
+    const usageData: ChampionsUsageData = {
+      ...usageDataFixture("mega-owner-resolution"),
+      formats: {
+        Singles: {
+          Charizard: entry("Charizardite Y"),
+          "Charizard-Mega-X": {
+            move: ["Flare Blitz"],
+            ability: [],
+            item: [],
+            nature: [{ canonicalName: "Adamant", rank: 1, percentage: 80 }],
+          },
+          Floette: entry("Floettite"),
+          Meowstic: entry("Light Clay"),
+          "Meowstic-F": entry("Mental Herb"),
+        },
+        Doubles: {},
+      },
+    };
+
+    expect(resolveUsageSuggestionOwner(
+      "Charizard-Mega-X",
+      {},
+      usageData,
+      "Singles",
+      "item",
+    )).toBe("Charizard");
+    expect(resolveUsageSuggestionOwner(
+      "Charizard-Mega-X",
+      {},
+      usageData,
+      "Singles",
+      "move",
+    )).toBe("Charizard-Mega-X");
+    expect(resolveUsageSuggestionOwner(
+      "Charizard-Mega-X",
+      {},
+      usageData,
+      "Singles",
+      "nature",
+    )).toBe("Charizard-Mega-X");
+    expect(resolveUsageSuggestionOwner(
+      "Charizard-Mega-Y",
+      {},
+      usageData,
+      "Singles",
+      "item",
+    )).toBe("Charizard");
+    expect(resolveUsageSuggestionOwner(
+      "Floette-Mega",
+      {},
+      usageData,
+      "Singles",
+      "item",
+    )).toBe("Floette");
+    expect(resolveUsageSuggestionOwner(
+      "Floette-Eternal",
+      {},
+      usageData,
+      "Singles",
+      "item",
+    )).toBe("Floette-Eternal");
+    expect(resolveUsageSuggestionOwner(
+      "Meowstic-F-Mega",
+      {},
+      usageData,
+      "Singles",
+      "item",
+    )).toBe("Meowstic-F");
+    expect(resolveUsageSuggestionOwner(
+      "Aegislash-Blade",
+      {},
+      usageData,
+      "Singles",
+      "item",
+    )).toBe("Aegislash-Blade");
+  });
+
+  it("applies aggregated Charizard rankings and nature usage to both Mega branches", () => {
+    const charizardUsage: ChampionsUsageData = {
+      ...usageDataFixture("mega-owner"),
+      formats: {
+        Singles: {
+          charizard: {
+            move: ["Solar Beam"],
+            ability: ["Blaze"],
+            item: ["Charizardite Y", "Charizardite X"],
+            nature: [{ canonicalName: "Timid", rank: 1, percentage: 64.2 }],
+          },
+        },
+        Doubles: {},
+      },
+    };
+    const itemCandidates = [
+      { canonicalName: "Charizardite X", value: "リザードナイトＸ" },
+      { canonicalName: "Life Orb", value: "いのちのたま" },
+      { canonicalName: "Charizardite Y", value: "リザードナイトＹ" },
+    ];
+
+    for (const mega of ["Charizard-Mega-X", "Charizard-Mega-Y"]) {
+      const owner = resolveUsageSuggestionOwner(mega, {}, charizardUsage, "Singles", "item");
+      expect(getUsageMatchingEntityInputOptions(
+        itemCandidates,
+        "",
+        charizardUsage,
+        "Singles",
+        owner,
+        "item",
+      ).map((option) => option.canonicalName)).toEqual([
+        "Charizardite Y",
+        "Charizardite X",
+        "Life Orb",
+      ]);
+      const natureOwner = resolveUsageSuggestionOwner(mega, {}, charizardUsage, "Singles", "nature");
+      expect(getNatureUsageState(charizardUsage, "Singles", natureOwner, "Timid")).toEqual({
+        kind: "listed",
+        rank: 1,
+        percentage: 64.2,
+      });
+    }
   });
 
   it("only treats field-wide or ally-targeting abilities as move-less support cards", () => {
