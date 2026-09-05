@@ -7,9 +7,15 @@ import moveOptions from "./data/generated/move-options.gen.json";
 import natureOptions from "./data/generated/nature-options.gen.json";
 import typeOptions from "./data/generated/type-options.gen.json";
 
+const smogonCalcRevision = [
+  calcPackage.version,
+  pokemonOptions.source.upstreamCommit.slice(0, 7),
+  pokemonOptions.source.compatibilityPatchId,
+].join("+");
+
 export const appVersionInfo = {
   appVersion: appPackage.version,
-  smogonCalcVersion: calcPackage.version,
+  smogonCalcVersion: smogonCalcRevision,
   localizationEntries:
     pokemonOptions.entries.length
     + abilityOptions.entries.length

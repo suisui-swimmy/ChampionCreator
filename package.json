@@ -1,6 +1,6 @@
 {
   "name": "championcreator",
-  "version": "0.24.2",
+  "version": "0.25.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,9 @@
     "generate:move-hit-counts": "node scripts/add-move-hit-counts.mjs",
     "generate:pokemon-abilities": "node scripts/generate-pokemon-abilities.mjs",
     "generate:champions-usage": "node scripts/generate-champions-usage.mjs",
+    "rebuild:smogon-calc-vendor": "node scripts/build-smogon-calc-vendor.mjs",
+    "verify:smogon-calc-vendor": "node scripts/build-smogon-calc-vendor.mjs --verify",
+    "validate:smogon-calc-compat": "node scripts/validate-smogon-calc-compat.mjs",
     "validate:artwork-assets": "node scripts/validate-artwork-assets.mjs",
     "validate:localization": "node scripts/validate-localization.mjs",
     "validate:pokemon-abilities": "node scripts/validate-pokemon-abilities.mjs",
@@ -17,7 +20,7 @@
     "emulators": "firebase emulators:start --project demo-championcreator --only auth,firestore",
     "test:rules:vitest": "vitest run --config vitest.rules.config.ts --configLoader runner",
     "test:rules": "firebase emulators:exec --project demo-championcreator --only firestore \"npm run test:rules:vitest\"",
-    "check": "npm run validate:localization && npm run validate:pokemon-abilities && npm run validate:artwork-assets && npm test && npm run test:rules && npm run build",
+    "check": "npm run validate:smogon-calc-compat && npm run validate:localization && npm run validate:pokemon-abilities && npm run validate:artwork-assets && npm test && npm run test:rules && npm run build",
     "build": "tsc --noEmit && vite build --configLoader runner",
     "preview": "vite preview --configLoader runner --host 127.0.0.1",
     "test": "vitest run --configLoader runner"
@@ -27,7 +30,7 @@
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
-    "@smogon/calc": "file:vendor/smogon-calc-0.11.0-49d4d86.tgz",
+    "@smogon/calc": "file:vendor/smogon-calc-0.11.0-49d4d86-cc-aura-guard-v1.tgz",
     "firebase": "^12.18.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

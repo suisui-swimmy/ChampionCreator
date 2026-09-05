@@ -961,3 +961,406 @@ describe("calculateSmogonHit", () => {
     expect(result.damageRange.max).toBeGreaterThanOrEqual(result.damageRange.min);
   });
 });
+
+const compatibilityFieldState: FieldState = {
+  gameType: "singles",
+  weather: "none",
+  terrain: "none",
+};
+
+const makeCompatibilityBuild = (
+  id: string,
+  options: {
+    ability?: string;
+    item?: string;
+    evs?: Partial<StatTable>;
+    pokemon?: string;
+  } = {},
+): Build => ({
+  id,
+  pokemon: mustResolve("pokemon", options.pokemon ?? "Mew"),
+  level: 100,
+  nature: mustResolve("nature", "Hardy"),
+  ivs: defaultIvs,
+  evs: { ...zeroEvs, hp: 252, ...options.evs },
+  ...(options.ability ? { ability: mustResolve("ability", options.ability) } : {}),
+  ...(options.item ? { item: mustResolve("item", options.item) } : {}),
+});
+
+const makeCompatibilityHit = (
+  id: string,
+  attackerBuild: Build,
+  moveCanonicalName: string,
+  options: {
+    critical?: boolean;
+    moveHits?: number;
+    repeat?: number;
+    allyAbilities?: ScenarioHit["allyAbilities"];
+  } = {},
+): ScenarioHit => ({
+  id,
+  attacker: attackerBuild,
+  move: mustResolve("move", moveCanonicalName),
+  ...(options.moveHits === undefined ? {} : { moveHits: options.moveHits }),
+  ...(options.allyAbilities === undefined ? {} : { allyAbilities: options.allyAbilities }),
+  repeat: options.repeat ?? 1,
+  critical: options.critical ?? false,
+  attackerBoosts: {},
+  defenderBoosts: {},
+  attackerSide: emptySide,
+  defenderSide: emptySide,
+});
+
+const compatibilityPhysicalAttacker = makeCompatibilityBuild("compat-physical-attacker", {
+  evs: { atk: 252 },
+});
+const compatibilitySpecialAttacker = makeCompatibilityBuild("compat-special-attacker", {
+  evs: { spa: 252 },
+});
+const compatibilityDefender = makeCompatibilityBuild("compat-defender");
+const compatibilityAuraGuardDefender = makeCompatibilityBuild("compat-aura-guard-defender", {
+  ability: "Aura Guard",
+});
+
+describe("Aura Guard compatibility patch", () => {
+  it.each([
+    ["Tackle", compatibilityPhysicalAttacker, true],
+    ["Earthquake", compatibilityPhysicalAttacker, false],
+    ["Draining Kiss", compatibilitySpecialAttacker, true],
+    ["Shadow Ball", compatibilitySpecialAttacker, false],
+  ] as const)(
+    "applies to %s according to its contact flag",
+    (moveCanonicalName, attackerBuild, shouldReduce) => {
+      const hit = makeCompatibilityHit(
+        `compat-${moveCanonicalName}`,
+        attackerBuild,
+        moveCanonicalName,
+      );
+      const baseline = calculateSmogonHit(
+        compatibilityDefender,
+        hit,
+        compatibilityFieldState,
+      );
+      const withAuraGuard = calculateSmogonHit(
+        compatibilityAuraGuardDefender,
+        hit,
+        compatibilityFieldState,
+      );
+
+      if (shouldReduce) {
+        expect(withAuraGuard.damageRange.max).toBeLessThan(baseline.damageRange.max);
+        expect(withAuraGuard.description).toContain("Aura Guard");
+      } else {
+        expect(withAuraGuard.damageRolls).toEqual(baseline.damageRolls);
+        expect(withAuraGuard.damageRange).toEqual(baseline.damageRange);
+      }
+    },
+  );
+
+  it("keeps the Aura Guard result identical between the adapter and direct @smogon/calc", () => {
+    const hit = makeCompatibilityHit(
+      "compat-adapter-parity",
+      compatibilityPhysicalAttacker,
+      "Tackle",
+      { critical: true },
+    );
+    const adapterResult = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      hit,
+      compatibilityFieldState,
+    );
+    const directAttacker = toSmogonPokemon(hit.attacker, hit.attackerBoosts);
+    const directDefender = toSmogonPokemon(
+      compatibilityAuraGuardDefender,
+      hit.defenderBoosts,
+    );
+    const directResult = calculate(
+      gen,
+      directAttacker,
+      directDefender,
+      new Move(gen, "Tackle", { isCrit: true }),
+      toSmogonField(compatibilityFieldState, hit),
+    );
+    const [min, max] = directResult.range();
+
+    expect(adapterResult.damageRolls).toEqual(flattenDamageRolls(directResult.damage));
+    expect(adapterResult.damageRange).toEqual({
+      min,
+      max,
+      percentMin: (min / directDefender.maxHP()) * 100,
+      percentMax: (max / directDefender.maxHP()) * 100,
+    });
+    expect(adapterResult.description).toBe(directResult.desc());
+  });
+
+  it("does not inherit Fluffy's Fire weakness", () => {
+    const hit = makeCompatibilityHit(
+      "compat-fluffy-fire",
+      compatibilitySpecialAttacker,
+      "Flamethrower",
+    );
+    const baseline = calculateSmogonHit(compatibilityDefender, hit, compatibilityFieldState);
+    const auraGuard = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      hit,
+      compatibilityFieldState,
+    );
+    const fluffy = calculateSmogonHit(
+      makeCompatibilityBuild("compat-fluffy-defender", { ability: "Fluffy" }),
+      hit,
+      compatibilityFieldState,
+    );
+
+    expect(auraGuard.damageRolls).toEqual(baseline.damageRolls);
+    expect(fluffy.damageRange.max).toBeGreaterThan(baseline.damageRange.max);
+
+    const contactHit = makeCompatibilityHit(
+      "compat-fluffy-contact-fire",
+      compatibilityPhysicalAttacker,
+      "Fire Punch",
+    );
+    const contactBaseline = calculateSmogonHit(
+      compatibilityDefender,
+      contactHit,
+      compatibilityFieldState,
+    );
+    const contactAuraGuard = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      contactHit,
+      compatibilityFieldState,
+    );
+    const contactFluffy = calculateSmogonHit(
+      makeCompatibilityBuild("compat-fluffy-contact-fire-defender", { ability: "Fluffy" }),
+      contactHit,
+      compatibilityFieldState,
+    );
+    expect(contactAuraGuard.damageRange.max).toBeLessThan(contactBaseline.damageRange.max);
+    expect(contactFluffy.damageRolls).toEqual(contactBaseline.damageRolls);
+  });
+
+  it("lets Long Reach bypass contact-based Aura Guard", () => {
+    const hit = makeCompatibilityHit(
+      "compat-long-reach",
+      makeCompatibilityBuild("compat-long-reach-attacker", { ability: "Long Reach", evs: { atk: 252 } }),
+      "Tackle",
+    );
+    const baseline = calculateSmogonHit(compatibilityDefender, hit, compatibilityFieldState);
+    const withAuraGuard = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      hit,
+      compatibilityFieldState,
+    );
+
+    expect(withAuraGuard.damageRolls).toEqual(baseline.damageRolls);
+    expect(withAuraGuard.damageRange).toEqual(baseline.damageRange);
+  });
+
+  it("lets Punching Glove bypass contact-based Aura Guard", () => {
+    const hit = makeCompatibilityHit(
+      "compat-punching-glove",
+      makeCompatibilityBuild("compat-punching-glove-attacker", {
+        item: "Punching Glove",
+        evs: { atk: 252 },
+      }),
+      "Drain Punch",
+    );
+    const baseline = calculateSmogonHit(compatibilityDefender, hit, compatibilityFieldState);
+    const withAuraGuard = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      hit,
+      compatibilityFieldState,
+    );
+
+    expect(withAuraGuard.damageRolls).toEqual(baseline.damageRolls);
+    expect(withAuraGuard.damageRange).toEqual(baseline.damageRange);
+  });
+
+  it.each(["Mold Breaker", "Teravolt", "Turboblaze"] as const)(
+    "lets %s suppress Aura Guard while Ability Shield protects it",
+    (abilityName) => {
+      const hit = makeCompatibilityHit(
+        `compat-${abilityName}`,
+        makeCompatibilityBuild(`compat-${abilityName}-attacker`, {
+          ability: abilityName,
+          evs: { atk: 252 },
+        }),
+        "Tackle",
+      );
+      const baseline = calculateSmogonHit(compatibilityDefender, hit, compatibilityFieldState);
+      const suppressed = calculateSmogonHit(
+        compatibilityAuraGuardDefender,
+        hit,
+        compatibilityFieldState,
+      );
+      const protectedDefender = makeCompatibilityBuild(`compat-${abilityName}-protected`, {
+        ability: "Aura Guard",
+        item: "Ability Shield",
+      });
+      const protectedResult = calculateSmogonHit(
+        protectedDefender,
+        hit,
+        compatibilityFieldState,
+      );
+      const ordinaryAuraGuard = calculateSmogonHit(
+        compatibilityAuraGuardDefender,
+        {
+          ...hit,
+          id: `${hit.id}-ordinary`,
+          attacker: compatibilityPhysicalAttacker,
+        },
+        compatibilityFieldState,
+      );
+
+      expect(suppressed.damageRolls).toEqual(baseline.damageRolls);
+      expect(protectedResult.damageRolls).toEqual(ordinaryAuraGuard.damageRolls);
+    },
+  );
+
+  it("lets Sunsteel Strike suppress Aura Guard", () => {
+    const hit = makeCompatibilityHit(
+      "compat-sunsteel-strike",
+      compatibilityPhysicalAttacker,
+      "Sunsteel Strike",
+    );
+    const baseline = calculateSmogonHit(compatibilityDefender, hit, compatibilityFieldState);
+    const withAuraGuard = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      hit,
+      compatibilityFieldState,
+    );
+
+    expect(withAuraGuard.damageRolls).toEqual(baseline.damageRolls);
+    expect(withAuraGuard.damageRange).toEqual(baseline.damageRange);
+  });
+
+  it("lets Neutralizing Gas suppress Aura Guard while Ability Shield protects it", () => {
+    const hit = makeCompatibilityHit(
+      "compat-neutralizing-gas",
+      makeCompatibilityBuild("compat-neutralizing-gas-attacker", {
+        ability: "Neutralizing Gas",
+        evs: { atk: 252 },
+      }),
+      "Tackle",
+    );
+    const baseline = calculateSmogonHit(compatibilityDefender, hit, compatibilityFieldState);
+    const suppressed = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      hit,
+      compatibilityFieldState,
+    );
+    const protectedResult = calculateSmogonHit(
+      makeCompatibilityBuild("compat-neutralizing-gas-protected", {
+        ability: "Aura Guard",
+        item: "Ability Shield",
+      }),
+      hit,
+      compatibilityFieldState,
+    );
+    const ordinaryAuraGuard = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      {
+        ...hit,
+        id: "compat-neutralizing-gas-ordinary",
+        attacker: compatibilityPhysicalAttacker,
+      },
+      compatibilityFieldState,
+    );
+
+    expect(suppressed.damageRolls).toEqual(baseline.damageRolls);
+    expect(protectedResult.damageRolls).toEqual(ordinaryAuraGuard.damageRolls);
+  });
+
+  it("applies Aura Guard to critical and every contact hit of a multi-hit move", () => {
+    const criticalHit = makeCompatibilityHit(
+      "compat-critical",
+      compatibilityPhysicalAttacker,
+      "Tackle",
+      { critical: true },
+    );
+    const baselineCritical = calculateSmogonHit(
+      compatibilityDefender,
+      criticalHit,
+      compatibilityFieldState,
+    );
+    const auraGuardCritical = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      criticalHit,
+      compatibilityFieldState,
+    );
+    expect(auraGuardCritical.damageRange.max).toBeLessThan(baselineCritical.damageRange.max);
+
+    const multiHit = makeCompatibilityHit(
+      "compat-multi-hit",
+      compatibilityPhysicalAttacker,
+      "Comet Punch",
+      { moveHits: 5 },
+    );
+    const baselineMultiHit = calculateSmogonHit(
+      compatibilityDefender,
+      multiHit,
+      compatibilityFieldState,
+    );
+    const auraGuardMultiHit = calculateSmogonHit(
+      compatibilityAuraGuardDefender,
+      multiHit,
+      compatibilityFieldState,
+    );
+
+    expect(baselineMultiHit.damageRollsByHit).toHaveLength(5);
+    expect(auraGuardMultiHit.damageRollsByHit).toHaveLength(5);
+    auraGuardMultiHit.damageRollsByHit?.forEach((rolls, index) => {
+      const baselineRolls = baselineMultiHit.damageRollsByHit?.[index] ?? [];
+      expect(rolls.length).toBeGreaterThan(0);
+      expect(baselineRolls.length).toBeGreaterThan(0);
+      expect(Math.max(...rolls)).toBeLessThan(Math.max(...baselineRolls));
+    });
+
+    const directResult = calculate(
+      gen,
+      toSmogonPokemon(multiHit.attacker, multiHit.attackerBoosts),
+      toSmogonPokemon(compatibilityAuraGuardDefender, multiHit.defenderBoosts),
+      new Move(gen, "Comet Punch", { hits: 5 }),
+      toSmogonField(compatibilityFieldState, multiHit),
+    );
+    expect(auraGuardMultiHit.damageRollsByHit).toEqual(directResult.damage);
+    expect(auraGuardMultiHit.description).toBe(directResult.desc());
+  });
+
+  it("does not treat Aura Guard as an attacker or ally field ability", () => {
+    const baselineHit = makeCompatibilityHit(
+      "compat-aura-guard-baseline",
+      compatibilityPhysicalAttacker,
+      "Tackle",
+    );
+    const attackerAuraGuardHit = makeCompatibilityHit(
+      "compat-attacker-aura-guard",
+      makeCompatibilityBuild("compat-attacker-aura-guard-build", {
+        ability: "Aura Guard",
+        evs: { atk: 252 },
+      }),
+      "Tackle",
+    );
+    const baseline = calculateSmogonHit(
+      compatibilityDefender,
+      baselineHit,
+      compatibilityFieldState,
+    );
+    const attackerAuraGuard = calculateSmogonHit(
+      compatibilityDefender,
+      attackerAuraGuardHit,
+      compatibilityFieldState,
+    );
+    const allyAuraGuard = calculateSmogonHit(
+      compatibilityDefender,
+      {
+        ...baselineHit,
+        id: "compat-ally-aura-guard",
+        allyAbilities: [mustResolve("ability", "Aura Guard")],
+      },
+      compatibilityFieldState,
+    );
+
+    expect(attackerAuraGuard.damageRolls).toEqual(baseline.damageRolls);
+    expect(allyAuraGuard.damageRolls).toEqual(baseline.damageRolls);
+  });
+});

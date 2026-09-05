@@ -609,11 +609,27 @@ describe("App", () => {
       data: null,
       format: "Singles",
     }).abilityInput).toBe("トレース");
+    expect(getPokemonUsageDefaultInputValues("Skarmory-Mega", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBe("すじがねいり");
+    expect(getPokemonUsageDefaultInputValues("Hawlucha-Mega", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBe("ノーガード");
+    expect(getPokemonUsageDefaultInputValues("Lucario-Mega-Z", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBe("はどうのぼうご");
     expect(getPokemonUsageDefaultInputValues("Tatsugiri-Curly-Mega", {
       data,
       format: "Singles",
     }).abilityInput).toBeUndefined();
     expect(getPokemonUsageDefaultInputValues("Magearna-Mega", {
+      data: null,
+      format: "Singles",
+    }).abilityInput).toBeUndefined();
+    expect(getPokemonUsageDefaultInputValues("Heatran-Mega", {
       data: null,
       format: "Singles",
     }).abilityInput).toBeUndefined();
@@ -934,9 +950,11 @@ describe("App", () => {
     expect(isAbilitySupportCard("defence", "", "フェアリーオーラ")).toBe(true);
     expect(isAbilitySupportCard("defence", "", "ダークオーラ")).toBe(true);
     expect(isAbilitySupportCard("defence", "", "オーラブレイク")).toBe(true);
+    expect(isAbilitySupportCard("defence", "", "はどうのぼうご")).toBe(false);
     expect(isAbilitySupportCard("defence", "ムーンフォース", "フェアリーオーラ")).toBe(false);
     expect(isAbilitySupportCard("offense", "", "フェアリーオーラ")).toBe(false);
     expect(shouldAutoFillUsageMoveForAttack("defence", "", "フェアリーオーラ")).toBe(false);
+    expect(shouldAutoFillUsageMoveForAttack("defence", "", "はどうのぼうご")).toBe(true);
     expect(shouldAutoFillUsageMoveForAttack("defence", "", "もうか")).toBe(true);
     expect(shouldAutoFillUsageMoveForAttack("offense", "", "もうか")).toBe(false);
     expect(shouldAutoFillUsageMoveForAttack("speed", "", "もうか")).toBe(false);
@@ -1983,7 +2001,8 @@ describe("App", () => {
     expect(guideHtml).toContain("使用率データの取得後にポケモンを候補から選ぶと、その形式で最上位かつ、そのポケモンで有効な技・性格・特性・持ち物を初期入力します。");
     expect(guideHtml).toContain("技は変化技を除外し、ランキング内で最上位の物理技または特殊技を入力します。");
     expect(guideHtml).toContain("確定済みのメガシンカ後の特性だけは、使用率データの取得状況や順位に関係なく、そのフォームで唯一の特性を入力します。");
-    expect(guideHtml).toContain("現行データでメガシンカ後の特性が未確定のメガマギアナとメガシャリタツは、特性を自動入力せず空欄を維持し、ドロップダウンにはメガシンカ前の特性候補を表示します。");
+    expect(guideHtml).toContain("現行データで未確定のメガヒードラン、メガダークライ、メガジガルデ、メガグソクムシャ、メガマギアナ、メガゼラオラ、メガシャリタツ、メガセグレイブは、特性を自動入力せず空欄を維持し、ドロップダウンにはメガシンカ前の特性候補を表示します。");
+    expect(guideHtml).toContain("メガルカリオZの「はどうのぼうご」は、接触技で受けるダメージを半減する効果として暫定対応しています。");
     expect(guideHtml).not.toContain("最上位が変化技の場合はその技が入る");
     expect(guideHtml).toContain("空欄または、現在値が直前のポケモンにおける同形式の1位と一致する欄だけを更新するため、別の値へ手動変更した欄は残ります。");
     expect(guideHtml).toContain("形式や調整種別を切り替えただけでは既存入力を変更せず、その後にポケモンを候補から選んだ時点で新しい基準を使います。");

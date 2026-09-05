@@ -1,0 +1,516 @@
+{
+  "schemaVersion": 1,
+  "kind": "mega-ability-manifest",
+  "dataVersion": "champions-mega-abilities-2026-09-05",
+  "source": {
+    "authority": "user-provided Champions Mega ability table",
+    "applicableVersion": "Pokemon Champions announced roster as of 2026-09-05",
+    "checkedAt": "2026-09-05",
+    "canonicalBasis": "src/data/generated/pokemon-options.gen.json",
+    "calcBase": "49d4d8696bf138b101cc47be8432489c3ac192aa",
+    "references": [
+      {
+        "kind": "damage-calc-proposed-implementation",
+        "url": "https://github.com/smogon/damage-calc/pull/855",
+        "commit": "589015cb5986fc96537c44000ab8a083dc1ef253"
+      },
+      {
+        "kind": "pokemon-showdown-reference-implementation",
+        "url": "https://github.com/smogon/pokemon-showdown/pull/12275",
+        "commit": "7340ea497118a6752336d735e193cdf89a1adb5f"
+      }
+    ]
+  },
+  "summary": {
+    "totalForms": 97,
+    "confirmed": 86,
+    "unconfirmed": 11
+  },
+  "entries": [
+    {
+      "showdownName": "Abomasnow-Mega",
+      "status": "confirmed",
+      "ability": "Snow Warning"
+    },
+    {
+      "showdownName": "Absol-Mega",
+      "status": "confirmed",
+      "ability": "Magic Bounce"
+    },
+    {
+      "showdownName": "Absol-Mega-Z",
+      "status": "confirmed",
+      "ability": "Sharpness"
+    },
+    {
+      "showdownName": "Aerodactyl-Mega",
+      "status": "confirmed",
+      "ability": "Tough Claws"
+    },
+    {
+      "showdownName": "Aggron-Mega",
+      "status": "confirmed",
+      "ability": "Filter"
+    },
+    {
+      "showdownName": "Alakazam-Mega",
+      "status": "confirmed",
+      "ability": "Trace"
+    },
+    {
+      "showdownName": "Altaria-Mega",
+      "status": "confirmed",
+      "ability": "Pixilate"
+    },
+    {
+      "showdownName": "Ampharos-Mega",
+      "status": "confirmed",
+      "ability": "Mold Breaker"
+    },
+    {
+      "showdownName": "Audino-Mega",
+      "status": "confirmed",
+      "ability": "Healer"
+    },
+    {
+      "showdownName": "Banette-Mega",
+      "status": "confirmed",
+      "ability": "Prankster"
+    },
+    {
+      "showdownName": "Barbaracle-Mega",
+      "status": "confirmed",
+      "ability": "Tough Claws"
+    },
+    {
+      "showdownName": "Baxcalibur-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Beedrill-Mega",
+      "status": "confirmed",
+      "ability": "Adaptability"
+    },
+    {
+      "showdownName": "Blastoise-Mega",
+      "status": "confirmed",
+      "ability": "Mega Launcher"
+    },
+    {
+      "showdownName": "Blaziken-Mega",
+      "status": "confirmed",
+      "ability": "Speed Boost"
+    },
+    {
+      "showdownName": "Camerupt-Mega",
+      "status": "confirmed",
+      "ability": "Sheer Force"
+    },
+    {
+      "showdownName": "Chandelure-Mega",
+      "status": "confirmed",
+      "ability": "Infiltrator"
+    },
+    {
+      "showdownName": "Charizard-Mega-X",
+      "status": "confirmed",
+      "ability": "Tough Claws"
+    },
+    {
+      "showdownName": "Charizard-Mega-Y",
+      "status": "confirmed",
+      "ability": "Drought"
+    },
+    {
+      "showdownName": "Chesnaught-Mega",
+      "status": "confirmed",
+      "ability": "Bulletproof"
+    },
+    {
+      "showdownName": "Chimecho-Mega",
+      "status": "confirmed",
+      "ability": "Levitate"
+    },
+    {
+      "showdownName": "Clefable-Mega",
+      "status": "confirmed",
+      "ability": "Magic Bounce"
+    },
+    {
+      "showdownName": "Crabominable-Mega",
+      "status": "confirmed",
+      "ability": "Iron Fist"
+    },
+    {
+      "showdownName": "Darkrai-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Delphox-Mega",
+      "status": "confirmed",
+      "ability": "Levitate"
+    },
+    {
+      "showdownName": "Diancie-Mega",
+      "status": "confirmed",
+      "ability": "Magic Bounce"
+    },
+    {
+      "showdownName": "Dragalge-Mega",
+      "status": "confirmed",
+      "ability": "Regenerator"
+    },
+    {
+      "showdownName": "Dragonite-Mega",
+      "status": "confirmed",
+      "ability": "Multiscale"
+    },
+    {
+      "showdownName": "Drampa-Mega",
+      "status": "confirmed",
+      "ability": "Berserk"
+    },
+    {
+      "showdownName": "Eelektross-Mega",
+      "status": "confirmed",
+      "ability": "Eelevate"
+    },
+    {
+      "showdownName": "Emboar-Mega",
+      "status": "confirmed",
+      "ability": "Mold Breaker"
+    },
+    {
+      "showdownName": "Excadrill-Mega",
+      "status": "confirmed",
+      "ability": "Piercing Drill"
+    },
+    {
+      "showdownName": "Falinks-Mega",
+      "status": "confirmed",
+      "ability": "Defiant"
+    },
+    {
+      "showdownName": "Feraligatr-Mega",
+      "status": "confirmed",
+      "ability": "Dragonize"
+    },
+    {
+      "showdownName": "Floette-Mega",
+      "status": "confirmed",
+      "ability": "Fairy Aura"
+    },
+    {
+      "showdownName": "Froslass-Mega",
+      "status": "confirmed",
+      "ability": "Snow Warning"
+    },
+    {
+      "showdownName": "Gallade-Mega",
+      "status": "confirmed",
+      "ability": "Inner Focus"
+    },
+    {
+      "showdownName": "Garchomp-Mega",
+      "status": "confirmed",
+      "ability": "Sand Force"
+    },
+    {
+      "showdownName": "Garchomp-Mega-Z",
+      "status": "confirmed",
+      "ability": "Levitate"
+    },
+    {
+      "showdownName": "Gardevoir-Mega",
+      "status": "confirmed",
+      "ability": "Pixilate"
+    },
+    {
+      "showdownName": "Gengar-Mega",
+      "status": "confirmed",
+      "ability": "Shadow Tag"
+    },
+    {
+      "showdownName": "Glalie-Mega",
+      "status": "confirmed",
+      "ability": "Refrigerate"
+    },
+    {
+      "showdownName": "Glimmora-Mega",
+      "status": "confirmed",
+      "ability": "Adaptability"
+    },
+    {
+      "showdownName": "Golisopod-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Golurk-Mega",
+      "status": "confirmed",
+      "ability": "Unseen Fist"
+    },
+    {
+      "showdownName": "Greninja-Mega",
+      "status": "confirmed",
+      "ability": "Protean"
+    },
+    {
+      "showdownName": "Gyarados-Mega",
+      "status": "confirmed",
+      "ability": "Mold Breaker"
+    },
+    {
+      "showdownName": "Hawlucha-Mega",
+      "status": "confirmed",
+      "ability": "No Guard"
+    },
+    {
+      "showdownName": "Heatran-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Heracross-Mega",
+      "status": "confirmed",
+      "ability": "Skill Link"
+    },
+    {
+      "showdownName": "Houndoom-Mega",
+      "status": "confirmed",
+      "ability": "Solar Power"
+    },
+    {
+      "showdownName": "Kangaskhan-Mega",
+      "status": "confirmed",
+      "ability": "Parental Bond"
+    },
+    {
+      "showdownName": "Latias-Mega",
+      "status": "confirmed",
+      "ability": "Levitate"
+    },
+    {
+      "showdownName": "Latios-Mega",
+      "status": "confirmed",
+      "ability": "Levitate"
+    },
+    {
+      "showdownName": "Lopunny-Mega",
+      "status": "confirmed",
+      "ability": "Scrappy"
+    },
+    {
+      "showdownName": "Lucario-Mega",
+      "status": "confirmed",
+      "ability": "Adaptability"
+    },
+    {
+      "showdownName": "Lucario-Mega-Z",
+      "status": "confirmed",
+      "ability": "Aura Guard"
+    },
+    {
+      "showdownName": "Magearna-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Magearna-Original-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Malamar-Mega",
+      "status": "confirmed",
+      "ability": "Contrary"
+    },
+    {
+      "showdownName": "Manectric-Mega",
+      "status": "confirmed",
+      "ability": "Intimidate"
+    },
+    {
+      "showdownName": "Mawile-Mega",
+      "status": "confirmed",
+      "ability": "Huge Power"
+    },
+    {
+      "showdownName": "Medicham-Mega",
+      "status": "confirmed",
+      "ability": "Pure Power"
+    },
+    {
+      "showdownName": "Meganium-Mega",
+      "status": "confirmed",
+      "ability": "Mega Sol"
+    },
+    {
+      "showdownName": "Meowstic-F-Mega",
+      "status": "confirmed",
+      "ability": "Trace"
+    },
+    {
+      "showdownName": "Meowstic-M-Mega",
+      "status": "confirmed",
+      "ability": "Trace"
+    },
+    {
+      "showdownName": "Metagross-Mega",
+      "status": "confirmed",
+      "ability": "Tough Claws"
+    },
+    {
+      "showdownName": "Mewtwo-Mega-X",
+      "status": "confirmed",
+      "ability": "Steadfast"
+    },
+    {
+      "showdownName": "Mewtwo-Mega-Y",
+      "status": "confirmed",
+      "ability": "Insomnia"
+    },
+    {
+      "showdownName": "Pidgeot-Mega",
+      "status": "confirmed",
+      "ability": "No Guard"
+    },
+    {
+      "showdownName": "Pinsir-Mega",
+      "status": "confirmed",
+      "ability": "Aerilate"
+    },
+    {
+      "showdownName": "Pyroar-Mega",
+      "status": "confirmed",
+      "ability": "Fire Mane"
+    },
+    {
+      "showdownName": "Raichu-Mega-X",
+      "status": "confirmed",
+      "ability": "Electric Surge"
+    },
+    {
+      "showdownName": "Raichu-Mega-Y",
+      "status": "confirmed",
+      "ability": "No Guard"
+    },
+    {
+      "showdownName": "Rayquaza-Mega",
+      "status": "confirmed",
+      "ability": "Delta Stream"
+    },
+    {
+      "showdownName": "Sableye-Mega",
+      "status": "confirmed",
+      "ability": "Magic Bounce"
+    },
+    {
+      "showdownName": "Salamence-Mega",
+      "status": "confirmed",
+      "ability": "Aerilate"
+    },
+    {
+      "showdownName": "Sceptile-Mega",
+      "status": "confirmed",
+      "ability": "Lightning Rod"
+    },
+    {
+      "showdownName": "Scizor-Mega",
+      "status": "confirmed",
+      "ability": "Technician"
+    },
+    {
+      "showdownName": "Scolipede-Mega",
+      "status": "confirmed",
+      "ability": "Shell Armor"
+    },
+    {
+      "showdownName": "Scovillain-Mega",
+      "status": "confirmed",
+      "ability": "Spicy Spray"
+    },
+    {
+      "showdownName": "Scrafty-Mega",
+      "status": "confirmed",
+      "ability": "Intimidate"
+    },
+    {
+      "showdownName": "Sharpedo-Mega",
+      "status": "confirmed",
+      "ability": "Strong Jaw"
+    },
+    {
+      "showdownName": "Skarmory-Mega",
+      "status": "confirmed",
+      "ability": "Stalwart"
+    },
+    {
+      "showdownName": "Slowbro-Mega",
+      "status": "confirmed",
+      "ability": "Shell Armor"
+    },
+    {
+      "showdownName": "Staraptor-Mega",
+      "status": "confirmed",
+      "ability": "Contrary"
+    },
+    {
+      "showdownName": "Starmie-Mega",
+      "status": "confirmed",
+      "ability": "Huge Power"
+    },
+    {
+      "showdownName": "Steelix-Mega",
+      "status": "confirmed",
+      "ability": "Sand Force"
+    },
+    {
+      "showdownName": "Swampert-Mega",
+      "status": "confirmed",
+      "ability": "Swift Swim"
+    },
+    {
+      "showdownName": "Tatsugiri-Curly-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Tatsugiri-Droopy-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Tatsugiri-Stretchy-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Tyranitar-Mega",
+      "status": "confirmed",
+      "ability": "Sand Stream"
+    },
+    {
+      "showdownName": "Venusaur-Mega",
+      "status": "confirmed",
+      "ability": "Thick Fat"
+    },
+    {
+      "showdownName": "Victreebel-Mega",
+      "status": "confirmed",
+      "ability": "Innards Out"
+    },
+    {
+      "showdownName": "Zeraora-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    },
+    {
+      "showdownName": "Zygarde-Mega",
+      "status": "unconfirmed",
+      "ability": null
+    }
+  ]
+}

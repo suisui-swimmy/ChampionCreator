@@ -1,0 +1,63 @@
+diff --git a/calc/src/data/abilities.ts b/calc/src/data/abilities.ts
+--- a/calc/src/data/abilities.ts
++++ b/calc/src/data/abilities.ts
+@@ -338,6 +338,7 @@ const SV = SS.concat([
+   'Wind Rider',
+   'Zero to Hero',
+   // Champions exclusive
++  'Aura Guard',
+   'Dragonize',
+   'Eelevate',
+   'Fire Mane',
+diff --git a/calc/src/data/species.ts b/calc/src/data/species.ts
+--- a/calc/src/data/species.ts
++++ b/calc/src/data/species.ts
+@@ -10354,7 +10354,7 @@ const ZA_PATCH: {[name: string]: DeepPartial<SpeciesData>} = {
+     types: ['Dark', 'Ghost'],
+     bs: {hp: 65, at: 154, df: 60, sa: 75, sd: 60, sp: 151},
+     weightkg: 49.0,
+-    abilities: {0: 'Magic Bounce'},
++    abilities: {0: 'Sharpness'},
+     baseSpecies: 'Absol',
+   },
+   'Barbaracle-Mega': {
+@@ -10498,7 +10498,7 @@ const ZA_PATCH: {[name: string]: DeepPartial<SpeciesData>} = {
+     types: ['Dragon'],
+     bs: {hp: 108, at: 130, df: 85, sa: 141, sd: 85, sp: 151},
+     weightkg: 99.0,
+-    abilities: {0: 'Sand Force'},
++    abilities: {0: 'Levitate'},
+     baseSpecies: 'Garchomp',
+   },
+   'Glimmora-Mega': {
+@@ -10548,7 +10548,7 @@ const ZA_PATCH: {[name: string]: DeepPartial<SpeciesData>} = {
+     types: ['Fighting', 'Steel'],
+     bs: {hp: 70, at: 100, df: 70, sa: 164, sd: 70, sp: 151},
+     weightkg: 49.4,
+-    abilities: {0: 'Adaptability'},
++    abilities: {0: 'Aura Guard'},
+     baseSpecies: 'Lucario',
+   },
+   'Magearna-Mega': {
+diff --git a/calc/src/mechanics/gen789.ts b/calc/src/mechanics/gen789.ts
+--- a/calc/src/mechanics/gen789.ts
++++ b/calc/src/mechanics/gen789.ts
+@@ -157,7 +157,7 @@ export function calculateSMSSSV(
+   }
+ 
+   const defenderAbilityIgnored = defender.hasAbility(
+-    'Armor Tail', 'Aroma Veil', 'Aura Break', 'Battle Armor',
++    'Armor Tail', 'Aroma Veil', 'Aura Break', 'Aura Guard', 'Battle Armor',
+     'Big Pecks', 'Bulletproof', 'Clear Body', 'Contrary',
+     'Damp', 'Dazzling', 'Disguise', 'Dry Skin',
+     'Earth Eater', 'Eelevate', 'Filter', 'Flash Fire',
+@@ -1758,7 +1758,8 @@ export function calculateFinalModsSMSSSV(
+     desc.defenderAbility = defender.ability;
+   }
+ 
+-  if (defender.hasAbility('Fluffy') && move.flags.contact && !attacker.hasAbility('Long Reach')) {
++  const halveContactMoveDmg = defender.hasAbility('Fluffy') || defender.hasAbility('Aura Guard');
++  if (halveContactMoveDmg && move.flags.contact && !attacker.hasAbility('Long Reach')) {
+     finalMods.push(2048);
+     desc.defenderAbility = defender.ability;
+   } else if (

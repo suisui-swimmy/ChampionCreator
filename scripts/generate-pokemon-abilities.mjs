@@ -46,6 +46,7 @@ const normalizeIdentifier = (value) => toID(value);
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.json");
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
+const megaAbilityManifest = await readJson("src/data/overrides/mega-ability-manifest.json");
 const pokeapiPokemon = await readCsv("others/pokeapi/data/v2/csv/pokemon.csv");
 const pokeapiForms = await readCsv("others/pokeapi/data/v2/csv/pokemon_forms.csv");
 const pokeapiAbilities = await readCsv("others/pokeapi/data/v2/csv/abilities.csv");
@@ -57,6 +58,45 @@ const pokeapiAbilityById = new Map(pokeapiAbilities.map((entry) => [entry.id, en
 const missingAbilityOptions = new Map();
 const calcFallbackPokemon = new Set();
 const pokeapiConflictFallbackPokemon = new Set();
+const megaOverridePokemon = new Set();
+const megaUnconfirmedPokemon = new Set();
+
+const isMegaShowdownName = (showdownName) => /-Mega(?:-[XYZ])?$/u.test(showdownName);
+const megaAbilityManifestEntries = megaAbilityManifest.entries ?? [];
+const megaAbilityManifestByShowdownName = new Map();
+if (megaAbilityManifest.schemaVersion !== 1 || megaAbilityManifest.kind !== "mega-ability-manifest") {
+  throw new Error("mega-ability-manifest must use schemaVersion 1 and kind mega-ability-manifest");
+}
+for (const entry of megaAbilityManifestEntries) {
+  if (!entry || typeof entry.showdownName !== "string" || !isMegaShowdownName(entry.showdownName)) {
+    throw new Error(`Invalid Mega ability manifest entry: ${JSON.stringify(entry)}`);
+  }
+  if (megaAbilityManifestByShowdownName.has(entry.showdownName)) {
+    throw new Error(`Duplicate Mega ability manifest entry: ${entry.showdownName}`);
+  }
+  if (entry.status !== "confirmed" && entry.status !== "unconfirmed") {
+    throw new Error(`Invalid Mega ability manifest status for ${entry.showdownName}: ${entry.status}`);
+  }
+  if (entry.status === "confirmed" && (typeof entry.ability !== "string" || entry.ability.trim() === "")) {
+    throw new Error(`Confirmed Mega ability manifest entry must have an ability: ${entry.showdownName}`);
+  }
+  if (entry.status === "unconfirmed" && entry.ability !== null) {
+    throw new Error(`Unconfirmed Mega ability manifest entry must have a null ability: ${entry.showdownName}`);
+  }
+  megaAbilityManifestByShowdownName.set(entry.showdownName, entry);
+}
+
+const megaPokemonOptions = pokemonOptions.entries.filter((entry) => isMegaShowdownName(entry.showdownName));
+if (megaAbilityManifestEntries.length !== megaPokemonOptions.length) {
+  throw new Error(
+    `Mega ability manifest must cover ${megaPokemonOptions.length} forms: ${megaAbilityManifestEntries.length} entries provided`,
+  );
+}
+for (const pokemonOption of megaPokemonOptions) {
+  if (!megaAbilityManifestByShowdownName.has(pokemonOption.showdownName)) {
+    throw new Error(`Mega ability manifest is missing ${pokemonOption.showdownName}`);
+  }
+}
 
 const pokeapiPokemonById = new Map(pokeapiPokemon.map((entry) => [entry.id, entry]));
 const pokeapiAbilityRowsByPokemonId = new Map();
@@ -193,6 +233,31 @@ const toAbilityOptionEntry = ({ abilityId, showdownName, slot, isHidden, source,
   };
 };
 
+const toMegaOverrideAbilityEntries = (pokemonOption, manifestEntry) => {
+  const abilityId = toID(manifestEntry.ability);
+  const abilityOption = abilityOptionsById.get(abilityId);
+  if (!abilityOption) {
+    throw new Error(
+      `Mega ability manifest references missing ability option ${manifestEntry.ability} for ${pokemonOption.showdownName}`,
+    );
+  }
+
+  megaOverridePokemon.add(pokemonOption.id);
+  return [{
+    id: abilityId,
+    showdownName: abilityOption.showdownName,
+    label: abilityOption.label,
+    slot: "1",
+    isHidden: false,
+    source: "mega-override",
+    override: {
+      manifest: "src/data/overrides/mega-ability-manifest.json",
+      dataVersion: megaAbilityManifest.dataVersion,
+      status: "confirmed",
+    },
+  }];
+};
+
 const toCalcAbilityEntries = (pokemonOption, fallbackReason = "missing-pokeapi-match") => {
   const species = speciesData[pokemonOption.showdownName];
   if (!species) {
@@ -311,7 +376,16 @@ const assertPokeapiSourceSelection = (pokemonOption, abilities) => {
 };
 
 const entries = pokemonOptions.entries.map((pokemonOption) => {
-  const abilities = toPokeapiAbilityEntries(pokemonOption);
+  const manifestEntry = megaAbilityManifestByShowdownName.get(pokemonOption.showdownName);
+  const abilities = manifestEntry?.status === "confirmed"
+    ? toMegaOverrideAbilityEntries(pokemonOption, manifestEntry)
+    : toPokeapiAbilityEntries(pokemonOption);
+  if (manifestEntry?.status === "unconfirmed") {
+    megaUnconfirmedPokemon.add(pokemonOption.id);
+    if (!abilities.every((ability) => ability.source === "calc-fallback")) {
+      throw new Error(`Unconfirmed Mega ability must remain Calc fallback: ${pokemonOption.showdownName}`);
+    }
+  }
   assertPokeapiSourceSelection(pokemonOption, abilities);
   return {
     id: pokemonOption.id,
@@ -335,8 +409,13 @@ const payload = {
   source: {
     speciesData: "@smogon/calc SPECIES[9]",
     calcPackageVersion: calcPackage.version,
+    upstreamCommit: pokemonOptions.source?.upstreamCommit,
+    compatibilityPatchId: pokemonOptions.source?.compatibilityPatchId,
+    compatibilityManifest: pokemonOptions.source?.compatibilityManifest,
     pokemonOptions: "src/data/generated/pokemon-options.gen.json",
     abilityOptions: "src/data/generated/ability-options.gen.json",
+    megaAbilityManifest: "src/data/overrides/mega-ability-manifest.json",
+    megaAbilityManifestVersion: megaAbilityManifest.dataVersion,
     pokeapiPokemon: "others/pokeapi/data/v2/csv/pokemon.csv",
     pokeapiForms: "others/pokeapi/data/v2/csv/pokemon_forms.csv",
     pokeapiAbilities: "others/pokeapi/data/v2/csv/abilities.csv",
@@ -355,6 +434,8 @@ const payload = {
     pokeapiMatchedPokemon,
     calcFallbackPokemon: calcFallbackPokemon.size,
     pokeapiConflictFallbackPokemon: pokeapiConflictFallbackPokemon.size,
+    megaOverridePokemon: megaOverridePokemon.size,
+    megaUnconfirmedPokemon: megaUnconfirmedPokemon.size,
     missingAbilityOptions: missingAbilityOptions.size,
   },
 };
@@ -363,7 +444,7 @@ await mkdir("src/data/generated", { recursive: true });
 await writeFile("src/data/generated/pokemon-abilities.gen.json", `${JSON.stringify(payload)}\n`);
 
 console.log(`Wrote ${entries.length} pokemon ability entries.`);
-console.log(`PokeAPI matched ${pokeapiMatchedPokemon} pokemon, calc fallback ${calcFallbackPokemon.size}, multi-ability ${multiAbilityPokemon}.`);
+console.log(`PokeAPI matched ${pokeapiMatchedPokemon} pokemon, calc fallback ${calcFallbackPokemon.size}, Mega overrides ${megaOverridePokemon.size}, multi-ability ${multiAbilityPokemon}.`);
 if (pokeapiConflictFallbackPokemon.size > 0) {
   console.warn(`Warnings: ${pokeapiConflictFallbackPokemon.size} PokeAPI matches conflicted with @smogon/calc and used calc fallback.`);
 }

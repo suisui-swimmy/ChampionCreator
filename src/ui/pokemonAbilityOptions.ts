@@ -1,21 +1,38 @@
-import unconfirmedMegaAbilitiesJson from "../data/overrides/unconfirmed-mega-abilities.json";
+import megaAbilityManifestJson from "../data/overrides/mega-ability-manifest.json";
 import {
   getPokemonAbilityInputOptions,
   type EntityInputOption,
 } from "../localization/resolver";
 import { getMegaBasePokemonCanonicalName } from "./pokemonFormVariants";
 
-type UnconfirmedMegaAbilitiesPayload = {
+type MegaAbilityManifestPayload = {
   schemaVersion: 1;
-  kind: "unconfirmed-mega-abilities";
-  entries: string[];
+  kind: "mega-ability-manifest";
+  dataVersion: string;
+  source: {
+    authority: string;
+    applicableVersion: string;
+    checkedAt: string;
+    canonicalBasis: string;
+    calcBase: string;
+  };
+  summary: {
+    totalForms: number;
+    confirmed: number;
+    unconfirmed: number;
+  };
+  entries: Array<{
+    showdownName: string;
+    status: "confirmed" | "unconfirmed";
+    ability: string | null;
+  }>;
 };
 
-const unconfirmedMegaAbilitiesPayload = (
-  unconfirmedMegaAbilitiesJson as UnconfirmedMegaAbilitiesPayload
+const megaAbilityManifestPayload = (
+  megaAbilityManifestJson as MegaAbilityManifestPayload
 );
-const unconfirmedMegaAbilityCanonicalNames = new Set(
-  unconfirmedMegaAbilitiesPayload.entries,
+const megaAbilityManifestByCanonicalName = new Map(
+  megaAbilityManifestPayload.entries.map((entry) => [entry.showdownName, entry]),
 );
 
 export type PokemonAbilityInputPlan = {
@@ -28,7 +45,7 @@ export type PokemonAbilityInputPlan = {
 /**
  * Known Mega forms have one fixed post-Mega ability. Forms explicitly marked
  * as unconfirmed keep the pre-Mega dropdown without treating calc placeholders
- * as a default; the override is reviewed when adopting a newer calc commit.
+ * as a default; the manifest is reviewed when adopting a newer calc commit.
  */
 export const getPokemonAbilityInputPlan = (
   pokemonCanonicalName: string | undefined,
@@ -43,8 +60,11 @@ export const getPokemonAbilityInputPlan = (
 
   const preMegaCanonicalName = getMegaBasePokemonCanonicalName(pokemonCanonicalName);
   const isMega = preMegaCanonicalName !== null;
+  const megaAbilityManifestEntry = isMega
+    ? megaAbilityManifestByCanonicalName.get(pokemonCanonicalName)
+    : undefined;
   const isUnconfirmedMega = isMega
-    && unconfirmedMegaAbilityCanonicalNames.has(pokemonCanonicalName);
+    && megaAbilityManifestEntry?.status === "unconfirmed";
   const optionOwner = isUnconfirmedMega
     ? preMegaCanonicalName
     : pokemonCanonicalName;
@@ -54,7 +74,9 @@ export const getPokemonAbilityInputPlan = (
     options,
     isMega,
     isUnconfirmedMega,
-    defaultInput: isMega && !isUnconfirmedMega && options?.length === 1
+    defaultInput: isMega
+      && megaAbilityManifestEntry?.status === "confirmed"
+      && options?.length === 1
       ? options[0].value
       : undefined,
   };

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import megaAbilityManifestPayload from "../data/overrides/mega-ability-manifest.json";
 import pokemonOptionsPayload from "../data/generated/pokemon-options.gen.json";
+import { getPokemonAbilityInputOptions } from "../localization/resolver";
 import { getPokemonAbilityInputPlan } from "./pokemonAbilityOptions";
+import { getMegaBasePokemonCanonicalName } from "./pokemonFormVariants";
 
 describe("getPokemonAbilityInputPlan", () => {
   it("uses each known Mega form's sole fixed ability without usage data", () => {
@@ -22,9 +25,40 @@ describe("getPokemonAbilityInputPlan", () => {
       defaultInput: "トレース",
       options: [expect.objectContaining({ canonicalName: "Trace", value: "トレース" })],
     });
+
+    for (const [showdownName, value, canonicalName] of [
+      ["Skarmory-Mega", "すじがねいり", "Stalwart"],
+      ["Hawlucha-Mega", "ノーガード", "No Guard"],
+      ["Absol-Mega-Z", "きれあじ", "Sharpness"],
+      ["Garchomp-Mega-Z", "ふゆう", "Levitate"],
+      ["Lucario-Mega-Z", "はどうのぼうご", "Aura Guard"],
+    ] as const) {
+      expect(getPokemonAbilityInputPlan(showdownName)).toMatchObject({
+        isMega: true,
+        isUnconfirmedMega: false,
+        defaultInput: value,
+        options: [expect.objectContaining({ canonicalName, value })],
+      });
+    }
   });
 
   it("keeps unconfirmed Mega defaults blank and exposes every pre-Mega ability", () => {
+    for (const pokemon of [
+      "Heatran-Mega",
+      "Darkrai-Mega",
+      "Zygarde-Mega",
+      "Golisopod-Mega",
+      "Zeraora-Mega",
+      "Baxcalibur-Mega",
+    ]) {
+      expect(getPokemonAbilityInputPlan(pokemon)).toMatchObject({
+        isMega: true,
+        isUnconfirmedMega: true,
+        defaultInput: undefined,
+        options: expect.arrayContaining([expect.anything()]),
+      });
+    }
+
     for (const pokemon of [
       "Tatsugiri-Curly-Mega",
       "Tatsugiri-Droopy-Mega",
@@ -85,14 +119,62 @@ describe("getPokemonAbilityInputPlan", () => {
       .map(({ showdownName }) => showdownName)
       .sort())
       .toEqual([
+        "Baxcalibur-Mega",
+        "Darkrai-Mega",
+        "Golisopod-Mega",
+        "Heatran-Mega",
         "Magearna-Mega",
         "Magearna-Original-Mega",
         "Tatsugiri-Curly-Mega",
         "Tatsugiri-Droopy-Mega",
         "Tatsugiri-Stretchy-Mega",
+        "Zeraora-Mega",
+        "Zygarde-Mega",
       ]);
     expect(plans.filter(({ plan }) => !plan.isUnconfirmedMega).every(({ plan }) => (
       plan.isMega && plan.options?.length === 1 && plan.defaultInput === plan.options[0].value
     ))).toBe(true);
+  });
+
+  it("keeps the tracked Mega manifest at 97 forms with 86 confirmed and 11 unconfirmed", () => {
+    expect(megaAbilityManifestPayload.summary).toEqual({
+      totalForms: 97,
+      confirmed: 86,
+      unconfirmed: 11,
+    });
+    expect(megaAbilityManifestPayload.entries).toHaveLength(97);
+    expect(megaAbilityManifestPayload.entries.filter((entry) => entry.status === "confirmed")).toHaveLength(86);
+    expect(megaAbilityManifestPayload.entries.filter((entry) => entry.status === "unconfirmed")).toHaveLength(11);
+    expect(megaAbilityManifestPayload.entries
+      .filter((entry) => entry.status === "unconfirmed")
+      .map((entry) => entry.showdownName)
+      .sort())
+      .toEqual([
+        "Baxcalibur-Mega",
+        "Darkrai-Mega",
+        "Golisopod-Mega",
+        "Heatran-Mega",
+        "Magearna-Mega",
+        "Magearna-Original-Mega",
+        "Tatsugiri-Curly-Mega",
+        "Tatsugiri-Droopy-Mega",
+        "Tatsugiri-Stretchy-Mega",
+        "Zeraora-Mega",
+        "Zygarde-Mega",
+      ]);
+  });
+
+  it("uses the resolved pre-Mega ability list for every unconfirmed form", () => {
+    for (const entry of megaAbilityManifestPayload.entries.filter((candidate) => (
+      candidate.status === "unconfirmed"
+    ))) {
+      const baseCanonicalName = getMegaBasePokemonCanonicalName(entry.showdownName);
+      expect(baseCanonicalName).not.toBeNull();
+      expect(getPokemonAbilityInputPlan(entry.showdownName)).toMatchObject({
+        isUnconfirmedMega: true,
+        defaultInput: undefined,
+        options: getPokemonAbilityInputOptions(baseCanonicalName ?? undefined),
+      });
+    }
   });
 });

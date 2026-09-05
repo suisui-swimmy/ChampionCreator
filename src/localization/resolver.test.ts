@@ -354,6 +354,7 @@ describe("resolveEntity", () => {
     ["ability", "メガソーラー", "Mega Sol"],
     ["ability", "かんつうドリル", "Piercing Drill"],
     ["ability", "とびだすハバネロ", "Spicy Spray"],
+    ["ability", "はどうのぼうご", "Aura Guard"],
   ] as const)("keeps non-CAP official data %s selectable", (kind, input, canonicalName) => {
     expect(resolveEntity(kind, input)).toMatchObject({
       status: "exact",

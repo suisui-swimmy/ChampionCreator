@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "smogon-calc-compatibility-build",
+  "patchId": "cc-aura-guard-v1",
+  "packageName": "@smogon/calc",
+  "packageVersion": "0.11.0",
+  "upstreamRepository": "https://github.com/smogon/damage-calc.git",
+  "upstreamBaseCommit": "49d4d8696bf138b101cc47be8432489c3ac192aa",
+  "sourcePullRequest": "https://github.com/smogon/damage-calc/pull/855",
+  "sourcePullRequestHead": "589015cb5986fc96537c44000ab8a083dc1ef253",
+  "showdownReference": "https://github.com/smogon/pokemon-showdown/pull/12275",
+  "showdownReferenceCommit": "7340ea497118a6752336d735e193cdf89a1adb5f",
+  "patchFile": "vendor/patches/smogon-calc-aura-guard-v1.patch",
+  "patchSha256": "b47dd1de29837bd281b30c7c38ae213fcc246255af7fad030c316246a3a8e232",
+  "upstreamLockfiles": [
+    {
+      "path": "package-lock.json",
+      "sha256": "1bcb0a123c2a42cb51144a6893438789bec3fbb04f167907fac4b9ac9b161b5a"
+    },
+    {
+      "path": "calc/package-lock.json",
+      "sha256": "b7e0f82492eb760f58462ad19a5c108fc4fb37b93e3b4663b44079d3c86fb457"
+    }
+  ],
+  "scope": [
+    "Generation 9 Aura Guard ability catalog entry",
+    "Mega Absol Z, Mega Garchomp Z, and Mega Lucario Z ability metadata",
+    "Generation 9 contact-damage reduction and breakable suppression"
+  ],
+  "provisional": [
+    "Aura Guard breakable suppression follows the referenced Pokemon Showdown implementation, whose source still marks that flag for confirmation."
+  ],
+  "artifact": {
+    "path": "vendor/smogon-calc-0.11.0-49d4d86-cc-aura-guard-v1.tgz",
+    "sha256": "b44925b367c69298dd7baac25b41809ecc190fb5b3e68eecedcdeb646c9b5c42",
+    "integrity": "sha512-yU5X06LnL+akae/1ly2fkd0h9gtH/0/XYkVGyqe0PBEEZiOhMfCTH7B653RuOMj4dPaBzaupLPWAvMnD9WZHKA=="
+  },
+  "buildEnvironment": {
+    "node": "24.14.1",
+    "npm": "11.11.0"
+  },
+  "buildScript": "scripts/build-smogon-calc-vendor.mjs",
+  "sunset": {
+    "condition": "Retire this patch after a frozen smogon/damage-calc commit implements equivalent Aura Guard contact reduction and suppression semantics.",
+    "requiredCheck": "Remove the local patch before native adoption and rerun parity tests to prove the effect is not applied twice."
+  }
+}

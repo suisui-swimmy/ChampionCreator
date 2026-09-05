@@ -12,9 +12,27 @@ const projectRoot = join(__dirname, "..");
 const outputDir = join(projectRoot, "src", "data", "generated");
 const generationNumber = 9;
 const generation = Generations.get(generationNumber);
-const upstreamCommit = "49d4d8696bf138b101cc47be8432489c3ac192aa";
+const calcCompatibilityManifestPath = join(
+  projectRoot,
+  "vendor",
+  "smogon-calc-cc-aura-guard-v1.json",
+);
+const calcCompatibilityManifest = JSON.parse(
+  await readFile(calcCompatibilityManifestPath, "utf8"),
+);
+const upstreamCommit = calcCompatibilityManifest.upstreamBaseCommit;
 const upstreamCommitShort = upstreamCommit.slice(0, 7);
-const dataVersion = `calc-${calcPackage.version}+smogon-${upstreamCommitShort}-gen${generationNumber}`;
+const compatibilityPatchId = calcCompatibilityManifest.patchId;
+const dataVersion = `calc-${calcPackage.version}+smogon-${upstreamCommitShort}-${compatibilityPatchId}-gen${generationNumber}`;
+
+if (
+  calcPackage.name !== calcCompatibilityManifest.packageName
+  || calcPackage.version !== calcCompatibilityManifest.packageVersion
+) {
+  throw new Error(
+    `Installed calc ${calcPackage.name}@${calcPackage.version} does not match compatibility manifest`,
+  );
+}
 
 const optionPaths = {
   pokemon: join(outputDir, "pokemon-options.gen.json"),
@@ -117,6 +135,7 @@ const MANUAL_MOVE_LABELS_JA = {
 };
 
 const SPECIAL_ABILITY_LABELS_JA = {
+  auraguard: "はどうのぼうご",
   noability: "とくせいなし",
   dragonize: "ドラゴンスキン",
   eelevate: "うなぎのぼり",
@@ -313,6 +332,8 @@ const makePayload = ({ kind, entries, summary, source }) => ({
     packageName: calcPackage.name,
     packageVersion: calcPackage.version,
     upstreamCommit,
+    compatibilityPatchId,
+    compatibilityManifest: "vendor/smogon-calc-cc-aura-guard-v1.json",
     generation: generationNumber,
     previousGeneratedLabels: "src/data/generated",
     userOptionExclusions: "src/data/overrides/user-option-exclusions.json",
@@ -722,6 +743,7 @@ const abilityTags = (ability) => {
       "adaptability",
       "aerilate",
       "analytic",
+      "auraguard",
       "beadsofruin",
       "blaze",
       "darkaura",
@@ -832,7 +854,7 @@ const makeAbilityOptions = () => {
       unsupportedTemporary: entries.filter((entry) => entry.sourceStatus === "unsupported-temporary").length,
       needsConfirmation: entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length,
       previousLocalized: entries.filter((entry) => previousById.abilities.has(entry.id)).length,
-      championsNewAbilitiesNowInCalc: ["dragonize", "eelevate", "firemane", "megasol", "piercingdrill", "spicyspray"].filter((id) =>
+      championsNewAbilitiesNowInCalc: ["auraguard", "dragonize", "eelevate", "firemane", "megasol", "piercingdrill", "spicyspray"].filter((id) =>
         entries.some((entry) => entry.id === id),
       ).length,
     },
