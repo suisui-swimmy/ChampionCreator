@@ -1,7 +1,28 @@
 {
   "schemaVersion": 1,
-  "dataVersion": "manual-overrides-2026-09-04",
+  "dataVersion": "manual-overrides-2026-09-06",
   "entries": [
+    {
+      "kind": "pokemon",
+      "id": "taurospaldeacombat",
+      "displayNameJa": "ケンタロス パルデアのすがた・コンバットしゅ",
+      "sourceStatus": "manual",
+      "note": "User-specified form label (2026-09-06); keeps Combat distinct in name search and usage rankings."
+    },
+    {
+      "kind": "pokemon",
+      "id": "taurospaldeablaze",
+      "displayNameJa": "ケンタロス パルデアのすがた・ブレイズしゅ",
+      "sourceStatus": "manual",
+      "note": "User-specified form label (2026-09-06); keeps Blaze distinct in name search and usage rankings."
+    },
+    {
+      "kind": "pokemon",
+      "id": "taurospaldeaaqua",
+      "displayNameJa": "ケンタロス パルデアのすがた・ウォーターしゅ",
+      "sourceStatus": "manual",
+      "note": "User-specified form label (2026-09-06); keeps Aqua distinct in name search and usage rankings."
+    },
     {
       "kind": "pokemon",
       "id": "maushold",

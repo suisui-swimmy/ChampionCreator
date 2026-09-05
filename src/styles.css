@@ -2683,8 +2683,9 @@ input {
 .pokemon-suggestion-popover {
   z-index: var(--floating-menu-z);
   width: var(--radix-popover-trigger-width);
-  min-width: var(--radix-popover-trigger-width);
-  max-width: var(--radix-popover-trigger-width);
+  min-width: 0;
+  max-width: calc(100vw - 16px);
+  max-height: var(--radix-popover-content-available-height);
   border: 1px solid rgba(245, 197, 66, 0.34);
   border-radius: 7px;
   background: #0c1212;
@@ -2694,7 +2695,7 @@ input {
 
 .pokemon-suggestion-list {
   display: grid;
-  max-height: 260px;
+  max-height: min(260px, calc(var(--radix-popover-content-available-height, 320px) - 12px));
   gap: 3px;
   overflow-y: auto;
 }
@@ -2721,14 +2722,22 @@ input {
 }
 
 .pokemon-suggestion-option span {
+  display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .pokemon-suggestion-option span {
-  font-size: 12px;
+  font-size: inherit;
   font-weight: 850;
+}
+
+.pokemon-ranking-empty {
+  margin: 0;
+  padding: 4px 8px 8px;
+  color: var(--muted);
+  font-size: var(--desktop-text-control);
+  overflow-wrap: anywhere;
 }
 
 
@@ -5676,7 +5685,7 @@ textarea {
     font-size: 14px;
   }
 
-  .target-summary.compact > .pokemon-autocomplete-field,
+  .target-summary.compact > .pokemon-autocomplete-field input,
   .target-summary.compact > .dropdown-text-field input,
   .target-summary.compact > .nature-field .nature-trigger {
     height: var(--desktop-control-compact);
@@ -5697,6 +5706,25 @@ textarea {
   .target-summary.compact > .dropdown-text-field .ability-input-row.has-ability-menu input,
   .target-summary.compact > .dropdown-text-field .dropdown-input-row input {
     padding-right: 40px;
+  }
+
+  .pokemon-autocomplete-field .dropdown-input-row input {
+    height: var(--desktop-control-compact);
+    padding-right: calc(var(--desktop-control-compact) + 8px);
+    font-size: var(--desktop-text-control);
+  }
+
+  .pokemon-autocomplete-field .dropdown-menu-trigger {
+    top: 0;
+    right: 0;
+    width: var(--desktop-control-compact);
+    height: var(--desktop-control-compact);
+    padding: 0;
+  }
+
+  .pokemon-autocomplete-field .disclosure-chevron {
+    width: var(--desktop-icon-compact);
+    height: var(--desktop-icon-compact);
   }
 
   .target-level-field,
@@ -8077,6 +8105,25 @@ textarea {
     padding-right: 40px;
   }
 
+  .pokemon-autocomplete-field .dropdown-input-row input {
+    height: var(--mobile-control-standard);
+    padding-right: calc(var(--mobile-control-compact) + 8px);
+    font-size: var(--mobile-text-input);
+  }
+
+  .pokemon-autocomplete-field .dropdown-menu-trigger {
+    top: 0;
+    right: 0;
+    width: var(--mobile-control-compact);
+    height: var(--mobile-control-standard);
+    padding: 0;
+  }
+
+  .pokemon-autocomplete-field .disclosure-chevron {
+    width: var(--mobile-icon-compact);
+    height: var(--mobile-icon-compact);
+  }
+
   .select-content {
     max-height: min(52vh, var(--radix-select-content-available-height, 52vh));
   }
@@ -8096,6 +8143,10 @@ textarea {
   .dropdown-option-list,
   .pokemon-suggestion-list {
     max-height: min(44vh, 320px);
+  }
+
+  .pokemon-suggestion-list {
+    max-height: min(44vh, 320px, calc(var(--radix-popover-content-available-height, 400px) - 12px));
   }
 
   .pokemon-suggestion-popover,

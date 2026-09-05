@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { getEntityInputOptions } from "../localization/resolver";
 import {
   applyUsageRanking,
   getMatchingEntityInputOptionsWithUsage,
   getTopUsageRankedCandidate,
   getUsagePokemonEntry,
+  getUsageRankedPokemonOptions,
   getUsageRanking,
   getUsageNatureRanking,
   getNatureUsageState,
@@ -47,6 +49,73 @@ const candidates = [
   { canonicalName: "Helping Hand", value: "てだすけ" },
   { canonicalName: "Fake Out", value: "ねこだまし" },
 ];
+
+describe("getUsageRankedPokemonOptions", () => {
+  const pokemonCandidates = [
+    { canonicalName: "Whimsicott", value: "エルフーン" },
+    { canonicalName: "Garchomp", value: "ガブリアス" },
+    { canonicalName: "Garchomp-Mega", value: "メガガブリアス" },
+    { canonicalName: "Sinistcha", value: "ヤバソチャ" },
+    { canonicalName: "Basculegion", value: "イダイトウ オスのすがた" },
+    { canonicalName: "Basculegion-F", value: "イダイトウ メスのすがた" },
+  ];
+  const ranked = (pokemonRank: number) => ({ pokemonRank, move: [], ability: [], item: [] });
+  const usage: ChampionsUsageData = {
+    ...data,
+    formats: {
+      Singles: { whimsicott: ranked(1), garchomp: ranked(2), unknownmon: ranked(3) },
+      Doubles: {
+        whimsicott: ranked(4), garchomp: ranked(1), sinistcha: ranked(2), basculegion: ranked(3),
+        "Basculegion-F": { move: ["Protect"], ability: [], item: [] },
+      },
+    },
+  };
+
+  it("uses the selected format's overall rank and keeps Japanese labels and form canonicals", () => {
+    expect(getUsageRankedPokemonOptions(pokemonCandidates, usage, "Doubles").map((option) => option.value))
+      .toEqual(["ガブリアス", "ヤバソチャ", "イダイトウ オスのすがた", "エルフーン"]);
+    expect(getUsageRankedPokemonOptions(pokemonCandidates, usage, "Singles"))
+      .toEqual([pokemonCandidates[0], pokemonCandidates[1]]);
+    expect(pokemonCandidates).toHaveLength(6);
+  });
+
+  it("does not infer ranks for Mega, opposite-sex or unlisted forms and does not duplicate labels", () => {
+    expect(getUsageRankedPokemonOptions([...pokemonCandidates, { canonicalName: "Garchomp", value: "別表示" }], usage, "Doubles"))
+      .toEqual([pokemonCandidates[1], pokemonCandidates[3], pokemonCandidates[4], pokemonCandidates[0]]);
+    expect(getUsageRankedPokemonOptions(pokemonCandidates, null, "Singles")).toEqual([]);
+    expect(getUsageRankedPokemonOptions(pokemonCandidates, data, "Singles")).toEqual([]);
+    expect(getUsageRankedPokemonOptions([], usage, "Doubles")).toEqual([]);
+  });
+
+  it("retains all four Tauros entries from the real input catalog in each format's ranking", () => {
+    const taurosUsage: ChampionsUsageData = {
+      ...data,
+      formats: {
+        Singles: { tauros: ranked(213), taurospaldeacombat: ranked(235), taurospaldeablaze: ranked(117), taurospaldeaaqua: ranked(175) },
+        Doubles: { tauros: ranked(224), taurospaldeacombat: ranked(234), taurospaldeablaze: ranked(181), taurospaldeaaqua: ranked(150) },
+      },
+    };
+    const expected = {
+      Singles: ["ケンタロス パルデアのすがた・ブレイズしゅ", "ケンタロス パルデアのすがた・ウォーターしゅ", "ケンタロス", "ケンタロス パルデアのすがた・コンバットしゅ"],
+      Doubles: ["ケンタロス パルデアのすがた・ウォーターしゅ", "ケンタロス パルデアのすがた・ブレイズしゅ", "ケンタロス", "ケンタロス パルデアのすがた・コンバットしゅ"],
+    };
+    for (const format of ["Singles", "Doubles"] as const) {
+      const options = getUsageRankedPokemonOptions(getEntityInputOptions("pokemon"), taurosUsage, format);
+      expect(options.map(option => option.value)).toEqual(expected[format]);
+      expect(new Set(options.map(option => option.canonicalName)).size).toBe(4);
+    }
+  });
+
+  it("keeps the full ranked list reachable beyond the text-search candidate limit", () => {
+    const all = Array.from({ length: 80 }, (_, index) => ({ canonicalName: `Pokemon${index}` }));
+    const allData: ChampionsUsageData = {
+      ...data,
+      formats: { Singles: Object.fromEntries(all.map((option, index) => [option.canonicalName, ranked(80 - index)])), Doubles: {} },
+    };
+    expect(getUsageRankedPokemonOptions(all, allData, "Singles")).toEqual([...all].reverse());
+    expect(getUsageRankedPokemonOptions(all, allData, "Doubles")).toEqual([]);
+  });
+});
 
 describe("getUsageRanking", () => {
   it("looks up a format and canonical Pokemon without inheriting another form", () => {

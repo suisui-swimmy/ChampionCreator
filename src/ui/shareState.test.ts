@@ -247,6 +247,26 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0].attackerPokemonCanonicalName).toBe("Tatsugiri-Droopy-Mega");
   });
 
+  it("preserves Paldean Tauros forms when reading both legacy shared names and distinct labels", () => {
+    const [scenario] = createDefaultScenarioForms();
+    for (const [displayName, canonicalName] of [
+      ["ケンタロス パルデアのすがた・コンバットしゅ", "Tauros-Paldea-Combat"],
+      ["ケンタロス パルデアのすがた・ブレイズしゅ", "Tauros-Paldea-Blaze"],
+      ["ケンタロス パルデアのすがた・ウォーターしゅ", "Tauros-Paldea-Aqua"],
+    ]) {
+      for (const input of [displayName, "ケンタロス パルデアのすがた"]) {
+        const target = { ...createDefaultTargetForm(), pokemonInput: input, pokemonCanonicalName: canonicalName };
+        const scenarios = [{
+          ...scenario,
+          attacks: [{ ...scenario.attacks[0], attackerPokemonInput: input, attackerPokemonCanonicalName: canonicalName }],
+        }];
+        const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios));
+        expect(parsed.target.pokemonCanonicalName).toBe(canonicalName);
+        expect(parsed.scenarios[0].attacks[0].attackerPokemonCanonicalName).toBe(canonicalName);
+      }
+    }
+  });
+
   it("round-trips display-only female forms through their shared calculation canonical", () => {
     const [scenario] = createDefaultScenarioForms();
     const target = {

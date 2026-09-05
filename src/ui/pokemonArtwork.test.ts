@@ -10,6 +10,17 @@ describe("pokemonArtwork", () => {
     expect(match?.artworkUrl).toContain("assets/official-artwork/149.png");
   });
 
+  it.each([
+    ["ケンタロス", "Tauros", "128.png", ["Normal"]],
+    ["ケンタロス パルデアのすがた・コンバットしゅ", "Tauros-Paldea-Combat", "128-paldea-combat-breed.png", ["Fighting"]],
+    ["ケンタロス パルデアのすがた・ブレイズしゅ", "Tauros-Paldea-Blaze", "128-paldea-blaze-breed.png", ["Fighting", "Fire"]],
+    ["ケンタロス パルデアのすがた・ウォーターしゅ", "Tauros-Paldea-Aqua", "128-paldea-aqua-breed.png", ["Fighting", "Water"]],
+  ] as const)("preserves the distinct artwork and types for %s", (input, canonicalName, artwork, types) => {
+    const match = findPokemonArtwork({ input });
+    expect(match).toMatchObject({ label: input, showdownName: canonicalName, types });
+    expect(match?.artworkUrl).toContain(`assets/official-artwork/${artwork}`);
+  });
+
   it("prefers canonical names when available", () => {
     const match = findPokemonArtwork({ input: "ガブ", canonicalName: "Garchomp" });
 

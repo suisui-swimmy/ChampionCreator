@@ -1,0 +1,2 @@
+# Reproducible Calc patch checksums require the original LF bytes on Windows too.
+vendor/patches/*.patch text eol=lf

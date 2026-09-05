@@ -45,6 +45,33 @@ describe("resolveEntity", () => {
     });
   });
 
+  it("keeps all four Tauros forms selectable with the exact requested Japanese labels", () => {
+    const cases = [
+      ["ケンタロス", "Tauros"],
+      ["ケンタロス パルデアのすがた・コンバットしゅ", "Tauros-Paldea-Combat"],
+      ["ケンタロス パルデアのすがた・ブレイズしゅ", "Tauros-Paldea-Blaze"],
+      ["ケンタロス パルデアのすがた・ウォーターしゅ", "Tauros-Paldea-Aqua"],
+    ] as const;
+    const suggestions = getMatchingEntityInputOptions("pokemon", "ケンタロス");
+    expect(suggestions).toHaveLength(4);
+    for (const [displayNameJa, canonicalName] of cases) {
+      expect(resolveEntity("pokemon", displayNameJa)).toMatchObject({ status: "exact", displayNameJa, canonicalName });
+      expect(suggestions).toContainEqual(expect.objectContaining({ value: displayNameJa, canonicalName }));
+    }
+    expect(getMatchingEntityInputOptions("pokemon", "けんたろす　ぱるであ")).toHaveLength(3);
+  });
+
+  it("retains the legacy Paldean Tauros canonical hint without guessing a form from the shared name", () => {
+    const legacyLabel = "ケンタロス パルデアのすがた";
+    expect(resolveEntity("pokemon", legacyLabel).status).toBe("ambiguous");
+    for (const canonicalName of ["Tauros-Paldea-Combat", "Tauros-Paldea-Blaze", "Tauros-Paldea-Aqua"]) {
+      expect(resolveEntityWithCanonicalHint("pokemon", legacyLabel, canonicalName)).toMatchObject({
+        status: "alias", canonicalName,
+      });
+    }
+    expect(resolveEntityWithCanonicalHint("pokemon", legacyLabel, "Tauros").status).toBe("not-found");
+  });
+
   it("uses one Japanese label format for all Forces of Nature forms", () => {
     const cases = [
       ["ランドロス けしんフォルム", "Landorus"],

@@ -1051,7 +1051,7 @@ describe("App", () => {
     expect(nonMobileCss).toMatch(/\.account-sync-trigger-icon\s*\{[^}]*width:\s*var\(--desktop-icon-standard\);[^}]*height:\s*var\(--desktop-icon-standard\);/s);
 
     // Dense fields use 32px; visible actions use 36px; primary actions get extra emphasis.
-    expect(desktopCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field,[\s\S]*?height:\s*var\(--desktop-control-compact\);[\s\S]*?font-size:\s*var\(--desktop-text-control\);/s);
+    expect(desktopCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field input,[^{]*\{[^}]*height:\s*var\(--desktop-control-compact\);[^}]*font-size:\s*var\(--desktop-text-control\);/s);
     expect(desktopCss).toMatch(/\.scenario-row-title \.inline-title-input,[\s\S]*?\.attack-card-header \.inline-title-input\s*\{[^}]*height:\s*var\(--desktop-control-standard\);/s);
     expect(desktopCss).toMatch(/\.scenario-row input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),[\s\S]*?\.attack-condition-card input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),[\s\S]*?\.attack-condition-card \.nature-trigger\s*\{[^}]*height:\s*var\(--desktop-control-compact\);[^}]*font-size:\s*var\(--desktop-text-control\);/s);
     expect(desktopCss).toMatch(/\.ui-button,[\s\S]*?\.ui-button-small\s*\{[^}]*min-height:\s*var\(--desktop-control-standard\);/s);
@@ -2283,6 +2283,51 @@ describe("App", () => {
     expect(getPokemonSuggestionKeyAction("Escape", 0, 2)).toEqual({ type: "close" });
   });
 
+  it("gives every target and scenario Pokemon field a focusable ranking trigger, including the tutorial", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const initialScenarioForms = (["defence", "offense", "speed"] as const).map((adjustmentType, index) => ({
+      ...scenario,
+      id: `ranking-scenario-${index}`,
+      adjustmentType,
+      attacks: [scenario.attacks[0]],
+    }));
+    const app = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={initialScenarioForms} />);
+    const tutorial = renderToStaticMarkup(<GuideTutorial />);
+    for (const html of [app, tutorial]) {
+      const fields = [...html.matchAll(/class="pokemon-autocomplete-field [^"]*"/g)];
+      const triggers = [...html.matchAll(/<button[^>]*aria-label="[^"]*の使用率ランキングを開く"[^>]*>/g)];
+      expect(fields.length).toBeGreaterThan(1);
+      expect(triggers).toHaveLength(fields.length);
+      for (const [trigger] of triggers) {
+        expect(trigger).toContain('class="dropdown-menu-trigger"');
+        expect(trigger).toContain('aria-haspopup="listbox"');
+        expect(trigger).toContain('aria-expanded="false"');
+        expect(trigger).not.toContain("tabindex");
+        expect(trigger).not.toContain("disabled");
+      }
+    }
+  });
+
+  it("uses compact ranking triggers and readable input tokens in both viewport tiers", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const desktopStart = css.indexOf("@media (min-width: 721px)");
+    const desktopEnd = css.indexOf("@media (min-width: 1181px)", desktopStart);
+    const mobileStart = css.lastIndexOf("@media (max-width: 720px)");
+    for (const [block, tier, height, font] of [
+      [css.slice(desktopStart, desktopEnd), "desktop", "compact", "control"],
+      [css.slice(mobileStart), "mobile", "standard", "input"],
+    ]) {
+      const trigger = block.match(/\.pokemon-autocomplete-field \.dropdown-menu-trigger\s*\{([^}]*)\}/)?.[1];
+      const input = block.match(/\.pokemon-autocomplete-field \.dropdown-input-row input\s*\{([^}]*)\}/)?.[1];
+      const icon = block.match(/\.pokemon-autocomplete-field \.disclosure-chevron\s*\{([^}]*)\}/)?.[1];
+      expect(trigger).toContain(`width: var(--${tier}-control-compact);`);
+      expect(trigger).toContain(`height: var(--${tier}-control-${height});`);
+      expect(input).toContain(`font-size: var(--${tier}-text-${font});`);
+      expect(input).toContain(`padding-right: calc(var(--${tier}-control-compact) + 8px);`);
+      expect(icon).toContain(`width: var(--${tier}-icon-compact);`);
+    }
+  });
+
   it("does not mark selectable Pokemon form suggestions as unresolved", () => {
     expect(isUnresolvedEntityInput("pokemon", "イッカネズミ ３びきかぞく")).toBe(false);
     expect(isUnresolvedEntityInput("pokemon", "イッカネズミ ４ひきかぞく")).toBe(false);
@@ -2917,7 +2962,7 @@ describe("App", () => {
     expect(desktopStart).toBeGreaterThanOrEqual(0);
     expect(desktopEnd).toBeGreaterThan(desktopStart);
     expect(desktopCss).toMatch(/\.target-identity,\s*\.target-summary\.compact\s*\{[^}]*gap:\s*6px;/s);
-    expect(nonMobileCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field,[\s\S]*?height:\s*var\(--desktop-control-compact\);[\s\S]*?padding:\s*0 7px;[\s\S]*?font-size:\s*var\(--desktop-text-control\);/s);
+    expect(nonMobileCss).toMatch(/\.target-summary\.compact > \.pokemon-autocomplete-field input,[^{]*\{[^}]*height:\s*var\(--desktop-control-compact\);[^}]*padding:\s*0 7px;[^}]*font-size:\s*var\(--desktop-text-control\);/s);
     expect(nonMobileCss).toMatch(/\.target-level-field,\s*\.placeholder-field\.target-level-field\s*\{[^}]*grid-template-columns:\s*52px minmax\(0, 1fr\);[^}]*gap:\s*6px;/s);
     expect(nonMobileCss).toMatch(/\.target-level-field \.level-inline-control\s*\{[^}]*height:\s*var\(--desktop-control-compact\);/s);
     expect(nonMobileCss).toMatch(/\.target-level-field \.move-power-lock-toggle\s*\{[^}]*width:\s*var\(--desktop-control-compact\);/s);

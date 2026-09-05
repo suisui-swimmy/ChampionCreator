@@ -22,6 +22,7 @@ export {
   getMatchingEntityInputOptionsWithUsage,
   getUsageMatchingEntityInputOptions,
   getUsagePokemonEntry,
+  getUsageRankedPokemonOptions,
   getUsageRanking,
   getUsageNatureRanking,
   getNatureUsageState,

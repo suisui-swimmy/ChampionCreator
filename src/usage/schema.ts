@@ -120,6 +120,14 @@ const parsePokemonEntry = (value: unknown, path: string): UsagePokemonEntry => {
   assertRecord(value, path);
 
   const entry = {} as UsagePokemonEntry;
+  if (value.pokemonRank !== undefined) {
+    if (typeof value.pokemonRank !== "number"
+      || !Number.isSafeInteger(value.pokemonRank)
+      || value.pokemonRank < 1) {
+      throw new UsageDataValidationError(`${path}.pokemonRank`, "expected a positive integer rank");
+    }
+    entry.pokemonRank = value.pokemonRank;
+  }
   for (const category of USAGE_RANKING_CATEGORIES) {
     entry[category] = parseRanking(value[category], `${path}.${category}`);
   }

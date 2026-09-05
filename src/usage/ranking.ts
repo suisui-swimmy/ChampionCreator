@@ -24,6 +24,33 @@ export const toUsagePokemonKey = (pokemonCanonicalName: string): string => (
   pokemonCanonicalName.toLowerCase().replace(/[^a-z0-9]/g, "")
 );
 
+/** Listed Pokemon only, using existing selectable labels and exact form IDs. */
+export const getUsageRankedPokemonOptions = <T extends UsageRankableCandidate>(
+  candidates: readonly T[],
+  data: ChampionsUsageData | null | undefined,
+  format: SuggestionFormat,
+): T[] => {
+  const rankedEntries = Object.entries(getFormatEntries(data, format) ?? {})
+    .filter(([, entry]) => Number.isSafeInteger(entry.pokemonRank) && entry.pokemonRank! > 0);
+  if (rankedEntries.length === 0) return [];
+  const byId = new Map<string, T>();
+  for (const candidate of candidates) {
+    const id = toUsagePokemonKey(candidate.canonicalName);
+    // Display aliases share a canonical Pokemon. Show its primary label once.
+    if (!byId.has(id)) byId.set(id, candidate);
+  }
+  const seen = new Set<string>();
+  return rankedEntries
+    .sort(([, left], [, right]) => left.pokemonRank! - right.pokemonRank!)
+    .flatMap(([key]) => {
+      const id = toUsagePokemonKey(key);
+      const candidate = byId.get(id);
+      if (!candidate || seen.has(id)) return [];
+      seen.add(id);
+      return [candidate];
+    });
+};
+
 /**
  * Look up a Pokemon's ranking without falling back to another form or format.
  * The toID comparison only accommodates generated id keys such as `pikachu`

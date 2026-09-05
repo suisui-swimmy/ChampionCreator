@@ -124,6 +124,10 @@ export const validatePayload = (payload) => {
       if (!isObject(ranking)) {
         throw new ChampionsUsageDataError(`usage payload formats.${format}.${pokemonId} must be an object`);
       }
+      if (ranking.pokemonRank !== undefined
+        && (!Number.isSafeInteger(ranking.pokemonRank) || ranking.pokemonRank < 1)) {
+        throw new ChampionsUsageDataError(`usage payload formats.${format}.${pokemonId}.pokemonRank must be a positive integer`);
+      }
       for (const category of CATEGORIES) {
         const values = ranking[category];
         if (!Array.isArray(values)) {
@@ -227,6 +231,28 @@ export const loadCatalogs = async (catalogDirectory = join(projectRoot, CATALOG_
 
 const getFormatValues = (entry, format) => entry?.summary?.battleSummary?.Current?.[format]?.values ?? {};
 
+const getPokemonUsageRank = (entry, format) => {
+  const summary = entry?.summary?.battleSummary?.Current?.[format];
+  // The provider's Meta view uses CSV column_position / JSON position as the
+  // Pokemon's overall rank. A row's `rank` is its move/item/etc. rank instead.
+  // Source: https://championsbattledata.com/meta.js (positionOf), checked 2026-09-05.
+  const rows = Array.isArray(summary?.rows) ? summary.rows : Object.values(summary?.top ?? {});
+  const positions = new Set();
+  for (const row of rows) {
+    for (const position of [row?.position, row?.column_position]) {
+      if (position === undefined || position === null || position === "") continue;
+      if (!Number.isSafeInteger(position) || position < 1) {
+        throw new ChampionsUsageDataError(`Invalid Pokemon position for ${entry.showdownId} (${format})`);
+      }
+      positions.add(position);
+    }
+  }
+  if (positions.size > 1) {
+    throw new ChampionsUsageDataError(`Conflicting Pokemon positions for ${entry.showdownId} (${format})`);
+  }
+  return positions.values().next().value;
+};
+
 const getCategoryValues = (values, category) => {
   if (!isObject(values)) return [];
   const sourceKey = category === "item" ? "held_item" : category;
@@ -324,12 +350,19 @@ export const transformApiData = (apiData, {
     }
 
     for (const format of FORMATS) {
+      const pokemonRank = getPokemonUsageRank(entry, format);
       for (const target of targets) {
         const targetRanking = {
           move: [...rankingsByFormat[format].move],
           ability: [...rankingsByFormat[format].ability],
           item: [...rankingsByFormat[format].item],
         };
+        // The aggregate Aegislash entry is selected as its initial Shield form.
+        // Its battle-form suggestion data is shared above; its overall rank
+        // must not be duplicated across Shield, Blade and the internal Both.
+        if (pokemonRank !== undefined && target === targets[0]) {
+          targetRanking.pokemonRank = pokemonRank;
+        }
         const nature = getNatureForTarget(natureUsageByFormat, format, target);
         if (Array.isArray(nature) && nature.length > 0) {
           targetRanking.nature = nature.map((datum) => ({ ...datum }));

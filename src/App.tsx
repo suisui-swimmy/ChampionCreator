@@ -52,6 +52,7 @@ import {
   getUsageNatureRanking,
   getNatureUsageState,
   getUsagePokemonEntry,
+  getUsageRankedPokemonOptions,
   getUsageRanking,
   loadChampionsUsageData,
   loadSuggestionFormat,
@@ -4846,9 +4847,18 @@ function PokemonAutocompleteField({
   onSelectValue,
 }: PokemonAutocompleteFieldProps) {
   const listboxId = `pokemon-suggestions-${useId()}`;
-  const [focused, setFocused] = useState(false);
+  const { data, format } = useContext(SuggestionUsageContext);
+  const [mode, setMode] = useState<"search" | "ranking" | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const options = useMemo(() => {
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeOptionRef = useRef<HTMLButtonElement>(null);
+  const rankedOptions = useMemo(() => getUsageRankedPokemonOptions(
+    getEntityInputOptions("pokemon"), data, format,
+  ), [data, format]);
+  const matchingOptions = useMemo(() => {
     const matchingOptions = value.trim()
       ? getMatchingEntityInputOptions("pokemon", value, 8)
       : [];
@@ -4868,18 +4878,54 @@ function PokemonAutocompleteField({
     }
     return matchingOptions;
   }, [canonicalNameHint, value]);
-  const open = focused && options.length > 0;
-  const activeOption = options[Math.min(activeIndex, options.length - 1)];
-  const fieldClassName = ["pokemon-autocomplete-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
+  const options = mode === "ranking" ? rankedOptions : matchingOptions;
+  const open = mode === "ranking" || (mode === "search" && options.length > 0);
+  const selectedIndex = Math.min(activeIndex, options.length - 1);
+  const activeOption = options[selectedIndex];
+  const formatLabel = format === "Singles" ? "シングル" : "ダブル";
+  const fieldClassName = ["pokemon-autocomplete-field", "dropdown-text-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
+
+  useEffect(() => {
+    if (mode === "ranking") setActiveIndex(0);
+  }, [rankedOptions, mode]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    const option = activeOptionRef.current;
+    if (!open || !list || !option) return;
+    const listBounds = list.getBoundingClientRect();
+    const optionBounds = option.getBoundingClientRect();
+    if (optionBounds.top < listBounds.top) {
+      list.scrollTop += optionBounds.top - listBounds.top;
+    } else if (optionBounds.bottom > listBounds.bottom) {
+      list.scrollTop += optionBounds.bottom - listBounds.bottom;
+    }
+  }, [open, selectedIndex, activeOption]);
 
   const selectOption = (option: EntityInputOption) => {
     onSelectValue(option.value, option.canonicalName);
     setActiveIndex(0);
-    setFocused(false);
+    setMode(null);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    const action = getPokemonSuggestionKeyAction(event.key, activeIndex, open ? options.length : 0);
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === "Escape" || (event.key === "Tab" && mode === "ranking")) {
+      if (event.key === "Escape" && open) event.preventDefault();
+      setMode(null);
+      return;
+    }
+    if (!open && event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex(0);
+      setMode(value.trim() ? "search" : "ranking");
+      return;
+    }
+    // Home/End still edit text in the normal name-search input.
+    if (mode !== "ranking" && (event.key === "Home" || event.key === "End")) return;
+    const action = mode === "ranking" && options.length > 0 && (event.key === "Home" || event.key === "End")
+      ? { type: "move" as const, index: event.key === "Home" ? 0 : options.length - 1 }
+      : getPokemonSuggestionKeyAction(event.key, selectedIndex, open ? options.length : 0);
     if (action.type === "none") {
       return;
     }
@@ -4900,54 +4946,92 @@ function PokemonAutocompleteField({
 
     if (action.type === "close") {
       event.preventDefault();
-      setFocused(false);
+      setMode(null);
     }
   };
 
   return (
-    <UiPopover.Root open={open}>
+    <UiPopover.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) setMode(null); }}>
       <UiPopover.Anchor asChild>
-        <input
+        <div
           className={fieldClassName}
-          value={value}
-          placeholder={label}
-          autoComplete="off"
-          role="combobox"
-          aria-label={label}
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls={open ? listboxId : undefined}
-          aria-activedescendant={open && activeOption ? `${listboxId}-${Math.min(activeIndex, options.length - 1)}` : undefined}
-          onFocus={(event) => {
-            selectInputValueOnFocus(event);
-            setFocused(true);
+          ref={fieldRef}
+          onBlur={(event) => {
+            const nextTarget = event.relatedTarget as Node | null;
+            if (!nextTarget || (!event.currentTarget.contains(nextTarget) && !contentRef.current?.contains(nextTarget))) {
+              setMode(null);
+            }
           }}
-          onBlur={() => setFocused(false)}
-          onChange={(event) => {
-            setActiveIndex(0);
-            setFocused(true);
-            onChange(event);
-          }}
-          onKeyDown={handleKeyDown}
-        />
+        >
+          <div className="dropdown-input-row">
+            <input
+              ref={inputRef}
+              value={value}
+              placeholder={label}
+              autoComplete="off"
+              role="combobox"
+              aria-label={label}
+              aria-autocomplete="list"
+              aria-expanded={open}
+              aria-controls={open ? listboxId : undefined}
+              aria-activedescendant={open && activeOption ? `${listboxId}-${selectedIndex}` : undefined}
+              onFocus={(event) => {
+                selectInputValueOnFocus(event);
+                setMode("search");
+              }}
+              onChange={(event) => {
+                setActiveIndex(0);
+                setMode("search");
+                onChange(event);
+              }}
+              onKeyDown={handleKeyDown}
+            />
+            <button
+              className="dropdown-menu-trigger"
+              type="button"
+              data-state={mode === "ranking" ? "open" : "closed"}
+              aria-label={`${label}の使用率ランキングを開く`}
+              aria-haspopup="listbox"
+              aria-expanded={mode === "ranking"}
+              aria-controls={mode === "ranking" ? listboxId : undefined}
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={() => {
+                inputRef.current?.focus({ preventScroll: true });
+                setActiveIndex(0);
+                setMode(mode === "ranking" ? null : "ranking");
+              }}
+            >
+              <ChevronRightIcon className="disclosure-chevron" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
       </UiPopover.Anchor>
       <UiPopover.Portal>
         <UiPopover.Content
           className="pokemon-suggestion-popover"
+          ref={contentRef}
+          data-pokemon-list-mode={mode}
           sideOffset={4}
           align="start"
+          collisionPadding={8}
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
+          onInteractOutside={(event) => {
+            if (fieldRef.current?.contains(event.target as Node)) event.preventDefault();
+          }}
         >
-          <div className="pokemon-suggestion-list" id={listboxId} role="listbox" aria-label={`${label}候補`}>
+          <div className="pokemon-suggestion-list" ref={listRef} id={listboxId} role="listbox" aria-label={mode === "ranking" ? `${label} ${formatLabel}使用率順` : `${label}候補`}>
             {options.map((option, index) => (
               <button
-                className={`pokemon-suggestion-option${index === activeIndex ? " active" : ""}`}
+                className={`pokemon-suggestion-option${index === selectedIndex ? " active" : ""}`}
+                ref={index === selectedIndex ? activeOptionRef : undefined}
                 id={`${listboxId}-${index}`}
                 type="button"
                 role="option"
-                aria-selected={index === activeIndex}
-                key={option.canonicalName}
+                aria-selected={index === selectedIndex}
+                // Combobox virtual focus stays on the input, including for long rankings.
+                tabIndex={-1}
+                key={`${option.canonicalName}:${option.value}`}
                 onPointerDown={(event) => event.preventDefault()}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectOption(option)}
@@ -4956,6 +5040,9 @@ function PokemonAutocompleteField({
               </button>
             ))}
           </div>
+          {mode === "ranking" && options.length === 0 ? (
+            <p className="pokemon-ranking-empty" role="status">使用率ランキングを取得できていません。ポケモン名を入力して検索できます。</p>
+          ) : null}
         </UiPopover.Content>
       </UiPopover.Portal>
     </UiPopover.Root>

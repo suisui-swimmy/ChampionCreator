@@ -14,6 +14,8 @@ export type UsageRankingCategory = (typeof USAGE_RANKING_CATEGORIES)[number];
 export const CHAMPIONS_USAGE_SCHEMA_VERSION = 1 as const;
 
 export interface UsagePokemonEntry {
+  /** Overall Pokemon usage position in this format; omitted when unavailable. */
+  pokemonRank?: number;
   move: string[];
   ability: string[];
   item: string[];

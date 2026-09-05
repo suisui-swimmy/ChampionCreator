@@ -61,6 +61,22 @@ describe("parseChampionsUsageData", () => {
       .toThrow(UsageDataValidationError);
   });
 
+  it("accepts overall Pokemon ranks as an optional v1 field and keeps old payloads readable", () => {
+    const payload = structuredClone(validPayload);
+    Object.assign(payload.formats.Singles.pikachu, { pokemonRank: 234 });
+    expect(parseChampionsUsageData(payload).formats.Singles.pikachu.pokemonRank).toBe(234);
+    expect(parseChampionsUsageData(validPayload).formats.Singles.pikachu).not.toHaveProperty("pokemonRank");
+  });
+
+  it.each([null, 0, -1, 1.5, "1", Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects malformed overall Pokemon rank %s",
+    (pokemonRank) => {
+      const payload = structuredClone(validPayload);
+      Object.assign(payload.formats.Singles.pikachu, { pokemonRank });
+      expect(() => parseChampionsUsageData(payload)).toThrow(/pokemonRank/);
+    },
+  );
+
   it("accepts optional nature usage while preserving null and real zero percentages", () => {
     const result = parseChampionsUsageData({
       ...validPayload,

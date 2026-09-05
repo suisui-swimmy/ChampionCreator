@@ -168,6 +168,100 @@ describe("generate-champions-usage", () => {
     expect(warn.mock.calls.flat().join("\n")).toContain("unknown ability");
   });
 
+  it("extracts overall Pokemon positions per Current format, independently of move ranks", () => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [
+      { position: 12, column_position: 12, rank: 1 },
+      { position: 12, column_position: 12, rank: 2 },
+    ];
+    pokemon.summary.battleSummary.Current.Doubles.top = { move: { position: 4, rank: 1 } };
+    const payload = transformApiData(apiData([pokemon]), { catalogs });
+    expect(payload.formats.Singles.pikachu.pokemonRank).toBe(12);
+    expect(payload.formats.Doubles.pikachu.pokemonRank).toBe(4);
+    expect(payload.formats.Singles.pikachu.move).toEqual(["Thunderbolt"]);
+  });
+
+  it("does not invent overall ranks from category ranks, daily data, or another format", () => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ rank: 1 }];
+    pokemon.summary.battleSummary.Current.Doubles.rows = [{ column_position: 9, rank: 1 }];
+    pokemon.summary.battleSummary.M4 = { Singles: { rows: [{ position: 3 }] } };
+    const payload = transformApiData(apiData([pokemon]), { catalogs });
+    expect(payload.formats.Singles.pikachu).not.toHaveProperty("pokemonRank");
+    expect(payload.formats.Doubles.pikachu.pokemonRank).toBe(9);
+  });
+
+  it("represents the aggregate Aegislash rank once with its initial Shield form", () => {
+    const pokemon = entry("aegislash", { move: ["Shadow Ball"] }, { move: ["Shadow Ball"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position: 22 }];
+    const payload = transformApiData(apiData([pokemon]), { catalogs });
+    expect(payload.formats.Singles.aegislashshield.pokemonRank).toBe(22);
+    expect(payload.formats.Singles.aegislashblade).not.toHaveProperty("pokemonRank");
+    expect(payload.formats.Singles.aegislashboth).not.toHaveProperty("pokemonRank");
+  });
+
+  it.each([0, -1, 2.5, "3", Number.MAX_SAFE_INTEGER + 1])("rejects invalid overall rank %s in source and output", (position) => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position }];
+    expect(() => transformApiData(apiData([pokemon]), { catalogs })).toThrow(/Pokemon position/);
+    const payload = createEmptyPayload();
+    payload.formats.Singles.pikachu = { move: [], ability: [], item: [], pokemonRank: position };
+    expect(() => validatePayload(payload)).toThrow(/pokemonRank/);
+  });
+
+  it("rejects conflicting positions instead of selecting an arbitrary source row", () => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position: 3, column_position: 4 }];
+    expect(() => transformApiData(apiData([pokemon]), { catalogs })).toThrow(/Conflicting Pokemon positions/);
+  });
+
+  it("extracts overall Pokemon positions per Current format, independently of move ranks", () => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [
+      { position: 12, column_position: 12, rank: 1 },
+      { position: 12, column_position: 12, rank: 2 },
+    ];
+    pokemon.summary.battleSummary.Current.Doubles.top = { move: { position: 4, rank: 1 } };
+    const payload = transformApiData(apiData([pokemon]), { catalogs });
+    expect(payload.formats.Singles.pikachu.pokemonRank).toBe(12);
+    expect(payload.formats.Doubles.pikachu.pokemonRank).toBe(4);
+    expect(payload.formats.Singles.pikachu.move).toEqual(["Thunderbolt"]);
+  });
+
+  it("does not invent overall ranks from category ranks, daily data, or another format", () => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ rank: 1 }];
+    pokemon.summary.battleSummary.Current.Doubles.rows = [{ column_position: 9, rank: 1 }];
+    pokemon.summary.battleSummary.M4 = { Singles: { rows: [{ position: 3 }] } };
+    const payload = transformApiData(apiData([pokemon]), { catalogs });
+    expect(payload.formats.Singles.pikachu).not.toHaveProperty("pokemonRank");
+    expect(payload.formats.Doubles.pikachu.pokemonRank).toBe(9);
+  });
+
+  it("represents the aggregate Aegislash rank once with its initial Shield form", () => {
+    const pokemon = entry("aegislash", { move: ["Shadow Ball"] }, { move: ["Shadow Ball"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position: 22 }];
+    const payload = transformApiData(apiData([pokemon]), { catalogs });
+    expect(payload.formats.Singles.aegislashshield.pokemonRank).toBe(22);
+    expect(payload.formats.Singles.aegislashblade).not.toHaveProperty("pokemonRank");
+    expect(payload.formats.Singles.aegislashboth).not.toHaveProperty("pokemonRank");
+  });
+
+  it.each([0, -1, 2.5, "3", Number.MAX_SAFE_INTEGER + 1])("rejects invalid overall rank %s in source and output", (position) => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position }];
+    expect(() => transformApiData(apiData([pokemon]), { catalogs })).toThrow(/Pokemon position/);
+    const payload = createEmptyPayload();
+    payload.formats.Singles.pikachu = { move: [], ability: [], item: [], pokemonRank: position };
+    expect(() => validatePayload(payload)).toThrow(/pokemonRank/);
+  });
+
+  it("rejects conflicting positions instead of selecting an arbitrary source row", () => {
+    const pokemon = entry("pikachu", { move: ["Thunderbolt"] }, { move: ["Protect"] });
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position: 3, column_position: 4 }];
+    expect(() => transformApiData(apiData([pokemon]), { catalogs })).toThrow(/Conflicting Pokemon positions/);
+  });
+
   it("applies only the explicit Aegislash override and does not inherit other forms", () => {
     const payload = transformApiData(apiData([
       entry("aegislash", {
