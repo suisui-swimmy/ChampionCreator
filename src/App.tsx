@@ -48,7 +48,7 @@ import { appVersionInfo, formatAppVersionLabel } from "./appVersion";
 import {
   formatUsageDataDateJst,
   getTopUsageRankedCandidate,
-  getUsageMatchingEntityInputOptions,
+  getUsageSuggestionOptionLists,
   getUsageNatureRanking,
   getNatureUsageState,
   getUsagePokemonEntry,
@@ -1649,9 +1649,9 @@ const useUsageSuggestionOptions = (
   ownerPokemonCanonicalName: string | undefined,
   baseOptions: readonly EntityInputOption[] = getEntityInputOptions(category),
   limit = 40,
-): EntityInputOption[] => {
+): { searchOptions: EntityInputOption[]; menuOptions: EntityInputOption[] } => {
   const { data, format, ownerAliases } = useContext(SuggestionUsageContext);
-  return getUsageMatchingEntityInputOptions(
+  return getUsageSuggestionOptionLists(
     baseOptions,
     input,
     data,
@@ -4711,6 +4711,7 @@ type EntityTextFieldProps = {
   className?: string;
   description?: string;
   options?: EntityInputOption[];
+  menuOptions?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectValue?: (value: string, canonicalName?: string) => void;
 };
@@ -4731,6 +4732,7 @@ function EntityTextField({
   className,
   description,
   options: suggestedOptions,
+  menuOptions,
   onChange,
   onSelectValue,
 }: EntityTextFieldProps) {
@@ -4759,6 +4761,7 @@ function EntityTextField({
         value={value}
         kind={kind}
         options={getDropdownEntityOptions(kind, value, suggestedOptions)}
+        menuOptions={menuOptions}
         description={description}
         canonicalNameHint={canonicalNameHint}
         onChange={onChange}
@@ -5054,6 +5057,7 @@ type DropdownTextFieldProps = {
   label: string;
   value: string;
   options: EntityInputOption[];
+  menuOptions?: EntityInputOption[];
   canonicalNameHint?: string;
   className?: string;
   description?: string;
@@ -5065,7 +5069,8 @@ function DropdownTextField({
   kind,
   label,
   value,
-  options,
+  options: searchOptions,
+  menuOptions,
   canonicalNameHint,
   className,
   description,
@@ -5075,23 +5080,48 @@ function DropdownTextField({
   const listboxId = `dropdown-options-${useId()}`;
   const labelId = useId();
   const descriptionId = useId();
-  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"search" | "menu" | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const fieldRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const activeOption = options[Math.min(activeIndex, options.length - 1)];
-  const listOpen = open && options.length > 0;
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeOptionRef = useRef<HTMLButtonElement>(null);
+  const options = mode === "menu" ? menuOptions ?? searchOptions : searchOptions;
+  const selectedIndex = Math.min(activeIndex, options.length - 1);
+  const activeOption = options[selectedIndex];
+  const listOpen = mode !== null && options.length > 0;
   const invalid = isUnresolvedEntityInput(kind, value, canonicalNameHint);
   const fieldClassName = ["dropdown-text-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
+
+  useEffect(() => {
+    const list = listRef.current;
+    const option = activeOptionRef.current;
+    if (!listOpen || !list || !option) return;
+    const listBounds = list.getBoundingClientRect();
+    const optionBounds = option.getBoundingClientRect();
+    if (optionBounds.top < listBounds.top) {
+      list.scrollTop += optionBounds.top - listBounds.top;
+    } else if (optionBounds.bottom > listBounds.bottom) {
+      list.scrollTop += optionBounds.bottom - listBounds.bottom;
+    }
+  }, [listOpen, selectedIndex, activeOption, mode]);
 
   const selectOption = (option: EntityInputOption) => {
     onSelectValue(option.value, option.canonicalName);
     setActiveIndex(0);
-    setOpen(false);
+    setMode(null);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    const action = getPokemonSuggestionKeyAction(event.key, activeIndex, listOpen ? options.length : 0);
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === "Escape" || (event.key === "Tab" && mode === "menu")) {
+      if (event.key === "Escape" && listOpen) event.preventDefault();
+      setMode(null);
+      return;
+    }
+    const action = mode === "menu" && options.length > 0 && (event.key === "Home" || event.key === "End")
+      ? { type: "move" as const, index: event.key === "Home" ? 0 : options.length - 1 }
+      : getPokemonSuggestionKeyAction(event.key, selectedIndex, listOpen ? options.length : 0);
     if (action.type === "move") {
       event.preventDefault();
       setActiveIndex(action.index);
@@ -5100,7 +5130,7 @@ function DropdownTextField({
       selectOption(activeOption);
     } else if (action.type === "close") {
       event.preventDefault();
-      setOpen(false);
+      setMode(null);
     }
   };
 
@@ -5112,7 +5142,7 @@ function DropdownTextField({
       onBlur={(event) => {
         const nextTarget = event.relatedTarget as Node | null;
         if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
-          setOpen(false);
+          setMode(null);
         }
       }}
     >
@@ -5130,13 +5160,14 @@ function DropdownTextField({
           aria-autocomplete="list"
           aria-expanded={listOpen}
           aria-controls={listOpen ? listboxId : undefined}
+          aria-activedescendant={listOpen && activeOption ? `${listboxId}-${selectedIndex}` : undefined}
           onFocus={(event) => {
             selectInputValueOnFocus(event);
-            setOpen(true);
+            setMode("search");
           }}
           onChange={(event) => {
             setActiveIndex(0);
-            setOpen(true);
+            setMode("search");
             onChange(event);
           }}
           onKeyDown={handleKeyDown}
@@ -5146,25 +5177,35 @@ function DropdownTextField({
           type="button"
           data-state={listOpen ? "open" : "closed"}
           aria-label={`${label}候補を開く`}
+          aria-haspopup="listbox"
           aria-expanded={listOpen}
+          aria-controls={listOpen ? listboxId : undefined}
           onPointerDown={(event) => event.preventDefault()}
           onClick={() => {
-            setOpen((current) => !current);
-            inputRef.current?.focus();
+            const nextMode = menuOptions !== undefined
+              ? mode === "menu" ? null : "menu"
+              : listOpen ? null : "search";
+            inputRef.current?.focus({ preventScroll: true });
+            setActiveIndex(0);
+            setMode(nextMode);
           }}
         >
           <ChevronRightIcon className="disclosure-chevron" />
         </button>
       </div>
       {listOpen ? (
-        <div className="dropdown-options-popover">
-          <div className="dropdown-option-list" id={listboxId} role="listbox" aria-label={`${label}候補`}>
+        <div className="dropdown-options-popover" data-dropdown-mode={mode}>
+          <div className="dropdown-option-list" ref={listRef} id={listboxId} role="listbox" aria-label={`${label}候補`}>
             {options.map((option, index) => (
               <button
-                className={`dropdown-option${index === activeIndex ? " active" : ""}${option.value === value ? " selected" : ""}`}
+                className={`dropdown-option${index === selectedIndex ? " active" : ""}${option.value === value ? " selected" : ""}`}
+                ref={index === selectedIndex ? activeOptionRef : undefined}
+                id={`${listboxId}-${index}`}
                 type="button"
                 role="option"
-                aria-selected={option.value === value}
+                aria-selected={index === selectedIndex}
+                // Virtual focus stays on the combobox input, as for Pokemon suggestions.
+                tabIndex={-1}
                 key={option.canonicalName}
                 onPointerDown={(event) => event.preventDefault()}
                 onMouseEnter={() => setActiveIndex(index)}
@@ -5186,6 +5227,7 @@ type AbilityTextFieldProps = {
   className?: string;
   description?: string;
   pokemonAbilityOptions?: EntityInputOption[];
+  menuOptions?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectAbility: (value: string) => void;
 };
@@ -5196,6 +5238,7 @@ function AbilityTextField({
   className,
   description,
   pokemonAbilityOptions = [],
+  menuOptions,
   onChange,
   onSelectAbility,
 }: AbilityTextFieldProps) {
@@ -5213,6 +5256,7 @@ function AbilityTextField({
       label={label}
       value={value}
       options={options}
+      menuOptions={menuOptions?.length ? menuOptions : getMatchingEntityInputOptions("ability", "")}
       description={description}
       onChange={onChange}
       onSelectValue={onSelectAbility}
@@ -6751,12 +6795,12 @@ function TargetPanel({
       targetForm.pokemonCanonicalName,
     );
   const pokemonAbilityOptions = getPokemonAbilityInputPlan(rankingOwnerPokemon).options;
-  const itemOptions = useUsageSuggestionOptions(
+  const { searchOptions: itemOptions, menuOptions: itemMenuOptions } = useUsageSuggestionOptions(
     "item",
     targetForm.itemInput,
     rankingOwnerPokemon,
   );
-  const abilityOptions = useUsageSuggestionOptions(
+  const { searchOptions: abilityOptions, menuOptions: abilityMenuOptions } = useUsageSuggestionOptions(
     "ability",
     targetForm.abilityInput,
     rankingOwnerPokemon,
@@ -6825,6 +6869,7 @@ function TargetPanel({
               description={itemSpeedOverrideDescription}
               value={targetForm.itemInput}
               options={itemOptions}
+              menuOptions={itemMenuOptions}
               onChange={(event) => onUpdateField("itemInput", event.target.value)}
               onSelectValue={(value) => onUpdateField("itemInput", value)}
             />
@@ -6834,6 +6879,7 @@ function TargetPanel({
               description={abilitySpeedOverrideDescription}
               value={targetForm.abilityInput}
               pokemonAbilityOptions={abilityOptions}
+              menuOptions={abilityMenuOptions}
               onChange={(event) => onUpdateField("abilityInput", event.target.value)}
               onSelectAbility={(value) => onUpdateField("abilityInput", value)}
             />
@@ -8478,18 +8524,18 @@ function AttackCard({
     attackerCanonicalPokemon,
   );
   const pokemonAbilityOptions = getPokemonAbilityInputPlan(attackerCanonicalPokemon).options;
-  const moveOptions = useUsageSuggestionOptions(
+  const { searchOptions: moveOptions, menuOptions: moveMenuOptions } = useUsageSuggestionOptions(
     "move",
     attack.moveInput,
     suggestionRankingOwners.move,
   );
-  const attackerAbilityOptions = useUsageSuggestionOptions(
+  const { searchOptions: attackerAbilityOptions, menuOptions: attackerAbilityMenuOptions } = useUsageSuggestionOptions(
     "ability",
     attack.attackerAbilityInput,
     suggestionRankingOwners.ability,
     pokemonAbilityOptions ?? getEntityInputOptions("ability"),
   );
-  const attackerItemOptions = useUsageSuggestionOptions(
+  const { searchOptions: attackerItemOptions, menuOptions: attackerItemMenuOptions } = useUsageSuggestionOptions(
     "item",
     attack.attackerItemInput,
     suggestionRankingOwners.item,
@@ -8698,6 +8744,7 @@ function AttackCard({
               showLabel
               value={attack.moveInput}
               options={moveOptions}
+              menuOptions={moveMenuOptions}
               onChange={onInput("moveInput")}
               onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
             />
@@ -8759,6 +8806,7 @@ function AttackCard({
             description={opponentAbilitySpeedOverrideDescription}
             value={attack.attackerAbilityInput}
             pokemonAbilityOptions={attackerAbilityOptions}
+            menuOptions={attackerAbilityMenuOptions}
             onChange={onInput("attackerAbilityInput")}
             onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
           />
@@ -8773,7 +8821,8 @@ function AttackCard({
               description={opponentItemSpeedOverrideDescription}
               value={attack.attackerItemInput}
               placeholder="任意"
-              options={attackerItemOptions}
+            options={attackerItemOptions}
+            menuOptions={attackerItemMenuOptions}
               onChange={onInput("attackerItemInput")}
               onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
             />
@@ -9270,6 +9319,7 @@ type ScenarioTextFieldProps = {
   description?: string;
   placeholder?: string;
   options?: EntityInputOption[];
+  menuOptions?: EntityInputOption[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectValue?: (value: string, canonicalName?: string) => void;
 };
@@ -9284,6 +9334,7 @@ function ScenarioTextField({
   description,
   placeholder,
   options: suggestedOptions,
+  menuOptions,
   onChange,
   onSelectValue,
 }: ScenarioTextFieldProps) {
@@ -9312,6 +9363,7 @@ function ScenarioTextField({
         label={label}
         value={value}
         options={suggestedOptions ?? getMatchingEntityInputOptions(kind, value)}
+        menuOptions={menuOptions}
         description={description}
         canonicalNameHint={canonicalNameHint}
         onChange={onChange}

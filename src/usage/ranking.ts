@@ -252,3 +252,23 @@ export const getUsageMatchingEntityInputOptions = <T extends UsageRankableCandid
   getUsageRanking(data, format, pokemonCanonicalName, category),
   limit,
 );
+
+/** Keep text-search results separate from the trigger's unfiltered menu. */
+export const getUsageSuggestionOptionLists = <T extends UsageRankableCandidate>(
+  options: readonly T[],
+  input: string,
+  data: ChampionsUsageData | null | undefined,
+  format: SuggestionFormat,
+  pokemonCanonicalName: string | undefined,
+  category: UsageRankingCategory,
+  limit = 40,
+): { searchOptions: T[]; menuOptions: T[] } => {
+  const ranking = getUsageRanking(data, format, pokemonCanonicalName, category);
+  const menuOptions = getMatchingEntityInputOptionsWithUsage(options, "", ranking, limit);
+  return {
+    searchOptions: input.trim()
+      ? getMatchingEntityInputOptionsWithUsage(options, input, ranking, limit)
+      : menuOptions,
+    menuOptions,
+  };
+};

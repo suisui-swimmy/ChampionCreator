@@ -21,6 +21,7 @@ export {
   applyUsageRanking,
   getMatchingEntityInputOptionsWithUsage,
   getUsageMatchingEntityInputOptions,
+  getUsageSuggestionOptionLists,
   getUsagePokemonEntry,
   getUsageRankedPokemonOptions,
   getUsageRanking,

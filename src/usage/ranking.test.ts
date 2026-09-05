@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getEntityInputOptions } from "../localization/resolver";
+import { getEntityInputOptions, getPokemonAbilityInputOptions } from "../localization/resolver";
 import {
   applyUsageRanking,
   getMatchingEntityInputOptionsWithUsage,
   getTopUsageRankedCandidate,
   getUsagePokemonEntry,
   getUsageRankedPokemonOptions,
+  getUsageSuggestionOptionLists,
   getUsageRanking,
   getUsageNatureRanking,
   getNatureUsageState,
@@ -114,6 +115,66 @@ describe("getUsageRankedPokemonOptions", () => {
     };
     expect(getUsageRankedPokemonOptions(all, allData, "Singles")).toEqual([...all].reverse());
     expect(getUsageRankedPokemonOptions(all, allData, "Doubles")).toEqual([]);
+  });
+});
+
+describe("getUsageSuggestionOptionLists", () => {
+  const kingambitUsage: ChampionsUsageData = {
+    ...data,
+    formats: {
+      Singles: {
+        Kingambit: {
+          move: ["Sucker Punch", "Kowtow Cleave", "Swords Dance"],
+          ability: ["Supreme Overlord", "Defiant", "Pressure"],
+          item: ["Black Glasses", "Leftovers", "Focus Sash"],
+        },
+      },
+      Doubles: {
+        Kingambit: { move: ["Protect", "Sucker Punch"], ability: ["Defiant", "Supreme Overlord"], item: ["Focus Sash", "Leftovers"] },
+      },
+    },
+  };
+
+  it.each([
+    ["move", "ふいうち", "Sucker Punch"],
+    ["ability", "まけんき", "Defiant"],
+    ["item", "たべのこし", "Leftovers"],
+  ] as const)("opens unfiltered ranked %s choices while preserving typed-name filtering", (category, input, selected) => {
+    const baseOptions = category === "ability"
+      ? getPokemonAbilityInputOptions("Kingambit")!
+      : getEntityInputOptions(category);
+    const lists = getUsageSuggestionOptionLists(baseOptions, input, kingambitUsage, "Singles", "Kingambit", category);
+    expect(lists.searchOptions.map(option => option.canonicalName)).toEqual([selected]);
+    expect(lists.menuOptions.slice(0, 3).map(option => option.canonicalName))
+      .toEqual(kingambitUsage.formats.Singles.Kingambit[category]);
+    expect(lists.menuOptions.length).toBeGreaterThan(1);
+    expect(lists.menuOptions.length).toBeLessThanOrEqual(40);
+    expect(lists.menuOptions.every(option => baseOptions.includes(option))).toBe(true);
+
+    const unmatched = getUsageSuggestionOptionLists(baseOptions, "存在しない入力", kingambitUsage, "Singles", "Kingambit", category);
+    expect(unmatched.searchOptions).toEqual([]);
+    expect(unmatched.menuOptions).toEqual(lists.menuOptions);
+    if (category === "ability") {
+      expect(lists.menuOptions).toHaveLength(3);
+      expect(lists.menuOptions.some(option => option.canonicalName === "Intimidate")).toBe(false);
+    }
+  });
+
+  it("keeps format-specific ordering and the alphabetical fallback without usage data", () => {
+    const options = getEntityInputOptions("move");
+    const doubles = getUsageSuggestionOptionLists(options, "ふいうち", kingambitUsage, "Doubles", "Kingambit", "move");
+    expect(doubles.menuOptions.slice(0, 2).map(option => option.canonicalName)).toEqual(["Protect", "Sucker Punch"]);
+    expect(doubles.searchOptions.map(option => option.canonicalName)).toEqual(["Sucker Punch"]);
+    const fallback = getUsageSuggestionOptionLists(options, "ふいうち", null, "Doubles", "Kingambit", "move");
+    expect(fallback.menuOptions).toEqual(options.slice(0, 40));
+    expect(fallback.searchOptions.map(option => option.canonicalName)).toEqual(["Sucker Punch"]);
+  });
+
+  it("filters the entire catalog before limiting search results", () => {
+    const options = Array.from({ length: 60 }, (_, i) => ({ value: `技${i}`, canonicalName: `Move${i}` }));
+    const lists = getUsageSuggestionOptionLists(options, "技59", null, "Singles", undefined, "move");
+    expect(lists.menuOptions).toHaveLength(40);
+    expect(lists.searchOptions).toEqual([options[59]]);
   });
 });
 
