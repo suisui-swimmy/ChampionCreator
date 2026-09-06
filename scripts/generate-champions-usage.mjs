@@ -18,6 +18,10 @@ export const DEFAULT_ASSET_ROOT = "pokemon_champions_assets";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
 const execFileAsync = promisify(execFileCallback);
+const pokemonMappings = JSON.parse(await readFile(
+  join(projectRoot, "src/data/overrides/champions-usage-pokemon-mappings.json"), "utf8",
+));
+const pokemonMappingDigest = createHash("sha256").update(JSON.stringify(pokemonMappings)).digest("hex");
 
 // The API uses Showdown IDs. Keep this generator dependency-free so the
 // scheduled workflow can validate and generate data before running npm ci.
@@ -119,8 +123,15 @@ export const validatePayload = (payload) => {
     if (!isObject(entries)) {
       throw new ChampionsUsageDataError(`usage payload formats.${format} must be an object`);
     }
+    const sourceKeysByTarget = new Map();
     for (const [pokemonId, ranking] of Object.entries(entries)) {
       assertNonEmptyString(pokemonId, `usage payload formats.${format} Pokemon key`);
+      const mapping = pokemonMappings.entries.find((entry) => entry.sourceId === toID(pokemonId));
+      const targetId = toID(mapping?.canonicalName ?? pokemonId);
+      if (sourceKeysByTarget.has(targetId)) {
+        throw new ChampionsUsageDataError(`Pokemon mapping collision (${format}): ${sourceKeysByTarget.get(targetId)} and ${pokemonId} both resolve to ${targetId}`);
+      }
+      sourceKeysByTarget.set(targetId, pokemonId);
       if (!isObject(ranking)) {
         throw new ChampionsUsageDataError(`usage payload formats.${format}.${pokemonId} must be an object`);
       }
@@ -287,8 +298,29 @@ const mapRankedValues = ({ values, category, canonicalMap, sourceId, format, war
   return result;
 };
 
+const assertSourcePokemonMappings = (apiData) => {
+  for (const mapping of pokemonMappings.entries) {
+    const sourceRecords = apiData.pokemon.filter((entry) => toID(entry?.showdownId) === mapping.sourceId);
+    if (sourceRecords.length === 0) continue;
+    const targetId = toID(mapping.canonicalName);
+    if (sourceRecords.length > 1 || apiData.pokemon.some((entry) => toID(entry?.showdownId) === targetId)) {
+      throw new ChampionsUsageDataError(`Pokemon mapping collision: ${mapping.sourceId} and ${targetId}; review the provider mapping before generating usage data`);
+    }
+    const stats = sourceRecords[0]?.summary?.baseStats;
+    if (!isObject(stats) || Object.entries(mapping.expectedSourceStats).some(([key, value]) => stats[key] !== value)) {
+      throw new ChampionsUsageDataError(`Pokemon source identity changed for ${mapping.sourceId}; review the provider mapping before generating usage data`);
+    }
+  }
+};
+
 const resolvePokemonTargets = ({ sourceId, pokemonMap, warn }) => {
   const normalizedId = toID(sourceId);
+  const mapping = pokemonMappings.entries.find((entry) => entry.sourceId === normalizedId);
+  if (mapping) {
+    const targetId = pokemonMap.get(toID(mapping.canonicalName));
+    if (!targetId) throw new ChampionsUsageDataError(`Pokemon mapping target is absent from the catalog: ${mapping.canonicalName}`);
+    return [targetId];
+  }
   if (normalizedId === "aegislash") {
     return ["aegislashshield", "aegislashblade", "aegislashboth"];
   }
@@ -316,6 +348,7 @@ export const transformApiData = (apiData, {
   dataVersion,
 } = {}) => {
   assertApiShape(apiData);
+  assertSourcePokemonMappings(apiData);
   if (!catalogs?.move || !catalogs?.ability || !catalogs?.item || !catalogs?.pokemon) {
     throw new ChampionsUsageDataError("Generated option catalogs are required");
   }
@@ -376,9 +409,11 @@ export const transformApiData = (apiData, {
     throw new ChampionsUsageDataError("Champions usage API response has no usable move, ability, or item data for every Current format");
   }
 
-  const resolvedDataVersion = natureUsageByFormat
+  const sourceDataVersion = natureUsageByFormat
     ? composeDataVersion(apiData.dataVersion, natureDigest ?? calculateNatureDigest(natureUsageByFormat))
     : dataVersion ?? apiData.dataVersion;
+  const hasMappedPokemon = apiData.pokemon.some((entry) => pokemonMappings.entries.some((mapping) => mapping.sourceId === toID(entry?.showdownId)));
+  const resolvedDataVersion = hasMappedPokemon ? `${sourceDataVersion}+pokemon-${pokemonMappingDigest}` : sourceDataVersion;
 
   return validatePayload({
     schemaVersion: 1,
@@ -787,6 +822,7 @@ export const collectNatureUsage = async ({
     throw new ChampionsUsageDataError("A bulk archive file reader is required");
   }
   const pathIndex = mapCurrentCsvPaths(apiData, { assetRoot, warn });
+  assertSourcePokemonMappings(apiData);
   const entries = archiveEntries === undefined
     ? undefined
     : archiveEntries instanceof Set
@@ -902,6 +938,8 @@ export const run = async ({
     zipBytes ?? fetchBulkZip(bulkZipUrl, fetchImpl),
     loadCatalogs(catalogDirectory),
   ]);
+  assertApiShape(apiData);
+  assertSourcePokemonMappings(apiData);
   const extracted = await extractBulkArchiveImpl({
     zipBytes: resolvedZipBytes,
     apiData,

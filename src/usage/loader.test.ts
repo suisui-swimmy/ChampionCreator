@@ -39,6 +39,21 @@ describe("loadChampionsUsageData", () => {
   });
 });
 
+describe("legacy usage Pokemon identities", () => {
+  it("normalizes a last-good legacy JSON and refuses ambiguous provider identities", async () => {
+    const entry = { move: ["Moonblast"], ability: ["Flower Veil"], item: ["Floettite"], pokemonRank: 27 };
+    const legacy = { ...payload, formats: { Singles: {}, Doubles: { floette: entry } } };
+    const result = await loadChampionsUsageData(async () => responseFor(legacy));
+    expect(result.data?.formats.Doubles).toEqual({ floetteeternal: entry });
+    const collision = { ...payload, formats: { Singles: {}, Doubles: { floette: entry, "Floette-Eternal": entry } } };
+    const failed = await loadChampionsUsageData(async () => responseFor(collision));
+    expect(failed.data).toBeNull();
+    expect(failed.error).toBeInstanceOf(Error);
+    expect(String(failed.error)).toContain("mapping collision");
+    expect(result.data?.formats.Doubles).toEqual({ floetteeternal: entry });
+  });
+});
+
 describe("formatUsageDataDateJst", () => {
   it("renders the source date in JST, including the UTC boundary", () => {
     expect(formatUsageDataDateJst("2026-08-13T15:00:00.000Z")).toBe("2026-08-14");
@@ -47,4 +62,3 @@ describe("formatUsageDataDateJst", () => {
     expect(formatUsageDataDateJst(undefined)).toBe("未取得");
   });
 });
-

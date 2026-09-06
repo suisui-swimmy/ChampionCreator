@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "provider": "https://championsbattledata.com/",
+  "scope": "Current Singles and Doubles usage data only; never changes localization, saved builds, or Calc species.",
+  "entries": [
+    {
+      "sourceId": "floette",
+      "canonicalName": "Floette-Eternal",
+      "checkedAt": "2026-09-06",
+      "verifiedSourceDataVersion": "20260903163627216",
+      "sources": [
+        "https://championsbattledata.com/api/pokemon/floette?format=Doubles",
+        "https://championsbattledata.com/api_guide"
+      ],
+      "evidence": "The provider's Floette artwork, Mega form, and six displayed stats identify Eternal Flower Floette. Its stats match Floette-Eternal at level 50, 31 IVs, 0 EVs and a neutral nature, not ordinary Floette. These values verify identity only and are never used as calculation inputs.",
+      "expectedSourceStats": {
+        "hp": 149,
+        "attack": 85,
+        "defense": 87,
+        "sp_attack": 145,
+        "sp_defense": 148,
+        "speed": 112
+      },
+      "reviewWhen": "Review or retire this mapping if the source identity stats change or both floette and floetteeternal are published. An explicit floetteeternal entry alone needs no remapping."
+    }
+  ]
+}

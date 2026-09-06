@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { CandidateResult } from "./domain/model";
 import type { EntityKind } from "./data/localizationTypes";
+import { getEntityInputOptions } from "./localization/resolver";
 import {
   App,
   CandidateStatPointBars,
@@ -58,6 +59,8 @@ import {
   formatUsageDataDateJst,
   getNatureUsageState,
   getUsageMatchingEntityInputOptions,
+  getUsageRankedPokemonOptions,
+  parseChampionsUsageData,
   type ChampionsUsageData,
 } from "./usage";
 import {
@@ -452,7 +455,7 @@ describe("App", () => {
     })).toBe("Explicit-Owner");
   });
 
-  it("prefers available Mega, pre-Mega, then aggregate owner data", () => {
+  it("prefers available Mega data, then its canonical pre-Mega owner", () => {
     const entry = (item: string) => ({ move: [], ability: [], item: [item] });
     const usageData: ChampionsUsageData = {
       ...usageDataFixture("mega-owner-resolution"),
@@ -465,7 +468,7 @@ describe("App", () => {
             item: [],
             nature: [{ canonicalName: "Adamant", rank: 1, percentage: 80 }],
           },
-          Floette: entry("Floettite"),
+          "Floette-Eternal": entry("Floettite"),
           Meowstic: entry("Light Clay"),
           "Meowstic-F": entry("Mental Herb"),
         },
@@ -507,7 +510,7 @@ describe("App", () => {
       usageData,
       "Singles",
       "item",
-    )).toBe("Floette");
+    )).toBe("Floette-Eternal");
     expect(resolveUsageSuggestionOwner(
       "Floette-Eternal",
       {},
@@ -529,6 +532,28 @@ describe("App", () => {
       "Singles",
       "item",
     )).toBe("Aegislash-Blade");
+  });
+
+  it("uses normalized Eternal usage for selection and Mega defaults without reinterpreting ordinary Floette", () => {
+    const data = parseChampionsUsageData({
+      ...usageDataFixture("floette-legacy"),
+      formats: { Singles: {}, Doubles: { Floette: {
+        pokemonRank: 27, move: ["Protect", "Dazzling Gleam", "Moonblast"],
+        ability: ["Flower Veil"], item: ["Floettite"],
+        nature: [{ canonicalName: "Modest", rank: 1, percentage: 77 }],
+      } } },
+    });
+    const options = getUsageRankedPokemonOptions(getEntityInputOptions("pokemon"), data, "Doubles");
+    expect(options).toHaveLength(1);
+    expect(options[0]).toMatchObject({ value: "フラエッテ えいえんのはな", canonicalName: "Floette-Eternal" });
+    expect(getPokemonUsageDefaultInputValues("Floette-Eternal", { data, format: "Doubles" })).toEqual({
+      moveInput: "マジカルシャイン", natureInput: "ひかえめ", abilityInput: "フラワーベール", itemInput: "フラエッテナイト",
+    });
+    expect(getPokemonUsageDefaultInputValues("Floette-Mega", { data, format: "Doubles" })).toEqual({
+      moveInput: "マジカルシャイン", natureInput: "ひかえめ", abilityInput: "フェアリーオーラ", itemInput: "フラエッテナイト",
+    });
+    expect(Object.values(getPokemonUsageDefaultInputValues("Floette", { data, format: "Doubles" })).every(value => value === undefined)).toBe(true);
+    expect(getEntityInputOptions("pokemon")).toContainEqual(expect.objectContaining({ value: "フラエッテ あかいはな", canonicalName: "Floette" }));
   });
 
   it("applies aggregated Charizard rankings and nature usage to both Mega branches", () => {

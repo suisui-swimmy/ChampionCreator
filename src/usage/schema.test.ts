@@ -22,6 +22,36 @@ const validPayload = {
 };
 
 describe("parseChampionsUsageData", () => {
+  it("normalizes all legacy Floette usage fields without changing their values or the input payload", () => {
+    const entry = { move: ["Moonblast"], ability: ["Flower Veil"], item: ["Floettite"], pokemonRank: 27,
+      nature: [{ canonicalName: "Modest", rank: 1, percentage: 77 }] };
+    const legacy = { ...validPayload, formats: { Singles: { Floette: { ...entry, pokemonRank: 42 } }, Doubles: { floette: entry } } };
+    const parsed = parseChampionsUsageData(legacy);
+    expect(parsed.formats.Singles).toEqual({ floetteeternal: { ...entry, pokemonRank: 42 } });
+    expect(parsed.formats.Doubles).toEqual({ floetteeternal: entry });
+    expect(parsed.dataVersion).toBe(legacy.dataVersion);
+    expect(parsed.sourceGeneratedAt).toBe(legacy.sourceGeneratedAt);
+    expect(legacy.formats.Singles).toHaveProperty("Floette");
+    expect(parseChampionsUsageData(parsed)).toEqual(parsed);
+  });
+
+  it.each([
+    ["floette", "floetteeternal"], ["Floette-Eternal", "Floette"], ["floette", "Floette"],
+  ])("rejects colliding usage identities %s and %s", (first, second) => {
+    const entry = validPayload.formats.Singles.pikachu;
+    expect(() => parseChampionsUsageData({ ...validPayload, formats: { Singles: { [first]: entry, [second]: entry }, Doubles: {} } }))
+      .toThrow(/Pokemon mapping collision/);
+  });
+
+  it("preserves native Eternal and Mega entries and keeps the two battle formats independent", () => {
+    const entry = validPayload.formats.Singles.pikachu;
+    const parsed = parseChampionsUsageData({ ...validPayload, formats: {
+      Singles: { floette: entry, floettemega: entry }, Doubles: { "Floette-Eternal": entry },
+    } });
+    expect(Object.keys(parsed.formats.Singles)).toEqual(["floetteeternal", "floettemega"]);
+    expect(Object.keys(parsed.formats.Doubles)).toEqual(["Floette-Eternal"]);
+  });
+
   it("validates and copies both formats while allowing empty rankings", () => {
     const result = parseChampionsUsageData({
       ...validPayload,

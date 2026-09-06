@@ -247,6 +247,17 @@ describe("shareState", () => {
     expect(parsed.scenarios[0].attacks[0].attackerPokemonCanonicalName).toBe("Tatsugiri-Droopy-Mega");
   });
 
+  it("keeps saved ordinary Floette separate from Eternal Flower regardless of usage source mappings", () => {
+    const [scenario] = createDefaultScenarioForms();
+    const target = { ...createDefaultTargetForm(), pokemonInput: "フラエッテ あかいはな", pokemonCanonicalName: "Floette" };
+    const scenarios = [{ ...scenario, attacks: [{ ...scenario.attacks[0],
+      attackerPokemonInput: "フラエッテ えいえんのはな", attackerPokemonCanonicalName: "Floette-Eternal",
+    }] }];
+    const parsed = parseShareStateDocument(stringifyShareStateDocument(target, scenarios));
+    expect(parsed.target).toMatchObject({ pokemonInput: "フラエッテ あかいはな", pokemonCanonicalName: "Floette" });
+    expect(parsed.scenarios[0].attacks[0]).toMatchObject({ attackerPokemonInput: "フラエッテ えいえんのはな", attackerPokemonCanonicalName: "Floette-Eternal" });
+  });
+
   it("preserves Paldean Tauros forms when reading both legacy shared names and distinct labels", () => {
     const [scenario] = createDefaultScenarioForms();
     for (const [displayName, canonicalName] of [

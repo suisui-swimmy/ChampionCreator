@@ -1,3 +1,5 @@
+import pokemonMappings from "../data/overrides/champions-usage-pokemon-mappings.json";
+import { toUsagePokemonKey } from "./ranking";
 import {
   CHAMPIONS_USAGE_SCHEMA_VERSION,
   SUGGESTION_FORMATS,
@@ -142,11 +144,25 @@ const parseFormatEntries = (value: unknown, path: string): UsageFormatEntries =>
   assertRecord(value, path);
 
   const entries: UsageFormatEntries = {};
+  const sourceKeysByTarget = new Map<string, string>();
   for (const [pokemonKey, pokemonValue] of Object.entries(value)) {
     if (!isNonEmptyString(pokemonKey)) {
       throw new UsageDataValidationError(`${path}.${pokemonKey}`, "expected a non-empty Pokemon key");
     }
-    entries[pokemonKey] = parsePokemonEntry(pokemonValue, `${path}.${pokemonKey}`);
+    // Normalize old published v1 payloads at the usage-data boundary too.
+    // Regular Floette in the catalog and saved input is deliberately untouched.
+    const mapping = pokemonMappings.entries.find((entry) => entry.sourceId === toUsagePokemonKey(pokemonKey));
+    const targetKey = mapping ? toUsagePokemonKey(mapping.canonicalName) : pokemonKey;
+    const identityKey = toUsagePokemonKey(targetKey);
+    const previousKey = sourceKeysByTarget.get(identityKey);
+    if (previousKey !== undefined) {
+      throw new UsageDataValidationError(
+        `${path}.${pokemonKey}`,
+        `Pokemon mapping collision: ${previousKey} and ${pokemonKey} both resolve to ${identityKey}`,
+      );
+    }
+    sourceKeysByTarget.set(identityKey, pokemonKey);
+    entries[targetKey] = parsePokemonEntry(pokemonValue, `${path}.${pokemonKey}`);
   }
   return entries;
 };

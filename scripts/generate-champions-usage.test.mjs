@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { Generations, Pokemon } from "@smogon/calc";
 import {
   calculateNatureDigest,
   ChampionsUsageDataError,
@@ -25,18 +26,21 @@ const catalogs = makeCatalogs({
       makeCatalogEntry("thunderbolt", "Thunderbolt"),
       makeCatalogEntry("protect", "Protect"),
       makeCatalogEntry("shadowball", "Shadow Ball"),
+      makeCatalogEntry("moonblast", "Moonblast"),
     ],
   },
   abilities: {
     entries: [
       makeCatalogEntry("static", "Static"),
       makeCatalogEntry("levitate", "Levitate"),
+      makeCatalogEntry("flowerveil", "Flower Veil"),
     ],
   },
   items: {
     entries: [
       makeCatalogEntry("choicescarf", "Choice Scarf"),
       makeCatalogEntry("leftovers", "Leftovers"),
+      makeCatalogEntry("floettite", "Floettite"),
     ],
   },
   pokemon: {
@@ -47,6 +51,9 @@ const catalogs = makeCatalogs({
       makeCatalogEntry("aegislashshield", "Aegislash-Shield"),
       makeCatalogEntry("aegislashblade", "Aegislash-Blade"),
       makeCatalogEntry("aegislashboth", "Aegislash-Both"),
+      makeCatalogEntry("floette", "Floette"),
+      makeCatalogEntry("floetteeternal", "Floette-Eternal"),
+      makeCatalogEntry("floettemega", "Floette-Mega"),
     ],
   },
 });
@@ -110,6 +117,106 @@ const natureCsv = ({ jolly = "66.2%", adamant = "31.3%" } = {}) => [
 ].join("\n");
 
 describe("generate-champions-usage", () => {
+  const floetteEntry = (sourceId = "floette") => {
+    const pokemon = entry(sourceId,
+      { move: ["Moonblast"], ability: ["Flower Veil"], held_item: ["Floettite"] },
+      { move: ["Protect", "Moonblast"], ability: ["Flower Veil"], held_item: ["Floettite"] });
+    pokemon.summary.baseStats = { hp: 149, attack: 85, defense: 87, sp_attack: 145, sp_defense: 148, speed: 112 };
+    pokemon.summary.battleSummary.Current.Singles.rows = [{ position: 42 }];
+    pokemon.summary.battleSummary.Current.Doubles.rows = [{ position: 27 }];
+    pokemon.battleDataCsvs = currentPaths("Floette");
+    return pokemon;
+  };
+
+  it("records provider evidence that matches Eternal Flower Floette's actual Calc stats", async () => {
+    const manifest = JSON.parse(await readFile(new URL("../src/data/overrides/champions-usage-pokemon-mappings.json", import.meta.url), "utf8"));
+    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.provider).toBe("https://championsbattledata.com/");
+    const [mapping] = manifest.entries;
+    expect(mapping).toMatchObject({ sourceId: "floette", canonicalName: "Floette-Eternal", checkedAt: "2026-09-06" });
+    expect(mapping.sources).toContain("https://championsbattledata.com/api/pokemon/floette?format=Doubles");
+    const stats = new Pokemon(Generations.get(9), mapping.canonicalName, { level: 50, nature: "Serious" }).rawStats;
+    expect(mapping.expectedSourceStats).toEqual({ hp: stats.hp, attack: stats.atk, defense: stats.def, sp_attack: stats.spa, sp_defense: stats.spd, speed: stats.spe });
+    expect(new Pokemon(Generations.get(9), "Floette", { level: 50 }).rawStats.hp).not.toBe(stats.hp);
+  });
+
+  it("maps ranking categories and bulk nature rows to Eternal Flower without renaming the source CSV", async () => {
+    const source = apiData([floetteEntry()]);
+    const natureUsageByFormat = await collectNatureUsageFromFiles({
+      apiData: source,
+      catalogs: natureCatalogs,
+      files: Object.fromEntries(currentPaths("Floette").map(({ path }) => [path, natureCsv().replaceAll("Pikachu", "Floette")])),
+    });
+    const payload = transformApiData(source, { catalogs: natureCatalogs, natureUsageByFormat });
+    for (const format of ["Singles", "Doubles"]) {
+      expect(natureUsageByFormat[format]).not.toHaveProperty("floette");
+      expect(payload.formats[format]).not.toHaveProperty("floette");
+      expect(payload.formats[format].floetteeternal).toMatchObject({
+        ability: ["Flower Veil"], item: ["Floettite"],
+        nature: [{ canonicalName: "Jolly", rank: 1, percentage: 66.2 }, { canonicalName: "Adamant", rank: 2, percentage: 31.3 }],
+      });
+    }
+    expect(payload.formats.Singles.floetteeternal).toMatchObject({ pokemonRank: 42, move: ["Moonblast"] });
+    expect(payload.formats.Doubles.floetteeternal).toMatchObject({ pokemonRank: 27, move: ["Protect", "Moonblast"] });
+    expect(payload.dataVersion).toMatch(/\+nature-[0-9a-f]{64}\+pokemon-[0-9a-f]{64}$/);
+    expect(transformApiData(source, { catalogs: natureCatalogs, natureUsageByFormat })).toEqual(payload);
+    expect(source.pokemon[0].showdownId).toBe("floette");
+  });
+
+  it.each([false, true])("rejects colliding source and native Eternal records in either order (%s)", async (reverse) => {
+    const pokemon = [floetteEntry(), floetteEntry("Floette-Eternal")];
+    if (reverse) pokemon.reverse();
+    expect(() => transformApiData(apiData(pokemon), { catalogs })).toThrow(/mapping collision/);
+    const files = Object.fromEntries(currentPaths("Floette").map(({ path }) => [path, natureCsv().replaceAll("Pikachu", "Floette")]));
+    await expect(collectNatureUsageFromFiles({ apiData: apiData(pokemon), catalogs: natureCatalogs, files })).rejects.toThrow(/mapping collision/);
+  });
+
+  it("leaves an existing output untouched when a provider collision blocks generation", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "champions-usage-mapping-"));
+    const outputPath = join(directory, "usage.json");
+    const previous = JSON.stringify(createEmptyPayload());
+    const extractBulkArchiveImpl = vi.fn();
+    await writeFile(outputPath, previous);
+    try {
+      await expect(run({
+        outputPath,
+        zipBytes: new Uint8Array(),
+        fetchImpl: async () => ({ ok: true, json: async () => apiData([floetteEntry(), floetteEntry("floetteeternal")]) }),
+        extractBulkArchiveImpl,
+      })).rejects.toThrow(/mapping collision/);
+      expect(extractBulkArchiveImpl).not.toHaveBeenCalled();
+      expect(await readFile(outputPath, "utf8")).toBe(previous);
+    } finally {
+      await rm(outputPath);
+      await rmdir(directory);
+    }
+  });
+
+  it("fails closed if the source identity changes or the mapped Calc catalog entry disappears", () => {
+    const changed = floetteEntry();
+    changed.summary.baseStats.sp_attack = 95;
+    expect(() => transformApiData(apiData([changed]), { catalogs })).toThrow(/source identity changed/);
+    delete changed.summary.baseStats;
+    expect(() => transformApiData(apiData([changed]), { catalogs })).toThrow(/source identity changed/);
+    const withoutEternal = { ...catalogs, pokemon: new Map([...catalogs.pokemon].filter(([, target]) => target !== "floetteeternal")) };
+    expect(() => transformApiData(apiData([floetteEntry()]), { catalogs: withoutEternal })).toThrow(/mapping target is absent/);
+  });
+
+  it("accepts a native Eternal entry by itself and validates legacy last-good payloads without mutation", () => {
+    const payload = transformApiData(apiData([floetteEntry("floetteeternal")]), { catalogs });
+    expect(payload.formats.Doubles.floetteeternal.pokemonRank).toBe(27);
+    expect(payload.formats.Doubles).not.toHaveProperty("floette");
+    const legacy = { ...createEmptyPayload(), formats: { Singles: { Floette: payload.formats.Singles.floetteeternal }, Doubles: {} } };
+    expect(validatePayload(legacy)).toBe(legacy);
+    expect(legacy.formats.Singles).toHaveProperty("Floette");
+    for (const entries of [
+      { Floette: payload.formats.Singles.floetteeternal, floetteeternal: payload.formats.Singles.floetteeternal },
+      { "Floette-Eternal": payload.formats.Singles.floetteeternal, floette: payload.formats.Singles.floetteeternal },
+    ]) {
+      expect(() => validatePayload({ ...legacy, formats: { Singles: entries, Doubles: {} } })).toThrow(/mapping collision/);
+    }
+  });
+
   it("converts Current Singles/Doubles rankings to canonical names", () => {
     const payload = transformApiData(apiData([
       entry(

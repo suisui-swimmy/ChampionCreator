@@ -1300,16 +1300,6 @@ const SuggestionUsageContext = createContext<SuggestionUsageContextValue>({
 
 type UsageSuggestionOwnerCategory = UsageRankingCategory | "nature";
 
-/**
- * The usage API groups Mega Floette under Floette even though calc identifies
- * Floette-Eternal as the form immediately before Mega Evolution. Prefer an
- * exact form entry whenever the loaded payload has one, and use this only as a
- * final, Mega-only aggregate fallback.
- */
-const USAGE_AGGREGATE_OWNER_BY_PRE_MEGA_CANONICAL_NAME: Readonly<Record<string, string>> = {
-  "Floette-Eternal": "Floette",
-};
-
 const hasUsageSuggestionOwnerData = (
   data: ChampionsUsageData,
   format: SuggestionFormat,
@@ -1350,9 +1340,7 @@ export const resolveUsageSuggestionOwner = (
     return ownerPokemonCanonicalName;
   }
 
-  const aggregateOwner = USAGE_AGGREGATE_OWNER_BY_PRE_MEGA_CANONICAL_NAME[preMegaOwner];
-  const candidates = [ownerPokemonCanonicalName, preMegaOwner, aggregateOwner]
-    .filter((candidate): candidate is string => Boolean(candidate));
+  const candidates = [ownerPokemonCanonicalName, preMegaOwner];
   if (data) {
     const availableOwner = candidates.find((candidate) => (
       hasUsageSuggestionOwnerData(data, format, candidate, category)
