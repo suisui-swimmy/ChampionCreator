@@ -18,13 +18,15 @@ import { toEntityRef } from "../domain/model";
 import { isSupportedHpEventEffectId } from "../domain/hpEvents";
 import { resolveAllowedMovePowerOverride } from "../calc/movePowerRules";
 import { resolveEntity } from "../localization/resolver";
+import { resolvePokemonTypeOverride, type PokemonTypeOverrideForm } from "./pokemonTypes";
 import { getUserOptionExclusion } from "../localization/userOptionExclusions";
 import {
   BEAT_UP_CANONICAL_NAME,
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 12;
+export const SHARE_SCHEMA_VERSION = 13;
+export const POKEMON_TYPE_OVERRIDE_SCHEMA_VERSION = 13;
 
 /** Schema version in which the current speed-state fields were introduced. */
 export const SPEED_STATE_SCHEMA_VERSION = 11;
@@ -67,7 +69,29 @@ type SupportedShareSchemaVersion =
   | 9
   | 10
   | 11
+  | 12
   | typeof SHARE_SCHEMA_VERSION;
+
+const normalizeTypeOverride = (
+  input: Record<string, unknown>,
+  field: "typeOverride" | "attackerTypeOverride",
+  sourceSchemaVersion: SupportedShareSchemaVersion,
+): PokemonTypeOverrideForm | undefined => {
+  if (sourceSchemaVersion < POKEMON_TYPE_OVERRIDE_SCHEMA_VERSION || input[field] === undefined) return undefined;
+  const value = input[field];
+  const fields = ["type1Input", "type2Input", "addedTypeInput"];
+  if (!isRecord(value) || Object.keys(value).some((key) => !fields.includes(key))
+    || fields.some((key) => typeof value[key] !== "string")) {
+    throw new Error(`条件JSONの ${field} の形式が不正です`);
+  }
+  const result = value as PokemonTypeOverrideForm;
+  try {
+    resolvePokemonTypeOverride(result);
+  } catch (error) {
+    throw new Error(`条件JSONの ${field}: ${error instanceof Error ? error.message : "タイプ指定が不正です"}`);
+  }
+  return { ...result };
+};
 
 type PokemonCanonicalHintField = "pokemonCanonicalName" | "attackerPokemonCanonicalName";
 
@@ -281,12 +305,14 @@ const normalizeTarget = (
     statPoints: mergeObject(defaults.statPoints, input.statPoints),
     boosts: mergeObject(defaults.boosts, input.boosts),
     pokemonCanonicalName,
+    typeOverride: normalizeTypeOverride(input, "typeOverride", sourceSchemaVersion),
     level,
     levelMode,
   } as TargetFormState;
   if (pokemonCanonicalName === undefined) {
     delete normalized.pokemonCanonicalName;
   }
+  if (normalized.typeOverride === undefined) delete normalized.typeOverride;
   delete (normalized as TargetFormState & { status?: unknown }).status;
   return normalized;
 };
@@ -429,6 +455,7 @@ const normalizeAttack = (
     id: attackId,
     attackerLevel,
     attackerLevelMode,
+    attackerTypeOverride: normalizeTypeOverride(input, "attackerTypeOverride", sourceSchemaVersion),
     speedTargetMode: hasSpeedTargetMode
       && typeof input.speedTargetMode === "string"
       && speedTargetModes.has(input.speedTargetMode as ScenarioAttackFormState["speedTargetMode"])
@@ -486,6 +513,7 @@ const normalizeAttack = (
   if (attackerPokemonCanonicalName === undefined) {
     delete normalized.attackerPokemonCanonicalName;
   }
+  if (normalized.attackerTypeOverride === undefined) delete normalized.attackerTypeOverride;
   // speedMoveModifier was part of schema <=10 only. Do not let an unknown
   // legacy key leak back into the current form state after migration.
   delete (normalized as ScenarioAttackFormState & Record<string, unknown>).speedMoveModifier;
@@ -539,6 +567,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 12
       && parsed.schemaVersion !== 11
       && parsed.schemaVersion !== 10
       && parsed.schemaVersion !== 9

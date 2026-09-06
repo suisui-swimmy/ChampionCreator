@@ -15,7 +15,7 @@ const generation = Generations.get(generationNumber);
 const calcCompatibilityManifestPath = join(
   projectRoot,
   "vendor",
-  "smogon-calc-cc-aura-guard-v1.json",
+  "smogon-calc-cc-type-overrides-v1.json",
 );
 const calcCompatibilityManifest = JSON.parse(
   await readFile(calcCompatibilityManifestPath, "utf8"),
@@ -333,7 +333,7 @@ const makePayload = ({ kind, entries, summary, source }) => ({
     packageVersion: calcPackage.version,
     upstreamCommit,
     compatibilityPatchId,
-    compatibilityManifest: "vendor/smogon-calc-cc-aura-guard-v1.json",
+    compatibilityManifest: "vendor/smogon-calc-cc-type-overrides-v1.json",
     generation: generationNumber,
     previousGeneratedLabels: "src/data/generated",
     userOptionExclusions: "src/data/overrides/user-option-exclusions.json",

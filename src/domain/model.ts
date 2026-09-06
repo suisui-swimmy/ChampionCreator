@@ -39,6 +39,11 @@ export type StatBoostTable = Partial<Record<Exclude<StatKey, "hp">, number>>;
 export type PokemonStatus = "none" | "slp" | "psn" | "brn" | "frz" | "par" | "tox";
 export type GameType = "singles" | "doubles";
 
+export interface PokemonTypeOverride {
+  types: [TypeRef] | [TypeRef, TypeRef];
+  addedType?: TypeRef;
+}
+
 export interface Build {
   id: string;
   pokemon: PokemonRef;
@@ -50,6 +55,7 @@ export interface Build {
   ability?: AbilityRef;
   item?: ItemRef;
   teraType?: TypeRef;
+  typeOverride?: PokemonTypeOverride;
   isDynamaxed?: boolean;
   status?: Exclude<PokemonStatus, "none">;
 }

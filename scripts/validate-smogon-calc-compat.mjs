@@ -21,7 +21,7 @@ const assert = (condition, message) => {
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 const projectPackage = await readJson("package.json");
 const packageLock = await readJson("package-lock.json");
-const provenance = await readJson("vendor/smogon-calc-cc-aura-guard-v1.json");
+const provenance = await readJson("vendor/smogon-calc-cc-type-overrides-v1.json");
 const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.json");
 const moveOptions = await readJson("src/data/generated/move-options.gen.json");
 const itemOptions = await readJson("src/data/generated/item-options.gen.json");
@@ -74,6 +74,9 @@ assert(lockedCalc?.resolved === expectedFileDependency, "package-lock Calc resol
 assert(lockedCalc?.integrity === provenance.artifact.integrity, "package-lock Calc integrity mismatch");
 
 const patchBuffer = await readFile(provenance.patchFile);
+for (const patch of provenance.patches ?? []) {
+  assert(sha256(await readFile(patch.path)) === patch.sha256, `Tracked Calc patch hash mismatch: ${patch.path}`);
+}
 const artifactBuffer = await readFile(provenance.artifact.path);
 assert(sha256(patchBuffer) === provenance.patchSha256, "Tracked Calc patch hash mismatch");
 assert(sha256(artifactBuffer) === provenance.artifact.sha256, "Tracked Calc artifact SHA-256 mismatch");
@@ -507,6 +510,23 @@ if (
   }
 }
 
+const typedDefender = new Pokemon(gen, "Mew", {
+  level: 50, typeOverrides: ["Bug", "Steel"], addedType: "Grass",
+});
+assert(typeof typedDefender.getTypes === "function", "Installed Calc has no explicit type-state API");
+if (typeof typedDefender.getTypes === "function") {
+  assert(typedDefender.getTypes().join(",") === "Bug,Steel,Grass", "Installed Calc lost the third type");
+  assert(typedDefender.clone().getTypes().join(",") === "Bug,Steel,Grass", "Calc clone lost explicit type state");
+  const typedRange = calculate(gen, new Pokemon(gen, "Mew", { level: 50 }), typedDefender, new Move(gen, "Flamethrower")).range();
+  assert(typedRange[0] === 272 && typedRange[1] === 328, "Third-type 8x effectiveness fixture mismatch");
+  const ghostDefender = new Pokemon(gen, "Mew", { addedType: "Ghost" });
+  assert(calculate(gen, new Pokemon(gen, "Mew"), ghostDefender, new Move(gen, "Tackle")).range()[1] === 0, "Added Ghost immunity is missing");
+  for (const teraType of ["Fire", "Stellar"]) {
+    const terastallized = new Pokemon(gen, "Mew", { typeOverrides: ["Bug", "Steel"], addedType: "Grass", teraType });
+    assert(terastallized.addedType === undefined, `Added type survived Tera ${teraType}`);
+  }
+}
+
 if (errors.length > 0) {
   console.error(`[smogon-calc-compat] ${calcPackage.version} validation failed:`);
   for (const error of errors) {
@@ -514,5 +534,5 @@ if (errors.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  console.log(`[smogon-calc-compat] ${calcPackage.version} Aura Guard compatibility validation passed.`);
+  console.log(`[smogon-calc-compat] ${calcPackage.version} Aura Guard and explicit type-state validation passed.`);
 }

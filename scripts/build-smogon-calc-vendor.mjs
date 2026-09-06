@@ -10,11 +10,11 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const manifestPath = join(projectRoot, "vendor", "smogon-calc-cc-aura-guard-v1.json");
+const manifestPath = join(projectRoot, "vendor", "smogon-calc-cc-type-overrides-v1.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const supportedArgs = new Set(["--verify"]);
 const unknownArgs = process.argv.slice(2).filter((argument) => !supportedArgs.has(argument));
@@ -23,7 +23,7 @@ if (unknownArgs.length > 0) {
 }
 const verifyOnly = process.argv.includes("--verify");
 
-const patchPath = join(projectRoot, manifest.patchFile);
+const patches = manifest.patches ?? [{ id: manifest.patchId, path: manifest.patchFile, sha256: manifest.patchSha256 }];
 const artifactPath = join(projectRoot, manifest.artifact.path);
 
 const run = (command, args, cwd) => {
@@ -85,9 +85,11 @@ if (npmVersion !== manifest.buildEnvironment.npm) {
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), "championcreator-smogon-calc-"));
 try {
-  const patchBuffer = await readFile(patchPath);
-  if (hashBuffer(patchBuffer, "sha256", "hex") !== manifest.patchSha256) {
-    throw new Error("Compatibility patch does not match the provenance manifest hash");
+  for (const patch of patches) {
+    const patchBuffer = await readFile(join(projectRoot, patch.path));
+    if (hashBuffer(patchBuffer, "sha256", "hex") !== patch.sha256) {
+      throw new Error(`Compatibility patch hash mismatch: ${patch.path}`);
+    }
   }
 
   const checkoutPath = join(temporaryRoot, "damage-calc");
@@ -103,25 +105,36 @@ try {
       throw new Error(`Upstream lockfile hash mismatch: ${lockfile.path}`);
     }
   }
-  const nativeAuraGuardCheck = spawnSync(
-    "git",
-    ["grep", "-n", "Aura Guard", "--", "calc/src"],
-    { cwd: checkoutPath, encoding: "utf8", shell: false },
-  );
-  if (nativeAuraGuardCheck.error) {
-    throw nativeAuraGuardCheck.error;
+  if (patches.some((patch) => patch.id === "cc-aura-guard-v1")) {
+    const nativeAuraGuardCheck = spawnSync(
+      "git",
+      ["grep", "-n", "Aura Guard", "--", "calc/src"],
+      { cwd: checkoutPath, encoding: "utf8", shell: false },
+    );
+    if (nativeAuraGuardCheck.error) throw nativeAuraGuardCheck.error;
+    if (nativeAuraGuardCheck.status === 0) {
+      throw new Error("Upstream base already contains Aura Guard; audit and retire the compatibility patch");
+    }
+    if (nativeAuraGuardCheck.status !== 1) {
+      throw new Error(`Unable to inspect upstream Aura Guard support: ${nativeAuraGuardCheck.stderr}`);
+    }
   }
-  if (nativeAuraGuardCheck.status === 0) {
-    throw new Error("Upstream base already contains Aura Guard; audit and retire the compatibility patch");
+  const nativePokemonSource = await readFile(join(checkoutPath, "calc/src/pokemon.ts"), "utf8");
+  if (patches.some((patch) => patch.id === "cc-type-overrides-v1")
+    && /\b(?:typeOverrides|addedType)\b/.test(nativePokemonSource)) {
+    throw new Error("Upstream base has explicit type state; audit and retire the type compatibility patch");
   }
-  if (nativeAuraGuardCheck.status !== 1) {
-    throw new Error(`Unable to inspect upstream Aura Guard support: ${nativeAuraGuardCheck.stderr}`);
+  for (const patch of patches) {
+    const patchPath = join(projectRoot, patch.path);
+    run("git", ["apply", "--check", patchPath], checkoutPath);
+    run("git", ["apply", patchPath], checkoutPath);
   }
-  run("git", ["apply", "--check", patchPath], checkoutPath);
-  run("git", ["apply", patchPath], checkoutPath);
   run("git", ["diff", "--check"], checkoutPath);
-  runNpm(["ci"], checkoutPath);
-  runNpm(["test", "--", "--runInBand"], join(checkoutPath, "calc"));
+  runNpm(["ci", "--ignore-scripts"], checkoutPath);
+  runNpm(["ci", "--ignore-scripts"], join(checkoutPath, "calc"));
+  runNpm(["run", "build"], join(checkoutPath, "calc"));
+  runNpm(["exec", "--", "jest", "--runInBand", "--cacheDirectory", join(temporaryRoot, "jest-cache")], join(checkoutPath, "calc"));
+  runNpm(["run", "lint"], join(checkoutPath, "calc"));
   runNpm(["pack", "--ignore-scripts", "--pack-destination", packOutputPath], join(checkoutPath, "calc"));
 
   const packedFiles = (await readdir(packOutputPath)).filter((name) => name.endsWith(".tgz"));
@@ -162,5 +175,9 @@ try {
     console.log(`integrity ${integrity}`);
   }
 } finally {
+  if (dirname(resolve(temporaryRoot)) !== resolve(tmpdir())
+    || !basename(temporaryRoot).startsWith("championcreator-smogon-calc-")) {
+    throw new Error("Refusing to remove an unexpected temporary build directory");
+  }
   await rm(temporaryRoot, { recursive: true, force: true });
 }

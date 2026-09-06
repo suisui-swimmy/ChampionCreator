@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "kind": "smogon-calc-compatibility-build",
+  "patchId": "cc-aura-guard-v1-type-overrides-v1",
+  "packageName": "@smogon/calc",
+  "packageVersion": "0.11.0",
+  "upstreamRepository": "https://github.com/smogon/damage-calc.git",
+  "upstreamBaseCommit": "49d4d8696bf138b101cc47be8432489c3ac192aa",
+  "sourcePullRequest": "https://github.com/smogon/damage-calc/pull/855",
+  "sourcePullRequestHead": "589015cb5986fc96537c44000ab8a083dc1ef253",
+  "showdownReference": "https://github.com/smogon/pokemon-showdown/pull/12275",
+  "showdownReferenceCommit": "7340ea497118a6752336d735e193cdf89a1adb5f",
+  "patchFile": "vendor/patches/smogon-calc-type-overrides-v1.patch",
+  "patchSha256": "cde3d33aaedfc74e374214485bddcaca6c3522533d85b3f220f5f2ba7f3266ab",
+  "upstreamLockfiles": [
+    {
+      "path": "package-lock.json",
+      "sha256": "1bcb0a123c2a42cb51144a6893438789bec3fbb04f167907fac4b9ac9b161b5a"
+    },
+    {
+      "path": "calc/package-lock.json",
+      "sha256": "b7e0f82492eb760f58462ad19a5c108fc4fb37b93e3b4663b44079d3c86fb457"
+    }
+  ],
+  "scope": [
+    "Generation 9 Aura Guard ability catalog entry",
+    "Mega Absol Z, Mega Garchomp Z, and Mega Lucario Z ability metadata",
+    "Generation 9 contact-damage reduction and breakable suppression",
+    "Generation 9 explicit one/two current types plus optional Grass or Ghost",
+    "Type effectiveness, STAB, immunity, cloning, and typed HP helpers",
+    "Tera including Stellar clears the additional type while preserving the chosen pre-Tera base types",
+    "Explicit type state overrides automatic Forecast inference; move activation and failure are outside this snapshot API"
+  ],
+  "provisional": [
+    "Aura Guard breakable suppression follows the referenced Pokemon Showdown implementation, whose source still marks that flag for confirmation."
+  ],
+  "artifact": {
+    "path": "vendor/smogon-calc-0.11.0-49d4d86-cc-aura-type-v1.tgz",
+    "sha256": "49afb4e4738cac99941a09643062b378b4261ff45d58d30f3df963a0ae0590bf",
+    "integrity": "sha512-cQNn/0dX/eHyjx/tG2o2pE3+zBi8NDLOPhpJuJ+CdoKuYGorSVA8vQRJLzcRGfhwIpMa1hplgRwxr+QDRvQD+w=="
+  },
+  "buildEnvironment": {
+    "node": "24.14.1",
+    "npm": "11.11.0"
+  },
+  "buildScript": "scripts/build-smogon-calc-vendor.mjs",
+  "sunset": {
+    "condition": "Retire each patch independently when a frozen native Calc commit provides equivalent behavior for its scope.",
+    "requiredCheck": "Remove the superseded patch before native adoption; re-run the Aura Guard and type-state active/inactive/clone/Tera/HP regression matrices."
+  },
+  "patches": [
+    {
+      "id": "cc-aura-guard-v1",
+      "path": "vendor/patches/smogon-calc-aura-guard-v1.patch",
+      "sha256": "b47dd1de29837bd281b30c7c38ae213fcc246255af7fad030c316246a3a8e232"
+    },
+    {
+      "id": "cc-type-overrides-v1",
+      "path": "vendor/patches/smogon-calc-type-overrides-v1.patch",
+      "sha256": "cde3d33aaedfc74e374214485bddcaca6c3522533d85b3f220f5f2ba7f3266ab"
+    }
+  ],
+  "typeStateReferenceCommit": "6b4bc34e44cc2541929cc4b8fff96e756ab3f268",
+  "typeStateReferences": [
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/sim/pokemon.ts#L2114-L2152",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/sim/battle-actions.ts#L1765-L1801",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/sim/battle-actions.ts#L1948",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/data/moves.ts#L10741-L10756",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/data/moves.ts#L19906-L19932",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/data/moves.ts#L6126-L6144"
+  ],
+  "audit": {
+    "checkedAt": "2026-09-06",
+    "upstreamHead": "e087a5e0da71459047dc2da7cd3ebc676925215d",
+    "commitsAhead": 36,
+    "upstreamPackageVersion": "0.11.0",
+    "decision": "Keep the current base and Aura Guard patch; add explicit Gen9 type states. Native addedType/typeOverrides/Aura Guard are absent at the frozen head. Defer unrelated Gmax/API and mechanics adoption."
+  }
+}

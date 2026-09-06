@@ -121,6 +121,8 @@ export const toSmogonPokemon = (
     ability: build.ability?.canonicalName,
     item: build.item?.canonicalName,
     teraType: build.teraType?.canonicalName as State.Pokemon["teraType"],
+    typeOverrides: build.typeOverride?.types.map((type) => type.canonicalName) as State.Pokemon["typeOverrides"],
+    addedType: build.typeOverride?.addedType?.canonicalName as State.Pokemon["addedType"],
     isDynamaxed: build.isDynamaxed,
     status: build.status,
     boosts,
@@ -140,9 +142,7 @@ export const getSmogonTypeEffectiveness = (
   }
 
   const effectiveness = attackingType.effectiveness as Readonly<Record<string, number | undefined>>;
-  const defendingTypes = defender.teraType && defender.teraType !== "Stellar"
-    ? [defender.teraType]
-    : defender.types;
+  const defendingTypes = defender.getTypes();
   return defendingTypes.reduce(
     (multiplier, type) => multiplier * (effectiveness[type] ?? 1),
     1,

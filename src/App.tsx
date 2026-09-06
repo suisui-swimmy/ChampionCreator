@@ -45,6 +45,7 @@ import type {
 } from "./domain/hpEvents";
 import type { EntityKind } from "./data/localizationTypes";
 import { TypeChip } from "./ui/TypeChip";
+import { PokemonTypeField } from "./ui/PokemonTypeField";
 import { appVersionInfo, formatAppVersionLabel } from "./appVersion";
 import {
   formatUsageDataDateJst,
@@ -6889,6 +6890,14 @@ function TargetPanel({
               onModeChange={(mode) => onUpdateField("levelMode", mode)}
               onChange={(value) => onUpdateField("level", value)}
             />
+            <PokemonTypeField
+              ownerLabel="調整対象"
+              pokemonInput={targetForm.pokemonInput}
+              pokemonCanonicalName={targetForm.pokemonCanonicalName}
+              value={targetForm.typeOverride}
+              teraEnabled={targetForm.teraEnabled}
+              onChange={(value) => onUpdateField("typeOverride", value)}
+            />
             <MechanicControls
               pokemonInput={targetForm.pokemonInput}
               pokemonCanonicalName={targetForm.pokemonCanonicalName}
@@ -8823,6 +8832,14 @@ function AttackCard({
             menuOptions={attackerItemMenuOptions}
               onChange={onInput("attackerItemInput")}
               onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
+            />
+            <PokemonTypeField
+              ownerLabel={attackLabel}
+              pokemonInput={attack.attackerPokemonInput}
+              pokemonCanonicalName={attack.attackerPokemonCanonicalName}
+              value={attack.attackerTypeOverride}
+              teraEnabled={attack.attackerTeraEnabled}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTypeOverride", value)}
             />
           </div>
         ) : null}

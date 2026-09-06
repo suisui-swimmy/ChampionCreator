@@ -1,0 +1,299 @@
+diff --git a/calc/src/desc.ts b/calc/src/desc.ts
+index f4e4fe3..b331bc8 100644
+--- a/calc/src/desc.ts
++++ b/calc/src/desc.ts
+@@ -525,7 +525,8 @@ function getHazards(gen: Generation, defender: Pokemon, defenderSide: Side) {
+       defender.teraType && defender.teraType !== 'Stellar'
+         ? rockType.effectiveness[defender.teraType]!
+         : rockType.effectiveness[defender.types[0]]! *
+-          (defender.types[1] ? rockType.effectiveness[defender.types[1]]! : 1);
++          (defender.types[1] ? rockType.effectiveness[defender.types[1]]! : 1) *
++          (defender.addedType ? rockType.effectiveness[defender.addedType]! : 1);
+     damage += Math.floor((effectiveness * defender.maxHP()) / 8);
+     texts.push('Stealth Rock');
+   }
+@@ -535,7 +536,8 @@ function getHazards(gen: Generation, defender: Pokemon, defenderSide: Side) {
+       defender.teraType && defender.teraType !== 'Stellar'
+         ? steelType.effectiveness[defender.teraType]!
+         : steelType.effectiveness[defender.types[0]]! *
+-          (defender.types[1] ? steelType.effectiveness[defender.types[1]]! : 1);
++          (defender.types[1] ? steelType.effectiveness[defender.types[1]]! : 1) *
++          (defender.addedType ? steelType.effectiveness[defender.addedType]! : 1);
+     damage += Math.floor((effectiveness * defender.maxHP()) / 8);
+     texts.push('Steelsurge');
+   }
+diff --git a/calc/src/mechanics/gen789.ts b/calc/src/mechanics/gen789.ts
+index ff6ac2b..3803eba 100644
+--- a/calc/src/mechanics/gen789.ts
++++ b/calc/src/mechanics/gen789.ts
+@@ -405,7 +405,11 @@ export function calculateSMSSSV(
+     )
+     : 1;
+ 
+-  let typeEffectiveness = type1Effectiveness * type2Effectiveness;
++  const addedTypeEffectiveness = defender.addedType
++    ? getMoveEffectiveness(
++      gen, move, defender.addedType, isGhostRevealed, field.isGravity, isRingTarget
++    ) : 1;
++  let typeEffectiveness = type1Effectiveness * type2Effectiveness * addedTypeEffectiveness;
+ 
+   if (defender.teraType && defender.teraType !== 'Stellar') {
+     typeEffectiveness = getMoveEffectiveness(
+@@ -420,7 +424,8 @@ export function calculateSMSSSV(
+ 
+   if (typeEffectiveness === 0 && move.hasType('Ground') &&
+     defender.hasItem('Iron Ball') && !defender.hasAbility('Klutz')) {
+-    typeEffectiveness = 1;
++    typeEffectiveness = defender.addedType
++      ? (type1Effectiveness || 1) * (type2Effectiveness || 1) * addedTypeEffectiveness : 1;
+   }
+ 
+   if (typeEffectiveness === 0 && move.named('Thousand Arrows')) {
+@@ -434,7 +439,8 @@ export function calculateSMSSSV(
+   if ((move.named('Sky Drop') &&
+         (defender.hasType('Flying') || defender.weightkg >= 200 || field.isGravity)) ||
+       (move.named('Synchronoise') && !defender.hasType(attacker.types[0]) &&
+-        (!attacker.types[1] || !defender.hasType(attacker.types[1]))) ||
++        (!attacker.types[1] || !defender.hasType(attacker.types[1])) &&
++        (!attacker.addedType || !defender.hasType(attacker.addedType))) ||
+       (move.named('Dream Eater') &&
+         (!(defender.hasStatus('slp') || defender.hasAbility('Comatose')))) ||
+       (move.named('Steel Roller') && !field.terrain) ||
+diff --git a/calc/src/mechanics/util.ts b/calc/src/mechanics/util.ts
+index f7adf7d..ea39005 100644
+--- a/calc/src/mechanics/util.ts
++++ b/calc/src/mechanics/util.ts
+@@ -179,6 +179,8 @@ export function checkTeraformZero(pokemon: Pokemon, field: Field) {
+ }
+ 
+ export function checkForecast(pokemon: Pokemon, weather?: Weather) {
++  // A manually supplied current type state takes precedence over inferred weather forms.
++  if (pokemon.typeOverrides) return;
+   if (pokemon.hasAbility('Forecast') && pokemon.named('Castform')) {
+     switch (weather) {
+     case 'Sun':
+diff --git a/calc/src/pokemon.ts b/calc/src/pokemon.ts
+index b41e1d1..9c2bef1 100644
+--- a/calc/src/pokemon.ts
++++ b/calc/src/pokemon.ts
+@@ -13,6 +13,8 @@ export class Pokemon implements State.Pokemon {
+   species: I.Specie;
+ 
+   types: [I.TypeName] | [I.TypeName, I.TypeName];
++  typeOverrides?: [I.TypeName] | [I.TypeName, I.TypeName];
++  addedType?: 'Ghost' | 'Grass';
+   weightkg: number;
+ 
+   level: number;
+@@ -54,7 +56,24 @@ export class Pokemon implements State.Pokemon {
+ 
+     this.gen = gen;
+     this.name = options.name || name as I.SpeciesName;
+-    this.types = this.species.types;
++    if ((options.typeOverrides || options.addedType) && gen.num !== 9) {
++      throw new Error('Explicit type states are supported only in Gen 9');
++    }
++    if (options.typeOverrides && (options.typeOverrides.length < 1 ||
++      options.typeOverrides.length > 2 || new Set(options.typeOverrides).size !==
++      options.typeOverrides.length || options.typeOverrides.some(type =>
++      type === 'Stellar' || type === '???' || !gen.types.get(toID(type))))) {
++      throw new Error('Expected one or two distinct ordinary types');
++    }
++    if (options.addedType && !['Ghost', 'Grass'].includes(options.addedType)) {
++      throw new Error('Added type must be Ghost or Grass');
++    }
++    this.typeOverrides = options.typeOverrides && options.typeOverrides.slice() as
++      [I.TypeName] | [I.TypeName, I.TypeName] | undefined;
++    this.types = this.typeOverrides || this.species.types;
++    // Terastallization removes an added type, including for Stellar.
++    this.addedType = !options.teraType && !this.types.includes(options.addedType!)
++      ? options.addedType : undefined;
+     this.weightkg = this.species.weightkg;
+ 
+     this.level = gen.num === 0 ? 50 : options.level || 100;
+@@ -139,7 +158,7 @@ export class Pokemon implements State.Pokemon {
+   hasType(...types: I.TypeName[]) {
+     for (const type of types) {
+       if (this.teraType && this.teraType !== 'Stellar'
+-        ? this.teraType === type : this.types.includes(type)) {
++        ? this.teraType === type : this.types.includes(type) || this.addedType === type) {
+         return true;
+       }
+     }
+@@ -149,7 +168,7 @@ export class Pokemon implements State.Pokemon {
+   /** Ignores Tera type */
+   hasOriginalType(...types: I.TypeName[]) {
+     for (const type of types) {
+-      if (this.types.includes(type)) return true;
++      if (this.types.includes(type) || this.addedType === type) return true;
+     }
+     return false;
+   }
+@@ -158,6 +177,11 @@ export class Pokemon implements State.Pokemon {
+     return names.includes(this.name);
+   }
+ 
++  getTypes(): I.TypeName[] {
++    if (this.teraType && this.teraType !== 'Stellar') return [this.teraType];
++    return this.addedType ? this.types.concat(this.addedType) : this.types.slice();
++  }
++
+   clone() {
+     return new Pokemon(this.gen, this.name, {
+       level: this.level,
+@@ -176,6 +200,8 @@ export class Pokemon implements State.Pokemon {
+       originalCurHP: this.originalCurHP,
+       status: this.status,
+       teraType: this.teraType,
++      typeOverrides: this.typeOverrides,
++      addedType: this.addedType,
+       toxicCounter: this.toxicCounter,
+       moves: this.moves.slice(),
+       overrides: this.species,
+diff --git a/calc/src/state.ts b/calc/src/state.ts
+index cf97a4e..05b4ac6 100644
+--- a/calc/src/state.ts
++++ b/calc/src/state.ts
+@@ -19,6 +19,9 @@ export namespace State {
+     originalCurHP?: number;
+     status?: I.StatusName | '';
+     teraType?: I.TypeName;
++    /** Explicit current type state, evaluated only in Gen 9. */
++    typeOverrides?: [I.TypeName] | [I.TypeName, I.TypeName];
++    addedType?: 'Ghost' | 'Grass';
+     toxicCounter?: number;
+     moves?: I.MoveName[];
+     overrides?: Partial<I.Specie>;
+diff --git a/calc/src/test/type-overrides.test.ts b/calc/src/test/type-overrides.test.ts
+new file mode 100644
+index 0000000..2856d03
+--- /dev/null
++++ b/calc/src/test/type-overrides.test.ts
+@@ -0,0 +1,127 @@
++import {calculate, Field, Move, Pokemon} from '../index';
++
++describe('Gen 9 explicit current types', () => {
++  const attacker = () => new Pokemon(9, 'Mew', {level: 50});
++  const damage = (defender: Pokemon, move = 'Flamethrower', source = attacker(), field?: Field) =>
++    calculate(9, source, defender, new Move(9, move), field).damage;
++
++  test('keeps species data separate and clones the supplied type state', () => {
++    const p = new Pokemon(9, 'Charizard', {
++      typeOverrides: ['Electric', 'Psychic'], addedType: 'Ghost',
++    });
++    expect(p.species.types).toEqual(['Fire', 'Flying']);
++    expect(p.getTypes()).toEqual(['Electric', 'Psychic', 'Ghost']);
++    expect(p.clone().getTypes()).toEqual(p.getTypes());
++    expect(p.clone().typeOverrides).not.toBe(p.typeOverrides);
++    expect(p.hasType('Ghost')).toBe(true);
++    expect(p.hasOriginalType('Ghost')).toBe(true);
++  });
++
++  test('single type replaces both original types', () => {
++    const p = new Pokemon(9, 'Charizard', {typeOverrides: ['Psychic']});
++    expect(p.types).toEqual(['Psychic']);
++    expect(p.hasType('Flying', 'Fire')).toBe(false);
++  });
++
++  test('third type cancels weakness and resistance before damage rounding', () => {
++    const p = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Normal', 'Water'], addedType: 'Grass',
++    });
++    expect(damage(p)).toEqual(damage(new Pokemon(9, 'Mew', {level: 50})));
++  });
++
++  test('third type supplies the eighth-fold weakness', () => {
++    const p = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Bug', 'Steel'], addedType: 'Grass',
++    });
++    const dual = damage(new Pokemon(9, 'Mew', {level: 50, typeOverrides: ['Bug', 'Steel']}));
++    expect(damage(p)).toEqual((dual as number[]).map(roll => roll * 2));
++  });
++
++  test('added Ghost supplies immunity, with Scrappy and Ring Target bypasses', () => {
++    const p = new Pokemon(9, 'Mew', {level: 50, addedType: 'Ghost'});
++    expect(damage(p, 'Tackle')).toBe(0);
++    expect(damage(p, 'Tackle', new Pokemon(9, 'Mew', {level: 50, ability: 'Scrappy'})))
++      .toEqual(damage(new Pokemon(9, 'Mew', {level: 50}), 'Tackle'));
++    expect(damage(new Pokemon(9, 'Mew', {
++      level: 50, addedType: 'Ghost', item: 'Ring Target',
++    }), 'Tackle')).toEqual(damage(new Pokemon(9, 'Mew', {level: 50}), 'Tackle'));
++  });
++
++  test('added type receives STAB without changing species stats', () => {
++    const p = new Pokemon(9, 'Mew', {level: 50, addedType: 'Ghost'});
++    const reference = new Pokemon(9, 'Mew', {level: 50, typeOverrides: ['Ghost']});
++    expect(damage(new Pokemon(9, 'Mew'), 'Shadow Ball', p))
++      .toEqual(damage(new Pokemon(9, 'Mew'), 'Shadow Ball', reference));
++  });
++
++  test.each(['Fire', 'Stellar'] as const)('Tera %s clears added type', teraType => {
++    const p = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Normal', 'Water'], addedType: 'Grass', teraType,
++    });
++    const reference = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Normal', 'Water'], teraType,
++    });
++    expect(p.addedType).toBeUndefined();
++    expect(p.clone().addedType).toBeUndefined();
++    expect(damage(p)).toEqual(damage(reference));
++    expect(damage(new Pokemon(9, 'Mew'), 'Energy Ball', p))
++      .toEqual(damage(new Pokemon(9, 'Mew'), 'Energy Ball', reference));
++  });
++
++  test('Tera Ghost does not retain added-Ghost double STAB', () => {
++    const p = new Pokemon(9, 'Mew', {level: 50, addedType: 'Ghost', teraType: 'Ghost'});
++    const reference = new Pokemon(9, 'Mew', {level: 50, teraType: 'Ghost'});
++    expect(damage(new Pokemon(9, 'Mew'), 'Shadow Ball', p))
++      .toEqual(damage(new Pokemon(9, 'Mew'), 'Shadow Ball', reference));
++  });
++
++  test('Freeze-Dry includes the third weakness and multihit rolls remain typed', () => {
++    const p = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Water', 'Flying'], addedType: 'Grass',
++    });
++    const dual = damage(new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Water', 'Flying'],
++    }), 'Freeze-Dry');
++    expect(damage(p, 'Freeze-Dry')).toEqual((dual as number[]).map(roll => roll * 2));
++    const ghost = new Pokemon(9, 'Mew', {addedType: 'Ghost'});
++    expect(damage(ghost, 'Double Slap')).toBe(0);
++  });
++
++  test('Iron Ball grounding retains the other types with added Grass', () => {
++    const p = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Water', 'Flying'], addedType: 'Grass', item: 'Iron Ball',
++    });
++    const reference = new Pokemon(9, 'Mew', {
++      level: 50, typeOverrides: ['Water', 'Grass'], item: 'Iron Ball',
++    });
++    expect(damage(p, 'Earthquake')).toEqual(damage(reference, 'Earthquake'));
++    expect(damage(new Pokemon(9, 'Mew', {
++      typeOverrides: ['Water', 'Flying'], addedType: 'Grass', item: 'Iron Ball', ability: 'Klutz',
++    }), 'Earthquake')).toBe(0);
++  });
++
++  test('Synchronoise can match only the added type', () => {
++    const target = new Pokemon(9, 'Gengar');
++    expect(damage(target, 'Synchronoise', new Pokemon(9, 'Mew'))).toBe(0);
++    expect(damage(target, 'Synchronoise', new Pokemon(9, 'Mew', {addedType: 'Ghost'})))
++      .not.toBe(0);
++  });
++
++  test('manual type state takes precedence over automatic Forecast inference', () => {
++    const field = new Field({weather: 'Sun'});
++    const p = new Pokemon(9, 'Castform', {typeOverrides: ['Electric']});
++    const reference = new Pokemon(9, 'Castform', {
++      typeOverrides: ['Electric'], ability: 'Pressure',
++    });
++    expect(damage(p, 'Energy Ball', attacker(), field))
++      .toEqual(damage(reference, 'Energy Ball', attacker(), field));
++  });
++
++  test('rejects unsupported generations, Stellar, and duplicate base types', () => {
++    expect(() => new Pokemon(8, 'Mew', {addedType: 'Ghost'})).toThrow('Gen 9');
++    expect(() => new Pokemon(9, 'Mew', {typeOverrides: ['Stellar']})).toThrow('ordinary types');
++    expect(() => new Pokemon(9, 'Mew', {typeOverrides: ['Ghost', 'Ghost']})).toThrow('distinct');
++    expect(new Pokemon(9, 'Gengar', {addedType: 'Ghost'}).getTypes()).toEqual(['Ghost', 'Poison']);
++  });
++});

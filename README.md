@@ -25,6 +25,7 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計
 - 調整対象と各攻撃カードの `レベル` は50でロックし、ロックを外したときだけ任意の1〜100へ変更する
 - 各攻撃カードの `威力` 欄で、計算に使う実効基礎威力を確認し、対応技は条件ステッパーまたは任意値で指定する
 - 調整対象と仮想敵のテラスタイプは、候補と選択済みの値をタイプ色のチップで表示する。ステラは虹色で表示し、文字検索と「>」からの全19タイプ選択を利用できる
+- 通常タイプは、調整対象のレベル右・仮想敵の持ち物右に最大3個のタイプアイコンで表示する。初期状態はロックしてポケモン・フォームに追従し、解除するとタイプ1・タイプ2と、くさ／ゴーストの追加タイプを手動指定できる
 - `A / C / S` の必要SPを固定条件として、耐久候補の SP 予算へ統合する
 - 候補ごとの最厳条件を表示し、どの条件がボトルネックかを確認できるようにする
 - 技・特性・持ち物の入力候補を、[Pokemon Champions Battle Data](https://championsbattledata.com/) の `Current` 使用率順で表示する
@@ -44,8 +45,14 @@ ChampionCreator は、Pokemon Champions / Pokemon Showdown 系のダメージ計
 
 ### Damage calculation boundary
 
+通常タイプの手動指定は、技が成功してタイプが変わった後の状態を入力する機能です。`Build.typeOverride`で1〜2個の通常タイプと任意の追加タイプ（くさ／ゴースト）を分け、adapterからCalcの`typeOverrides` / `addedType`へ渡します。タイプ相性、タイプ一致補正、無効化、接地判定、HPイベントと探索の最終再評価は同じCalc経路を使います。種族名・種族値・フォームのcanonicalは変更しません。指定した通常タイプはForecastによる自動タイプ推定より優先します。
+
+テラスタル中はステラを含めて追加タイプを計算から除外します。通常タイプの手動指定はテラスタル前のタイプとして保持し、通常テラスの防御タイプはテラスタイプを優先します。設定をオフにしたときに比較できるよう、保存データには追加タイプを残します。タイプ変更技の成否・発動順・タイプ変更が禁止されるポケモン等は自動判定しません。通常タイプにステラ・不明タイプ、重複したタイプ、4個以上のタイプは指定できません。
+
+条件schema v13は通常タイプの手動指定を保存します。v1〜v12は自動設定（ロック中）へ移行し、調整対象・仮想敵ボックス、バックアップ、ブラウザ下書き、同期payloadで既存parserを共有します。タイプアイコンは提供された`others/small`の18枚を`public/assets/types`へコピーした60×60 PNGを20pxで表示し、runtimeは`others/`へ依存しません。あくのPNGは背景色を`#624d4e`へ調整した提供画像を使用します。
+
 - ダメージ計算エンジンは `@smogon/calc` に依存します
-- 現在の直接依存は、`@smogon/calc@0.11.0` の upstream master `49d4d8696bf138b101cc47be8432489c3ac192aa` をbaseに、`cc-aura-guard-v1`互換patchを適用したvendor tarballです。patch・出典・artifact hash・sunset条件は`vendor/smogon-calc-cc-aura-guard-v1.json`へ記録します
+- 現在の直接依存は、`@smogon/calc@0.11.0` の upstream master `49d4d8696bf138b101cc47be8432489c3ac192aa` をbaseに、Aura GuardとGen9通常タイプ上書きの互換patchを順番に適用したvendor tarballです。patch・出典・artifact hash・sunset条件は`vendor/smogon-calc-cc-type-overrides-v1.json`へ記録します
 - 計算世代は `Generations.get(9)` を使用します
 - `src/calc/smogonAdapter.ts` が `Pokemon` / `Move` / `Field` / `Side` への変換境界です
 - `はどうのぼうご`は、接触技の最終ダメージを半減し、`えんかく`または`パンチグローブ`で非接触扱いになった技には適用しません。`かたやぶり`系、特性を無視する技、`かがくへんかガス`、`とくせいガード`との関係は、現在のPokemon Showdown実装に合わせた暫定対応で、実機仕様またはupstream native実装の確定時に再監査します

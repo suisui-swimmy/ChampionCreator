@@ -5232,6 +5232,41 @@ describe("App", () => {
     expect(html).toContain('aria-label="Sラインを調整対象へ適用"');
   });
 
+  it("places automatic type icons and default locks in the target and all enemy cards", () => {
+    const html = renderExampleApp();
+    expect(countClassToken(html, "pokemon-type-field")).toBe(4);
+    expect(html).toContain('aria-label="調整対象のタイプのロックを解除"');
+    expect(html).toContain('aria-label="調整対象の通常タイプ: ほのお・エスパー。自動設定を確認"');
+    expect(html).toContain("assets/types/fire.png");
+    expect(html).toContain("assets/types/dark.png");
+    expect(html).toContain("耐久調整Aのタイプのロックを解除");
+    expect(html).toContain("火力調整Aのタイプのロックを解除");
+    expect(html).toContain("素早さ調整Aのタイプのロックを解除");
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    expect(css.match(/^\.pokemon-type-field \{([^}]*)\}/m)?.[1]).toContain("min-height: var(--desktop-control-compact)");
+    const mobileCss = css.slice(css.indexOf("@media (max-width: 720px)"));
+    expect(mobileCss.match(/\.pokemon-type-field \{([^}]*)\}/)?.[1]).toContain("min-height: var(--mobile-control-standard)");
+    expect(countClassToken(html, "pokemon-type-added-marker")).toBe(0);
+    const targetField = html.indexOf('class="pokemon-type-field"');
+    expect(targetField).toBeGreaterThan(html.indexOf('target-level-field'));
+    expect(targetField).toBeLessThan(html.indexOf('class="mechanic-block"'));
+    const itemRow = html.indexOf('attack-card-item-row');
+    const enemyType = html.indexOf('class="pokemon-type-field"', itemRow);
+    expect(enemyType).toBeGreaterThan(itemRow);
+    expect(enemyType).toBeLessThan(html.indexOf('class="mechanic-block"', itemRow));
+  });
+
+  it("marks a third type and its Tera suppression without changing the selected types", () => {
+    const html = renderToStaticMarkup(<App
+      initialTargetForm={{ ...createDefaultTargetForm(), typeOverride: { type1Input: "ほのお", type2Input: "エスパー", addedTypeInput: "ゴースト" }, teraEnabled: true, teraTypeInput: "ステラ" }}
+      initialScenarioForms={createDefaultScenarioForms()}
+    />);
+    expect(html).toContain('class="pokemon-type-icon-slot is-added is-inactive"');
+    expect(html).toContain('aria-label="調整対象のタイプを自動設定に戻してロック"');
+    expect(html).toContain("ほのお・エスパー・ゴースト。手動設定を編集。追加タイプはテラスタル中無効");
+    expect(html).toContain("assets/types/ghost.png");
+  });
+
   it("shows localized Tera chips for the target and each scenario without replacing saved input", () => {
     const scenarios = createDefaultScenarioForms().map((scenario) => ({
       ...scenario,

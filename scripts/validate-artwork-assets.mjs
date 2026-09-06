@@ -55,6 +55,18 @@ const artworkRefs = new Set(
 
 const invalidRefs = [];
 const missingRefs = [];
+const typeOptions = JSON.parse(await readFile(resolve(projectRoot, "src/data/generated/type-options.gen.json"), "utf8"));
+const ordinaryTypes = typeOptions.entries.filter((entry) => entry.showdownName !== "Stellar");
+for (const type of ordinaryTypes) {
+  const reference = `/assets/types/${type.showdownName.toLowerCase()}.png`;
+  try {
+    const image = await readFile(toPublicPath(reference));
+    if (image.length < 24 || image.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a"
+      || image.readUInt32BE(16) !== 60 || image.readUInt32BE(20) !== 60) invalidRefs.push(reference);
+  } catch {
+    missingRefs.push(reference);
+  }
+}
 
 for (const artworkRef of artworkRefs) {
   const filePath = toPublicPath(artworkRef);
@@ -91,6 +103,7 @@ const totalAssetBytes = (
 ).reduce((sum, size) => sum + size, 0);
 
 const summary = {
+  ordinaryTypeIcons: ordinaryTypes.length,
   optionEntries: entries.length,
   displayAliasArtworkRefs: displayAliasArtworkRefs.length,
   labelOverrideArtworkRefs: labelOverrideArtworkRefs.length,

@@ -1,4 +1,5 @@
 import type { EntityKind } from "../data/localizationTypes";
+import { resolvePokemonTypeOverride, type PokemonTypeOverrideForm } from "./pokemonTypes";
 import type {
   ActiveDefenceSearchRequest,
   StartDefenceSearchWorkerOptions,
@@ -105,6 +106,7 @@ export interface TargetFormState {
   abilityInput: string;
   itemInput: string;
   teraTypeInput: string;
+  typeOverride?: PokemonTypeOverrideForm;
   teraEnabled: boolean;
   dmaxEnabled: boolean;
   level: number;
@@ -122,6 +124,7 @@ export interface ScenarioAttackFormState {
   attackerAbilityInput: string;
   attackerItemInput: string;
   attackerTeraTypeInput: string;
+  attackerTypeOverride?: PokemonTypeOverrideForm;
   attackerTeraEnabled: boolean;
   attackerDmaxEnabled: boolean;
   attackerStatus: PokemonStatus;
@@ -180,6 +183,7 @@ export interface OffenseAdjustmentFormState {
   defenderAbilityInput: string;
   defenderItemInput: string;
   defenderTeraTypeInput: string;
+  defenderTypeOverride?: PokemonTypeOverrideForm;
   defenderTeraEnabled: boolean;
   defenderDmaxEnabled: boolean;
   defenderStatus: PokemonStatus;
@@ -863,6 +867,7 @@ const toBuild = (form: BuildFormState, id: string): Build => {
     ability: resolveOptional("ability", form.abilityInput, "特性"),
     item: resolveOptional("item", form.itemInput, "持ち物"),
     teraType,
+    typeOverride: resolvePokemonTypeOverride(form.typeOverride),
     isDynamaxed: form.dmaxEnabled || isGmaxForm || undefined,
     status: form.status && form.status !== "none" ? form.status : undefined,
     ivs: defaultIvs,
@@ -887,6 +892,7 @@ export const buildScenarioAttackBuildFromUi = (
     abilityInput: attackForm.attackerAbilityInput,
     itemInput: attackForm.attackerItemInput,
     teraTypeInput: attackForm.attackerTeraTypeInput,
+    typeOverride: attackForm.attackerTypeOverride,
     teraEnabled: attackForm.attackerTeraEnabled,
     dmaxEnabled: attackForm.attackerDmaxEnabled,
     status: attackForm.attackerStatus,
@@ -1110,6 +1116,7 @@ export const buildOffenseAdjustmentInput = (
       abilityInput: offenseForm.defenderAbilityInput,
       itemInput: offenseForm.defenderItemInput,
       teraTypeInput: offenseForm.defenderTeraTypeInput,
+      typeOverride: offenseForm.defenderTypeOverride,
       teraEnabled: offenseForm.defenderTeraEnabled,
       dmaxEnabled: offenseForm.defenderDmaxEnabled,
       status: offenseForm.defenderStatus,
@@ -1205,6 +1212,7 @@ export const createOffenseAdjustmentFormFromScenarioAttack = (
   defenderAbilityInput: attackForm.attackerAbilityInput,
   defenderItemInput: attackForm.attackerItemInput,
   defenderTeraTypeInput: attackForm.attackerTeraTypeInput,
+  defenderTypeOverride: attackForm.attackerTypeOverride,
   defenderTeraEnabled: attackForm.attackerTeraEnabled,
   defenderDmaxEnabled: attackForm.attackerDmaxEnabled,
   defenderStatus: attackForm.attackerStatus,
