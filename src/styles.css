@@ -31,6 +31,10 @@
   --hp-marker-edge: #ffa100;
   --hp-marker-fill-end: #fff3a6;
   --purple: #704170;
+  --type-chip-text: #fff;
+  --type-stellar-background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), transparent 38%, rgba(10, 13, 35, 0.24) 54%, rgba(255, 255, 255, 0.16)),
+    linear-gradient(105deg, #355ae3, #30bcb9 18%, #8dc65b 34%, #f4dd64 48%, #ee9247 62%, #e76287 78%, #9864d7);
   --shadow-card: 0 12px 26px rgba(0, 0, 0, 0.28);
   --radius: 8px;
   --hp: #00ff72;
@@ -1910,7 +1914,7 @@ textarea:focus-visible,
 .mechanic-block {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5em), 1fr));
   gap: 6px;
   min-width: 0;
 }
@@ -1952,6 +1956,37 @@ textarea:focus-visible,
 
 .tera-type-field {
   display: block;
+}
+
+.type-field-value {
+  position: absolute;
+  inset: 0 calc(var(--desktop-control-compact) + 8px) 0 8px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.type-field-value .type-chip {
+  padding-inline: 4px;
+}
+
+.type-dropdown-field .dropdown-input-row input {
+  min-height: calc(1.5em + 8px);
+}
+
+.type-dropdown-field [data-type-display="chip"] input {
+  color: transparent;
+  caret-color: transparent;
+}
+
+.type-dropdown-field [data-type-display="chip"] input::selection {
+  background: transparent;
+}
+
+.type-dropdown-field .dropdown-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .variant-choice-row {
@@ -2758,12 +2793,34 @@ textarea {
 .type-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 0;
   min-height: 24px;
+  width: 7em;
+  max-width: 100%;
   padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--type-chip-text) 20%, transparent);
   border-radius: 999px;
-  color: #fff;
-  font-size: 12px;
+  background: var(--type-color);
+  color: var(--type-chip-text);
+  font-size: var(--desktop-text-control);
   font-weight: 700;
+  line-height: 1.5;
+}
+
+.type-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.type-chip--stellar {
+  background: var(--type-stellar-background);
+  color: var(--type-chip-text);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4), inset 0 -1px 2px rgba(10, 13, 35, 0.3);
+  text-shadow: -1px -1px 1px var(--line), 1px -1px 1px var(--line), -1px 1px 1px var(--line), 1px 1px 1px var(--line);
 }
 
 .type-chip.fire,

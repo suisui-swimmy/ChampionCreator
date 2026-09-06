@@ -5232,6 +5232,46 @@ describe("App", () => {
     expect(html).toContain('aria-label="Sラインを調整対象へ適用"');
   });
 
+  it("shows localized Tera chips for the target and each scenario without replacing saved input", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: scenario.attacks.map((attack) => ({ ...attack, attackerTeraEnabled: true, attackerTeraTypeInput: "Stellar" })),
+    }));
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={{ ...createDefaultTargetForm(), teraEnabled: true, teraTypeInput: "Fire" }}
+        initialScenarioForms={scenarios}
+      />,
+    );
+
+    expect(html).toContain('data-type="Fire" style="--type-color:#e62829"');
+    expect(html).toContain('<span class="type-chip-label">ほのお</span>');
+    expect(html).toContain('value="Fire"');
+    expect(html).toContain('value="Stellar"');
+    expect(countClassToken(html, "type-chip--stellar")).toBe(scenarios.length);
+    expect(countClassToken(html, "type-field-value")).toBe(1 + scenarios.length);
+    expect(html).toContain('class="type-field-value" aria-hidden="true"');
+    expect(html).toContain('aria-label="テラスタイプ候補を開く"');
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const chipRule = css.match(/^\.type-chip \{([^}]*)\}/m)?.[1];
+    expect(chipRule).toContain("color: var(--type-chip-text)");
+    expect(chipRule).toContain("font-size: var(--desktop-text-control)");
+    expect(css.match(/^:root \{([^}]*)\}/m)?.[1]).toContain("--type-chip-text: #fff");
+  });
+
+  it.each(["", "???", "存在しないタイプ"])("keeps blank or unresolved Tera input editable without a misleading chip: %s", (teraTypeInput) => {
+    const html = renderToStaticMarkup(
+      <App
+        initialTargetForm={{ ...createDefaultTargetForm(), teraEnabled: true, teraTypeInput }}
+        initialScenarioForms={createDefaultScenarioForms()}
+      />,
+    );
+
+    expect(countClassToken(html, "type-field-value")).toBe(0);
+    expect(html).toContain(`value="${teraTypeInput}"`);
+    expect(html).toContain('placeholder="テラスタイプ"');
+  });
+
   it("wires resolver-backed datalist candidates to free-text entity fields", () => {
     const html = renderExampleApp();
 

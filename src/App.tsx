@@ -44,6 +44,7 @@ import type {
   SupportedHpEventEffectId,
 } from "./domain/hpEvents";
 import type { EntityKind } from "./data/localizationTypes";
+import { TypeChip } from "./ui/TypeChip";
 import { appVersionInfo, formatAppVersionLabel } from "./appVersion";
 import {
   formatUsageDataDateJst,
@@ -4749,7 +4750,7 @@ function EntityTextField({
         value={value}
         kind={kind}
         options={getDropdownEntityOptions(kind, value, suggestedOptions)}
-        menuOptions={menuOptions}
+        menuOptions={kind === "type" ? getEntityInputOptions("type") : menuOptions}
         description={description}
         canonicalNameHint={canonicalNameHint}
         onChange={onChange}
@@ -5079,7 +5080,10 @@ function DropdownTextField({
   const activeOption = options[selectedIndex];
   const listOpen = mode !== null && options.length > 0;
   const invalid = isUnresolvedEntityInput(kind, value, canonicalNameHint);
-  const fieldClassName = ["dropdown-text-field", "placeholder-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
+  const resolvedType = kind === "type" ? resolveEntity("type", value) : null;
+  const selectedType = resolvedType?.status === "exact" || resolvedType?.status === "alias" ? resolvedType : null;
+  const showTypeChip = Boolean(selectedType && mode !== "search");
+  const fieldClassName = ["dropdown-text-field", "placeholder-field", kind === "type" && "type-dropdown-field", invalid && "is-invalid", className].filter(Boolean).join(" ");
 
   useEffect(() => {
     const list = listRef.current;
@@ -5136,7 +5140,7 @@ function DropdownTextField({
     >
       <span className="visually-hidden" id={labelId}>{label}</span>
       {description ? <span className="visually-hidden" id={descriptionId}>{description}</span> : null}
-      <div className="dropdown-input-row">
+      <div className="dropdown-input-row" data-type-display={showTypeChip ? "chip" : undefined}>
         <input
           ref={inputRef}
           value={value}
@@ -5153,6 +5157,7 @@ function DropdownTextField({
             selectInputValueOnFocus(event);
             setMode("search");
           }}
+          onClick={kind === "type" ? () => setMode("search") : undefined}
           onChange={(event) => {
             setActiveIndex(0);
             setMode("search");
@@ -5160,6 +5165,11 @@ function DropdownTextField({
           }}
           onKeyDown={handleKeyDown}
         />
+        {showTypeChip && selectedType ? (
+          <span className="type-field-value" aria-hidden="true">
+            <TypeChip canonicalName={selectedType.canonicalName!} label={selectedType.displayNameJa!} />
+          </span>
+        ) : null}
         <button
           className="dropdown-menu-trigger"
           type="button"
@@ -5199,7 +5209,7 @@ function DropdownTextField({
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectOption(option)}
               >
-                {option.value}
+                {kind === "type" ? <TypeChip canonicalName={option.canonicalName} label={option.value} /> : option.value}
               </button>
             ))}
           </div>
