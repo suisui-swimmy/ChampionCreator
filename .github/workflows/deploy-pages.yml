@@ -148,6 +148,8 @@ jobs:
           VITE_FIREBASE_APP_CHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APP_CHECK_SITE_KEY }}
           VITE_FIREBASE_USE_EMULATORS: "false"
         run: npm run check
+      - name: Retain previous deployment assets for 30 days
+        run: npm run retain:deploy-assets
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

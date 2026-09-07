@@ -18,6 +18,7 @@ import {
   AppCheck,
   ReCaptchaEnterpriseProvider,
   initializeAppCheck,
+  setTokenAutoRefreshEnabled,
 } from "firebase/app-check";
 import {
   FirebaseConfigResolution,
@@ -38,6 +39,7 @@ export interface ReadyFirebaseClient {
   readonly appCheck: AppCheck | null;
   readonly appCheckStatus: "disabled" | "initialized" | "failed";
   readonly emulatorStatus: "disabled" | "connected" | "failed";
+  readonly setAppCheckSessionActive: (active: boolean) => void;
 }
 
 export interface UnavailableFirebaseClient {
@@ -71,6 +73,7 @@ export interface FirebaseSdkDependencies {
   readonly connectFirestoreEmulator: typeof connectFirestoreEmulator;
   readonly initializeAppCheck: typeof initializeAppCheck;
   readonly ReCaptchaEnterpriseProvider: typeof ReCaptchaEnterpriseProvider;
+  readonly setTokenAutoRefreshEnabled: typeof setTokenAutoRefreshEnabled;
 }
 
 const defaultDependencies: FirebaseSdkDependencies = {
@@ -82,6 +85,7 @@ const defaultDependencies: FirebaseSdkDependencies = {
   connectFirestoreEmulator,
   initializeAppCheck,
   ReCaptchaEnterpriseProvider,
+  setTokenAutoRefreshEnabled,
 };
 
 export interface CreateFirebaseClientOptions {
@@ -162,7 +166,9 @@ const createAppCheck = (
     const provider = new dependencies.ReCaptchaEnterpriseProvider(config.appCheckSiteKey);
     const appCheck = dependencies.initializeAppCheck(app, {
       provider,
-      isTokenAutoRefreshEnabled: true,
+      // Auth must still be able to request a token while restoring a saved
+      // session. Guest page views do not need background attestation requests.
+      isTokenAutoRefreshEnabled: false,
     });
     return { appCheck, appCheckStatus: "initialized" };
   } catch {
@@ -251,6 +257,11 @@ export function createFirebaseClient(
       config: resolution.config,
       ...appCheck,
       emulatorStatus,
+      setAppCheckSessionActive(active) {
+        if (appCheck.appCheck) {
+          dependencies.setTokenAutoRefreshEnabled(appCheck.appCheck, active);
+        }
+      },
     };
   } catch {
     return {

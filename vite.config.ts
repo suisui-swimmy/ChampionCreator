@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import type { ViteDevServer } from "vite";
 import { formatAppVersionLabel } from "./src/appVersion";
 import { formatUsageDataDateJst } from "./src/usage/date";
 import { parseChampionsUsageDataJson } from "./src/usage/schema";
@@ -34,9 +35,22 @@ const siteFooterMetadataPlugin = () => ({
   },
 });
 
+const guideExamplePlugin = () => {
+  let server: ViteDevServer | undefined;
+  return {
+    name: "championcreator-guide-example",
+    configureServer(devServer: ViteDevServer) { server = devServer; },
+    async transformIndexHtml(html: string) {
+      if (!server || !html.includes("<!--GUIDE_CALCULATION_EXAMPLE-->")) return html;
+      const { renderGuideExample } = await server.ssrLoadModule("/src/seo/guideExample.tsx");
+      return html.replace("<!--GUIDE_CALCULATION_EXAMPLE-->", () => renderGuideExample());
+    },
+  };
+};
+
 export default defineConfig({
   base: "./",
-  plugins: [react(), siteFooterMetadataPlugin()],
+  plugins: [react(), siteFooterMetadataPlugin(), guideExamplePlugin()],
   build: {
     rollupOptions: {
       input: {

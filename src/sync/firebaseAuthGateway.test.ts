@@ -1,5 +1,6 @@
 import type { Auth, User, UserCredential } from "firebase/auth";
 import { describe, expect, it, vi } from "vitest";
+import type { ReadyFirebaseClient } from "./firebaseClient";
 import {
   FirebaseAuthGatewayDependencies,
   createFirebaseAuthGateway,
@@ -51,6 +52,36 @@ const makeDependencies = () => {
 };
 
 describe("createFirebaseAuthGateway", () => {
+  it("enables App Check refresh only for restored users or an explicit sign-in, then stops it on logout", async () => {
+    const fakes = makeDependencies();
+    const setAppCheckSessionActive = vi.fn();
+    const client = { status: "ready", auth, setAppCheckSessionActive } as unknown as ReadyFirebaseClient;
+    const gateway = createFirebaseAuthGateway({ client, dependencies: fakes.dependencies });
+    expect(setAppCheckSessionActive).not.toHaveBeenCalled();
+    gateway.subscribe(vi.fn());
+    fakes.emitUser(null);
+    expect(setAppCheckSessionActive).toHaveBeenLastCalledWith(false);
+    fakes.emitUser(firebaseUser);
+    expect(setAppCheckSessionActive).toHaveBeenLastCalledWith(true);
+    await gateway.signOut();
+    expect(setAppCheckSessionActive).toHaveBeenLastCalledWith(false);
+    fakes.signInWithPopup.mockImplementation(async () => {
+      expect(setAppCheckSessionActive).toHaveBeenLastCalledWith(true);
+      return { user: firebaseUser } as UserCredential;
+    });
+    await gateway.signInWithGoogle();
+  });
+
+  it("does not keep background attestation running after a guest cancels sign-in", async () => {
+    const fakes = makeDependencies();
+    fakes.signInWithPopup.mockRejectedValue({ code: "auth/popup-closed-by-user" });
+    const setAppCheckSessionActive = vi.fn();
+    const client = { status: "ready", auth: { currentUser: null }, setAppCheckSessionActive } as unknown as ReadyFirebaseClient;
+    const gateway = createFirebaseAuthGateway({ client, dependencies: fakes.dependencies });
+    await expect(gateway.signInWithGoogle()).rejects.toMatchObject({ code: "popup-closed" });
+    expect(setAppCheckSessionActive.mock.calls).toEqual([[true], [false]]);
+  });
+
   it("restores and maps Firebase users through onAuthStateChanged", () => {
     const fakes = makeDependencies();
     const gateway = createFirebaseAuthGateway({ auth, dependencies: fakes.dependencies });

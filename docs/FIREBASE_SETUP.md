@@ -267,6 +267,8 @@ Firestoreの保存先は`/users/{uid}/drafts/{deviceId}`です。1ブラウザ�
 
 ## 本番公開とApp Check
 
+App CheckのSDK初期化はAuth / Firestoreより先に行いますが、トークンの自動更新は未ログイン時には開始しません。保存済みユーザーの復元または明示的なGoogleログイン時に自動更新を開始し、ログアウト・未ログイン状態への遷移・ゲストによるログインのキャンセル後に停止します。Authがセッション復元に必要なトークンを要求する経路は、自動更新を停止していても利用できます。reCAPTCHAスクリプトの初期化とトークンの取得は区別します。Googlebot専用の例外や、App Check enforcementを解除する処理はありません。
+
 本番では、Googleプロバイダー、authorized domains、Cloud Firestore、GitHub Pages variables、reCAPTCHA Enterprise App Checkを有効にします。Cloud FirestoreとAuthenticationのApp Check enforcementも有効な状態を維持します。
 
 公開前とFirebase設定変更後は、次の順で再検証します。

@@ -66,6 +66,7 @@ const makeDependencies = (): {
       connectFirestoreEmulator,
       initializeAppCheck,
       ReCaptchaEnterpriseProvider: Provider as never,
+      setTokenAutoRefreshEnabled: vi.fn(),
     },
     initializeApp,
     getAuth,
@@ -148,13 +149,18 @@ describe("createFirebaseClient", () => {
     expect(fakes.initializeAppCheck).toHaveBeenCalledTimes(1);
     expect(fakes.order.indexOf("initializeAppCheck")).toBeLessThan(fakes.order.indexOf("getAuth"));
     expect(fakes.initializeAppCheck.mock.calls[0][1]).toMatchObject({
-      isTokenAutoRefreshEnabled: true,
+      isTokenAutoRefreshEnabled: false,
     });
     const provider = fakes.initializeAppCheck.mock.calls[0][1].provider as { siteKey: string };
     expect(provider.siteKey).toBe("enterprise-site-key");
     if (result.status === "ready") {
       expect(result.appCheckStatus).toBe("initialized");
       expect(result.emulatorStatus).toBe("disabled");
+      expect(fakes.dependencies.setTokenAutoRefreshEnabled).not.toHaveBeenCalled();
+      result.setAppCheckSessionActive(true);
+      result.setAppCheckSessionActive(false);
+      expect(fakes.dependencies.setTokenAutoRefreshEnabled).toHaveBeenNthCalledWith(1, result.appCheck, true);
+      expect(fakes.dependencies.setTokenAutoRefreshEnabled).toHaveBeenNthCalledWith(2, result.appCheck, false);
     }
   });
 

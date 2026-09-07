@@ -13,6 +13,8 @@ if (!rootElement) {
   throw new Error("Root element #root was not found.");
 }
 
+// Replace the build-time, storage-free preview with the normal browser app.
+// Hydrating it would mix a blank server snapshot with this browser's saved forms.
 createRoot(rootElement).render(
   <StrictMode>
     <AuthSessionProvider>

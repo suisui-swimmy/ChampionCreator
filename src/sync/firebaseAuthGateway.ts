@@ -87,8 +87,8 @@ const getUnavailableGateway = (client: FirebaseClient): AuthGateway => {
 export function createFirebaseAuthGateway(
   options: CreateFirebaseAuthGatewayOptions = {},
 ): AuthGateway {
-  const client = options.client;
-  const auth = options.auth ?? getReadyClient(options)?.auth;
+  const client = options.client ?? (options.auth ? undefined : getFirebaseClient());
+  const auth = options.auth ?? getReadyClient({ ...options, client })?.auth;
   if (!auth) {
     return getUnavailableGateway(client ?? getFirebaseClient());
   }
@@ -98,17 +98,25 @@ export function createFirebaseAuthGateway(
     ...options.dependencies,
   };
 
+  const setAppCheckSessionActive = (active: boolean) => {
+    if (client?.status === "ready") client.setAppCheckSessionActive(active);
+  };
+
   return {
     availability: "available",
     subscribe(onUser: AuthUserListener, onError?: AuthErrorListener) {
       return dependencies.onAuthStateChanged(
         auth,
-        (user) => onUser(user ? toAuthUser(user) : null),
+        (user) => {
+          setAppCheckSessionActive(user !== null);
+          onUser(user ? toAuthUser(user) : null);
+        },
         (error) => onError?.(classifyAuthError(error, "restore")),
       );
     },
     async signInWithGoogle() {
       try {
+        setAppCheckSessionActive(true);
         const provider = new dependencies.GoogleAuthProvider();
         const credential: UserCredential = await dependencies.signInWithPopup(auth, provider);
         if (!credential.user) {
@@ -116,12 +124,14 @@ export function createFirebaseAuthGateway(
         }
         return toAuthUser(credential.user);
       } catch (error) {
+        setAppCheckSessionActive(Boolean(auth.currentUser));
         throw classifyAuthError(error, "sign-in");
       }
     },
     async signOut() {
       try {
         await dependencies.signOut(auth);
+        setAppCheckSessionActive(false);
       } catch (error) {
         throw classifyAuthError(error, "sign-out");
       }

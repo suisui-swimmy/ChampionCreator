@@ -1,6 +1,6 @@
 {
   "name": "championcreator",
-  "version": "0.27.1",
+  "version": "0.27.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -21,7 +21,8 @@
     "test:rules:vitest": "vitest run --config vitest.rules.config.ts --configLoader runner",
     "test:rules": "firebase emulators:exec --project demo-championcreator --only firestore \"npm run test:rules:vitest\"",
     "check": "npm run validate:smogon-calc-compat && npm run validate:localization && npm run validate:pokemon-abilities && npm run validate:artwork-assets && npm test && npm run test:rules && npm run build",
-    "build": "tsc --noEmit && vite build --configLoader runner",
+    "build": "tsc --noEmit && vite build --configLoader runner && node scripts/prerender.mjs",
+    "retain:deploy-assets": "node scripts/retain-deploy-assets.mjs",
     "preview": "vite preview --configLoader runner --host 127.0.0.1",
     "test": "vitest run --configLoader runner"
   },
