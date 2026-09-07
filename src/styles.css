@@ -2086,10 +2086,13 @@ textarea:focus-visible,
 
 .pokemon-type-popover-heading strong { font-size: var(--desktop-text-heading); }
 .pokemon-type-popover-heading .ui-button-icon {
+  display: grid;
+  place-items: center;
   width: var(--desktop-control-standard);
   min-height: var(--desktop-control-standard);
+  padding: 0;
 }
-.pokemon-type-popover-heading img { width: var(--desktop-icon-standard); height: var(--desktop-icon-standard); }
+.pokemon-type-popover-heading img { display: block; width: var(--desktop-icon-standard); height: var(--desktop-icon-standard); }
 .pokemon-type-note { margin: 8px 0; color: var(--muted); font-size: var(--desktop-text-interactive-small); line-height: 1.6; }
 .pokemon-type-error { color: var(--red); font-size: var(--desktop-text-control); }
 .pokemon-type-full-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
