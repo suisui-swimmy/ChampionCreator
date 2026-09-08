@@ -100,9 +100,9 @@ export function PokemonTypeField({ ownerLabel, pokemonInput, pokemonCanonicalNam
           {error ? <p className="pokemon-type-error" role="alert">{error}</p> : null}
           {locked ? <div className="pokemon-type-full-chips">{baseTypes.map((type) => <TypeChip key={type} canonicalName={type} label={getPokemonTypeLabel(type)} />)}</div> : (
             <div className="pokemon-type-edit-fields">
-              <SelectField label="タイプ1" value={selectedValue(value.type1Input)} options={normalOptions} onChange={(next) => edit("type1Input", next)} />
-              <SelectField label="タイプ2" value={selectedValue(value.type2Input)} options={[{ value: "none", label: "なし" }, ...normalOptions]} onChange={(next) => edit("type2Input", next)} />
-              <SelectField className="pokemon-type-addition" label="追加タイプ" value={selectedValue(value.addedTypeInput)} options={[{ value: "none", label: "なし" }, ...addedPokemonTypeOptions.filter((option) => !types.includes(option.canonicalName)).map((option) => ({ value: option.value, label: <TypeChip canonicalName={option.canonicalName} label={option.displayNameJa} /> }))]} onChange={(next) => edit("addedTypeInput", next)} />
+              <SelectField contentClassName="pokemon-type-select-content" label="タイプ1" value={selectedValue(value.type1Input)} options={normalOptions} onChange={(next) => edit("type1Input", next)} />
+              <SelectField contentClassName="pokemon-type-select-content" label="タイプ2" value={selectedValue(value.type2Input)} options={[{ value: "none", label: "なし" }, ...normalOptions]} onChange={(next) => edit("type2Input", next)} />
+              <SelectField contentClassName="pokemon-type-select-content" className="pokemon-type-addition" label="追加タイプ" value={selectedValue(value.addedTypeInput)} options={[{ value: "none", label: "なし" }, ...addedPokemonTypeOptions.filter((option) => !types.includes(option.canonicalName)).map((option) => ({ value: option.value, label: <TypeChip canonicalName={option.canonicalName} label={option.displayNameJa} /> }))]} onChange={(next) => edit("addedTypeInput", next)} />
               {teraEnabled ? <p className="pokemon-type-note">テラスタル中は追加タイプを計算に使いません。指定は保持されます。</p> : null}
             </div>
           )}

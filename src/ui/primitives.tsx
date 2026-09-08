@@ -94,6 +94,7 @@ type SelectFieldProps<TValue extends string> = {
   options: Array<SelectOption<TValue>>;
   onChange: (value: TValue) => void;
   className?: string;
+  contentClassName?: string;
   compact?: boolean;
   disabled?: boolean;
   placeholderLabel?: boolean;
@@ -108,6 +109,7 @@ export function SelectField<TValue extends string>({
   options,
   onChange,
   className,
+  contentClassName,
   compact = false,
   disabled = false,
   placeholderLabel = false,
@@ -140,7 +142,7 @@ export function SelectField<TValue extends string>({
           </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
-          <Select.Content className="select-content" position="popper" sideOffset={4}>
+          <Select.Content className={joinClassNames("select-content", contentClassName)} position="popper" sideOffset={4}>
             <Select.Viewport className="select-viewport">
               {options.map((option) => (
                 <Select.Item className="select-item" value={option.value} key={option.value}>
