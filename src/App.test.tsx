@@ -2933,6 +2933,9 @@ describe("App", () => {
   it("keeps a compact power field beside every non-speed move input", () => {
     const html = renderExampleApp();
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const desktopCss = css.split("@media (min-width: 721px) {")[1].split("@media")[0];
+    expect(desktopCss.match(/\.attack-level-field \.level-inline-control \{([^}]*)\}/)?.[1])
+      .toContain("height: var(--desktop-control-compact)");
 
     expect(html.match(/class="attack-card-field-row attack-card-identity-row"/g)).toHaveLength(3);
     expect(html.match(/class="attack-card-field-row attack-move-power-cell"/g)).toHaveLength(2);

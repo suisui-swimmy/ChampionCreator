@@ -6150,6 +6150,10 @@ textarea {
     grid-template-columns: minmax(0, 1fr) var(--desktop-control-compact);
   }
 
+  .attack-level-field .level-inline-control {
+    height: var(--desktop-control-compact);
+  }
+
   .move-power-inline-control.is-readonly {
     grid-template-columns: minmax(0, 1fr);
   }
