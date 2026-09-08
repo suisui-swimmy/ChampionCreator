@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createBoxEntryFromState,
   createDefaultBoxExampleEntry,
+  DEFAULT_BOX_EXAMPLE_ID,
   type BoxEntry,
 } from "../ui/boxStorage";
 import { createDefaultScenarioForms, createDefaultTargetForm } from "../ui/defenceSearchUi";
@@ -211,8 +212,12 @@ describe("migrationPlan", () => {
     expect(result.state.outbox).toEqual([]);
   });
 
-  it("tombstones an untouched cloud default even when its seed timestamps differ", () => {
-    const cloudDefault = createDefaultBoxExampleEntry("2026-08-21T01:00:00.000Z");
+  it.each(["current", "legacy"])("tombstones an untouched cloud default even when its seed timestamps differ (%s)", (version) => {
+    const cloudDefault = version === "current"
+      ? createDefaultBoxExampleEntry("2026-08-21T01:00:00.000Z")
+      : createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+          id: DEFAULT_BOX_EXAMPLE_ID, name: "調整例：メガマフォクシー", now: "2026-07-27T00:00:00.000Z",
+        });
     const remote = remoteRecord("uid-1", "target-box", cloudDefault);
     const result = planLocalMigration({
       decision: "device",

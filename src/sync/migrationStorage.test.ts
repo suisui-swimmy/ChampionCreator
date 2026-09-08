@@ -3,6 +3,8 @@ import {
   BOX_DEFAULT_EXAMPLE_SEEDED_KEY,
   BOX_STORAGE_KEY,
   createDefaultBoxExampleEntry,
+  createBoxEntryFromState,
+  DEFAULT_BOX_EXAMPLE_ID,
   stringifyBoxStorageDocument,
 } from "../ui/boxStorage";
 import {
@@ -10,7 +12,7 @@ import {
   createEnemyBoxEntryFromScenarios,
   stringifyEnemyBoxStorageDocument,
 } from "../ui/enemyBoxStorage";
-import { createDefaultScenarioForms } from "../ui/defenceSearchUi";
+import { createDefaultScenarioForms, createDefaultTargetForm } from "../ui/defenceSearchUi";
 import { SHARE_SCHEMA_VERSION } from "../ui/shareState";
 import {
   MIGRATION_STATE_SCHEMA_VERSION,
@@ -59,9 +61,13 @@ describe("migrationStorage snapshots", () => {
     expect(snapshot.defaultExampleState).toBe("uninitialized");
   });
 
-  it("gives fresh and App-seeded untouched defaults the same logical fingerprint", () => {
+  it.each(["current", "legacy"])("gives fresh and App-seeded untouched defaults the same logical fingerprint (%s)", (version) => {
     const fresh = captureLegacyMigrationSnapshot(makeStorage().storage);
-    const defaultEntry = createDefaultBoxExampleEntry("2026-08-21T00:00:00.000Z");
+    const defaultEntry = version === "current"
+      ? createDefaultBoxExampleEntry("2026-08-21T00:00:00.000Z")
+      : createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+          id: DEFAULT_BOX_EXAMPLE_ID, name: "調整例：メガマフォクシー",
+        });
     const seeded = captureLegacyMigrationSnapshot(makeStorage({
       [BOX_STORAGE_KEY]: stringifyBoxStorageDocument([defaultEntry]),
       [BOX_DEFAULT_EXAMPLE_SEEDED_KEY]: "1",
@@ -126,7 +132,9 @@ describe("migrationStorage snapshots", () => {
   });
 
   it("canonicalizes legacy payloads through the existing backup parser", () => {
-    const entry = createDefaultBoxExampleEntry("2026-08-21T00:00:00.000Z");
+    const entry = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+      id: DEFAULT_BOX_EXAMPLE_ID, name: "調整例：メガマフォクシー", now: "2026-08-21T00:00:00.000Z",
+    });
     const rawEntry = JSON.parse(JSON.stringify(entry)) as typeof entry;
     rawEntry.payload = {
       ...rawEntry.payload,

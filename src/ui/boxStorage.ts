@@ -10,11 +10,13 @@ import {
   type TargetFormState,
 } from "./defenceSearchUi";
 import type { StatPointTable } from "../domain/championsStats";
+import { createAdjustmentExampleState } from "./adjustmentExample";
 
 export const BOX_STORAGE_KEY = "championcreator.box.v1";
 export const BOX_DEFAULT_EXAMPLE_SEEDED_KEY = "championcreator.box.default-example.v1";
 export const BOX_STORAGE_SCHEMA_VERSION = 1;
 export const BOX_BACKUP_FILE_PREFIX = "championcreator-box-backup";
+// Keep the original slot ID: existing deletions and cloud tombstones refer to it.
 export const DEFAULT_BOX_EXAMPLE_ID = "default-example-mega-delphox";
 
 export type BoxEntrySummary = {
@@ -139,15 +141,34 @@ export const createBoxEntryFromState = (
 
 export const createDefaultBoxExampleEntry = (
   now = new Date().toISOString(),
-): BoxEntry => createBoxEntryFromState(
-  createDefaultTargetForm(),
-  createDefaultScenarioForms(),
-  {
+): BoxEntry => {
+  const { target, scenarios } = createAdjustmentExampleState();
+  return createBoxEntryFromState(target, scenarios, {
+    id: DEFAULT_BOX_EXAMPLE_ID,
+    name: `調整例：${target.pokemonInput}`,
+    now,
+  });
+};
+
+const defaultExampleContentKey = (entry: BoxEntry): string => JSON.stringify({
+  id: entry.id,
+  name: entry.name,
+  summary: entry.summary,
+  payload: parseShareStateDocument(JSON.stringify(entry.payload)),
+}, (_key, value: unknown) => isRecord(value)
+  ? Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)))
+  : value);
+
+export const getDefaultBoxExampleVersion = (entry: BoxEntry): "current" | "legacy" | null => {
+  if (entry.id !== DEFAULT_BOX_EXAMPLE_ID) return null;
+  const content = defaultExampleContentKey(entry);
+  if (content === defaultExampleContentKey(createDefaultBoxExampleEntry())) return "current";
+  const legacy = createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
     id: DEFAULT_BOX_EXAMPLE_ID,
     name: "調整例：メガマフォクシー",
-    now,
-  },
-);
+  });
+  return content === defaultExampleContentKey(legacy) ? "legacy" : null;
+};
 
 const normalizeBoxEntry = (value: unknown): BoxEntry | null => {
   if (
@@ -340,13 +361,21 @@ export const loadBoxEntriesFromBrowser = (
         return entries;
       }
     }
+    // Only the untouched built-in sample can be refreshed. Renames, edited
+    // conditions, copies and deleted samples remain the user's saved data.
+    const refreshedEntries = entries.map((entry) => getDefaultBoxExampleVersion(entry) === "legacy"
+      ? { ...createDefaultBoxExampleEntry(), createdAt: entry.createdAt }
+      : entry);
     if (storage.getItem(BOX_DEFAULT_EXAMPLE_SEEDED_KEY) === "1") {
-      return entries;
+      if (refreshedEntries.some((entry, index) => entry !== entries[index])) {
+        storage.setItem(BOX_STORAGE_KEY, stringifyBoxStorageDocument(refreshedEntries));
+      }
+      return refreshedEntries;
     }
 
-    const seededEntries = entries.some((entry) => entry.id === DEFAULT_BOX_EXAMPLE_ID)
-      ? entries
-      : [createDefaultBoxExampleEntry(), ...entries];
+    const seededEntries = refreshedEntries.some((entry) => entry.id === DEFAULT_BOX_EXAMPLE_ID)
+      ? refreshedEntries
+      : [createDefaultBoxExampleEntry(), ...refreshedEntries];
     storage.setItem(BOX_STORAGE_KEY, stringifyBoxStorageDocument(seededEntries));
     storage.setItem(BOX_DEFAULT_EXAMPLE_SEEDED_KEY, "1");
     return seededEntries;

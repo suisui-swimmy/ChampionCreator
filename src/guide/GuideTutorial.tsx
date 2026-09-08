@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { App } from "../App";
-import { parseBoxBackupDocument } from "../ui/boxStorage";
+import { createAdjustmentTutorialState } from "../ui/adjustmentExample";
 import type { SearchStatus } from "../ui/defenceSearchUi";
 import { getPublicAssetUrl } from "../ui/publicAssetUrl";
-import tutorialPresetJson from "./tutorial-preset.json";
 
 const tutorialSteps = [
   { id: 1, label: "入力内容を確認する" },
@@ -14,27 +13,8 @@ const tutorialSteps = [
 
 export const guideTutorialSuggestionFormat = "Doubles" as const;
 export const guideTutorialUsagePokemonAliases = {
-  "Delphox-Mega": "Delphox",
-  "Gengar-Mega": "Gengar",
+  "Charizard-Mega-Y": "Charizard",
 } as const;
-
-const loadTutorialPreset = () => {
-  const result = parseBoxBackupDocument(JSON.stringify(tutorialPresetJson));
-  if (result.status === "error") {
-    throw new Error(`チュートリアル用バックアップを読み込めません: ${result.message}`);
-  }
-
-  const entry = result.entries.find((candidate) => candidate.id === "default-example-mega-delphox")
-    ?? result.entries[0];
-  if (!entry) {
-    throw new Error("チュートリアル用バックアップに保存スロットがありません");
-  }
-
-  return {
-    target: structuredClone(entry.payload.target),
-    scenarios: structuredClone(entry.payload.scenarios),
-  };
-};
 
 const getActiveStep = (status: SearchStatus, candidateApplied: boolean): number => {
   if (candidateApplied) {
@@ -72,7 +52,7 @@ export function GuideTutorial() {
   const [resetKey, setResetKey] = useState(0);
   const [searchStatus, setSearchStatus] = useState<SearchStatus>("idle");
   const [candidateApplied, setCandidateApplied] = useState(false);
-  const preset = useMemo(loadTutorialPreset, [resetKey]);
+  const preset = useMemo(createAdjustmentTutorialState, [resetKey]);
   const activeStep = getActiveStep(searchStatus, candidateApplied);
 
   const handleStatusChange = useCallback((status: SearchStatus) => {
@@ -94,7 +74,7 @@ export function GuideTutorial() {
         <div>
           <span className="guide-live-badge"><i aria-hidden="true" />このサンプルは実際に操作できます。</span>
           <h2 id="interactive-tutorial-title">サンプル入力で計算してみよう</h2>
-          <p className="guide-tutorial-context">メガマフォクシーのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。</p>
+          <p className="guide-tutorial-context">メガリザードンYのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。</p>
           <p className="guide-tutorial-context guide-tutorial-storage-note">チュートリアル内の変更内容・計算結果は保存・同期されません。</p>
         </div>
         <div className="guide-tutorial-actions">

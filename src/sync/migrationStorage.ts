@@ -3,6 +3,7 @@ import {
   BOX_STORAGE_KEY,
   BOX_STORAGE_SCHEMA_VERSION,
   createDefaultBoxExampleEntry,
+  getDefaultBoxExampleVersion,
   parseBoxBackupDocument,
   type BoxEntry,
 } from "../ui/boxStorage";
@@ -659,10 +660,6 @@ const makeLogicalFingerprint = (
   entries: entries.map(semanticEntry),
 }));
 
-const sameDefaultSemantics = (entry: BoxEntry, expected: BoxEntry): boolean => (
-  stableStringify(semanticEntry(entry)) === stableStringify(semanticEntry(expected))
-);
-
 const resolveBrowserReadStorage = (
   supplied?: MigrationRawStorageLike | null,
 ): MigrationRawStorageLike | null => {
@@ -709,7 +706,7 @@ const makeTargetSnapshot = (
   let defaultDisposition: MigrationDefaultDisposition;
   if (raw === null && markerRaw === null) {
     defaultDisposition = "fresh";
-  } else if (defaultEntry && sameDefaultSemantics(defaultEntry, expectedDefault)) {
+  } else if (defaultEntry && getDefaultBoxExampleVersion(defaultEntry) !== null) {
     defaultDisposition = "untouched";
   } else if (defaultEntry) {
     defaultDisposition = "modified";

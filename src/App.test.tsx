@@ -1920,8 +1920,8 @@ describe("App", () => {
     const allyAbilityTipHtml = renderToStaticMarkup(<GuideAllyAbilityTip />);
     const tutorialHtml = renderToStaticMarkup(<GuideTutorial />);
     const tutorialPreset = JSON.parse(
-      readFileSync(new URL("./guide/tutorial-preset.json", import.meta.url), "utf8"),
-    ) as { entries: Array<{ payload: { scenarios: Array<{ attacks: Array<{ gameType: string }> }> } }> };
+      readFileSync(new URL("./data/presets/adjustment-example.json", import.meta.url), "utf8"),
+    ) as { payload: { scenarios: Array<{ attacks: Array<{ gameType: string }> }> } };
 
     expect(guideHtml).toContain("<title>ChampionCreator 使い方ガイド | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール</title>");
     const guideDescription = "ChampionCreatorの使い方を、調整対象と仮想敵シナリオの入力から、耐久・火力・素早さの計算、候補の適用、保存・同期まで順番に解説します";
@@ -2180,18 +2180,16 @@ describe("App", () => {
     expect(guideHtml).toContain('src="/assets/social/github-invertocat-white.svg"');
     expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
     expect(tutorialHtml).toContain("このサンプルは実際に操作できます。");
-    expect(tutorialHtml).toContain("メガマフォクシーのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。");
+    expect(tutorialHtml).toContain("メガリザードンYのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。");
     expect(tutorialHtml).toContain("チュートリアル内の変更内容・計算結果は保存・同期されません。");
     expect(guideTutorialSuggestionFormat).toBe("Doubles");
     expect(guideTutorialUsagePokemonAliases).toEqual({
-      "Delphox-Mega": "Delphox",
-      "Gengar-Mega": "Gengar",
+      "Charizard-Mega-Y": "Charizard",
     });
-    expect(resolveUsageSuggestionOwner("Delphox-Mega", guideTutorialUsagePokemonAliases)).toBe("Delphox");
-    expect(resolveUsageSuggestionOwner("Kingambit", guideTutorialUsagePokemonAliases)).toBe("Kingambit");
-    expect(tutorialPreset.entries.flatMap((entry) => (
-      entry.payload.scenarios.flatMap((scenario) => scenario.attacks.map((attack) => attack.gameType))
-    ))).toEqual(["doubles", "doubles", "doubles"]);
+    expect(resolveUsageSuggestionOwner("Charizard-Mega-Y", guideTutorialUsagePokemonAliases)).toBe("Charizard");
+    expect(resolveUsageSuggestionOwner("Basculegion", guideTutorialUsagePokemonAliases)).toBe("Basculegion");
+    expect(tutorialPreset.payload.scenarios.flatMap((scenario) => scenario.attacks.map((attack) => attack.gameType)))
+      .toEqual(["doubles", "doubles", "doubles"]);
     expect(appSource).toContain("const activeUsageData = usageData === undefined");
     expect(appSource).not.toContain('const activeUsageData = variant === "tutorial"');
     expect(appSource).toMatch(/useEffect\(\(\) => \{\s*if \(usageData !== undefined\)/);
@@ -2208,11 +2206,13 @@ describe("App", () => {
     expect(tutorialHtml).toContain('aria-label="サンプルに戻す"');
     expect(tutorialHtml).toContain('assets/ui/refresh-ccw.svg');
     expect(tutorialHtml).toContain('class="app-shell app-shell--tutorial"');
-    expect(tutorialHtml).toContain('value="メガマフォクシー"');
-    expect(tutorialHtml).toContain('value="ドドゲザン"');
-    expect(tutorialHtml).toContain('value="ふいうち"');
-    expect(tutorialHtml).toContain('value="メガゲンガー"');
-    expect(tutorialHtml).toContain('value="サイコキネシス"');
+    expect(tutorialHtml).toContain('value="メガリザードンY"');
+    expect(tutorialHtml).toContain('value="ガブリアス"');
+    expect(tutorialHtml).toContain('value="いわなだれ"');
+    expect(tutorialHtml).toContain('value="イダイトウ オスのすがた"');
+    expect(tutorialHtml).toContain('value="ソーラービーム"');
+    expect(tutorialHtml).not.toContain("メガマフォクシー");
+    expect(tutorialHtml).not.toContain("メガゲンガー");
     expect(tutorialHtml).not.toContain('class="topbar"');
     expect(tutorialHtml).not.toContain('aria-label="バトル形式とサジェスト基準"');
     expect(tutorialHtml).not.toContain('class="app-footer"');

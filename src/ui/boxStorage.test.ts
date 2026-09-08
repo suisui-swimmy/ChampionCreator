@@ -21,6 +21,13 @@ import {
   createDefaultTargetForm,
 } from "./defenceSearchUi";
 import { SHARE_SCHEMA_VERSION } from "./shareState";
+import { createAdjustmentExampleState, createAdjustmentTutorialState } from "./adjustmentExample";
+
+const createLegacyExample = () => createBoxEntryFromState(createDefaultTargetForm(), createDefaultScenarioForms(), {
+  id: DEFAULT_BOX_EXAMPLE_ID,
+  name: "調整例：メガマフォクシー",
+  now: "2026-07-27T00:00:00.000Z",
+});
 
 describe("boxStorage", () => {
   it("creates minimal summaries for saved conditions", () => {
@@ -288,26 +295,35 @@ describe("boxStorage", () => {
     },
   );
 
-  it("creates the Mega Delphox adjustment as the default box example", () => {
+  it("shares the selected Mega Charizard Y adjustment with the tutorial, retaining the completed box spread", () => {
     const entry = createDefaultBoxExampleEntry("2026-07-27T00:00:00.000Z");
 
     expect(entry).toMatchObject({
       id: DEFAULT_BOX_EXAMPLE_ID,
-      name: "調整例：メガマフォクシー",
+      name: "調整例：メガリザードンY",
       createdAt: "2026-07-27T00:00:00.000Z",
       updatedAt: "2026-07-27T00:00:00.000Z",
       summary: {
-        pokemonName: "メガマフォクシー",
+        pokemonName: "メガリザードンY",
         conditionSummary: "耐久 1 / 火力 1 / 素早さ 1",
+        statPointSummary: "H4 A0 B27 C10 D0 S25",
       },
       payload: {
         target: {
-          pokemonInput: "メガマフォクシー",
+          pokemonInput: "メガリザードンY",
         },
       },
     });
     expect(entry.payload.scenarios).toHaveLength(3);
     expect(entry.payload).not.toHaveProperty("offenseAdjustment");
+    expect(entry.payload).toEqual(createAdjustmentExampleState());
+    const tutorial = createAdjustmentTutorialState();
+    expect(tutorial.scenarios).toEqual(entry.payload.scenarios);
+    expect(tutorial.target).toEqual({ ...entry.payload.target, statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } });
+    tutorial.target.pokemonInput = "ピカチュウ";
+    tutorial.scenarios[0].attacks[0].minSurvivalProbabilityPercent = 1;
+    expect(createAdjustmentTutorialState().scenarios).toEqual(entry.payload.scenarios);
+    expect(createDefaultBoxExampleEntry().payload).toEqual(entry.payload);
   });
 
   it("ignores invalid localStorage payloads instead of throwing", () => {
@@ -377,7 +393,7 @@ describe("boxStorage", () => {
     expect(firstLoad).toHaveLength(2);
     expect(firstLoad[0]).toMatchObject({
       id: DEFAULT_BOX_EXAMPLE_ID,
-      name: "調整例：メガマフォクシー",
+      name: "調整例：メガリザードンY",
     });
     expect(firstLoad[1]).toEqual(entry);
     expect(secondLoad).toEqual(firstLoad);
@@ -398,6 +414,61 @@ describe("boxStorage", () => {
     };
 
     expect(loadBoxEntriesFromBrowser(storage)).toEqual([]);
+  });
+
+  it.each([null, "1"])("refreshes only the untouched legacy sample once (seed marker %s)", (marker) => {
+    const legacy = createLegacyExample();
+    const saved = { ...legacy, id: "user-saved-delphox" };
+    const values = new Map<string, string>([[BOX_STORAGE_KEY, stringifyBoxStorageDocument([saved, legacy])]]);
+    if (marker) values.set(BOX_DEFAULT_EXAMPLE_SEEDED_KEY, marker);
+    const writes: string[] = [];
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { writes.push(key); values.set(key, value); },
+    };
+    const entries = loadBoxEntriesFromBrowser(storage);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toEqual(saved);
+    expect(entries[1]).toMatchObject({
+      id: DEFAULT_BOX_EXAMPLE_ID,
+      name: "調整例：メガリザードンY",
+      createdAt: legacy.createdAt,
+      payload: createAdjustmentExampleState(),
+    });
+    expect(parseBoxStorageDocument(values.get(BOX_STORAGE_KEY) ?? null)).toEqual(entries);
+    const writeCount = writes.length;
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual(entries);
+    expect(writes).toHaveLength(writeCount);
+  });
+
+  it.each(["name", "target", "scenario", "summary", "copy"])("preserves a legacy sample changed by the user (%s)", (change) => {
+    const entry = createLegacyExample();
+    if (change === "name") entry.name = "自分の調整";
+    if (change === "target") entry.payload.target.statPoints.hp = 1;
+    if (change === "scenario") entry.payload.scenarios[0].attacks[0].minSurvivalProbabilityPercent = 95;
+    if (change === "summary") entry.summary.conditionSummary = "保存した説明";
+    if (change === "copy") entry.id = "copied-example";
+    const raw = stringifyBoxStorageDocument([entry]);
+    let writes = 0;
+    const storage = {
+      getItem: (key: string) => key === BOX_STORAGE_KEY ? raw : "1",
+      setItem: () => { writes += 1; },
+    };
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual(parseBoxStorageDocument(raw));
+    expect(writes).toBe(0);
+  });
+
+  it("keeps the legacy sample recoverable if persisting the replacement fails", () => {
+    const legacy = createLegacyExample();
+    const raw = stringifyBoxStorageDocument([legacy]);
+    let writes = 0;
+    const storage = {
+      getItem: (key: string) => key === BOX_STORAGE_KEY ? raw : "1",
+      setItem: () => { writes += 1; throw new Error("quota exceeded"); },
+    };
+    expect(loadBoxEntriesFromBrowser(storage)).toEqual([legacy]);
+    expect(writes).toBe(1);
+    expect(storage.getItem(BOX_STORAGE_KEY)).toBe(raw);
   });
 
   it("reports browser storage write failures", () => {

@@ -1,5 +1,6 @@
 import {
   createDefaultBoxExampleEntry,
+  getDefaultBoxExampleVersion,
   DEFAULT_BOX_EXAMPLE_ID,
   type BoxEntry,
 } from "../ui/boxStorage";
@@ -203,13 +204,6 @@ const stableStringify = (value: unknown): string => {
   }
   return JSON.stringify(value);
 };
-
-const defaultEntrySemanticPayload = (entry: BoxEntry): string => stableStringify({
-  id: entry.id,
-  name: entry.name,
-  summary: entry.summary,
-  payload: entry.payload,
-});
 
 const chooseRemoteRecord = (current: SyncRecord | undefined, candidate: SyncRecord): SyncRecord => {
   if (!current) {
@@ -522,7 +516,7 @@ const applyDeletedDefaultIntent = (
   const decodedExisting = decodeSyncPayload("target-box", existing.payload, DEFAULT_BOX_EXAMPLE_ID);
   if (
     decodedExisting.status === "error"
-    || defaultEntrySemanticPayload(decodedExisting.entry) !== defaultEntrySemanticPayload(seed.entry as BoxEntry)
+    || getDefaultBoxExampleVersion(decodedExisting.entry) === null
   ) {
     // A changed cloud entry is user data, not the generated sample.  A local
     // deletion must not silently erase it during migration.
