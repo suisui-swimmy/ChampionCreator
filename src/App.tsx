@@ -5127,7 +5127,30 @@ function DropdownTextField({
     }
   };
 
-  return (
+  const optionList = (
+    <div className="dropdown-option-list" ref={listRef} id={listboxId} role="listbox" aria-label={`${label}候補`}>
+      {options.map((option, index) => (
+        <button
+          className={`dropdown-option${index === selectedIndex ? " active" : ""}${option.value === value ? " selected" : ""}`}
+          ref={index === selectedIndex ? activeOptionRef : undefined}
+          id={`${listboxId}-${index}`}
+          type="button"
+          role="option"
+          aria-selected={index === selectedIndex}
+          // Virtual focus stays on the combobox input, as for Pokemon suggestions.
+          tabIndex={-1}
+          key={option.canonicalName}
+          onPointerDown={(event) => event.preventDefault()}
+          onMouseEnter={() => setActiveIndex(index)}
+          onClick={() => selectOption(option)}
+        >
+          {kind === "type" ? <TypeChip canonicalName={option.canonicalName} label={option.value} /> : option.value}
+        </button>
+      ))}
+    </div>
+  );
+
+  const field = (
     <div
       className={fieldClassName}
       title={description}
@@ -5192,31 +5215,36 @@ function DropdownTextField({
           <ChevronRightIcon className="disclosure-chevron" />
         </button>
       </div>
-      {listOpen ? (
+      {listOpen && kind !== "type" ? (
         <div className="dropdown-options-popover" data-dropdown-mode={mode}>
-          <div className="dropdown-option-list" ref={listRef} id={listboxId} role="listbox" aria-label={`${label}候補`}>
-            {options.map((option, index) => (
-              <button
-                className={`dropdown-option${index === selectedIndex ? " active" : ""}${option.value === value ? " selected" : ""}`}
-                ref={index === selectedIndex ? activeOptionRef : undefined}
-                id={`${listboxId}-${index}`}
-                type="button"
-                role="option"
-                aria-selected={index === selectedIndex}
-                // Virtual focus stays on the combobox input, as for Pokemon suggestions.
-                tabIndex={-1}
-                key={option.canonicalName}
-                onPointerDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => selectOption(option)}
-              >
-                {kind === "type" ? <TypeChip canonicalName={option.canonicalName} label={option.value} /> : option.value}
-              </button>
-            ))}
-          </div>
+          {optionList}
         </div>
       ) : null}
     </div>
+  );
+
+  if (kind !== "type") return field;
+
+  return (
+    <UiPopover.Root open={listOpen} onOpenChange={(open) => { if (!open) setMode(null); }}>
+      <UiPopover.Anchor asChild>{field}</UiPopover.Anchor>
+      <UiPopover.Portal>
+        <UiPopover.Content
+          className="pokemon-suggestion-popover type-options-popover"
+          data-dropdown-mode={mode}
+          sideOffset={4}
+          align="start"
+          collisionPadding={8}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          onInteractOutside={(event) => {
+            if (fieldRef.current?.contains(event.target as Node)) event.preventDefault();
+          }}
+        >
+          {optionList}
+        </UiPopover.Content>
+      </UiPopover.Portal>
+    </UiPopover.Root>
   );
 }
 
@@ -6882,22 +6910,24 @@ function TargetPanel({
               onChange={(event) => onUpdateField("abilityInput", event.target.value)}
               onSelectAbility={(value) => onUpdateField("abilityInput", value)}
             />
-            <LevelLockField
-              ownerLabel="調整対象"
-              className="placeholder-field target-level-field"
-              mode={targetForm.levelMode}
-              value={targetForm.level}
-              onModeChange={(mode) => onUpdateField("levelMode", mode)}
-              onChange={(value) => onUpdateField("level", value)}
-            />
-            <PokemonTypeField
-              ownerLabel="調整対象"
-              pokemonInput={targetForm.pokemonInput}
-              pokemonCanonicalName={targetForm.pokemonCanonicalName}
-              value={targetForm.typeOverride}
-              teraEnabled={targetForm.teraEnabled}
-              onChange={(value) => onUpdateField("typeOverride", value)}
-            />
+            <div className="target-level-type-row">
+              <LevelLockField
+                ownerLabel="調整対象"
+                className="placeholder-field target-level-field"
+                mode={targetForm.levelMode}
+                value={targetForm.level}
+                onModeChange={(mode) => onUpdateField("levelMode", mode)}
+                onChange={(value) => onUpdateField("level", value)}
+              />
+              <PokemonTypeField
+                ownerLabel="調整対象"
+                pokemonInput={targetForm.pokemonInput}
+                pokemonCanonicalName={targetForm.pokemonCanonicalName}
+                value={targetForm.typeOverride}
+                teraEnabled={targetForm.teraEnabled}
+                onChange={(value) => onUpdateField("typeOverride", value)}
+              />
+            </div>
             <MechanicControls
               pokemonInput={targetForm.pokemonInput}
               pokemonCanonicalName={targetForm.pokemonCanonicalName}

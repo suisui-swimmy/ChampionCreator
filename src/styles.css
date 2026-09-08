@@ -1884,6 +1884,10 @@ textarea:focus-visible,
   display: contents;
 }
 
+.target-level-type-row {
+  display: contents;
+}
+
 .target-level-field,
 .placeholder-field.target-level-field {
   display: grid;
@@ -2031,7 +2035,6 @@ textarea:focus-visible,
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: contain;
 }
 
@@ -2834,6 +2837,20 @@ input {
   max-height: 260px;
   gap: 3px;
   overflow-y: auto;
+}
+
+.type-options-popover.pokemon-suggestion-popover {
+  width: max(var(--radix-popover-trigger-width), 10em);
+  font-size: var(--desktop-text-control);
+}
+
+.type-options-popover .dropdown-option-list {
+  max-height: min(260px, calc(var(--radix-popover-content-available-height) - 12px));
+}
+
+.type-options-popover .dropdown-option {
+  min-height: var(--desktop-control-standard);
+  font-size: var(--desktop-text-control);
 }
 
 .dropdown-option {
@@ -8191,8 +8208,8 @@ textarea {
   }
 
   .mobile-target-open .target-identity {
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: clamp(24px, calc(100% - 236px), 92px) minmax(0, 1fr);
+    gap: 6px;
   }
 
   .mobile-target-open .target-summary.compact {
@@ -8200,12 +8217,50 @@ textarea {
     gap: 7px;
   }
 
+  .mobile-target-open .target-level-type-row {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .mobile-target-open .target-level-field {
+    flex: 1 0 calc(6.5em + var(--mobile-control-compact));
+    grid-template-columns: 3em minmax(0, 1fr);
+    gap: 4px;
+    font-size: var(--mobile-text-interactive-small);
+  }
+
+  .mobile-target-open .target-level-type-row > .pokemon-type-field {
+    flex: 0 0 calc(3 * var(--mobile-icon-standard) + var(--mobile-control-compact) + 16px);
+  }
+
+  .mobile-target-open .pokemon-type-summary {
+    padding-inline: 4px;
+  }
+
   .mobile-target-open .mechanic-block {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
   .mobile-target-open .mechanic-toggle-row {
+    flex: 0 0 calc(3 * var(--mobile-control-standard) + 6px);
     justify-content: flex-start;
+    gap: 3px;
+  }
+
+  .mobile-target-open .tera-type-field {
+    flex: 1 0 calc(5.2em + var(--mobile-control-compact) + 12px);
+    max-width: 100%;
+    font-size: var(--mobile-text-control);
+  }
+
+  .mobile-target-open .tera-type-field .type-field-value {
+    inset-inline: 4px calc(var(--mobile-control-compact) + 4px);
   }
 
   .mobile-target-open .ev-header,
