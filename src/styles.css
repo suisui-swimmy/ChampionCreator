@@ -2004,8 +2004,11 @@ textarea:focus-visible,
 .pokemon-type-lock {
   flex: 0 0 var(--desktop-control-compact);
   width: var(--desktop-control-compact);
-  border-left: 1px solid var(--line-strong);
+  border: 1px solid transparent;
+  border-left-color: var(--line-strong);
   border-radius: 0 5px 5px 0;
+  background: var(--surface-raised);
+  background-clip: padding-box;
 }
 
 .pokemon-type-lock img {
@@ -2014,8 +2017,9 @@ textarea:focus-visible,
   opacity: 0.72;
 }
 
-.pokemon-type-field.is-manual .pokemon-type-lock {
-  background: var(--gold-soft);
+.pokemon-type-lock:hover,
+.pokemon-type-lock:focus-visible {
+  background-color: var(--gold-soft);
 }
 
 .pokemon-type-summary:focus-visible,
@@ -4050,10 +4054,6 @@ textarea {
   align-items: center;
   gap: 6px;
   min-width: 0;
-}
-
-.attack-card-item-row > .scenario-cell {
-  grid-column: 1;
 }
 
 .move-power-control {

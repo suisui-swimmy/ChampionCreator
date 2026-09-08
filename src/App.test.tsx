@@ -2937,7 +2937,7 @@ describe("App", () => {
     expect(html.match(/class="attack-card-field-row attack-card-identity-row"/g)).toHaveLength(3);
     expect(html.match(/class="attack-card-field-row attack-move-power-cell"/g)).toHaveLength(2);
     expect(html.match(/class="attack-card-field-row attack-card-details-row"/g)).toHaveLength(3);
-    expect(html.match(/class="attack-card-field-row attack-card-item-row"/g)).toHaveLength(3);
+    expect(html.match(/class="attack-card-field-row attack-card-level-type-row"/g)).toHaveLength(3);
     expect(html.match(/class="move-power-inline-control is-readonly"/g)).toHaveLength(2);
     expect(html).toContain('aria-label="威力 70"');
     expect(html).toContain('aria-label="威力 90"');
@@ -2945,15 +2945,15 @@ describe("App", () => {
     expect(css).toMatch(/\.attack-card-identity-row,\s*\.attack-move-power-cell\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     expect(css).toMatch(/\.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(52px, max-content\) minmax\(0, 1fr\);/s);
     expect(css).toMatch(/\.mobile-scenarios-open \.move-power-field\s*\{[^}]*grid-template-columns:\s*minmax\(54px, auto\) minmax\(0, 1fr\);/s);
-    expect(html).toMatch(/attack-card-identity-row[^>]*>[\s\S]*?aria-label="ポケモン"[\s\S]*?<span class="row-label">レベル<\/span>/);
+    expect(html).toMatch(/attack-card-identity-row[^>]*>[\s\S]*?aria-label="ポケモン"[\s\S]*?aria-label="性格:/);
     expect(html.match(/aria-label="[^"]+ レベルの固定を解除"/g)).toHaveLength(4);
     expect(html).toMatch(/class="move-power-lock-toggle is-closed" type="button" aria-label="耐久調整A レベルの固定を解除"/);
     expect(html).not.toMatch(/class="move-power-lock-toggle is-closed" type="button" tabindex="-1" aria-label="耐久調整A レベルの固定を解除"/);
     expect(html).not.toMatch(/<button type="button" tabindex="-1" aria-label="耐久調整A 威力条件を(?:上げる|下げる)/);
     expect(html).toMatch(/attack-move-power-cell[^>]*>[\s\S]*?placeholder="技"[\s\S]*?move-power-field/);
     expect(html).toMatch(/move-power-field[^>]*aria-label="耐久調整A 威力"[^>]*>[\s\S]*?<span class="move-power-label">威力<\/span>[\s\S]*?move-power-inline-control is-readonly/);
-    expect(html).toMatch(/attack-card-details-row[^>]*>[\s\S]*?aria-label="性格:[^"]+"[\s\S]*?aria-label="特性候補を開く"/);
-    expect(html).toMatch(/attack-card-item-row[^>]*>[\s\S]*?placeholder="持ち物"/);
+    expect(html).toMatch(/attack-card-details-row[^>]*>[\s\S]*?placeholder="持ち物"[\s\S]*?aria-label="特性候補を開く"/);
+    expect(html).toMatch(/attack-card-level-type-row[^>]*>[\s\S]*?<span class="row-label">レベル<\/span>[\s\S]*?pokemon-type-field/);
 
     const [scenario] = createDefaultScenarioForms();
     const calculationPendingHtml = renderToStaticMarkup(
@@ -5243,17 +5243,36 @@ describe("App", () => {
     expect(html).toContain("火力調整Aのタイプのロックを解除");
     expect(html).toContain("素早さ調整Aのタイプのロックを解除");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    const cards = html.split('<div class="attack-card-fields">').slice(1)
+      .map((section) => section.split('<div class="mechanic-block">')[0]);
+    expect(cards).toHaveLength(3);
+    for (const card of cards) {
+      const fields = ['aria-label="性格:', 'placeholder="持ち物"', 'aria-label="特性候補を開く"', 'attack-level-field', 'pokemon-type-field'];
+      const positions = fields.map((field) => card.indexOf(field));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+      if (card.includes('placeholder="技"')) {
+        expect(card.indexOf('placeholder="技"')).toBeGreaterThan(positions[0]);
+        expect(card.indexOf('placeholder="技"')).toBeLessThan(card.indexOf('move-power-field'));
+        expect(card.indexOf('move-power-field')).toBeLessThan(positions[1]);
+      }
+    }
     expect(css.match(/^\.pokemon-type-field \{([^}]*)\}/m)?.[1]).toContain("min-height: var(--desktop-control-compact)");
+    const typeLockCss = css.match(/(?:^|\r?\n\r?\n)\.pokemon-type-lock \{([^}]*)\}/)?.[1];
+    expect(typeLockCss).toContain("background: var(--surface-raised)");
+    expect(typeLockCss).toContain("background-clip: padding-box");
+    expect(typeLockCss).toContain("border-left-color: var(--line-strong)");
     const mobileCss = css.slice(css.indexOf("@media (max-width: 720px)"));
     expect(mobileCss.match(/\.pokemon-type-field \{([^}]*)\}/)?.[1]).toContain("min-height: var(--mobile-control-standard)");
     expect(countClassToken(html, "pokemon-type-added-marker")).toBe(0);
     const targetField = html.indexOf('class="pokemon-type-field"');
     expect(targetField).toBeGreaterThan(html.indexOf('target-level-field'));
     expect(targetField).toBeLessThan(html.indexOf('class="mechanic-block"'));
-    const itemRow = html.indexOf('attack-card-item-row');
-    const enemyType = html.indexOf('class="pokemon-type-field"', itemRow);
-    expect(enemyType).toBeGreaterThan(itemRow);
-    expect(enemyType).toBeLessThan(html.indexOf('class="mechanic-block"', itemRow));
+    const levelRow = html.indexOf('attack-card-level-type-row');
+    const enemyType = html.indexOf('class="pokemon-type-field"', levelRow);
+    expect(enemyType).toBeGreaterThan(levelRow);
+    expect(enemyType).toBeLessThan(html.indexOf('class="mechanic-block"', levelRow));
   });
 
   it("marks a third type and its Tera suppression without changing the selected types", () => {

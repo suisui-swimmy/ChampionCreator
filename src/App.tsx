@@ -8762,14 +8762,12 @@ function AttackCard({
             )}
           />
           {!isAbilitySupport ? (
-            <LevelLockField
-              ownerLabel={attackLabel}
-              className="scenario-cell number-cell number-labeled-field attack-level-field"
-              labelClassName="row-label"
-              mode={attack.attackerLevelMode}
-              value={attack.attackerLevel}
-              onModeChange={(mode) => onUpdateAttack(scenarioId, attack.id, "attackerLevelMode", mode)}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
+            <NatureMatrixField
+              className="scenario-cell"
+              label="性格"
+              value={attack.attackerNatureInput}
+              ownerPokemonCanonicalName={attackerCanonicalPokemon}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
             />
           ) : null}
         </div>
@@ -8829,12 +8827,18 @@ function AttackCard({
         ) : null}
         <div className={`attack-card-field-row attack-card-details-row${isAbilitySupport ? " single" : ""}`}>
           {!isAbilitySupport ? (
-            <NatureMatrixField
-              className="scenario-cell"
-              label="性格"
-              value={attack.attackerNatureInput}
-              ownerPokemonCanonicalName={attackerCanonicalPokemon}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
+            <ScenarioTextField
+              kind="item"
+              label="持ち物"
+              showLabel
+              className={opponentItemSpeedOverridden ? "speed-source-overridden" : undefined}
+              description={opponentItemSpeedOverrideDescription}
+              value={attack.attackerItemInput}
+              placeholder="任意"
+              options={attackerItemOptions}
+              menuOptions={attackerItemMenuOptions}
+              onChange={onInput("attackerItemInput")}
+              onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
             />
           ) : null}
           <AbilityTextField
@@ -8849,19 +8853,15 @@ function AttackCard({
           />
         </div>
         {!isAbilitySupport ? (
-          <div className="attack-card-field-row attack-card-item-row">
-            <ScenarioTextField
-              kind="item"
-              label="持ち物"
-              showLabel
-              className={opponentItemSpeedOverridden ? "speed-source-overridden" : undefined}
-              description={opponentItemSpeedOverrideDescription}
-              value={attack.attackerItemInput}
-              placeholder="任意"
-            options={attackerItemOptions}
-            menuOptions={attackerItemMenuOptions}
-              onChange={onInput("attackerItemInput")}
-              onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
+          <div className="attack-card-field-row attack-card-level-type-row">
+            <LevelLockField
+              ownerLabel={attackLabel}
+              className="scenario-cell number-cell number-labeled-field attack-level-field"
+              labelClassName="row-label"
+              mode={attack.attackerLevelMode}
+              value={attack.attackerLevel}
+              onModeChange={(mode) => onUpdateAttack(scenarioId, attack.id, "attackerLevelMode", mode)}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
             />
             <PokemonTypeField
               ownerLabel={attackLabel}
