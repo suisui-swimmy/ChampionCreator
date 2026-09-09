@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "kind": "mega-ability-manifest",
-  "dataVersion": "champions-mega-abilities-2026-09-05",
+  "dataVersion": "champions-mega-abilities-2026-09-09",
   "source": {
     "authority": "user-provided Champions Mega ability table",
-    "applicableVersion": "Pokemon Champions announced roster as of 2026-09-05",
-    "checkedAt": "2026-09-05",
+    "applicableVersion": "Pokemon Champions announced roster as of 2026-09-09",
+    "checkedAt": "2026-09-09",
     "canonicalBasis": "src/data/generated/pokemon-options.gen.json",
     "calcBase": "49d4d8696bf138b101cc47be8432489c3ac192aa",
     "references": [
@@ -18,13 +18,21 @@
         "kind": "pokemon-showdown-reference-implementation",
         "url": "https://github.com/smogon/pokemon-showdown/pull/12275",
         "commit": "7340ea497118a6752336d735e193cdf89a1adb5f"
+      },
+      {
+        "kind": "user-provided-confirmed-abilities",
+        "checkedAt": "2026-09-09",
+        "abilities": {
+          "Golisopod-Mega": "Tough Claws",
+          "Baxcalibur-Mega": "Thermal Exchange"
+        }
       }
     ]
   },
   "summary": {
     "totalForms": 97,
-    "confirmed": 86,
-    "unconfirmed": 11
+    "confirmed": 88,
+    "unconfirmed": 9
   },
   "entries": [
     {
@@ -84,8 +92,8 @@
     },
     {
       "showdownName": "Baxcalibur-Mega",
-      "status": "unconfirmed",
-      "ability": null
+      "status": "confirmed",
+      "ability": "Thermal Exchange"
     },
     {
       "showdownName": "Beedrill-Mega",
@@ -244,8 +252,8 @@
     },
     {
       "showdownName": "Golisopod-Mega",
-      "status": "unconfirmed",
-      "ability": null
+      "status": "confirmed",
+      "ability": "Tough Claws"
     },
     {
       "showdownName": "Golurk-Mega",

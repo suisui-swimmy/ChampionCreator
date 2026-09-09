@@ -32,6 +32,8 @@ describe("getPokemonAbilityInputPlan", () => {
       ["Absol-Mega-Z", "きれあじ", "Sharpness"],
       ["Garchomp-Mega-Z", "ふゆう", "Levitate"],
       ["Lucario-Mega-Z", "はどうのぼうご", "Aura Guard"],
+      ["Golisopod-Mega", "かたいツメ", "Tough Claws"],
+      ["Baxcalibur-Mega", "ねつこうかん", "Thermal Exchange"],
     ] as const) {
       expect(getPokemonAbilityInputPlan(showdownName)).toMatchObject({
         isMega: true,
@@ -47,9 +49,7 @@ describe("getPokemonAbilityInputPlan", () => {
       "Heatran-Mega",
       "Darkrai-Mega",
       "Zygarde-Mega",
-      "Golisopod-Mega",
       "Zeraora-Mega",
-      "Baxcalibur-Mega",
     ]) {
       expect(getPokemonAbilityInputPlan(pokemon)).toMatchObject({
         isMega: true,
@@ -119,9 +119,7 @@ describe("getPokemonAbilityInputPlan", () => {
       .map(({ showdownName }) => showdownName)
       .sort())
       .toEqual([
-        "Baxcalibur-Mega",
         "Darkrai-Mega",
-        "Golisopod-Mega",
         "Heatran-Mega",
         "Magearna-Mega",
         "Magearna-Original-Mega",
@@ -136,23 +134,21 @@ describe("getPokemonAbilityInputPlan", () => {
     ))).toBe(true);
   });
 
-  it("keeps the tracked Mega manifest at 97 forms with 86 confirmed and 11 unconfirmed", () => {
+  it("keeps the tracked Mega manifest at 97 forms with 88 confirmed and 9 unconfirmed", () => {
     expect(megaAbilityManifestPayload.summary).toEqual({
       totalForms: 97,
-      confirmed: 86,
-      unconfirmed: 11,
+      confirmed: 88,
+      unconfirmed: 9,
     });
     expect(megaAbilityManifestPayload.entries).toHaveLength(97);
-    expect(megaAbilityManifestPayload.entries.filter((entry) => entry.status === "confirmed")).toHaveLength(86);
-    expect(megaAbilityManifestPayload.entries.filter((entry) => entry.status === "unconfirmed")).toHaveLength(11);
+    expect(megaAbilityManifestPayload.entries.filter((entry) => entry.status === "confirmed")).toHaveLength(88);
+    expect(megaAbilityManifestPayload.entries.filter((entry) => entry.status === "unconfirmed")).toHaveLength(9);
     expect(megaAbilityManifestPayload.entries
       .filter((entry) => entry.status === "unconfirmed")
       .map((entry) => entry.showdownName)
       .sort())
       .toEqual([
-        "Baxcalibur-Mega",
         "Darkrai-Mega",
-        "Golisopod-Mega",
         "Heatran-Mega",
         "Magearna-Mega",
         "Magearna-Original-Mega",

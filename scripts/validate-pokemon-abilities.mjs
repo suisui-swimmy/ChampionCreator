@@ -81,10 +81,10 @@ for (const [field, value] of Object.entries({
 
 const expectedMegaManifestSummary = {
   totalForms: 97,
-  confirmed: 86,
-  unconfirmed: 11,
+  confirmed: 88,
+  unconfirmed: 9,
 };
-const expectedMegaManifestSignature = "b6e9c7b2a8665a6d3297b64cf4a7dd311b5e8701838ab0dfcf0882c52e3d46aa";
+const expectedMegaManifestSignature = "c41e929f2d2d18fa9d24f52a44f58eb3d05d9e4e1ceff3173dc732c2e0d89de5";
 if (megaPokemonOptions.length !== expectedMegaManifestSummary.totalForms) {
   errors.push(`pokemon-options Mega form count mismatch: ${megaPokemonOptions.length} != ${expectedMegaManifestSummary.totalForms}`);
 }
@@ -174,6 +174,8 @@ const expectedMegaCorrections = new Map([
   ["Absol-Mega-Z", "Sharpness"],
   ["Garchomp-Mega-Z", "Levitate"],
   ["Lucario-Mega-Z", "Aura Guard"],
+  ["Golisopod-Mega", "Tough Claws"],
+  ["Baxcalibur-Mega", "Thermal Exchange"],
 ]);
 for (const [showdownName, ability] of expectedMegaCorrections) {
   const entry = megaManifestByShowdownName.get(showdownName);
@@ -183,9 +185,7 @@ for (const [showdownName, ability] of expectedMegaCorrections) {
 }
 
 const expectedUnconfirmedMegaNames = [
-  "Baxcalibur-Mega",
   "Darkrai-Mega",
-  "Golisopod-Mega",
   "Heatran-Mega",
   "Magearna-Mega",
   "Magearna-Original-Mega",

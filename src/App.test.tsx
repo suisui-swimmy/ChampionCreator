@@ -65,6 +65,8 @@ import {
 } from "./usage";
 import {
   applyMoveInputDefaults,
+  buildScenarioAttackBuildFromUi,
+  buildTargetBuildFromUi,
   createDefaultScenarioForms,
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
@@ -673,6 +675,43 @@ describe("App", () => {
       abilityInput: undefined,
       itemInput: undefined,
     });
+  });
+
+  it.each([
+    ["メガグソクムシャ", "Golisopod-Mega", "かたいツメ", "Tough Claws"],
+    ["メガセグレイブ", "Baxcalibur-Mega", "ねつこうかん", "Thermal Exchange"],
+  ] as const)("autofills %s's confirmed ability through target and enemy build conversion", (
+    pokemonInput, pokemonCanonicalName, abilityInput, abilityCanonicalName,
+  ) => {
+    for (const format of ["Singles", "Doubles"] as const) {
+      const context = { data: null, format };
+      const target = applyUsageDefaultsForTargetPokemonSelection(
+        {
+          ...createDefaultTargetForm(),
+          pokemonInput: "",
+          pokemonCanonicalName: undefined,
+          abilityInput: "",
+        },
+        [], pokemonInput, pokemonCanonicalName, context,
+      ).target;
+      expect(target.abilityInput).toBe(abilityInput);
+      expect(buildTargetBuildFromUi(target).ability?.canonicalName).toBe(abilityCanonicalName);
+
+      for (const adjustmentType of ["defence", "offense", "speed"] as const) {
+        const attack = applyUsageDefaultsForAttackPokemonSelection(
+          {
+            ...createDefaultScenarioForms()[0].attacks[0],
+            attackerPokemonInput: "",
+            attackerPokemonCanonicalName: undefined,
+            attackerAbilityInput: "",
+          },
+          pokemonInput, pokemonCanonicalName, adjustmentType, context,
+        );
+        expect(attack.attackerAbilityInput).toBe(abilityInput);
+        expect(buildScenarioAttackBuildFromUi(attack, "mega-enemy").ability?.canonicalName)
+          .toBe(abilityCanonicalName);
+      }
+    }
   });
 
   it("replaces blank or previous defaults while preserving a manually changed value", () => {
@@ -2026,7 +2065,9 @@ describe("App", () => {
     expect(guideHtml).toContain("使用率データの取得後にポケモンを候補から選ぶと、その形式で最上位かつ、そのポケモンで有効な技・性格・特性・持ち物を初期入力します。");
     expect(guideHtml).toContain("技は変化技を除外し、ランキング内で最上位の物理技または特殊技を入力します。");
     expect(guideHtml).toContain("確定済みのメガシンカ後の特性だけは、使用率データの取得状況や順位に関係なく、そのフォームで唯一の特性を入力します。");
-    expect(guideHtml).toContain("現行データで未確定のメガヒードラン、メガダークライ、メガジガルデ、メガグソクムシャ、メガマギアナ、メガゼラオラ、メガシャリタツ、メガセグレイブは、特性を自動入力せず空欄を維持し、ドロップダウンにはメガシンカ前の特性候補を表示します。");
+    expect(guideHtml).toContain("確定済みの88フォームではその姿の特性を自動入力します。");
+    expect(guideHtml).not.toContain("メガグソクムシャは「かたいツメ」、メガセグレイブは「ねつこうかん」を入力します。");
+    expect(guideHtml).toContain("現行データで未確定のメガヒードラン、メガダークライ、メガジガルデ、メガマギアナ、メガゼラオラ、メガシャリタツは、特性を自動入力せず空欄を維持し、ドロップダウンにはメガシンカ前の特性候補を表示します。");
     expect(guideHtml).toContain("メガルカリオZの「はどうのぼうご」は、接触技で受けるダメージを半減する効果として暫定対応しています。");
     expect(guideHtml).not.toContain("最上位が変化技の場合はその技が入る");
     expect(guideHtml).toContain("空欄または、現在値が直前のポケモンにおける同形式の1位と一致する欄だけを更新するため、別の値へ手動変更した欄は残ります。");

@@ -1022,6 +1022,54 @@ const compatibilityAuraGuardDefender = makeCompatibilityBuild("compat-aura-guard
   ability: "Aura Guard",
 });
 
+describe("confirmed Mega abilities", () => {
+  it.each([
+    ["メガグソクムシャ", "かたいツメ", "Golisopod-Mega", "Tough Claws", "First Impression", true],
+    ["メガグソクムシャ", "かたいツメ", "Golisopod-Mega", "Tough Claws", "Earthquake", false],
+    ["メガセグレイブ", "ねつこうかん", "Baxcalibur-Mega", "Thermal Exchange", "Glaive Rush", false],
+  ] as const)("passes %s's %s to Calc for %s / %s / %s", (
+    pokemonInput, abilityInput, pokemonCanonicalName, abilityCanonicalName, move, shouldBoost,
+  ) => {
+    const attackerBuild = makeCompatibilityBuild("confirmed-mega-attacker", {
+      pokemon: pokemonInput,
+      ability: abilityInput,
+      evs: { atk: 252 },
+    });
+    expect(toSmogonPokemon(attackerBuild).ability).toBe(abilityCanonicalName);
+    const result = calculateSmogonHit(
+      compatibilityDefender,
+      makeCompatibilityHit("confirmed-mega-hit", attackerBuild, move),
+      compatibilityFieldState,
+    );
+    const direct = calculate(
+      gen,
+      new Pokemon(gen, pokemonCanonicalName, {
+        level: 100, nature: "Hardy", ivs: defaultIvs,
+        evs: { ...zeroEvs, hp: 252, atk: 252 }, ability: abilityCanonicalName,
+      }),
+      new Pokemon(gen, "Mew", {
+        level: 100, nature: "Hardy", ivs: defaultIvs, evs: { ...zeroEvs, hp: 252 },
+      }),
+      new Move(gen, move),
+      new Field(),
+    );
+    expect(result.damageRolls).toEqual(flattenDamageRolls(direct.damage));
+    expect([result.damageRange.min, result.damageRange.max]).toEqual(direct.range());
+
+    const baseline = calculateSmogonHit(
+      compatibilityDefender,
+      makeCompatibilityHit("confirmed-mega-baseline", { ...attackerBuild, ability: undefined }, move),
+      compatibilityFieldState,
+    );
+    if (shouldBoost) {
+      expect(result.damageRange.min).toBeGreaterThan(baseline.damageRange.min);
+      expect(result.damageRange.max).toBeGreaterThan(baseline.damageRange.max);
+    } else {
+      expect(result.damageRolls).toEqual(baseline.damageRolls);
+    }
+  });
+});
+
 describe("Aura Guard compatibility patch", () => {
   it.each([
     ["Tackle", compatibilityPhysicalAttacker, true],
