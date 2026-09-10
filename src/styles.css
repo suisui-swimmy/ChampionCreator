@@ -6999,6 +6999,17 @@ textarea {
     stroke-width: 4px;
   }
 
+  .mobile-flow-edge[data-enabled="false"] .mobile-flow-edge-hit,
+  .mobile-flow-edge[data-enabled="false"] .mobile-flow-edge-line {
+    display: none;
+  }
+
+  .mobile-flow-edge[data-enabled="false"]:focus-visible .mobile-flow-edge-small-node,
+  .mobile-flow-edge[data-enabled="false"]:focus-visible .mobile-flow-edge-capsule-node {
+    stroke: var(--gold);
+    stroke-width: 3px;
+  }
+
   .mobile-scenario-summary {
     position: relative;
     z-index: 1;

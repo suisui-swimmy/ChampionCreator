@@ -6343,6 +6343,7 @@ function MobileOverview({
           {flowGeometry.edges.map((edge) => (
             <g
               className="mobile-flow-edge"
+              data-enabled={scenarios.some((scenario) => scenario.id === edge.id && scenario.enabled)}
               key={edge.id}
               role="button"
               tabIndex={0}
