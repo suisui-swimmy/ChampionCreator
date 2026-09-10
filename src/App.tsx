@@ -684,8 +684,6 @@ const damageDescriptionStatCodes = {
 
 type DamageDescriptionStat = keyof typeof damageDescriptionStatCodes;
 
-const damageDescriptionPattern = /^(\d+)([+-]?)\s+(Atk|Def|SpA|SpD|Spe)\s+(.+?)\s+vs\.\s+(\d+)\s+HP\s+\/\s+(\d+)([+-]?)\s+(Def|SpD|Atk|SpA|Spe)\s+([^:]+):\s+(.+)$/u;
-
 const formatDamageDescriptionStatCode = (stat: string): string =>
   damageDescriptionStatCodes[stat as DamageDescriptionStat] ?? stat;
 
@@ -998,52 +996,50 @@ const formatLocalizedDamageResult = (resultText: string): string => {
   return localizedKoText ? `${damageText} / ${localizedKoText}` : normalized;
 };
 
-const formatFallbackLocalizedDamageDescription = (description: string): string => {
-  const separator = description.lastIndexOf(": ");
-  const bodyText = separator >= 0 ? description.slice(0, separator) : description;
-  const resultText = separator >= 0 ? description.slice(separator + 2) : undefined;
-  const localizedBody = Object.entries(damageDescriptionStatCodes)
-    .reduce(
-      (current, [english, japanese]) => current.replace(new RegExp(`\\b${english}\\b`, "g"), japanese),
-      formatLocalizedDamageDescriptionBody(bodyText),
-    )
-    .replace(/\s+vs\.\s+/g, " → ");
-  return resultText
-    ? `${localizedBody} : ${formatLocalizedDamageResult(resultText)}`
-    : localizedBody;
+const formatDamageDescriptionIvs = (ivs: string | undefined): string =>
+  ivs === undefined ? "" : `（個体値${ivs}）`;
+
+const formatDamageDescriptionSide = (source: string, side: "attacker" | "defender"): string => {
+  // Consume only Calc's leading fields. Levels, IVs, move power, entity names
+  // and damage numbers must never be interpreted as an EV investment.
+  const prefix = /^(?:([+-]\d+)\s+)?(?:Lvl\s+(\d+)\s+)?/u.exec(source)!;
+  const [, rank, level] = prefix;
+  let body = source.slice(prefix[0].length);
+  const hp = side === "defender" ? /^(\d+)\s+HP(?:\s+(\d+)\s+IVs)?\s+/u.exec(body) : null;
+  if (hp) body = body.slice(hp[0].length);
+  const stat = /^(?:\/\s+)?(\d+)([+-]?)\s+(Atk|Def|SpA|SpD|Spe)(?:\s+(\d+)\s+IVs)?\s+/u.exec(body);
+  if (stat) body = body.slice(stat[0].length);
+
+  const statCode = stat ? formatDamageDescriptionStatCode(stat[3]) : "";
+  const statLabel = stat ? `${statCode}${formatDamageDescriptionStatPoint(stat[1])}${stat[2]}` : "";
+  const rankLabel = rank && Number(rank) !== 0 ? `${statCode}ランク${rank}` : "";
+  const ivLabel = formatDamageDescriptionIvs(stat?.[4]);
+  const usesDefenderAttack = side === "attacker" && stat?.[3] === "Atk" && /\bFoul Play\b/u.test(body);
+  const localizedBody = formatLocalizedDamageDescriptionBody(body);
+  const reference = usesDefenderAttack
+    ? `（受け側${[statLabel, rankLabel, stat?.[4] === undefined ? "" : `個体値${stat[4]}`].filter(Boolean).join("・")}参照）`
+    : "";
+
+  return [
+    level ? `Lv.${level}` : "",
+    hp ? `H${formatDamageDescriptionStatPoint(hp[1])}${formatDamageDescriptionIvs(hp[2])}` : "",
+    hp && stat ? "/" : "",
+    usesDefenderAttack ? "" : `${statLabel}${rankLabel ? `（${rankLabel}）` : ""}${ivLabel}`,
+    `${localizedBody}${reference}`,
+  ].filter(Boolean).join(" ");
 };
 
 export const formatLocalizedDamageDescription = (description: string): string => {
-  const match = damageDescriptionPattern.exec(description);
-  if (!match) {
-    return formatLocalizedDamageResult(formatFallbackLocalizedDamageDescription(description));
-  }
-
-  const [
-    ,
-    attackInvestment,
-    attackNature,
-    attackStat,
-    attackerAndMove,
-    defenderHpInvestment,
-    defenderInvestment,
-    defenderNature,
-    defenderStat,
-    defenderPokemon,
-    resultText,
-  ] = match;
-
-  return [
-    `${formatDamageDescriptionStatCode(attackStat)}${formatDamageDescriptionStatPoint(attackInvestment)}${attackNature}`,
-    formatLocalizedDamageDescriptionBody(attackerAndMove),
-    "→",
-    `H${formatDamageDescriptionStatPoint(defenderHpInvestment)}`,
-    "/",
-    `${formatDamageDescriptionStatCode(defenderStat)}${formatDamageDescriptionStatPoint(defenderInvestment)}${defenderNature}`,
-    formatLocalizedDamageDescriptionBody(defenderPokemon.trim()),
-    ":",
-    formatLocalizedDamageResult(resultText),
-  ].join(" ");
+  // A colon inside Type: Null (or an unknown KO annotation) is not the
+  // boundary between combatants and the numeric damage result.
+  const separator = /:\s+(?=\d+-\d+\s+\()/u.exec(description);
+  const body = separator ? description.slice(0, separator.index) : description;
+  const resultText = separator ? description.slice(separator.index + separator[0].length) : undefined;
+  const combatants = /^(.+?)\s+vs\.\s+(.+)$/u.exec(body);
+  const localizedBody = combatants
+    ? `${formatDamageDescriptionSide(combatants[1], "attacker")} → ${formatDamageDescriptionSide(combatants[2], "defender")}`
+    : formatLocalizedDamageDescriptionBody(body);
+  return resultText === undefined ? localizedBody : `${localizedBody} : ${formatLocalizedDamageResult(resultText)}`;
 };
 
 const statPointCells = Array.from({ length: CHAMPIONS_MAX_STAT_POINTS_PER_STAT }, (_value, index) => index + 1);
