@@ -71,6 +71,7 @@ import {
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
+import { createAdjustmentExampleState } from "./ui/adjustmentExample";
 import {
   DRAFT_STORAGE_KEY,
   createDraftStorageDocument,
@@ -3941,6 +3942,65 @@ describe("App", () => {
     expect(speedScenario.attacks[0].speedOrderMode).toBe("normal");
     expect(speedScenario.attacks[0].speedTargetTailwind).toBe(false);
     expect(speedScenario.attacks[0].speedOpponentTailwind).toBe(false);
+  });
+
+  it("shows Pokemon names in mobile speed summaries loaded from JSON without changing stored moves", () => {
+    const { target, scenarios } = createAdjustmentExampleState();
+    const before = structuredClone(scenarios);
+    const html = renderToStaticMarkup(<App initialTargetForm={target} initialScenarioForms={scenarios} />);
+    const start = findElementWithClasses(html, ["mobile-scenario-summary", "speed"]);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const speedArticle = html.slice(start, html.indexOf("</article>", start));
+
+    expect(speedArticle).toContain("<small>イダイトウ オスのすがた</small>");
+    expect(speedArticle).not.toContain("アクアブレイク");
+    expect(html).toContain("<small>いわなだれ</small>");
+    expect(html).toContain("<small>ソーラービーム</small>");
+    expect(scenarios).toEqual(before);
+    expect(scenarios[2].attacks[0].moveInput).toBe("アクアブレイク");
+  });
+
+  it.each(["defence", "offense"] as const)("restores an autofilled move and manual power after switching %s through speed", (adjustmentType) => {
+    const base = createDefaultScenarioForms()[0];
+    const autofilled = applyUsageDefaultsForAttackPokemonSelection(
+      { ...base.attacks[0], attackerPokemonInput: "", attackerAbilityInput: "", moveInput: "" },
+      "ガブリアス",
+      "Garchomp",
+      "defence",
+      { data: usageAutofillDataFixture(), format: "Singles" },
+    );
+    expect(autofilled.moveInput).toBe("じしん");
+    const scenario = {
+      ...base,
+      adjustmentType,
+      attacks: [{ ...autofilled, movePowerMode: "manual" as const, movePowerValue: 120 }],
+    };
+    const speed = applyScenarioAdjustmentTypeDefaults(scenario, "speed");
+    const restored = applyScenarioAdjustmentTypeDefaults(speed, adjustmentType);
+    for (const current of [speed, restored]) {
+      expect(current.attacks[0]).toMatchObject({ moveInput: "じしん", movePowerMode: "manual", movePowerValue: 120 });
+      const html = renderToStaticMarkup(<App initialScenarioForms={[current]} />);
+      const start = findElementWithClasses(html, ["mobile-attack-summary"]);
+      expect(start).toBeGreaterThanOrEqual(0);
+      const card = html.slice(start, html.indexOf("</button>", start));
+      expect(card).toContain(`<small>${current.adjustmentType === "speed" ? "ガブリアス" : "じしん"}</small>`);
+      if (current.adjustmentType === "speed") expect(card).not.toContain("じしん");
+    }
+  });
+
+  it.each(["", "ガブリアス"])("never falls mobile speed summaries back to a retained move (Pokemon: %s)", (pokemonInput) => {
+    const base = createDefaultScenarioForms()[2];
+    const scenario = {
+      ...base,
+      attacks: [{ ...base.attacks[0], attackerPokemonInput: pokemonInput, moveInput: "じしん" }],
+    };
+    const html = renderToStaticMarkup(<App initialScenarioForms={[scenario]} />);
+    const start = findElementWithClasses(html, ["mobile-attack-summary"]);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const card = html.slice(start, html.indexOf("</button>", start));
+    expect(card).toContain(`<small>${pokemonInput || "未設定"}</small>`);
+    expect(card).not.toContain("じしん");
+    expect(scenario.attacks[0].moveInput).toBe("じしん");
   });
 
   it("defaults opponent S SP to 0 for Trick Room speed adjustment", () => {

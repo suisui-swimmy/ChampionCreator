@@ -6484,7 +6484,9 @@ function MobileOverview({
                             />
                             <span>
                               <strong>{formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label)}</strong>
-                              <small>{attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
+                              <small>{scenario.adjustmentType === "speed"
+                                ? attack.attackerPokemonInput || "未設定"
+                                : attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
                               <em>{formatMobileAttackMeta(
                                 attack,
                                 scenario.adjustmentType,
