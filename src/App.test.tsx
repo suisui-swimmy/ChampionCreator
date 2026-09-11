@@ -2034,17 +2034,13 @@ describe("App", () => {
     expect(guideHtml).not.toContain('class="guide-feature-grid"');
     expect(guideHtml).toContain('src="/assets/guide/lightbulb.svg"');
     expect(guideHtml).toContain("スマホでは？");
-    expect(guideHtml).toContain("調整対象やシナリオのカードをタップすると、画面下から入力用のシートが開きます。候補一覧はメイン画面に表示され、そのまま詳細の確認や適用ができます。");
-    expect(guideHtml).toContain("カードをつなぐ線は、「どちらが攻撃するか」「どちらの素早さを比べるか」を表しています。");
+    expect(guideHtml).toContain("調整対象やシナリオのカードをタップすると、入力画面が下から開きます。");
     expect(guideHtml).toContain('src="/assets/guide/overview_mobile.png"');
-    expect(guideHtml.indexOf("どちらの素早さを比べるか")).toBeLessThan(guideHtml.indexOf('class="guide-mobile-overview-image"'));
-    expect(guideHtml).not.toContain("調整対象、シナリオ、候補をタップすると");
-    expect(guideHtml).toContain("画面は、主に3つの作業エリアと、3つの共通操作で構成されています。");
     expect(guideHtml).toContain("すべての条件を同時に満たすSP（能力ポイント）配分");
     expect(guideHtml).toContain("ログインしなくても、計算・保存・バックアップを利用できます。");
-    const scenarioColumnText = "技Aを受けたあとに技Bも受ける場合や、同じ相手へ複数の技を使う場合に使います。耐久調整と火力調整では、攻撃を左から右へ順番に評価し、HPの変化を引き継ぎます。ダブルバトルでは、味方を追加するときにも使います。";
-    const scenarioRowText = "別の相手や別の目的を追加するときは、画面下の「シナリオを追加」を使います。";
-    const scenarioEvaluationText = '<p>有効になっているシナリオは、<strong>すべて同時に満たす必要があります。</strong></p>';
+    const scenarioColumnText = "続けて受ける・使う攻撃を追加するときに使います。HPの変化を引き継ぐので、想定する攻撃順に並べてください。";
+    const scenarioRowText = "別の相手や調整目的を、独立した条件として追加するときに使います。";
+    const scenarioEvaluationText = "すべて同時に満たす必要があります。";
     expect(guideHtml).toContain(scenarioColumnText);
     expect(guideHtml).toContain(scenarioRowText);
     expect(guideHtml).toContain(scenarioEvaluationText);
@@ -2058,41 +2054,32 @@ describe("App", () => {
     expect(guideHtml.indexOf('id="speed"')).toBeLessThan(guideHtml.indexOf("技の威力を確認する"));
     expect(guideHtml.indexOf("技の威力を確認する")).toBeLessThan(guideHtml.indexOf('id="guide-ally-ability-tip-root"'));
     expect(guideHtml.indexOf('id="guide-ally-ability-tip-root"')).toBeLessThan(guideHtml.indexOf('id="constant-damage"'));
-    expect(guideHtml).toContain("「相手のこの技を、指定した回数・確率で耐える」という条件です。");
-    expect(guideHtml).toContain("「調整対象のこの技で、相手を指定した確率で倒す」という条件です。");
-    expect(guideHtml).toContain("「この相手より速くする」「この相手より遅くする」という条件です。");
-    expect(guideHtml).toContain("ポケモン・技・特性・持ち物の入力欄に文字を入力、または「&gt;」ボタンを押すと、入力候補が表示されます。");
-    expect(guideHtml).toContain('href="https://championsbattledata.com/" target="_blank" rel="noreferrer">Pokemon Champions Battle Data</a>の使用率データを参考に並び替えます。');
-    expect(guideHtml).toContain("使用率データの取得後にポケモンを候補から選ぶと、その形式で最上位かつ、そのポケモンで有効な技・性格・特性・持ち物を初期入力します。");
-    expect(guideHtml).toContain("技は変化技を除外し、ランキング内で最上位の物理技または特殊技を入力します。");
-    expect(guideHtml).toContain("確定済みのメガシンカ後の特性だけは、使用率データの取得状況や順位に関係なく、そのフォームで唯一の特性を入力します。");
-    expect(guideHtml).toContain("確定済みの88フォームではその姿の特性を自動入力します。");
-    expect(guideHtml).not.toContain("メガグソクムシャは「かたいツメ」、メガセグレイブは「ねつこうかん」を入力します。");
-    expect(guideHtml).toContain("現行データで未確定のメガヒードラン、メガダークライ、メガジガルデ、メガマギアナ、メガゼラオラ、メガシャリタツは、特性を自動入力せず空欄を維持し、ドロップダウンにはメガシンカ前の特性候補を表示します。");
-    expect(guideHtml).toContain("メガルカリオZの「はどうのぼうご」は、接触技で受けるダメージを半減する効果として暫定対応しています。");
-    expect(guideHtml).not.toContain("最上位が変化技の場合はその技が入る");
-    expect(guideHtml).toContain("空欄または、現在値が直前のポケモンにおける同形式の1位と一致する欄だけを更新するため、別の値へ手動変更した欄は残ります。");
-    expect(guideHtml).toContain("形式や調整種別を切り替えただけでは既存入力を変更せず、その後にポケモンを候補から選んだ時点で新しい基準を使います。");
-    expect(guideHtml).toContain("対応するメガストーンがある姿では、使用率1位の持ち物より対応石を優先します。");
-    expect(guideHtml).toContain("個体値は全能力31固定で計算します。現在、個体値を変更する入力欄はありません。");
-    expect(guideHtml).not.toContain("レベル、性格、SP、個体値");
-    expect(guideHtml).toContain("現在HPで威力が変わる技は、ロック中に各攻撃時点のHPから自動計算されます。");
-    expect(guideHtml).toContain("攻撃カード下部の「定数ダメージ・回復」を開き、「効果を追加」から計算に含めたい効果を選んでください。");
-    expect(guideHtml).toContain("持ち物・状態・天候を入力しても、それに対応する定数ダメージや回復は、この欄へ自動では追加されません。");
-    expect(guideHtml).toContain("調整対象ボックスへの保存は行われません。");
-    expect(guideHtml).toContain("ChampionCreatorには、作業中の下書き、2種類のボックス、JSONバックアップがあります。");
-    expect(guideHtml).toContain("迷った場合はこの方法が安全です。");
-    expect(guideHtml).toContain("同期に失敗しても、ブラウザ内の保存やJSONバックアップはそのまま利用できます。");
-    expect(guideHtml).toContain("アドレスバーに表示されるインストールアイコンから追加します。");
-    expect(guideHtml).toContain("シナリオを1つずつ無効にし、候補が出なくなる条件を特定する");
-    expect(guideHtml).toContain("計算方式、対応している効果、未対応範囲、保存・同期の詳しい仕様は、");
-    expect(guideHtml).toContain('href="https://github.com/suisui-swimmy/ChampionCreator#readme"');
-    expect(guideHtml).toContain("<code>@smogon/calc</code>");
-    for (const technicalDetail of ["Firestore", "Worker", "outbox", "tombstone", "HBD/(B+D)", "Showdown EV", "userId + deviceId"]) {
-      expect(guideHtml).not.toContain(technicalDetail);
+    for (const operation of [
+      "表示された候補を選んで入力を確定してください。",
+      "元のタイプに戻す", "▲ / ▼", "参加者と攻撃順", "HP基準",
+      "耐久回数", "耐久確率", "KO確率", "トリックルームを有効に",
+      "持ち物・状態・天候を入力しても、定数ダメージや回復は自動追加されません。",
+      "計算に含めたい効果は、ここで追加してください。",
+      "「適用」だけではボックスに保存されません。",
+      "下書きを復元", "下書きを破棄", "ボックスに保存済み",
+      "バックアップを書き出す", "バックアップを読み込む",
+      "Googleでログイン", "統合", "クラウドを使用", "このブラウザを使用", "あとで決める",
+      "今すぐ同期", "両方を残すか、どちらを使うか", "日時と内容を確認してから復元",
+      "ログアウト", "アカウントデータを書き出す", "アカウントを削除",
+      "ホーム画面に追加", "シナリオを1つずつ無効に",
+    ]) expect(guideHtml).toContain(operation);
+    for (const status of ["このブラウザのみ", "未同期", "同期中…", "同期済み", "オフライン", "競合あり", "同期エラー"]) {
+      expect(guideHtml).toContain(`<code>${status}</code>`);
+    }
+    for (const section of ["readme", "入力サジェストと性格の使用率", "制限"]) {
+      expect(guideHtml).toContain(`href="https://github.com/suisui-swimmy/ChampionCreator#${section}"`);
+    }
+    expect(guideHtml).toContain('href="/privacy/"');
+    for (const specification of ["フラエッテ", "メガヒードラン", "メガルカリオZ", "はどうのぼうご", "確定済みの88フォーム", "全97フォーム", "ボディプレス", "イカサマ", "個体値は全能力31固定", "@smogon/calc", "Firestore", "Worker", "outbox", "tombstone", "HBD/(B+D)", "Showdown EV", "userId + deviceId"]) {
+      expect(guideHtml).not.toContain(specification);
     }
     expect(guideHtml).toContain('class="guide-notes-list"');
-    expect(guideHtml).toContain("ログインしない場合、ボックスと下書きは基本的に現在のブラウザ内へ保存されます。");
+    expect(guideHtml).toContain("ブラウザのサイトデータを削除すると、ブラウザ内だけの保存も失われます。");
     expect(guideHtml).toContain('src="/src/guide/main.tsx"');
     const guideOverviewImage = readFileSync(new URL("../public/assets/guide/overview.png", import.meta.url));
     expect(guideOverviewImage.subarray(1, 4).toString("ascii")).toBe("PNG");
@@ -2128,29 +2115,25 @@ describe("App", () => {
     expect(guideAllyAbilityImage.readUInt32BE(20)).toBe(548);
     expect(allyAbilityTipHtml).toContain('class="guide-tip-icon"');
     expect(allyAbilityTipHtml).toContain("ダブルバトルの味方特性");
-    expect(allyAbilityTipHtml).toContain("ダブルバトルでは、同じシナリオに味方を追加し、そのポケモンの特性による補正を計算へ含められます。");
-    expect(allyAbilityTipHtml).toContain("ヘッダーを「ダブル」に切り替え、同じシナリオ内の「＋」から味方を追加して、ポケモンと特性を選択してください。");
-    expect(allyAbilityTipHtml).toContain('class="guide-ability-disclosure-trigger"');
-    expect(allyAbilityTipHtml).toContain('data-state="closed"');
+    expect(allyAbilityTipHtml).toContain("同じシナリオの「＋」から味方を追加します。");
+    expect(allyAbilityTipHtml).not.toContain("README");
     expect(allyAbilityTipHtml).toContain("対応している味方特性");
-    expect(allyAbilityLabels).toEqual([
-      "わざわいのつるぎ",
-      "わざわいのたま",
-      "わざわいのおふだ",
-      "わざわいのうつわ",
-      "フラワーギフト",
-      "バッテリー",
-      "パワースポット",
-      "はがねのせいしん",
-      "フェアリーオーラ",
-      "ダークオーラ",
-      "オーラブレイク",
-      "プラス",
-      "マイナス",
-      "フレンドガード",
-    ]);
+    expect(allyAbilityTipHtml).toContain('class="guide-ability-disclosure-trigger"');
+    expect(allyAbilityTipHtml).toContain('aria-expanded="false"');
+    expect(allyAbilityTipHtml).toContain('data-state="closed"');
+    expect(allyAbilityLabels).toHaveLength(14);
+    const disclosureRules = [...guideCss.matchAll(/^\s*\.guide-ability-disclosure-trigger\s*\{([^}]*)\}/gm)].map((match) => match[1]);
+    expect(disclosureRules).toHaveLength(2);
+    expect(disclosureRules[0]).toContain("min-height: var(--desktop-control-comfort)");
+    expect(disclosureRules[0]).toContain("font-size: var(--desktop-text-control)");
+    expect(disclosureRules[1]).toContain("min-height: var(--mobile-control-comfort)");
+    expect(disclosureRules[1]).toContain("font-size: var(--mobile-text-control)");
     expect(allyAbilityTipHtml).toContain('src="/assets/guide/double-battle-ally-abilities.png"');
-    expect(allyAbilityTipHtml.indexOf("対応している味方特性")).toBeLessThan(allyAbilityTipHtml.indexOf('class="guide-ally-ability-image"'));
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    for (const ability of ["わざわいのつるぎ", "わざわいのたま", "わざわいのおふだ", "わざわいのうつわ", "フラワーギフト", "バッテリー", "パワースポット", "はがねのせいしん", "フェアリーオーラ", "ダークオーラ", "オーラブレイク", "プラス", "マイナス", "フレンドガード"]) {
+      expect(readme).toContain(`\`${ability}\``);
+      expect(allyAbilityLabels).toContain(ability);
+    }
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(guideStructuredDataMatch).not.toBeNull();
     const guideStructuredData = JSON.parse(guideStructuredDataMatch?.[1] ?? "{}");
@@ -2177,8 +2160,6 @@ describe("App", () => {
     expect(guideCss).toContain(".feature-mark.sync { color: var(--guide-blue); }");
     expect(guideCss).toMatch(/\.guide-tip-heading\s*\{[^}]*display:\s*flex;/s);
     expect(guideCss).toMatch(/\.guide-mobile-overview-image\s*\{[^}]*width:\s*min\(100%, 320px\);[^}]*height:\s*auto;/s);
-    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*var\(--desktop-control-comfort\);[^}]*font-size:\s*var\(--desktop-text-control\);[^}]*cursor:\s*pointer;/s);
-    expect(guideCss).toMatch(/\.guide-ability-disclosure-trigger\[data-state="open"\] \.guide-disclosure-chevron\s*\{[^}]*transform:\s*rotate\(90deg\);/s);
     expect(guideCss).toMatch(/\.guide-ally-ability-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-image\s*\{[^}]*width:\s*min\(100%, 720px\);[^}]*height:\s*auto;/s);
     expect(guideCss).toMatch(/\.guide-scenario-row-image\s*\{[^}]*width:\s*min\(100%, 520px\);/s);
@@ -2210,7 +2191,7 @@ describe("App", () => {
     expect(guideCss).toMatch(/\.guide-table-wrap th\s*\{[^}]*font-size:\s*11px;/s);
     expect(guideCss).toMatch(/\.guide-layout\s*\{[^}]*grid-template-columns:\s*220px minmax\(0, 1fr\);/s);
     expect(guideHtml).toContain("<h3>候補が出ない</h3>");
-    expect(guideHtml).toContain("<h3>実際のゲーム内結果と違う</h3>");
+    expect(guideHtml).toContain("<h3>想定と違う結果になる</h3>");
     expect(guideHtml).not.toContain("<details");
     expect(guideHtml).not.toContain('class="guide-context"');
     expect(guideHtml).not.toContain('id="guide-version"');
@@ -2221,9 +2202,9 @@ describe("App", () => {
     expect(guideHtml).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
     expect(guideHtml).toContain('src="/assets/social/github-invertocat-white.svg"');
     expect(tutorialHtml).toContain("サンプル入力で計算してみよう");
-    expect(tutorialHtml).toContain("このサンプルは実際に操作できます。");
-    expect(tutorialHtml).toContain("メガリザードンYのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。");
-    expect(tutorialHtml).toContain("チュートリアル内の変更内容・計算結果は保存・同期されません。");
+    expect(tutorialHtml).toContain("操作できるサンプル");
+    expect(tutorialHtml).toContain("メガリザードンYのダブル向け調整を試せます。");
+    expect(tutorialHtml).toContain("ここでの入力・計算結果は保存されません。");
     expect(guideTutorialSuggestionFormat).toBe("Doubles");
     expect(guideTutorialUsagePokemonAliases).toEqual({
       "Charizard-Mega-Y": "Charizard",
@@ -2237,11 +2218,11 @@ describe("App", () => {
     expect(appSource).toMatch(/useEffect\(\(\) => \{\s*if \(usageData !== undefined\)/);
     expect(tutorialHtml).toContain("入力内容を確認する");
     expect(tutorialHtml).toContain("候補の詳細を見る");
-    expect(getTutorialMessage("idle", false)).toBe("必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。");
-    expect(getTutorialMessage("running", false)).toBe("条件に合うSP配分を探索しています。計算が完了するまで、そのままお待ちください。");
-    expect(getTutorialMessage("complete", false)).toBe("候補を1つ開き、各条件の「PASS」表示とダメージ詳細を確認してみましょう。");
-    expect(getTutorialMessage("complete", true)).toBe("上部の「調整対象」を確認してください。選んだ候補のSP配分が反映されています。");
-    expect(tutorialHtml).toContain("必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。");
+    expect(getTutorialMessage("idle", false)).toBe("条件は入力済みです。「計算開始」を押してください。");
+    expect(getTutorialMessage("running", false)).toBe("条件に合う配分を探しています。計算が終わるまでお待ちください。");
+    expect(getTutorialMessage("complete", false)).toBe("候補を開き、「PASS」とダメージを確認したら「適用」を押してみましょう。");
+    expect(getTutorialMessage("complete", true)).toBe("「調整対象」に選んだSP配分が反映されました。");
+    expect(tutorialHtml).toContain("条件は入力済みです。「計算開始」を押してください。");
     expect(tutorialHtml).not.toContain("作業台の「計算開始」");
     expect(tutorialHtml).not.toContain("添付バックアップの3条件を、本体と同じ計算経路で同時評価します。");
     expect(tutorialHtml).not.toContain('class="guide-open-app-button"');
@@ -2274,7 +2255,6 @@ describe("App", () => {
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-lead\s*\{[^}]*font-size:\s*15px;/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-section > p:not\(\.guide-section-kicker\),[\s\S]*?\.guide-notes-list\s*\{[^}]*font-size:\s*14px;/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-tip strong,[\s\S]*?\.guide-ability-disclosure-content ul\s*\{[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
-    expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-ability-disclosure-trigger\s*\{[^}]*min-height:\s*var\(--mobile-control-comfort\);[^}]*font-size:\s*var\(--mobile-text-control\);/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-table-wrap table\s*\{[^}]*font-size:\s*12px;/s);
     expect(guideCss).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.guide-table-wrap th\s*\{[^}]*font-size:\s*11px;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.app-footer-links \.app-footer-contact,[\s\S]*?\.app-footer-source-link\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s);
@@ -3722,8 +3702,8 @@ describe("App", () => {
       expect(readme).toContain(technicalDetail);
     }
 
-    expect(guide).toContain("入力中の内容は、ボックスとは別に、このブラウザへ自動で下書き保存されます。");
-    expect(guide).toContain("「下書きを復元」または「下書きを破棄」");
+    expect(guide).toContain("入力中の内容は、このブラウザに下書きとして自動保存されます。");
+    expect(guide).toContain("「下書きを復元」");
     expect(guide).toContain("「ボックスに保存済み」");
     expect(guide).toContain("「Googleでログイン」を選ぶ");
     expect(guide).toContain("JSONバックアップ");
@@ -4207,9 +4187,8 @@ describe("App", () => {
     expect(css).not.toContain('span:last-child[data-marker-state="reached"]');
     expect(css).toMatch(/\.sp-cell-bar span\[data-marker="red"\]\s*\{[^}]*--sp-marker-color:\s*var\(--sp-marker-red\);[^}]*--sp-marker-fill:\s*linear-gradient\(180deg, var\(--sp-marker-red-fill-start\) 30%, var\(--sp-marker-red-fill-end\) 100%\);/s);
     expect(css).toMatch(/\.sp-cell-bar span\[data-marker="blue"\]\s*\{[^}]*--sp-marker-color:\s*var\(--sp-marker-blue\);[^}]*--sp-marker-fill:\s*linear-gradient\(180deg, var\(--sp-marker-blue-fill-start\) 30%, var\(--sp-marker-blue-fill-end\) 100%\);/s);
-    expect(guideHtml).toContain("赤マークは、性格上昇補正によって、そのSPで性格無補正時より実数値が多く伸びる位置です。");
-    expect(guideHtml).toContain("青マークは、性格下降補正によって、そのSPで性格無補正時より実数値の伸びが少なくなる位置です。");
-    expect(guideHtml).toContain("マーク位置へ到達する前は控えめに、到達すると枠と発光を強く表示します。");
+    expect(guideHtml).toContain("配分バーの赤・青のマークは、性格補正によって実数値の伸びが変わる位置の目安です。");
+    expect(guideHtml).toContain("赤は伸びが大きく、青は小さくなる位置を示します。");
   });
 
   it("renders one selected HP criterion without adding per-cell controls", () => {
@@ -4275,9 +4254,8 @@ describe("App", () => {
     expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-boundary="true"\]::before\s*\{[^}]*left:\s*0;[^}]*width:\s*calc\(\(100% - 31px\) \/ 32 \+ 2px\);[^}]*transform:\s*translateX\(-50%\);[^}]*pointer-events:\s*none;/s);
     expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-boundary="true"\]::before\s*\{[^}]*border:\s*2px solid var\(--hp-marker-edge\);[^}]*box-shadow:\s*0 0 0 1px var\(--sp-marker-outer-edge\),\s*0 0 4px var\(--sp-marker-outer-glow\);/s);
     expect(css).toMatch(/\.sp-cell-bar\[data-hp-zero-match="true"\]:not\(\[data-hp-zero-boundary="true"\]\)::after\s*\{[^}]*left:\s*-1px;[^}]*width:\s*2px;[^}]*opacity:\s*0\.5;[^}]*pointer-events:\s*none;/s);
-    expect(guideHtml).toContain("H行のHP基準ボタン（未選択時はスライダーアイコン）では、");
-    expect(guideHtml).toContain("HP基準はDmax増加を除外した通常HPをSP 0〜32で実計算します。");
-    expect(guideHtml).toContain("SP0が該当するときは、SP1と混同しないようバー左端の外側へ表示します。");
+    expect(guideHtml).toContain("H行の「HP基準」から倍数を選ぶと、その倍数のHPになる位置にマークが付きます。");
+    expect(guideHtml).toContain("HPの実数値を見ながら配分を調整してください。");
   });
 
   it("renders only A and C parameter rows for each virtual attacker", () => {

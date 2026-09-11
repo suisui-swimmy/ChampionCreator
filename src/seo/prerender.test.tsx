@@ -43,7 +43,8 @@ describe("search-readable initial HTML", () => {
     expect(html).toContain("ソーラービーム」で確定1発");
     expect(html).toContain("確定1発（KO率100%）");
     expect(html).toContain("確定抜き+1（相手の実数値+2）");
-    expect(html).toContain("条件を満たす配分は1つ");
+    expect(html).toContain("条件を満たす配分は1つで、<strong>");
+    expect(html).not.toContain("<h3>条件を満たす配分は1つ</h3>");
     expect(html).toContain("H4 / A0 / B27 / C10 / D0 / S25");
     expect(html).toContain("耐える確率は93.75%、倒せる確率は100%");
     expect(html).not.toContain("メガマフォクシー");

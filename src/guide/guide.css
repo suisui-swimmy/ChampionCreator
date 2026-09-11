@@ -32,6 +32,16 @@ body.guide-page {
   line-height: 1.75;
 }
 
+.guide-page:not(.privacy-page) .app-footer-source > .app-footer-link-item {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.guide-page:not(.privacy-page) .app-footer-source-date {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .guide-page *,
 .guide-page *::before,
 .guide-page *::after {
@@ -706,7 +716,6 @@ body.guide-page {
 
 .guide-ability-disclosure {
   margin-top: 10px;
-  border-top: 1px solid var(--guide-border-soft);
 }
 
 .guide-ability-disclosure-trigger {
@@ -757,7 +766,7 @@ body.guide-page {
   column-gap: 24px;
   margin: 0;
   padding: 4px 0 10px 22px;
-  color: #abb7b2;
+  color: var(--guide-muted);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -1180,6 +1189,27 @@ body.guide-page {
     min-height: var(--mobile-control-standard);
     padding: 0 10px;
     font-size: var(--mobile-text-interactive-small);
+  }
+
+  .guide-page:not(.privacy-page) .guide-brand,
+  .guide-page:not(.privacy-page) .guide-brand-home {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .guide-page:not(.privacy-page) .guide-brand img {
+    max-width: 100%;
+  }
+
+  .guide-page:not(.privacy-page) .guide-brand-page {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .guide-page:not(.privacy-page) .guide-header-action {
+    max-width: calc(var(--mobile-control-standard) * 3);
+    line-height: 1;
+    text-align: center;
   }
 
   .guide-menu-toggle {

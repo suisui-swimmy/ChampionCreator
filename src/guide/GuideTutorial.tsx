@@ -31,21 +31,21 @@ const getActiveStep = (status: SearchStatus, candidateApplied: boolean): number 
 
 export const getTutorialMessage = (status: SearchStatus, candidateApplied: boolean): string => {
   if (candidateApplied) {
-    return "上部の「調整対象」を確認してください。選んだ候補のSP配分が反映されています。";
+    return "「調整対象」に選んだSP配分が反映されました。";
   }
   if (status === "complete") {
-    return "候補を1つ開き、各条件の「PASS」表示とダメージ詳細を確認してみましょう。";
+    return "候補を開き、「PASS」とダメージを確認したら「適用」を押してみましょう。";
   }
   if (status === "running") {
-    return "条件に合うSP配分を探索しています。計算が完了するまで、そのままお待ちください。";
+    return "条件に合う配分を探しています。計算が終わるまでお待ちください。";
   }
   if (status === "error") {
-    return "エラーが表示されている入力欄を確認してください。右上のボタンからサンプルの初期状態へ戻すこともできます。";
+    return "エラーのある入力欄を見直すか、「サンプルに戻す」でやり直してください。";
   }
   if (status === "canceled") {
-    return "条件を変更したあと、もう一度「計算開始」を押すと再計算できます。";
+    return "もう一度「計算開始」を押すと再計算できます。";
   }
-  return "必要な条件は、あらかじめ入力されています。まずは「計算開始」を押してください。";
+  return "条件は入力済みです。「計算開始」を押してください。";
 };
 
 export function GuideTutorial() {
@@ -72,10 +72,9 @@ export function GuideTutorial() {
     <section className="guide-tutorial" aria-labelledby="interactive-tutorial-title">
       <header className="guide-tutorial-header">
         <div>
-          <span className="guide-live-badge"><i aria-hidden="true" />このサンプルは実際に操作できます。</span>
+          <span className="guide-live-badge"><i aria-hidden="true" />操作できるサンプル</span>
           <h2 id="interactive-tutorial-title">サンプル入力で計算してみよう</h2>
-          <p className="guide-tutorial-context">メガリザードンYのダブル向け調整例です。技・特性・持ち物の入力候補はダブル基準で表示します。</p>
-          <p className="guide-tutorial-context guide-tutorial-storage-note">チュートリアル内の変更内容・計算結果は保存・同期されません。</p>
+          <p className="guide-tutorial-context guide-tutorial-storage-note">メガリザードンYのダブル向け調整を試せます。ここでの入力・計算結果は保存されません。</p>
         </div>
         <div className="guide-tutorial-actions">
           <button type="button" className="guide-reset-button" onClick={handleReset} aria-label="サンプルに戻す" title="サンプルに戻す">
