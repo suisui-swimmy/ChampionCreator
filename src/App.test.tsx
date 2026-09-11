@@ -1720,7 +1720,6 @@ describe("App", () => {
     expect(css).toMatch(/\.topbar\.has-draft-status\s*\{[^}]*grid-template-areas:\s*"description description"\s*"brand actions"\s*"status status";/s);
     expect(css).toMatch(/\.brand-title,\s*\.brand-line\s*\{[^}]*display:\s*contents;/s);
     expect(css).toMatch(/\.topbar \.brand-description\s*\{[^}]*grid-area:\s*description;[^}]*text-align:\s*center;[^}]*text-wrap:\s*balance;/s);
-    expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*display:\s*none;/s);
     expect(css).toMatch(/\.topbar \.draft-save-status\s*\{[^}]*font-weight:\s*400;/s);
     expect(css).toMatch(/\.topbar-draft-row\s*\{[^}]*display:\s*contents;/s);
     expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar \.draft-save-status\s*\{[^}]*text-align:\s*right;/s);
@@ -1829,7 +1828,6 @@ describe("App", () => {
 
     expect(css).toMatch(/\.brand-title\s*\{[^}]*flex:\s*1 1 auto;/s);
     expect(css).toMatch(/\.topbar-meta\s*\{[^}]*justify-items:\s*end;/s);
-    expect(css).toMatch(/\.topbar \.brand-version\s*\{[^}]*font-size:\s*9px;[^}]*text-align:\s*right;/s);
     expect(html).toContain("<title>ChampionCreator | ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール</title>");
     const description = "「神調整」を誰にでも ― ポケモンチャンピオンズ（ポケチャン）の耐久・火力・素早さ条件から、能力ポイント（SP）の配分を自動計算できるツール";
     expect(html.match(new RegExp(`content="${description}"`, "g"))).toHaveLength(3);
@@ -2406,7 +2404,11 @@ describe("App", () => {
     expect(html).toContain("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール");
     expect(html).toContain('class="topbar-meta"');
     expect(html).not.toContain("title=");
-    expect(html).toContain(`app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`);
+    const versionLabel = `app v${appVersionInfo.appVersion} / calc ${appVersionInfo.smogonCalcVersion} / data ${appVersionInfo.localizationEntries}`;
+    expect(html.split(versionLabel)).toHaveLength(2);
+    expect(html.split("</header>")[0]).not.toContain(versionLabel);
+    expect(html).not.toContain('class="brand-version"');
+    expect(css).not.toContain(".brand-version");
     expect(html.indexOf("ポケモンチャンピオンズ 耐久・火力・素早さ自動調整ツール")).toBeLessThan(
       html.indexOf(`app v${appVersionInfo.appVersion}`),
     );

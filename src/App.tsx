@@ -46,7 +46,7 @@ import type {
 import type { EntityKind } from "./data/localizationTypes";
 import { TypeChip } from "./ui/TypeChip";
 import { PokemonTypeField } from "./ui/PokemonTypeField";
-import { appVersionInfo, formatAppVersionLabel } from "./appVersion";
+import { formatAppVersionLabel } from "./appVersion";
 import {
   formatUsageDataDateJst,
   getTopUsageRankedCandidate,
@@ -4229,13 +4229,6 @@ export function App({
               <img src={getAssetSrc("assets/ui/info.svg")} alt="" aria-hidden="true" />
             </a>
           </div>
-          <p className="brand-version">
-            app v{appVersionInfo.appVersion}
-            {" / "}
-            calc {appVersionInfo.smogonCalcVersion}
-            {" / "}
-            data {appVersionInfo.localizationEntries}
-          </p>
           {draftSaveState.status !== "idle" ? (
             <div className="topbar-draft-row">
               <p

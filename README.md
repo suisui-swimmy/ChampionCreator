@@ -68,7 +68,7 @@ HTML本文・正規URL・robots・サイトマップとGoogleの実際の描画�
 条件schema v13は通常タイプの手動指定を保存します。v1〜v12は自動設定（ロック中）へ移行し、調整対象・仮想敵ボックス、バックアップ、ブラウザ下書き、同期payloadで既存parserを共有します。タイプアイコンは提供された`others/small`の18枚を`public/assets/types`へコピーした60×60 PNGを20pxで表示し、runtimeは`others/`へ依存しません。あくのPNGは背景色を`#624d4e`へ調整した提供画像を使用します。
 
 - ダメージ計算エンジンは `@smogon/calc` に依存します
-- 現在の直接依存は、`@smogon/calc@0.11.0` の upstream master `e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d`（2026-09-11確認）をbaseにしたvendor tarballです。Aura Guardの接触半減・特性データはupstream nativeを使用し、Gen9の特性無視判定と通常タイプ上書きだけを互換patchで補います。patch・出典・artifact hash・sunset条件は`vendor/smogon-calc-compat.json`、更新差分と採用判断は[監査記録](vendor/smogon-calc-audit-2026-09-11.md)へ記録します
+- 現在の直接依存は、`@smogon/calc@0.11.0` の upstream master `e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d`（2026-09-11確認）をbaseにしたvendor tarballです。Aura Guardの接触半減・特性データはupstream nativeを使用し、Gen9の特性無視判定・通常タイプ上書き・下記4技のChampionsデータを互換patchで補います。patch・出典・artifact hash・sunset条件は`vendor/smogon-calc-compat.json`、更新差分と採用判断は[監査記録](vendor/smogon-calc-audit-2026-09-11.md)と[4技のpatch記録](vendor/smogon-calc-champions-moves-v1.md)へ記録します
 - 計算世代は `Generations.get(9)` を使用します
 - `src/calc/smogonAdapter.ts` が `Pokemon` / `Move` / `Field` / `Side` への変換境界です
 - `はどうのぼうご`は、接触技の最終ダメージを半減し、`えんかく`または`パンチグローブ`で非接触扱いになった技には適用しません。接触半減・`かがくへんかガス`・`とくせいガード`はnative経路で評価し、Gen9で不足する`かたやぶり`系と特性を無視する技の対象リストだけを補完します。補完は参照済みPokemon Showdown実装に合わせた暫定対応で、実機仕様または同等のGen9 native対応時に再監査します
@@ -87,6 +87,19 @@ HTML本文・正規URL・robots・サイトマップとGoogleの実際の描画�
 - アプリ側では独自のダメージ計算式、独自のタイプ相性、独自の乱数分布を主計算として実装しません
 - 最終候補の合否判定は、resolver 済み canonical name を `@smogon/calc` に渡して再評価します
 - 公式画像、タイプ色、日本語表示名は UI 表示用であり、計算結果には影響しません
+
+#### Championsの技データ補完
+
+2026-09-11の指定と固定upstreamのChampions用データを根拠に、次の4件をCCが使うGen9の技データへ反映します。Gen9計算全体をChampions世代へ切り替える変更ではありません。
+
+| 技 | CCで使うデータ |
+| --- | --- |
+| ねらいうち | 威力85（80から変更） |
+| スターアサルト | 威力170（150から変更） |
+| きりさく | 威力80（70から変更） |
+| でんこうそうげき | 威力120を維持し、パンチ技に追加 |
+
+威力欄と耐久・火力の計算は同じCalcデータを使います。既存の任意威力に対応する技の設定には影響しません。でんこうそうげきのパンチ判定は、てつのこぶし・パンチグローブなどの既存Calc処理と、接触反動の判定にも反映します。
 
 #### 味方特性の対応範囲
 

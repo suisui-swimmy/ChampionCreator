@@ -353,16 +353,6 @@ textarea:focus-visible,
   font-size: 11px;
 }
 
-.topbar .brand-version {
-  min-width: 0;
-  margin: 0;
-  color: rgba(238, 241, 237, 0.62);
-  font-size: 9px;
-  line-height: 1.2;
-  text-align: right;
-  white-space: nowrap;
-}
-
 .topbar .brand-description {
   flex: 1 1 260px;
   min-width: 0;
@@ -6526,10 +6516,6 @@ textarea {
 
   .topbar p {
     font-size: 10px;
-  }
-
-  .topbar .brand-version {
-    display: none;
   }
 
   .topbar .draft-save-status {

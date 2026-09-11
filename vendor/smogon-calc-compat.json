@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "kind": "smogon-calc-compatibility-build",
-  "patchId": "cc-aura-suppression-v1-type-overrides-v2",
+  "patchId": "cc-aura-suppression-v1-type-overrides-v2-champions-moves-v1",
   "packageName": "@smogon/calc",
   "packageVersion": "0.11.0",
   "upstreamRepository": "https://github.com/smogon/damage-calc.git",
@@ -10,8 +10,8 @@
   "sourcePullRequestHead": "589015cb5986fc96537c44000ab8a083dc1ef253",
   "showdownReference": "https://github.com/smogon/pokemon-showdown/pull/12275",
   "showdownReferenceCommit": "7340ea497118a6752336d735e193cdf89a1adb5f",
-  "patchFile": "vendor/patches/smogon-calc-type-overrides-v2.patch",
-  "patchSha256": "38ab2adea5f6106ae8a2a290709eee0726783fbfd5703e757d1de52759656dd2",
+  "patchFile": "vendor/patches/smogon-calc-champions-moves-v1.patch",
+  "patchSha256": "a3a32059ea6441d9e1462de1465a7cbe2e40f64899d79574ad14a7772d3271a2",
   "upstreamLockfiles": [
     {
       "path": "package-lock.json",
@@ -28,15 +28,16 @@
     "CC Gen9 explicit one/two current types plus optional Grass or Ghost",
     "Type effectiveness, STAB, immunity, cloning, and typed HP helpers",
     "Tera including Stellar clears the additional type while preserving the chosen pre-Tera base types",
-    "Explicit type state overrides automatic Forecast inference; move activation and failure are outside this snapshot API"
+    "Explicit type state overrides automatic Forecast inference; move activation and failure are outside this snapshot API",
+    "CC Gen9 projection of four requested Champions move metadata updates: Snipe Shot 85, Meteor Assault 170, Slash 80, and Double Shock punch flag"
   ],
   "provisional": [
     "Aura Guard breakable suppression follows the referenced Pokemon Showdown implementation, whose source still marks that flag for confirmation."
   ],
   "artifact": {
-    "path": "vendor/smogon-calc-0.11.0-e7fd7e5-cc-aura-type-v2.tgz",
-    "sha256": "601665fca7888109557814b6a3c273cb27f5399c3b0a147eab0024171f0b694c",
-    "integrity": "sha512-fKlEBgDCfSlaUGcj9DD2b0DcSY1O+wyiZi6lA9WC8t1nlRjJTJJwzmcDbcoQALKSqu23ySFsYB99qKiC2+D1bA=="
+    "path": "vendor/smogon-calc-0.11.0-e7fd7e5-cc-champions-moves-v1.tgz",
+    "sha256": "af777f34bee437d2c0328bce507f1ea0e432af8b34864d6d556bd8a4ab351ad5",
+    "integrity": "sha512-zNZYAIPzNkkuGJkcZejy8bMvpGxmhB+Lbl5eHMKu6pQZZCnKR4kHg8Si+MCbMsk2q10+KvF+uVAB+ZbSteu2Bw=="
   },
   "buildEnvironment": {
     "node": "24.14.1",
@@ -44,8 +45,8 @@
   },
   "buildScript": "scripts/build-smogon-calc-vendor.mjs",
   "sunset": {
-    "condition": "Retire the suppression patch when native Gen9 ignores Aura Guard for Mold Breaker and ability-ignoring moves. Retire type overrides independently when native Calc provides equivalent explicit type states.",
-    "requiredCheck": "Never reapply the retired Aura Guard catalog or contact modifier. Remove each superseded patch before native adoption and rerun suppression/Ability Shield/contact/non-contact/multi-hit and type-state/clone/Tera/HP regressions."
+    "condition": "Retire the suppression patch when native Gen9 ignores Aura Guard for Mold Breaker and ability-ignoring moves. Retire type overrides independently when native Calc provides equivalent explicit type states. Retire the move projection independently when the CC runtime consumes equivalent native move metadata.",
+    "requiredCheck": "Never reapply the retired Aura Guard catalog or contact modifier. Remove each superseded patch before native adoption and rerun suppression/Ability Shield/contact/non-contact/multi-hit and type-state/clone/Tera/HP regressions. Recheck the exact four move values, Iron Fist, Punching Glove, contact prevention, generated power labels, and manual power overrides."
   },
   "patches": [
     {
@@ -57,6 +58,11 @@
       "id": "cc-type-overrides-v2",
       "path": "vendor/patches/smogon-calc-type-overrides-v2.patch",
       "sha256": "38ab2adea5f6106ae8a2a290709eee0726783fbfd5703e757d1de52759656dd2"
+    },
+    {
+      "id": "cc-champions-moves-v1",
+      "path": "vendor/patches/smogon-calc-champions-moves-v1.patch",
+      "sha256": "a3a32059ea6441d9e1462de1465a7cbe2e40f64899d79574ad14a7772d3271a2"
     }
   ],
   "typeStateReferenceCommit": "6b4bc34e44cc2541929cc4b8fff96e756ab3f268",
@@ -86,5 +92,42 @@
     "retiredPatch": "cc-aura-guard-v1",
     "remainingPatch": "cc-aura-suppression-v1"
   },
-  "nativeChampionsSuppressionCommit": "06cc6116714a2dd92cc2fdcee3052bcecf8eb714"
+  "nativeChampionsSuppressionCommit": "06cc6116714a2dd92cc2fdcee3052bcecf8eb714",
+  "championsMoveMetadata": {
+    "patchId": "cc-champions-moves-v1",
+    "checkedAt": "2026-09-11",
+    "authority": "Explicit user-requested Champions move changes, corroborated by the pinned upstream Champions move data",
+    "upstreamReference": "https://github.com/smogon/damage-calc/blob/e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d/calc/src/data/moves.ts#L5456-L5491",
+    "referenceGeneration": 0,
+    "runtimeGeneration": 9,
+    "support": "metadata-supported; engine-supported through existing native mechanics; calculation-supported through the CC-patched Gen9 catalog",
+    "moves": [
+      {
+        "canonicalName": "Snipe Shot",
+        "labelJa": "ねらいうち",
+        "basePower": 85,
+        "previousBasePower": 80
+      },
+      {
+        "canonicalName": "Meteor Assault",
+        "labelJa": "スターアサルト",
+        "basePower": 170,
+        "previousBasePower": 150
+      },
+      {
+        "canonicalName": "Slash",
+        "labelJa": "きりさく",
+        "basePower": 80,
+        "previousBasePower": 70
+      },
+      {
+        "canonicalName": "Double Shock",
+        "labelJa": "でんこうそうげき",
+        "basePower": 120,
+        "punch": true
+      }
+    ],
+    "documentation": "vendor/smogon-calc-champions-moves-v1.md",
+    "sunset": "Retire each projected entry when the audited CC runtime consumes equivalent native metadata. Champions-only Gen0 support alone does not retire a patch used by CC Gen9; switching generations requires a separate runtime audit."
+  }
 }

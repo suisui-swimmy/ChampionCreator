@@ -134,6 +134,21 @@ try {
     && /\b(?:typeOverrides|addedType)\b/.test(nativePokemonSource)) {
     throw new Error("Upstream base has explicit type state; audit and retire the type compatibility patch");
   }
+  if (patches.some((patch) => patch.id === "cc-champions-moves-v1")) {
+    const nativeMoves = await readFile(join(checkoutPath, "calc/src/data/moves.ts"), "utf8");
+    const championsStart = nativeMoves.indexOf("const CHAMPIONS_LIST");
+    if (championsStart < 0) throw new Error("Unable to locate the audited Champions move-data boundary");
+    const nativeGen9Moves = nativeMoves.slice(0, championsStart);
+    const projectedUpdates = [
+      /(?:^|\n)\s*'Snipe Shot':\s*\{[^}]*\bbp:\s*85\b/,
+      /(?:^|\n)\s*'Meteor Assault':\s*\{[^}]*\bbp:\s*170\b/,
+      /(?:^|\n)\s*'?Slash'?:\s*\{[^}]*\bbp:\s*80\b/,
+      /(?:^|\n)\s*'Double Shock':\s*\{[^}]*\bisPunch:\s*true\b/,
+    ];
+    if (projectedUpdates.some((pattern) => pattern.test(nativeGen9Moves))) {
+      throw new Error("Upstream may now provide a projected Champions move update; audit and narrow or retire the move patch");
+    }
+  }
   for (const patch of patches) {
     const patchPath = join(projectRoot, patch.path);
     run("git", ["apply", "--check", patchPath], checkoutPath);

@@ -125,6 +125,10 @@ const expectedMegaSpeciesAbilities = {
 };
 
 const expectedMoves = {
+  "Snipe Shot": { category: "Special", type: "Water", contact: false, basePower: 85 },
+  "Meteor Assault": { category: "Physical", type: "Fighting", contact: false, basePower: 170 },
+  Slash: { category: "Physical", type: "Normal", contact: true, basePower: 80 },
+  "Double Shock": { category: "Physical", type: "Electric", contact: true, punch: true, basePower: 120 },
   Tackle: { category: "Physical", type: "Normal", contact: true },
   Earthquake: { category: "Physical", type: "Ground", contact: false },
   "Draining Kiss": { category: "Special", type: "Fairy", contact: true },
@@ -162,6 +166,11 @@ for (const [moveName, expected] of Object.entries(expectedMoves)) {
   assert(move?.category === expected.category, `${moveName} must be ${expected.category}`);
   assert(move?.type === expected.type, `${moveName} must be ${expected.type}-type`);
   assert(Boolean(move?.flags?.contact) === expected.contact, `${moveName} contact flag mismatch`);
+  if (expected.basePower !== undefined) {
+    assert(move?.basePower === expected.basePower, `${moveName} Champions base power mismatch`);
+    const option = moveOptions.entries.find((entry) => entry.showdownName === moveName);
+    assert(option?.basePower === expected.basePower, `${moveName} generated base power mismatch`);
+  }
   if (expected.punch !== undefined) {
     assert(Boolean(move?.flags?.punch) === expected.punch, `${moveName} punch flag mismatch`);
   }

@@ -1,0 +1,50 @@
+diff --git a/calc/src/data/moves.ts b/calc/src/data/moves.ts
+--- a/calc/src/data/moves.ts
++++ b/calc/src/data/moves.ts
+@@ -4176,6 +4176,7 @@ const SV_PATCH: {[name: string]: DeepPartial<MoveData>} = {
+   'Leaf Blade': {isSlicing: true},
+   'Luster Purge': {bp: 95, zp: 175, maxPower: 130},
++  'Meteor Assault': {bp: 170},
+   'Mist Ball': {bp: 95, zp: 175, maxPower: 130},
+   'Night Slash': {isSlicing: true},
+   'Petal Blizzard': {isWind: true},
+   'Psycho Cut': {isSlicing: true},
+@@ -4186,6 +4187,7 @@ const SV_PATCH: {[name: string]: DeepPartial<MoveData>} = {
+   'Secret Sword': {isSlicing: true},
+   Sandstorm: {isWind: true},
+-  Slash: {isSlicing: true},
++  Slash: {bp: 80, isSlicing: true},
++  'Snipe Shot': {bp: 85},
+   'Solar Blade': {isSlicing: true},
+   Tailwind: {isWind: true},
+   Twister: {isWind: true},
+@@ -4354,6 +4356,7 @@ const SV_PATCH: {[name: string]: DeepPartial<MoveData>} = {
+     zp: 190,
+     maxPower: 140,
+     makesContact: true,
++    isPunch: true,
+   },
+   'Dire Claw': {
+     bp: 80,
+diff --git a/calc/src/test/data.test.ts b/calc/src/test/data.test.ts
+--- a/calc/src/test/data.test.ts
++++ b/calc/src/test/data.test.ts
+@@ -53,7 +53,17 @@ describe('Generations', () => {
+             delete (move as any)[k];
+           }
+         }
+-        expect(c.get(move.id)).toMatchObject(move);
++        // CC runs these four Champions move updates through the Gen9 engine.
++        // Keep the rest of the Dex comparison, including all older generations.
++        const championsBasePowers: {[id: string]: number} = {
++          snipeshot: 85,
++          meteorassault: 170,
++          slash: 80,
++        };
++        const expected = gen === 9 && championsBasePowers[move.id]
++          ? {...move, basePower: championsBasePowers[move.id]} : move;
++        expect(c.get(move.id)).toMatchObject(expected);
++        if (gen === 9 && move.id === 'doubleshock') expect(c.get(move.id)!.flags.punch).toBe(1);
+         c.delete(move.id);
+       }
+       expect(c.size).toBe(0);
