@@ -110,10 +110,10 @@ export const toSmogonField = (field: FieldState, hit: ScenarioHit): Field => {
 export const toSmogonPokemon = (
   build: Build,
   boosts: StatBoostTable = {},
-  abilityOn = false,
+  abilityOn?: boolean,
   options: SmogonPokemonOptions = {},
-): Pokemon =>
-  new Pokemon(SMOGON_GENERATION, build.pokemon.canonicalName, {
+): Pokemon => {
+  const pokemon = new Pokemon(SMOGON_GENERATION, build.pokemon.canonicalName, {
     level: build.level,
     nature: build.nature?.canonicalName,
     ivs: build.ivs,
@@ -129,6 +129,13 @@ export const toSmogonPokemon = (
     abilityOn,
     curHP: options.currentHp,
   });
+  // Preserve CC's entry-boost default, including saved inputs with no explicit
+  // ability where Calc selects the species default. An explicit false still wins.
+  if (abilityOn === undefined && pokemon.hasAbility("Intrepid Sword", "Dauntless Shield")) {
+    pokemon.abilityOn = true;
+  }
+  return pokemon;
+};
 
 export const getSmogonTypeEffectiveness = (
   attackType: string,
@@ -478,7 +485,7 @@ export const calculateSmogonHit = (
   const attacker = toSmogonPokemon(
     hit.attacker,
     hit.attackerBoosts,
-    hasPlusMinusSynergy(hit, allyAbilityNames),
+    hasPlusMinusSynergy(hit, allyAbilityNames) || undefined,
     { currentHp: options.attackerCurrentHp },
   );
   const originalMoveName = hit.move.canonicalName;
@@ -492,7 +499,7 @@ export const calculateSmogonHit = (
       ? defenderBuild
       : { ...defenderBuild, status: hit.defenderStatus },
     hit.defenderBoosts,
-    false,
+    undefined,
     { currentHp: defenderCurrentHp },
   );
   const field = toSmogonField(fieldState, hit);

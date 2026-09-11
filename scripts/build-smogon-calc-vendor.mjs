@@ -14,7 +14,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const manifestPath = join(projectRoot, "vendor", "smogon-calc-cc-type-overrides-v1.json");
+const manifestPath = join(projectRoot, "vendor", "smogon-calc-compat.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const supportedArgs = new Set(["--verify"]);
 const unknownArgs = process.argv.slice(2).filter((argument) => !supportedArgs.has(argument));
@@ -119,8 +119,18 @@ try {
       throw new Error(`Unable to inspect upstream Aura Guard support: ${nativeAuraGuardCheck.stderr}`);
     }
   }
+  if (patches.some((patch) => patch.id === "cc-aura-suppression-v1")) {
+    const nativeGen9 = await readFile(join(checkoutPath, "calc/src/mechanics/gen789.ts"), "utf8");
+    const ignoredAbilities = nativeGen9.match(/const defenderAbilityIgnored = defender.hasAbility\(([\s\S]*?)\);/);
+    if (!nativeGen9.includes("defender.hasAbility('Aura Guard')") || !ignoredAbilities) {
+      throw new Error("Expected audited native Aura Guard reduction and Gen9 suppression boundary");
+    }
+    if (ignoredAbilities[1].includes("'Aura Guard'")) {
+      throw new Error("Upstream Gen9 now suppresses Aura Guard; audit and retire the suppression patch");
+    }
+  }
   const nativePokemonSource = await readFile(join(checkoutPath, "calc/src/pokemon.ts"), "utf8");
-  if (patches.some((patch) => patch.id === "cc-type-overrides-v1")
+  if (patches.some((patch) => patch.id.startsWith("cc-type-overrides-"))
     && /\b(?:typeOverrides|addedType)\b/.test(nativePokemonSource)) {
     throw new Error("Upstream base has explicit type state; audit and retire the type compatibility patch");
   }

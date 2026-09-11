@@ -7,7 +7,7 @@
     "applicableVersion": "Pokemon Champions announced roster as of 2026-09-09",
     "checkedAt": "2026-09-09",
     "canonicalBasis": "src/data/generated/pokemon-options.gen.json",
-    "calcBase": "49d4d8696bf138b101cc47be8432489c3ac192aa",
+    "calcBase": "e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d",
     "references": [
       {
         "kind": "damage-calc-proposed-implementation",
@@ -26,6 +26,11 @@
           "Golisopod-Mega": "Tough Claws",
           "Baxcalibur-Mega": "Thermal Exchange"
         }
+      },
+      {
+        "kind": "damage-calc-native-implementation",
+        "url": "https://github.com/smogon/damage-calc/commit/111407c919c2c886688db704ae97376e768b72e4",
+        "commit": "111407c919c2c886688db704ae97376e768b72e4"
       }
     ]
   },

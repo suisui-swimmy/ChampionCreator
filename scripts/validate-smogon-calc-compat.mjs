@@ -21,7 +21,7 @@ const assert = (condition, message) => {
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 const projectPackage = await readJson("package.json");
 const packageLock = await readJson("package-lock.json");
-const provenance = await readJson("vendor/smogon-calc-cc-type-overrides-v1.json");
+const provenance = await readJson("vendor/smogon-calc-compat.json");
 const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.json");
 const moveOptions = await readJson("src/data/generated/move-options.gen.json");
 const itemOptions = await readJson("src/data/generated/item-options.gen.json");
@@ -60,6 +60,14 @@ assert(
 assert(
   megaManifestReferenceCommits.has(provenance.showdownReferenceCommit),
   "Mega ability manifest is missing the Pokemon Showdown reference commit",
+);
+assert(
+  megaManifestReferenceCommits.has(provenance.nativeAuraGuard?.commit),
+  "Mega ability manifest is missing the native Aura Guard reference commit",
+);
+assert(
+  !provenance.patches?.some((patch) => patch.id === "cc-aura-guard-v1"),
+  "The retired Aura Guard catalog/contact patch must not be applied over native support",
 );
 assert(
   projectPackage.dependencies?.["@smogon/calc"] === expectedFileDependency,

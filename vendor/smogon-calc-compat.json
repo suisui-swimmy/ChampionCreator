@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "kind": "smogon-calc-compatibility-build",
+  "patchId": "cc-aura-suppression-v1-type-overrides-v2",
+  "packageName": "@smogon/calc",
+  "packageVersion": "0.11.0",
+  "upstreamRepository": "https://github.com/smogon/damage-calc.git",
+  "upstreamBaseCommit": "e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d",
+  "sourcePullRequest": "https://github.com/smogon/damage-calc/pull/855",
+  "sourcePullRequestHead": "589015cb5986fc96537c44000ab8a083dc1ef253",
+  "showdownReference": "https://github.com/smogon/pokemon-showdown/pull/12275",
+  "showdownReferenceCommit": "7340ea497118a6752336d735e193cdf89a1adb5f",
+  "patchFile": "vendor/patches/smogon-calc-type-overrides-v2.patch",
+  "patchSha256": "38ab2adea5f6106ae8a2a290709eee0726783fbfd5703e757d1de52759656dd2",
+  "upstreamLockfiles": [
+    {
+      "path": "package-lock.json",
+      "sha256": "1bcb0a123c2a42cb51144a6893438789bec3fbb04f167907fac4b9ac9b161b5a"
+    },
+    {
+      "path": "calc/package-lock.json",
+      "sha256": "b7e0f82492eb760f58462ad19a5c108fc4fb37b93e3b4663b44079d3c86fb457"
+    }
+  ],
+  "scope": [
+    "Native upstream Gen9 Aura Guard contact reduction and Mega ability metadata",
+    "CC Gen9 Aura Guard breakable suppression only",
+    "CC Gen9 explicit one/two current types plus optional Grass or Ghost",
+    "Type effectiveness, STAB, immunity, cloning, and typed HP helpers",
+    "Tera including Stellar clears the additional type while preserving the chosen pre-Tera base types",
+    "Explicit type state overrides automatic Forecast inference; move activation and failure are outside this snapshot API"
+  ],
+  "provisional": [
+    "Aura Guard breakable suppression follows the referenced Pokemon Showdown implementation, whose source still marks that flag for confirmation."
+  ],
+  "artifact": {
+    "path": "vendor/smogon-calc-0.11.0-e7fd7e5-cc-aura-type-v2.tgz",
+    "sha256": "601665fca7888109557814b6a3c273cb27f5399c3b0a147eab0024171f0b694c",
+    "integrity": "sha512-fKlEBgDCfSlaUGcj9DD2b0DcSY1O+wyiZi6lA9WC8t1nlRjJTJJwzmcDbcoQALKSqu23ySFsYB99qKiC2+D1bA=="
+  },
+  "buildEnvironment": {
+    "node": "24.14.1",
+    "npm": "11.11.0"
+  },
+  "buildScript": "scripts/build-smogon-calc-vendor.mjs",
+  "sunset": {
+    "condition": "Retire the suppression patch when native Gen9 ignores Aura Guard for Mold Breaker and ability-ignoring moves. Retire type overrides independently when native Calc provides equivalent explicit type states.",
+    "requiredCheck": "Never reapply the retired Aura Guard catalog or contact modifier. Remove each superseded patch before native adoption and rerun suppression/Ability Shield/contact/non-contact/multi-hit and type-state/clone/Tera/HP regressions."
+  },
+  "patches": [
+    {
+      "id": "cc-aura-suppression-v1",
+      "path": "vendor/patches/smogon-calc-aura-suppression-v1.patch",
+      "sha256": "d37c706cb4e36fc2e0da7601c7736eadfefa4c0e697cd08ac42abf25a20251df"
+    },
+    {
+      "id": "cc-type-overrides-v2",
+      "path": "vendor/patches/smogon-calc-type-overrides-v2.patch",
+      "sha256": "38ab2adea5f6106ae8a2a290709eee0726783fbfd5703e757d1de52759656dd2"
+    }
+  ],
+  "typeStateReferenceCommit": "6b4bc34e44cc2541929cc4b8fff96e756ab3f268",
+  "typeStateReferences": [
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/sim/pokemon.ts#L2114-L2152",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/sim/battle-actions.ts#L1765-L1801",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/sim/battle-actions.ts#L1948",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/data/moves.ts#L10741-L10756",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/data/moves.ts#L19906-L19932",
+    "https://github.com/smogon/pokemon-showdown/blob/6b4bc34e44cc2541929cc4b8fff96e756ab3f268/data/moves.ts#L6126-L6144"
+  ],
+  "audit": {
+    "checkedAt": "2026-09-11",
+    "upstreamHead": "e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d",
+    "upstreamHeadCommittedAt": "2026-09-11T01:13:15Z",
+    "commitsAhead": 40,
+    "previousAuditedHead": "e087a5e0da71459047dc2da7cd3ebc676925215d",
+    "commitsSincePreviousAudit": 4,
+    "upstreamPackageVersion": "0.11.0",
+    "decision": "Adopt frozen head; retire cc-aura-guard-v1 catalog and contact reduction, retain only missing Gen9 suppression, and rebase explicit type states. Preserve Intrepid Sword/Dauntless Shield activation in the adapter. Adopt native Dragonize correction; Champions-only rules and upstream sets do not run in CC Gen9.",
+    "report": "vendor/smogon-calc-audit-2026-09-11.md"
+  },
+  "nativeAuraGuard": {
+    "commit": "111407c919c2c886688db704ae97376e768b72e4",
+    "pullRequest": "https://github.com/smogon/damage-calc/pull/855",
+    "support": "metadata-supported; native contact reduction; Gen9 calculation-supported with the suppression patch",
+    "retiredPatch": "cc-aura-guard-v1",
+    "remainingPatch": "cc-aura-suppression-v1"
+  },
+  "nativeChampionsSuppressionCommit": "06cc6116714a2dd92cc2fdcee3052bcecf8eb714"
+}

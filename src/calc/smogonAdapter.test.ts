@@ -1058,7 +1058,11 @@ describe("confirmed Mega abilities", () => {
 
     const baseline = calculateSmogonHit(
       compatibilityDefender,
-      makeCompatibilityHit("confirmed-mega-baseline", { ...attackerBuild, ability: undefined }, move),
+      // Omission now selects native Tough Claws for Golisopod-Mega.
+      // Use an explicit ability with no damage effect for the baseline.
+      makeCompatibilityHit("confirmed-mega-baseline", {
+        ...attackerBuild, ability: mustResolve("ability", "にげあし"),
+      }, move),
       compatibilityFieldState,
     );
     if (shouldBoost) {
@@ -1070,7 +1074,7 @@ describe("confirmed Mega abilities", () => {
   });
 });
 
-describe("Aura Guard compatibility patch", () => {
+describe("native Aura Guard reduction with Gen9 suppression compatibility", () => {
   it.each([
     ["Tackle", compatibilityPhysicalAttacker, true],
     ["Earthquake", compatibilityPhysicalAttacker, false],

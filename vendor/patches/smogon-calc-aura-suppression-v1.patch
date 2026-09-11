@@ -1,0 +1,12 @@
+diff --git a/calc/src/mechanics/gen789.ts b/calc/src/mechanics/gen789.ts
+--- a/calc/src/mechanics/gen789.ts
++++ b/calc/src/mechanics/gen789.ts
+@@ -157,7 +157,7 @@ export function calculateSMSSSV(
+   }
+ 
+   const defenderAbilityIgnored = defender.hasAbility(
+-    'Armor Tail', 'Aroma Veil', 'Aura Break', 'Battle Armor',
++    'Armor Tail', 'Aroma Veil', 'Aura Break', 'Aura Guard', 'Battle Armor',
+     'Big Pecks', 'Bulletproof', 'Clear Body', 'Contrary',
+     'Damp', 'Dazzling', 'Disguise', 'Dry Skin',
+     'Earth Eater', 'Eelevate', 'Filter', 'Flash Fire',

@@ -68,10 +68,11 @@ HTML本文・正規URL・robots・サイトマップとGoogleの実際の描画�
 条件schema v13は通常タイプの手動指定を保存します。v1〜v12は自動設定（ロック中）へ移行し、調整対象・仮想敵ボックス、バックアップ、ブラウザ下書き、同期payloadで既存parserを共有します。タイプアイコンは提供された`others/small`の18枚を`public/assets/types`へコピーした60×60 PNGを20pxで表示し、runtimeは`others/`へ依存しません。あくのPNGは背景色を`#624d4e`へ調整した提供画像を使用します。
 
 - ダメージ計算エンジンは `@smogon/calc` に依存します
-- 現在の直接依存は、`@smogon/calc@0.11.0` の upstream master `49d4d8696bf138b101cc47be8432489c3ac192aa` をbaseに、Aura GuardとGen9通常タイプ上書きの互換patchを順番に適用したvendor tarballです。patch・出典・artifact hash・sunset条件は`vendor/smogon-calc-cc-type-overrides-v1.json`へ記録します
+- 現在の直接依存は、`@smogon/calc@0.11.0` の upstream master `e7fd7e59f3eef7ea42fba3c8b83261cb4a14109d`（2026-09-11確認）をbaseにしたvendor tarballです。Aura Guardの接触半減・特性データはupstream nativeを使用し、Gen9の特性無視判定と通常タイプ上書きだけを互換patchで補います。patch・出典・artifact hash・sunset条件は`vendor/smogon-calc-compat.json`、更新差分と採用判断は[監査記録](vendor/smogon-calc-audit-2026-09-11.md)へ記録します
 - 計算世代は `Generations.get(9)` を使用します
 - `src/calc/smogonAdapter.ts` が `Pokemon` / `Move` / `Field` / `Side` への変換境界です
-- `はどうのぼうご`は、接触技の最終ダメージを半減し、`えんかく`または`パンチグローブ`で非接触扱いになった技には適用しません。`かたやぶり`系、特性を無視する技、`かがくへんかガス`、`とくせいガード`との関係は、現在のPokemon Showdown実装に合わせた暫定対応で、実機仕様またはupstream native実装の確定時に再監査します
+- `はどうのぼうご`は、接触技の最終ダメージを半減し、`えんかく`または`パンチグローブ`で非接触扱いになった技には適用しません。接触半減・`かがくへんかガス`・`とくせいガード`はnative経路で評価し、Gen9で不足する`かたやぶり`系と特性を無視する技の対象リストだけを補完します。補完は参照済みPokemon Showdown実装に合わせた暫定対応で、実機仕様または同等のGen9 native対応時に再監査します
+- `ふとうのけん`・`ふくつのたて`は、既存の保存条件との互換性のため発動済みとしてCalcへ渡します。入力ランクに対するA／Bの1段階上昇と上限処理はCalc内で1回だけ行います。`ドラゴンスキン`はnative修正により、ノーマル技だけをドラゴンへ変換・強化し、他タイプの技を強化しません
 - 定数ダメージは `@smogon/calc` の直接ダメージへ混ぜず、Champions HPルールと順序付きHPイベント評価層で処理します
 - 現在対応する選択式HPイベントは `いのちのたま反動`、`すなあらし`、`どく`、`もうどく`、`やけど`、`ステルスロック`、`まきびし`、Champions版 `しおづけ`、`オボンのみ`、`たべのこし`、`ゴツゴツメット`、`さめはだ／てつのトゲ` です
 - `ステルスロック` / `まきびし` → 直接攻撃 → 明示したヒットごとの接触反動・`オボンのみ` → 明示した`いのちのたま` → ターン終了時の天候 → 状態異常 → `しおづけ` → `たべのこし` の順でHPを更新します
