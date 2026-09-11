@@ -8,6 +8,7 @@ import {
   getPokemonBaseTypes,
   getPokemonTypeLabel,
   getPokemonTypeSelectionValue,
+  isTypelessPokemon,
   pokemonTypeOptions,
   resolvePokemonTypeOverride,
   updatePokemonTypeOverride,
@@ -27,6 +28,7 @@ export function PokemonTypeField({ ownerLabel, pokemonInput, pokemonCanonicalNam
   const [open, setOpen] = useState(false);
   const descriptionId = useId();
   const baseTypes = getPokemonBaseTypes(pokemonInput, pokemonCanonicalName);
+  const typeless = isTypelessPokemon(pokemonInput, pokemonCanonicalName);
   const locked = value === undefined;
   let customTypes: ReturnType<typeof resolvePokemonTypeOverride>;
   let error: string | undefined;
@@ -38,7 +40,7 @@ export function PokemonTypeField({ ownerLabel, pokemonInput, pokemonCanonicalNam
   const types = customTypes?.types.map((type) => type.canonicalName) ?? (locked ? baseTypes : []);
   const addedType = customTypes?.addedType?.canonicalName;
   const displayedTypes = [...types, ...(addedType ? [addedType] : [])];
-  const typeLabel = displayedTypes.map(getPokemonTypeLabel).join("・");
+  const typeLabel = displayedTypes.map(getPokemonTypeLabel).join("・") || (typeless ? "タイプなし" : "");
   const unlock = () => {
     const next = createPokemonTypeOverride(pokemonInput, pokemonCanonicalName);
     if (next) {
@@ -79,7 +81,7 @@ export function PokemonTypeField({ ownerLabel, pokemonInput, pokemonCanonicalNam
                   <img className="pokemon-type-icon" src={getPublicAssetUrl(`assets/types/${type.toLowerCase()}.png`)} alt="" aria-hidden="true" width="20" height="20" />
                   {index === types.length ? <span className="pokemon-type-added-marker" aria-hidden="true" /> : null}
                 </span>
-              )) : <span>{error ? "タイプ未解決" : "タイプ"}</span>}
+              )) : <span>{error ? "タイプ未解決" : typeless ? "タイプなし" : "タイプ"}</span>}
             </button>
           </UiPopover.Trigger>
           <button

@@ -47,6 +47,7 @@ const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.json");
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
 const megaAbilityManifest = await readJson("src/data/overrides/mega-ability-manifest.json");
+const debugPokemon = await readJson("src/data/overrides/debug-pokemon.json");
 const pokeapiPokemon = await readCsv("others/pokeapi/data/v2/csv/pokemon.csv");
 const pokeapiForms = await readCsv("others/pokeapi/data/v2/csv/pokemon_forms.csv");
 const pokeapiAbilities = await readCsv("others/pokeapi/data/v2/csv/abilities.csv");
@@ -376,6 +377,13 @@ const assertPokeapiSourceSelection = (pokemonOption, abilities) => {
 };
 
 const entries = pokemonOptions.entries.map((pokemonOption) => {
+  if (pokemonOption.showdownName === debugPokemon.canonicalName) {
+    return {
+      id: pokemonOption.id,
+      showdownName: pokemonOption.showdownName,
+      abilities: [],
+    };
+  }
   const manifestEntry = megaAbilityManifestByShowdownName.get(pokemonOption.showdownName);
   const abilities = manifestEntry?.status === "confirmed"
     ? toMegaOverrideAbilityEntries(pokemonOption, manifestEntry)
@@ -413,6 +421,8 @@ const payload = {
     compatibilityPatchId: pokemonOptions.source?.compatibilityPatchId,
     compatibilityManifest: pokemonOptions.source?.compatibilityManifest,
     pokemonOptions: "src/data/generated/pokemon-options.gen.json",
+    debugPokemon: "src/data/overrides/debug-pokemon.json",
+    debugPokemonVersion: debugPokemon.dataVersion,
     abilityOptions: "src/data/generated/ability-options.gen.json",
     megaAbilityManifest: "src/data/overrides/mega-ability-manifest.json",
     megaAbilityManifestVersion: megaAbilityManifest.dataVersion,

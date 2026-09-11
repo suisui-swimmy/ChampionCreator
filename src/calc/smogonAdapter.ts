@@ -22,6 +22,7 @@ import {
   BEAT_UP_CANONICAL_NAME,
   getBeatUpBasePowerForPokemon,
 } from "./beatUp";
+import { getDebugPokemonSpecies } from "./debugPokemon";
 
 const SMOGON_GENERATION = Generations.get(9);
 
@@ -114,6 +115,7 @@ export const toSmogonPokemon = (
   options: SmogonPokemonOptions = {},
 ): Pokemon => {
   const pokemon = new Pokemon(SMOGON_GENERATION, build.pokemon.canonicalName, {
+    overrides: getDebugPokemonSpecies(build.pokemon.canonicalName),
     level: build.level,
     nature: build.nature?.canonicalName,
     ivs: build.ivs,

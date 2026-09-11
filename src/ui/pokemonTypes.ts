@@ -13,6 +13,12 @@ export const addedPokemonTypeOptions = pokemonTypeOptions.filter((option) => ["G
 const normalTypeNames = new Set(pokemonTypeOptions.map((option) => option.canonicalName));
 const typesByPokemon = new Map(pokemonOptions.entries.map((option) => [option.showdownName, option.types]));
 
+export const isTypelessPokemon = (input: string, canonicalName?: string): boolean => {
+  const resolved = resolveEntityWithCanonicalHint("pokemon", input, canonicalName);
+  return (resolved.status === "exact" || resolved.status === "alias")
+    && typesByPokemon.get(resolved.canonicalName!)?.length === 0;
+};
+
 export const getPokemonBaseTypes = (input: string, canonicalName?: string): string[] => {
   const resolved = resolveEntityWithCanonicalHint("pokemon", input, canonicalName);
   if (resolved.status !== "exact" && resolved.status !== "alias") return [];

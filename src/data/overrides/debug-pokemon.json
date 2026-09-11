@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "debug-substitute-2026-09-11-v2",
+  "source": {
+    "authority": "User-specified damage debugging fixture",
+    "applicableVersion": "ChampionCreator 0.28.1",
+    "checkedAt": "2026-09-11",
+    "note": "Base HP 225 and other base stats 80 give HP 300 and other stats 100 at level 50, 31 IVs, zero SP and neutral nature. Normal level, IV, SP and nature rules still apply. No native type or ability. Weight defaults to 0 kg for this synthetic fixture; ordinary Calc weight rules apply. This is not the battle move Substitute or its decoy mechanics.",
+    "artwork": "User-supplied Substitute_Doll.png"
+  },
+  "canonicalName": "Substitute",
+  "displayNameJa": "みがわり",
+  "artwork": "/assets/debug/substitute.png",
+  "support": {
+    "metadata": "metadata-supported",
+    "engine": "engine-supported",
+    "calculation": "calculation-supported",
+    "path": "Native Pokemon.overrides with Calc's neutral ??? type; no damage post-processing"
+  },
+  "species": {
+    "name": "Substitute",
+    "types": ["???"],
+    "baseStats": { "hp": 225, "atk": 80, "def": 80, "spa": 80, "spd": 80, "spe": 80 },
+    "weightkg": 0,
+    "abilities": { "0": "" }
+  }
+}

@@ -1,5 +1,6 @@
 import { Generations, toID } from "@smogon/calc";
 import type { GameType } from "../domain/model";
+import { getDebugPokemonSpecies } from "./debugPokemon";
 
 const SMOGON_GENERATION = Generations.get(9);
 
@@ -14,8 +15,9 @@ export const calculateBeatUpBasePower = (baseAttack: number): number =>
 export const getBeatUpBasePowerForPokemon = (
   canonicalPokemonName: string,
 ): number | undefined => {
-  const species = SMOGON_GENERATION.species.get(toID(canonicalPokemonName));
-  return species
+  const species = getDebugPokemonSpecies(canonicalPokemonName)
+    ?? SMOGON_GENERATION.species.get(toID(canonicalPokemonName));
+  return species?.baseStats?.atk !== undefined
     ? calculateBeatUpBasePower(species.baseStats.atk)
     : undefined;
 };

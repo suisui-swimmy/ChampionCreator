@@ -17,6 +17,7 @@ const pokemonOptions = await readJson("src/data/generated/pokemon-options.gen.js
 const abilityOptions = await readJson("src/data/generated/ability-options.gen.json");
 const pokemonAbilities = await readJson("src/data/generated/pokemon-abilities.gen.json");
 const megaAbilityManifest = await readJson("src/data/overrides/mega-ability-manifest.json");
+const debugPokemon = await readJson("src/data/overrides/debug-pokemon.json");
 const userOptionExclusions = await readJson("src/data/overrides/user-option-exclusions.json");
 const calcPackage = await readJson("node_modules/@smogon/calc/package.json");
 
@@ -256,6 +257,16 @@ for (const entry of pokemonAbilities.entries ?? []) {
     errors.push(`${key} unexpectedly has Mega ability manifest entry`);
   }
   const isMegaOverride = manifestEntry?.status === "confirmed";
+
+  if (pokemonOption.showdownName === debugPokemon.canonicalName) {
+    if (pokemonAbilities.source?.debugPokemon !== "src/data/overrides/debug-pokemon.json"
+      || pokemonAbilities.source?.debugPokemonVersion !== debugPokemon.dataVersion
+      || !Array.isArray(entry.abilities) || entry.abilities.length !== 0
+      || Object.values(debugPokemon.species.abilities).some(Boolean)) {
+      errors.push(`${key} debug species must have no abilities and matching provenance`);
+    }
+    continue;
+  }
 
   const species = speciesData[pokemonOption.showdownName];
   if (!species) {

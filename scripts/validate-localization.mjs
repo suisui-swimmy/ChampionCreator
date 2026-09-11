@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { Generations, Pokemon, toID } from "@smogon/calc";
 
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
 
@@ -21,6 +22,7 @@ const aliasOverrides = await readJson("src/data/overrides/ja-aliases.json");
 const labelOverrides = await readJson("src/data/overrides/ja-label-overrides.json");
 const megaStoneLabels = await readJson("src/data/overrides/mega-stone-labels-ja.json");
 const userOptionExclusions = await readJson("src/data/overrides/user-option-exclusions.json");
+const debugPokemon = await readJson("src/data/overrides/debug-pokemon.json");
 const optionFiles = [
   "src/data/generated/pokemon-options.gen.json",
   "src/data/generated/move-options.gen.json",
@@ -31,6 +33,39 @@ const optionFiles = [
 ];
 
 const errors = [];
+const debugOptions = await readJson("src/data/generated/pokemon-options.gen.json");
+const debugEntry = debugOptions.entries.find((entry) => entry.showdownName === debugPokemon.canonicalName);
+const gen = Generations.get(9);
+if (debugPokemon.schemaVersion !== 1 || debugPokemon.canonicalName !== "Substitute"
+  || debugPokemon.displayNameJa !== "みがわり" || !debugPokemon.source?.authority
+  || !debugPokemon.source?.checkedAt || !debugPokemon.source?.applicableVersion
+  || debugPokemon.support?.metadata !== "metadata-supported"
+  || debugPokemon.support?.engine !== "engine-supported"
+  || debugPokemon.support?.calculation !== "calculation-supported"
+  || gen.species.get(toID(debugPokemon.canonicalName))) {
+  errors.push("debug Pokemon identity/provenance mismatch or upstream name collision");
+}
+if (debugEntry?.id !== toID(debugPokemon.canonicalName)
+  || debugEntry?.label !== debugPokemon.displayNameJa || debugEntry?.artwork !== debugPokemon.artwork
+  || !Array.isArray(debugEntry?.types) || debugEntry.types.length !== 0
+  || debugOptions.source?.debugPokemon !== "src/data/overrides/debug-pokemon.json"
+  || debugOptions.source?.debugPokemonVersion !== debugPokemon.dataVersion) {
+  errors.push("debug Pokemon generated option mismatch");
+}
+try {
+  const pokemon = new Pokemon(gen, debugPokemon.canonicalName, { level: 50, overrides: debugPokemon.species });
+  if (pokemon.species.name !== debugPokemon.canonicalName || pokemon.ability !== undefined
+    || pokemon.weightkg !== 0 || JSON.stringify(pokemon.types) !== '["???"]'
+    || ["hp", "atk", "def", "spa", "spd", "spe"].some((stat) => (
+      pokemon.species.baseStats[stat] !== (stat === "hp" ? 225 : 80)
+      || pokemon.rawStats[stat] !== (stat === "hp" ? 300 : 100)
+    ))
+    || [...gen.types].some((type) => type.name !== "???" && type.effectiveness["???"] !== 1)) {
+    errors.push("debug Pokemon must have HP 300 / other stats 100 at level 50 with neutral native Calc typing");
+  }
+} catch (error) {
+  errors.push(`debug Pokemon is not accepted by Calc: ${error.message}`);
+}
 const warnings = [];
 const catalogKeys = new Set();
 const resolverKeys = new Set();

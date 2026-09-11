@@ -46,6 +46,7 @@ const optionPaths = {
 const megaStoneLabelOverridePath = join(projectRoot, "src", "data", "overrides", "mega-stone-labels-ja.json");
 const userOptionExclusionPath = join(projectRoot, "src", "data", "overrides", "user-option-exclusions.json");
 const userOptionExclusionPayload = JSON.parse(await readFile(userOptionExclusionPath, "utf8"));
+const debugPokemon = JSON.parse(await readFile(join(projectRoot, "src/data/overrides/debug-pokemon.json"), "utf8"));
 
 const TYPE_LABELS_JA = {
   "???": "???",
@@ -437,7 +438,7 @@ const makePokemonOptions = () => {
   const speciesEntries = getUserOptionEntries("pokemon");
   const exclusionSummary = getExclusionSummary("pokemon");
   const entries = sortByLabel(
-    speciesEntries.map((species) => {
+    [...speciesEntries.map((species) => {
       const id = toID(species.name);
       const previousOption = getPreviousOption("pokemon", id, species.name);
       const localized = inferPokemonLabel(species, previousOption);
@@ -453,7 +454,15 @@ const makePokemonOptions = () => {
         sourceStatus: localized.sourceStatus,
         fallback: localized.fallback,
       });
-    }),
+    }), {
+      id: toID(debugPokemon.canonicalName),
+      label: debugPokemon.displayNameJa,
+      showdownName: debugPokemon.canonicalName,
+      types: [],
+      searchText: makeSearchText([debugPokemon.displayNameJa, debugPokemon.canonicalName]),
+      artwork: debugPokemon.artwork,
+      sourceStatus: "manual",
+    }],
   );
 
   return makePayload({
@@ -461,13 +470,15 @@ const makePokemonOptions = () => {
     entries,
     source: {
       previousOptions: "src/data/generated/pokemon-options.gen.json",
+      debugPokemon: "src/data/overrides/debug-pokemon.json",
+      debugPokemonVersion: debugPokemon.dataVersion,
     },
     summary: {
       totalOptions: entries.length,
       excludedShowdownOriginal: exclusionSummary.excludedSmogonOriginal,
       ...exclusionSummary,
       withArtwork: entries.filter((entry) => entry.artwork).length,
-      previousLocalized: entries.filter((entry) => previousById.pokemon.has(entry.id)).length,
+      previousLocalized: entries.filter((entry) => entry.showdownName !== debugPokemon.canonicalName && previousById.pokemon.has(entry.id)).length,
       needsConfirmation: entries.filter((entry) => entry.sourceStatus === "needs-confirmation").length,
       adapterTemporary: entries.filter((entry) => entry.sourceStatus === "adapter-temporary").length,
     },
