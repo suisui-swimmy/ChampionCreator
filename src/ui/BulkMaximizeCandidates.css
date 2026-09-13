@@ -1,0 +1,179 @@
+.bulk-maximize-preview.bulk-maximize-summary {
+  font-size: var(--desktop-text-control);
+}
+
+.bulk-maximize-summary .bulk-maximize-preview-header {
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.bulk-maximize-preview-header > strong { font-size: var(--desktop-text-heading); }
+.bulk-maximize-summary .bulk-maximize-preview-header > button { margin-left: auto; }
+.bulk-candidate-score strong { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+.bulk-candidate-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 3.5em), 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.bulk-candidate-stat {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bulk-candidate-stat dt {
+  font-size: var(--desktop-text-interactive-small);
+  font-weight: 700;
+}
+
+.bulk-candidate-stat-hp dt { color: var(--hp); }
+.bulk-candidate-stat-def dt { color: var(--def); }
+.bulk-candidate-stat-spd dt { color: var(--spd); }
+
+.bulk-candidate-stat dd {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.bulk-candidate-stat dd span {
+  display: inline-block;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: var(--desktop-text-interactive-small);
+  font-weight: 400;
+}
+
+.bulk-maximize-summary .ui-button:focus-visible,
+.bulk-comparison-dialog .ui-button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.bulk-comparison-dialog {
+  width: min(var(--bulk-comparison-width, 100%), calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  margin: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--desktop-text-control);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.bulk-comparison-dialog[open] { display: flex; flex-direction: column; }
+.bulk-comparison-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+
+.bulk-comparison-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bulk-comparison-header > div { min-width: 0; }
+.bulk-comparison-header h2 { margin: 0; font-size: var(--desktop-text-heading); overflow-wrap: anywhere; }
+.bulk-comparison-header p { margin: 4px 0 0; color: var(--muted); font-size: var(--desktop-text-interactive-small); }
+.bulk-comparison-header > button { flex-shrink: 0; }
+.bulk-comparison-close.ui-button {
+  display: grid;
+  place-items: center;
+  width: var(--desktop-control-standard);
+  height: var(--desktop-control-standard);
+  min-width: var(--desktop-control-standard);
+  min-height: var(--desktop-control-standard);
+  padding: 0;
+}
+.bulk-comparison-close img { width: var(--desktop-icon-standard); height: var(--desktop-icon-standard); }
+
+.bulk-comparison-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 16px;
+  margin: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.bulk-candidate-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.bulk-candidate-row:last-child { border-bottom: 0; }
+.bulk-candidate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+.bulk-candidate-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.bulk-candidate-identity { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.bulk-candidate-rank { color: var(--muted); }
+.bulk-candidate-score { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 4px; margin-left: auto; overflow-wrap: anywhere; }
+.bulk-candidate-score > span { color: var(--muted); font-size: var(--desktop-text-interactive-small); }
+.bulk-candidate-layout > .bulk-candidate-stats { grid-column: 1; grid-row: 2; min-width: 0; align-self: center; }
+.bulk-candidate-layout > .bulk-candidate-apply { grid-column: 2; grid-row: 2; justify-self: end; align-self: center; }
+.bulk-candidate-apply.ui-button { min-height: var(--desktop-control-primary); min-width: 5.5em; font-size: 14px; }
+.bulk-candidate-apply.ui-button-ghost { border-color: var(--gold-line); color: var(--gold); background: transparent; }
+.bulk-candidate-apply.ui-button-ghost:hover { background: var(--gold-soft); }
+.bulk-comparison-dialog .ui-button-small { min-height: var(--desktop-control-standard); font-size: var(--desktop-text-control); }
+
+.bulk-comparison-pagination {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+}
+.bulk-comparison-pagination > .ui-button { flex-shrink: 0; }
+.bulk-comparison-pagination > div { display: grid; min-width: 0; gap: 2px; text-align: center; overflow-wrap: anywhere; }
+.bulk-comparison-pagination span { color: var(--muted); font-size: var(--desktop-text-interactive-small); }
+
+@media (max-width: 720px) {
+  .bulk-maximize-preview.bulk-maximize-summary { font-size: var(--mobile-text-control); }
+  .bulk-comparison-dialog {
+    max-height: calc(100dvh - 16px);
+    margin: auto auto 0;
+    border-radius: 12px 12px 0 0;
+    font-size: var(--mobile-text-control);
+  }
+  .bulk-comparison-header { padding: 12px; }
+  .bulk-comparison-header h2 { font-size: var(--mobile-text-heading); }
+  .bulk-comparison-close.ui-button {
+    width: var(--mobile-control-standard);
+    height: var(--mobile-control-standard);
+    min-width: var(--mobile-control-standard);
+    min-height: var(--mobile-control-standard);
+  }
+  .bulk-comparison-close img { width: var(--mobile-icon-standard); height: var(--mobile-icon-standard); }
+  .bulk-comparison-list { padding: 0 12px; }
+  .bulk-candidate-apply.ui-button { min-height: var(--mobile-control-primary); }
+  .bulk-comparison-dialog .ui-button-small { min-height: var(--mobile-control-standard); font-size: var(--mobile-text-control); }
+  .bulk-comparison-pagination { padding: 10px 12px max(10px, env(safe-area-inset-bottom)); }
+}

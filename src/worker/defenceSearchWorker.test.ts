@@ -359,6 +359,7 @@ describe("runMaximizeRemainingBulkWorkerTask", () => {
       {
         type: "maximizeRemainingBulk",
         requestId: "bulk-request",
+        options: { maxResults: 50 },
         input: {
           build: defender,
           allowNatureChange: true,
@@ -375,6 +376,10 @@ describe("runMaximizeRemainingBulkWorkerTask", () => {
 
     expect(messages.some((message) => message.type === "bulkProgress")).toBe(true);
     expect(complete?.type === "bulkComplete" ? complete.result?.candidate.usedTotal : 0).toBe(66);
+    if (complete?.type !== "bulkComplete") throw new Error("Expected bulk completion");
+    expect(complete.results).toHaveLength(50);
+    expect(complete.result).toEqual(complete.results[0]);
+    expect(complete.results.every((result, index) => index === 0 || result.score.overallBulk <= complete.results[index - 1].score.overallBulk)).toBe(true);
     expect(complete?.type === "bulkComplete" ? complete.result?.score.overallBulkGain : 0).toBeGreaterThan(0);
   });
 

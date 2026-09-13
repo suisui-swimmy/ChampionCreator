@@ -3391,6 +3391,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding-top: 10px;
   font-weight: 700;
@@ -7476,42 +7477,26 @@ textarea {
 
   .mobile-target-open .sp-summary {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    gap: 0 12px;
+    gap: 8px;
   }
 
   .mobile-target-open .sp-summary-actions {
-    display: grid;
-    grid-template-columns: repeat(2, max-content);
-    grid-template-rows: repeat(2, var(--mobile-control-standard));
+    display: flex;
+    grid-row: 2;
+    width: 100%;
     align-items: center;
-    justify-items: start;
     gap: 8px;
   }
 
   .mobile-target-open .sp-summary-actions .ui-button {
-    min-height: var(--mobile-control-standard);
-    font-size: var(--mobile-text-interactive-small);
-  }
-
-  .mobile-target-open .bulk-nature-toggle {
-    grid-column: 1 / -1;
-    min-height: var(--mobile-control-standard);
-    font-size: var(--mobile-text-interactive-small);
-  }
-
-  .mobile-target-open .bulk-nature-toggle:focus-within {
-    outline: 2px solid rgba(245, 197, 66, 0.55);
-    outline-offset: 2px;
-    border-radius: 4px;
+    min-height: var(--mobile-control-primary);
   }
 
   .mobile-target-open .sp-summary-total {
-    grid-column: 2;
     grid-row: 1;
-    align-self: start;
-    min-height: var(--mobile-control-standard);
+    justify-self: end;
     margin-left: 0;
   }
 

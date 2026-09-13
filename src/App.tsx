@@ -126,6 +126,8 @@ import {
   type MovePowerAssistRule,
 } from "./calc/movePowerRules";
 import type { MaximizeRemainingBulkResult } from "./search/maximizeRemainingBulk";
+import { BulkMaximizeCandidates, getBulkCandidateKey } from "./ui/BulkMaximizeCandidates";
+import { BulkMaximizeControls } from "./ui/BulkMaximizeControls";
 import {
   getAutomaticSpeedModifierSources,
   type SpeedAdjustmentResult,
@@ -656,9 +658,6 @@ const formatHpEventEvaluation = (
           : `${damageAmountLabel}ダメージ`;
   return `${evaluation.label} / ${subjectLabel} / ${orderLabel}: ${hpChangeLabel}${probabilityLabel}`;
 };
-
-const formatBulkIndex = (value: number): string =>
-  Number.isInteger(value) ? String(value) : value.toFixed(1);
 
 const damageDescriptionEntityKinds = ["pokemon", "move", "item", "ability", "type"] as const satisfies readonly EntityKind[];
 
@@ -3350,6 +3349,10 @@ export function App({
     if (bulkMaximizeState.status === "running") {
       return;
     }
+    if (bulkMaximizeState.status === "complete" && bulkMaximizeState.result) {
+      dispatchBulkMaximize({ type: "reset" });
+      return;
+    }
 
     const activeRequest = activeRequestRef.current;
     activeRequest?.cancel();
@@ -4027,10 +4030,11 @@ export function App({
     clearAppliedMarkerAfterDelay();
   };
 
-  const handleApplyBulkMaximize = () => {
-    setTargetForm((current) => applyMaximizeRemainingBulkToTarget(current, bulkMaximizeState.result));
+  const handleApplyBulkMaximize = (result: MaximizeRemainingBulkResult) => {
+    if (bulkMaximizeState.status !== "complete" || !bulkMaximizeState.results.includes(result)) return;
+    setTargetForm((current) => applyMaximizeRemainingBulkToTarget(current, result));
     setAppliedCandidateId(null);
-    setAppliedAdjustmentId("bulk-maximize");
+    setAppliedAdjustmentId(`bulk-maximize:${getBulkCandidateKey(result)}`);
     clearAppliedMarkerAfterDelay();
   };
 
@@ -4503,7 +4507,7 @@ export function App({
           speedOverrideCounts={targetSpeedOverrideCounts}
           bulkMaximizeState={bulkMaximizeState}
           allowBulkNatureChange={allowBulkNatureChange}
-          bulkMaximizeApplied={appliedAdjustmentId === "bulk-maximize"}
+          bulkMaximizeAppliedKey={appliedAdjustmentId?.startsWith("bulk-maximize:") ? appliedAdjustmentId.slice("bulk-maximize:".length) : null}
           isBoxPanelOpen={boxOpen}
           onOpenBoxPanel={toggleBoxPanel}
           onAllowBulkNatureChange={handleAllowBulkNatureChange}
@@ -5756,7 +5760,7 @@ type TargetPanelProps = {
   speedOverrideCounts: TargetSpeedOverrideCounts;
   bulkMaximizeState: BulkMaximizeUiState;
   allowBulkNatureChange: boolean;
-  bulkMaximizeApplied: boolean;
+  bulkMaximizeAppliedKey: string | null;
   isBoxPanelOpen: boolean;
   onUpdateField: <K extends keyof TargetFormState>(
     key: K,
@@ -5767,7 +5771,7 @@ type TargetPanelProps = {
   onAllowBulkNatureChange: (value: boolean) => void;
   onRunBulkMaximize: () => void;
   onCancelBulkMaximize: () => void;
-  onApplyBulkMaximize: () => void;
+  onApplyBulkMaximize: (result: MaximizeRemainingBulkResult) => void;
   onOpenBoxPanel: () => void;
   onCloseMobileSheet?: () => void;
 };
@@ -5898,28 +5902,13 @@ type MobileOverviewProps = {
 
 type BulkMaximizeResultPreviewProps = {
   state: BulkMaximizeUiState;
-  applied: boolean;
-  onApply: () => void;
+  appliedKey: string | null;
+  onApply: (result: MaximizeRemainingBulkResult) => void;
 };
-
-function formatBulkStatSpread(result: MaximizeRemainingBulkResult): string {
-  const { statPoints } = result.candidate;
-  return `H${statPoints.hp} / B${statPoints.def} / D${statPoints.spd}`;
-}
-
-function formatBulkDerivedSpread(result: MaximizeRemainingBulkResult): string {
-  const { derivedStats } = result.candidate;
-  return `H${derivedStats.hp} / B${derivedStats.def} / D${derivedStats.spd}`;
-}
-
-function formatBulkGain(value: number): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${formatBulkIndex(value)}`;
-}
 
 function BulkMaximizeResultPreview({
   state,
-  applied,
+  appliedKey,
   onApply,
 }: BulkMaximizeResultPreviewProps) {
   if (state.status === "idle") {
@@ -5965,56 +5954,8 @@ function BulkMaximizeResultPreview({
     );
   }
 
-  const result = state.result;
-  const sideEffectNotes = result.natureChangeImpact.notes;
-
-  return (
-    <div className="bulk-maximize-preview" aria-live="polite">
-      <div className="bulk-maximize-preview-header">
-        <strong>耐久最大化候補</strong>
-        <Button
-          variant="primary"
-          size="small"
-          onClick={onApply}
-        >
-          {applied ? "適用済み" : "適用"}
-        </Button>
-      </div>
-      <dl className="bulk-maximize-grid">
-        <div>
-          <dt>推奨性格</dt>
-          <dd>{result.candidate.nature}</dd>
-        </div>
-        <div>
-          <dt>推奨SP</dt>
-          <dd>{formatBulkStatSpread(result)}</dd>
-        </div>
-        <div>
-          <dt>実数値</dt>
-          <dd>{formatBulkDerivedSpread(result)}</dd>
-        </div>
-        <div>
-          <dt>物理耐久</dt>
-          <dd>{formatBulkIndex(result.score.physicalBulk)}</dd>
-        </div>
-        <div>
-          <dt>特殊耐久</dt>
-          <dd>{formatBulkIndex(result.score.specialBulk)}</dd>
-        </div>
-        <div>
-          <dt>総合耐久</dt>
-          <dd>
-            {formatBulkIndex(result.score.overallBulk)}
-            <span>{formatBulkGain(result.score.overallBulkGain)}</span>
-          </dd>
-        </div>
-      </dl>
-      <p>{result.explanation}</p>
-      {sideEffectNotes.length > 0 ? (
-        <p className="bulk-maximize-warning">{sideEffectNotes.join(" / ")}</p>
-      ) : null}
-    </div>
-  );
+  return <BulkMaximizeCandidates key={state.results.map(getBulkCandidateKey).join("|")}
+    results={state.results} appliedKey={appliedKey} onApply={onApply} />;
 }
 
 function formatMobileAttackMeta(
@@ -6783,7 +6724,7 @@ function TargetPanel({
   speedOverrideCounts,
   bulkMaximizeState,
   allowBulkNatureChange,
-  bulkMaximizeApplied,
+  bulkMaximizeAppliedKey,
   isBoxPanelOpen,
   onUpdateField,
   onUpdateEv,
@@ -6987,30 +6928,9 @@ function TargetPanel({
         </div>
 
         <div className={`sp-summary${isSpLimitReached ? " is-sp-max" : ""}`}>
-          <div className="sp-summary-actions">
-            <Button
-              variant="ghost"
-              size="small"
-              className="bulk-maximize-button"
-              onClick={onRunBulkMaximize}
-              disabled={bulkMaximizeState.status === "running"}
-            >
-              {bulkMaximizeState.status === "running" ? "計算中..." : "残りSPで耐久最大化"}
-            </Button>
-            {bulkMaximizeState.status === "running" ? (
-              <Button variant="ghost" size="small" onClick={onCancelBulkMaximize}>
-                中止
-              </Button>
-            ) : null}
-            <label className="bulk-nature-toggle">
-              <input
-                type="checkbox"
-                checked={allowBulkNatureChange}
-                onChange={(event) => onAllowBulkNatureChange(event.target.checked)}
-              />
-              <span>性格変更を許可する</span>
-            </label>
-          </div>
+          <BulkMaximizeControls running={bulkMaximizeState.status === "running"} allowNatureChange={allowBulkNatureChange}
+            candidatesVisible={bulkMaximizeState.status === "complete" && bulkMaximizeState.result !== null}
+            onRun={onRunBulkMaximize} onCancel={onCancelBulkMaximize} onAllowNatureChange={onAllowBulkNatureChange} />
           <div className="sp-summary-total">
             <span>合計SP</span>
             <strong>{totalStatPoints} / {CHAMPIONS_TOTAL_STAT_POINTS}</strong>
@@ -7018,7 +6938,7 @@ function TargetPanel({
         </div>
         <BulkMaximizeResultPreview
           state={bulkMaximizeState}
-          applied={bulkMaximizeApplied}
+          appliedKey={bulkMaximizeAppliedKey}
           onApply={onApplyBulkMaximize}
         />
       </div>

@@ -1824,13 +1824,24 @@ describe("bulkMaximizeUiReducer", () => {
       type: "complete",
       requestId: "bulk-a",
       result,
+      results: [result],
       searchedCandidates: 20,
       totalCandidates: 20,
     });
 
     expect(state.status).toBe("complete");
     expect(state.result).toEqual(result);
+    expect(state.results).toEqual([result]);
     expect(state.progress).toBe(1);
+
+    const staleCompletion = { type: "complete" as const, requestId: "bulk-a", result, results: [result], searchedCandidates: 20, totalCandidates: 20 };
+    for (const action of [{ type: "reset" as const }, { type: "cancel" as const }, { type: "error" as const, message: "failed" }]) {
+      let next = bulkMaximizeUiReducer(state, action);
+      expect(bulkMaximizeUiReducer(next, staleCompletion)).toEqual(next);
+      next = bulkMaximizeUiReducer(next, { type: "start", requestId: "bulk-b" });
+      expect(next.results).toEqual([]);
+      expect(bulkMaximizeUiReducer(next, staleCompletion)).toEqual(next);
+    }
   });
 });
 
@@ -2013,7 +2024,7 @@ describe("startMaximizeRemainingBulkFromUi", () => {
     expect(state.status).toBe("running");
     expect(client.input?.build.pokemon.canonicalName).toBe("Delphox-Mega");
     expect(client.input?.natureCandidates?.length).toBe(25);
-    expect(client.options?.maxResults).toBe(1);
+    expect(client.options?.maxResults).toBe(50);
 
     client.options?.callbacks?.onBulkProgress?.({
       type: "bulkProgress",

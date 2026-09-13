@@ -112,6 +112,27 @@ describe("computeBulkScore", () => {
 });
 
 describe("maximizeRemainingBulk", () => {
+  it("returns the top 50 legal candidates in the same order as the complete result set", () => {
+    const build = makeBuild({ ...zeroStatPoints, atk: 8, spa: 4, spe: 10 });
+    const input = { build, allowNatureChange: false };
+    const all = maximizeRemainingBulk(input, { maxResults: 10000 });
+    const results = maximizeRemainingBulk(input, { maxResults: 50 });
+    expect(results).toHaveLength(50);
+    expect(results).toEqual(all.slice(0, 50));
+    for (const result of results) {
+      expect(result.candidate.usedTotal).toBe(66);
+      expect(result.candidate.statPoints).toMatchObject({ atk: 8, spa: 4, spe: 10 });
+      expect(Object.values(result.candidate.statPoints).every((sp) => sp >= 0 && sp <= 32)).toBe(true);
+      expect(result.score).toMatchObject(computeBulkScore(result.candidate.derivedStats));
+    }
+  });
+
+  it("returns fewer than 50 candidates when the fixed SP budget permits only one", () => {
+    const results = maximizeRemainingBulk({ build: makeBuild({ ...zeroStatPoints, atk: 32, spa: 32, spe: 2 }) }, { maxResults: 50 });
+    expect(results).toHaveLength(1);
+    expect(results[0].candidate.statPoints).toMatchObject({ hp: 0, def: 0, spd: 0 });
+  });
+
   it("keeps the current nature when nature changes are disabled", () => {
     const build = makeBuild({ ...zeroStatPoints, hp: 8, def: 4, spd: 6, spe: 12 });
 

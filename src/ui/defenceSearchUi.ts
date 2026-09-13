@@ -307,6 +307,7 @@ export interface BulkMaximizeUiState {
   totalCandidates: number;
   progress: number;
   result: MaximizeRemainingBulkResult | null;
+  results: MaximizeRemainingBulkResult[];
   errorMessage: string | null;
 }
 
@@ -323,6 +324,7 @@ export type BulkMaximizeUiAction =
       type: "complete";
       requestId: string;
       result: MaximizeRemainingBulkResult | null;
+      results: MaximizeRemainingBulkResult[];
       searchedCandidates: number;
       totalCandidates: number;
     }
@@ -352,6 +354,7 @@ export const createInitialBulkMaximizeUiState = (): BulkMaximizeUiState => ({
   totalCandidates: 0,
   progress: 0,
   result: null,
+  results: [],
   errorMessage: null,
 });
 
@@ -1972,6 +1975,7 @@ export const bulkMaximizeUiReducer = (
         totalCandidates: 0,
         progress: 0,
         result: null,
+        results: [],
         errorMessage: null,
       };
     case "progress":
@@ -1990,6 +1994,7 @@ export const bulkMaximizeUiReducer = (
         totalCandidates: action.totalCandidates,
         progress: 1,
         result: action.result,
+        results: action.results,
         errorMessage: null,
       };
     case "error":
@@ -2089,7 +2094,7 @@ export const startMaximizeRemainingBulkFromUi = (
 
   const request = client.maximizeRemainingBulk(input, {
     requestId,
-    maxResults: options.maxResults ?? 1,
+    maxResults: options.maxResults ?? 50,
     callbacks: {
       onBulkProgress: (message) => dispatch({
         type: "progress",
@@ -2102,6 +2107,7 @@ export const startMaximizeRemainingBulkFromUi = (
         type: "complete",
         requestId: message.requestId,
         result: message.result,
+        results: message.results,
         searchedCandidates: message.searchedCandidates,
         totalCandidates: message.totalCandidates,
       }),

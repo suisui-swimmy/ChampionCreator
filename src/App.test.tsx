@@ -1375,33 +1375,18 @@ describe("App", () => {
     );
   });
 
-  it("keeps the mobile SP summary on one stable two-row layout", () => {
+  it("places mobile bulk controls below the SP total at every mobile width", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const mobileStart = css.indexOf("@media (max-width: 720px)");
     const narrowStart = css.indexOf("@media (max-width: 380px)", mobileStart);
     const mobileCss = css.slice(mobileStart, narrowStart);
     const narrowCss = css.slice(narrowStart);
-
-    expect(mobileCss).toMatch(
-      /\.mobile-target-open \.sp-summary\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto;[^}]*align-items:\s*start;[^}]*gap:\s*0 12px;/s,
-    );
-    expect(mobileCss).toMatch(
-      /\.mobile-target-open \.sp-summary-actions\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2,\s*max-content\);[^}]*grid-template-rows:\s*repeat\(2,\s*var\(--mobile-control-standard\)\);[^}]*gap:\s*8px;/s,
-    );
-    expect(mobileCss).toMatch(
-      /\.mobile-target-open \.sp-summary-actions \.ui-button\s*\{[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
-    );
-    expect(mobileCss).toMatch(
-      /\.mobile-target-open \.bulk-nature-toggle\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
-    );
-    expect(mobileCss).toMatch(/\.mobile-target-open \.bulk-nature-toggle:focus-within\s*\{[^}]*outline:/s);
-    expect(mobileCss).toMatch(
-      /\.mobile-target-open \.sp-summary-total\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;[^}]*align-self:\s*start;[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*margin-left:\s*0;/s,
-    );
-
-    expect(narrowCss).not.toMatch(
-      /\.mobile-target-open \.sp-summary(?:-actions|-total)?\s*\{[^}]*(?:grid-template|align-items|min-height|font-size):/s,
-    );
+    expect(mobileCss).toMatch(/\.mobile-target-open \.sp-summary\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*gap: 8px;/s);
+    expect(mobileCss).toMatch(/\.mobile-target-open \.sp-summary-actions\s*\{[^}]*display: flex;[^}]*grid-row: 2;[^}]*width: 100%;/s);
+    expect(mobileCss).toMatch(/\.mobile-target-open \.sp-summary-total\s*\{[^}]*grid-row: 1;[^}]*justify-self: end;/s);
+    expect(mobileCss).not.toContain(".mobile-target-open .bulk-nature-toggle");
+    expect(narrowCss).not.toContain(".mobile-target-open .sp-summary {");
+    expect(narrowCss).not.toMatch(/\.mobile-target-open \.sp-summary(?:-actions|-total)?\s*\{[^}]*(?:font-size|min-height):/s);
   });
 
   it("organizes battle modifiers as one accessible two-column section per attack", () => {
@@ -2427,7 +2412,8 @@ describe("App", () => {
     expect(html).toMatch(/class="placeholder-field target-level-field"[\s\S]*?aria-label="調整対象 レベルの固定を解除"/);
     expect(html).toMatch(/aria-label="調整対象 レベルの固定を解除"[^>]*>[\s\S]*?assets\/ui\/lock\.svg/);
     expect(html).toContain(">残りSPで耐久最大化</button>");
-    expect(html).toContain(">性格変更を許可する</span>");
+    expect(html).toContain('<span>性格変更</span>');
+    expect(html).not.toContain('>性格変更を許可する</span>');
     expect(html).toContain('class="sp-summary-actions"');
     expect(html).toContain('class="sp-summary-total"');
     expect(html).not.toContain(">条件JSON</button>");

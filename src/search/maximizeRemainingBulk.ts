@@ -300,11 +300,13 @@ const evaluateBulkCandidateWithContext = (
     derivedStats,
   );
   const naturePart = natureChangeImpact.changed
-    ? `性格を ${natureChangeImpact.from} から ${natureChangeImpact.to} に変更`
-    : `${natureChangeImpact.to} のまま`;
+    ? `性格を ${natureChangeImpact.from} から ${natureChangeImpact.to} に変更し`
+    : `${natureChangeImpact.to}のまま`;
   const explanation = [
-    `${naturePart}し、H${statPoints.hp} / B${statPoints.def} / D${statPoints.spd} に再配分します`,
-    `総合耐久指数は ${context.currentScore.overallBulk.toFixed(1)} から ${score.overallBulk.toFixed(1)} へ上がります`,
+    `${naturePart}、H${statPoints.hp} / B${statPoints.def} / D${statPoints.spd} に再配分します`,
+    score.overallBulk === context.currentScore.overallBulk
+      ? `総合耐久指数は ${score.overallBulk.toFixed(1)} のままです`
+      : `総合耐久指数は ${context.currentScore.overallBulk.toFixed(1)} から ${score.overallBulk.toFixed(1)} へ変わります`,
   ].join("。");
 
   return {
