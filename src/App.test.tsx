@@ -1687,10 +1687,10 @@ describe("App", () => {
     expect(narrowCss).not.toMatch(/\.box-slot span\s*\{[^}]*font-size:/s);
   });
 
-  it("keeps a viewport of mobile workspace independent from the footer", () => {
+  it("keeps the small mobile viewport independent from browser toolbars and the footer", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
-    expect(css).toMatch(/\.app-workspace\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto 1fr auto;[^}]*min-height:\s*calc\(100dvh - 2 \* var\(--mobile-page-gutter\)\);/s);
+    expect(css).toMatch(/\.app-workspace\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto 1fr auto;[^}]*min-height:\s*calc\(100svh - 2 \* var\(--mobile-page-gutter\)\);/s);
     expect(css).toMatch(/\.mobile-overview\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
     expect(css).toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*0;/s);
     expect(css).not.toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*610px;/s);

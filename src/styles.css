@@ -6567,7 +6567,8 @@ textarea {
     grid-template-rows: auto 1fr auto;
     align-content: stretch;
     min-height: calc(100vh - 2 * var(--mobile-page-gutter));
-    min-height: calc(100dvh - 2 * var(--mobile-page-gutter));
+    /* Browser toolbar changes must not move the candidate dock while scrolling. */
+    min-height: calc(100svh - 2 * var(--mobile-page-gutter));
   }
   .app-footer.app-footer--about {
     grid-template-columns: minmax(0, 1fr);
@@ -8858,7 +8859,7 @@ textarea {
 @media (max-width: 380px) {
   .app-workspace {
     min-height: calc(100vh - 2 * var(--narrow-page-gutter));
-    min-height: calc(100dvh - 2 * var(--narrow-page-gutter));
+    min-height: calc(100svh - 2 * var(--narrow-page-gutter));
   }
 
   .mobile-scenarios-open .speed-target-mode-option {

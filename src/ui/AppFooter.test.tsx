@@ -75,7 +75,11 @@ describe("main footer publication contract", () => {
     expect(css).toMatch(/\.app-footer-details > summary\s*\{[^}]*min-height: var\(--desktop-control-comfort\);/);
     expect(mobile).toMatch(/\.app-footer-details > summary\s*\{[^}]*min-height: var\(--mobile-control-comfort\);/);
     expect(mobile).toMatch(/\.app-footer\.app-footer--about\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
-    expect(narrow).toMatch(/\.app-workspace\s*\{[^}]*min-height: calc\(100dvh - 2 \* var\(--narrow-page-gutter\)\);/);
+    expect(narrow).toMatch(/\.app-workspace\s*\{[^}]*min-height: calc\(100svh - 2 \* var\(--narrow-page-gutter\)\);/);
+    // Both mobile breakpoints must avoid reintroducing toolbar-driven layout changes.
+    const workspaceRules = [...css.matchAll(/\.app-workspace\s*\{([^}]*)\}/g)].map((match) => match[1]);
+    expect(workspaceRules.filter((rule) => rule.includes("100svh"))).toHaveLength(2);
+    expect(workspaceRules.every((rule) => !rule.includes("100dvh"))).toBe(true);
     expect(css).toContain('.app-footer-details > summary::-webkit-details-marker { display: none; }');
     expect(css).toContain('.app-footer-details > summary::marker { content: ""; }');
   });
