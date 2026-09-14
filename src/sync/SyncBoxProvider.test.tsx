@@ -131,7 +131,9 @@ describe("SyncBoxProvider activation boundary", () => {
     const guideMain = readFileSync(new URL("../guide/main.tsx", import.meta.url), "utf8");
     const provider = readFileSync(new URL("./SyncBoxProvider.tsx", import.meta.url), "utf8");
     expect(main).toContain('import { SyncBoxProvider } from "./sync/SyncBoxProvider"');
-    expect(main).toMatch(/<SyncMigrationGate>[\s\S]*?<SyncBoxProvider>[\s\S]*?<App \/>[\s\S]*?<\/SyncBoxProvider>[\s\S]*?<\/SyncMigrationGate>/);
+    const migrationChildren = main.match(/<SyncMigrationGate>([\s\S]*?)<\/SyncMigrationGate>/)?.[1];
+    // Verify provider containment independently of App's presentation-only props.
+    expect(migrationChildren).toMatch(/<SyncBoxProvider>\s*<App\b[^>]*\/>\s*<\/SyncBoxProvider>/);
     expect(guideMain).not.toContain("SyncBoxProvider");
     expect(provider).toContain("active.repository && active.isAvailable");
     expect(provider).toContain('result.status === "success" ? true : previous.isAvailable');

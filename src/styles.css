@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  --footer-body-size: 14px;
   --bg: #0d0f10;
   --surface: #151819;
   --surface-raised: #1a1e20;
@@ -5848,6 +5849,112 @@ textarea {
   color: #d7d0bf;
 }
 
+/* Main-app explanation: static guide/privacy footers keep their existing layout. */
+.app-shell:not(.app-shell--tutorial) {
+  display: block;
+}
+
+.app-workspace {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.app-footer.app-footer--about {
+  /* Size the right column to its content; cap it only when text needs reflow. */
+  grid-template-columns: minmax(0, 1fr) fit-content(60%);
+  align-items: start;
+  gap: 20px 28px;
+  padding-block: 16px 8px;
+  text-align: left;
+}
+
+.app-footer--about > section {
+  min-width: 0;
+}
+
+.app-footer--about h2 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: var(--desktop-text-heading);
+  line-height: 1.5;
+}
+
+.app-footer--about .app-footer-about {
+  color: var(--text);
+  font-size: var(--footer-body-size);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.app-footer-about p {
+  margin: 0 0 12px;
+}
+
+.app-footer-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--desktop-control-comfort);
+  font-size: var(--desktop-text-control);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-footer-details > summary::-webkit-details-marker { display: none; }
+.app-footer-details > summary::marker { content: ""; }
+.app-footer-details > summary svg {
+  flex: 0 0 var(--desktop-icon-compact);
+  width: var(--desktop-icon-compact);
+  height: var(--desktop-icon-compact);
+}
+.app-footer-details[open] > summary svg { transform: rotate(90deg); }
+.app-footer-details > summary:focus-visible,
+.app-footer-explanation a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.app-footer-explanation h3 {
+  margin: 12px 0 4px;
+  font-size: var(--desktop-text-control);
+}
+.app-footer-explanation a {
+  color: var(--gold);
+  text-underline-offset: 3px;
+}
+.app-footer--about .app-footer-links {
+  justify-content: flex-start;
+  gap: 4px 16px;
+}
+.app-footer--about .app-footer-resources {
+  display: grid;
+  gap: 10px;
+}
+.app-footer--about .app-footer-source {
+  display: grid;
+  justify-content: start;
+  gap: 4px;
+  color: var(--muted);
+}
+.app-footer--about .app-footer-source-date,
+.app-footer--about .app-footer-link-item,
+.app-footer--about .app-footer-contact {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.app-footer--about .app-footer-meta {
+  grid-column: 1 / -1;
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 721px) {
   .suggestion-format-toggle {
     min-height: var(--desktop-control-standard);
@@ -6455,6 +6562,29 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .app-workspace {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    align-content: stretch;
+    min-height: calc(100vh - 2 * var(--mobile-page-gutter));
+    min-height: calc(100dvh - 2 * var(--mobile-page-gutter));
+  }
+  .app-footer.app-footer--about {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .app-footer--about h2 { font-size: var(--mobile-text-heading); }
+  .app-footer-details > summary {
+    min-height: var(--mobile-control-comfort);
+    font-size: var(--mobile-text-control);
+  }
+  .app-footer-details > summary svg {
+    flex-basis: var(--mobile-icon-compact);
+    width: var(--mobile-icon-compact);
+    height: var(--mobile-icon-compact);
+  }
+  .app-footer-explanation h3 { font-size: var(--mobile-text-control); }
+
   .pokemon-type-field { min-height: var(--mobile-control-standard); }
   .pokemon-type-summary,
   .pokemon-type-lock { min-height: var(--mobile-control-standard); font-size: var(--mobile-text-control); }
@@ -6476,8 +6606,7 @@ textarea {
   .app-shell:not(.app-shell--tutorial) {
     min-height: 100vh;
     min-height: 100dvh;
-    grid-template-rows: auto 1fr auto auto;
-    align-content: stretch;
+    display: block;
   }
 
   .topbar {
@@ -8727,6 +8856,11 @@ textarea {
 }
 
 @media (max-width: 380px) {
+  .app-workspace {
+    min-height: calc(100vh - 2 * var(--narrow-page-gutter));
+    min-height: calc(100dvh - 2 * var(--narrow-page-gutter));
+  }
+
   .mobile-scenarios-open .speed-target-mode-option {
     gap: 6px;
   }

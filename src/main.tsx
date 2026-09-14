@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { captureFooterStartup } from "./ui/footerStartup";
 import { App } from "./App";
 import { AuthSessionProvider } from "./sync/authSessionContext";
 import { CloudDraftProvider } from "./sync/CloudDraftProvider";
@@ -13,6 +14,8 @@ if (!rootElement) {
   throw new Error("Root element #root was not found.");
 }
 
+const footerStartup = captureFooterStartup(rootElement);
+
 // Replace the build-time, storage-free preview with the normal browser app.
 // Hydrating it would mix a blank server snapshot with this browser's saved forms.
 createRoot(rootElement).render(
@@ -21,7 +24,7 @@ createRoot(rootElement).render(
       <SyncMigrationGate>
         <CloudDraftProvider>
           <SyncBoxProvider>
-            <App />
+            <App footerStartup={footerStartup} />
           </SyncBoxProvider>
         </CloudDraftProvider>
       </SyncMigrationGate>

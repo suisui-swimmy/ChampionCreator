@@ -1687,10 +1687,10 @@ describe("App", () => {
     expect(narrowCss).not.toMatch(/\.box-slot span\s*\{[^}]*font-size:/s);
   });
 
-  it("lets the mobile board follow its content while keeping the footer at the viewport bottom", () => {
+  it("keeps a viewport of mobile workspace independent from the footer", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
-    expect(css).toMatch(/\.app-shell:not\(\.app-shell--tutorial\)\s*\{[^}]*min-height:\s*100dvh;[^}]*grid-template-rows:\s*auto 1fr auto auto;[^}]*align-content:\s*stretch;/s);
+    expect(css).toMatch(/\.app-workspace\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto 1fr auto;[^}]*min-height:\s*calc\(100dvh - 2 \* var\(--mobile-page-gutter\)\);/s);
     expect(css).toMatch(/\.mobile-overview\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
     expect(css).toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*0;/s);
     expect(css).not.toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*610px;/s);
@@ -1883,8 +1883,8 @@ describe("App", () => {
     expect(pages[2]).not.toContain("/assets/icons/icon-512.png");
   });
 
-  it("publishes the same five-group footer contract on the app, guide, and privacy pages", () => {
-    const appFooter = renderExampleApp().match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
+  it("preserves shared footer information while the app adds its own explanation layout", () => {
+    const appFooter = renderExampleApp().match(/<footer class="app-footer app-footer--about"[\s\S]*?<\/footer>/)?.[0] ?? "";
     const guideHtml = readFileSync(new URL("../guide/index.html", import.meta.url), "utf8");
     const guideFooter = guideHtml.match(/<footer class="app-footer"[\s\S]*?<\/footer>/)?.[0] ?? "";
     const privacyHtml = readFileSync(new URL("../privacy/index.html", import.meta.url), "utf8");
@@ -1905,7 +1905,11 @@ describe("App", () => {
       expect(footer).toContain('class="app-footer-version"');
       expect(footer).toContain("© 2026 suisui-swimmy");
       expect(footer).toContain("本ツールは非公式のファンツールであり、画像、名称などに関する著作権は 任天堂 / クリーチャーズ / ゲームフリーク に帰属します");
-      expect(footer.indexOf('class="app-footer-copy"')).toBeLessThan(footer.indexOf("app-footer-page-links"));
+      if (footer === appFooter) {
+        expect(footer.indexOf('class="app-footer-copy"')).toBeGreaterThan(footer.indexOf('class="app-footer-source"'));
+      } else {
+        expect(footer.indexOf('class="app-footer-copy"')).toBeLessThan(footer.indexOf("app-footer-page-links"));
+      }
       expect(footer.indexOf("app-footer-page-links")).toBeLessThan(footer.indexOf("app-footer-support-links"));
       expect(footer.indexOf("app-footer-support-links")).toBeLessThan(footer.indexOf('class="app-footer-source"'));
       expect(footer.indexOf('class="app-footer-source"')).toBeLessThan(footer.indexOf('class="app-footer-version"'));
@@ -1915,11 +1919,11 @@ describe("App", () => {
       expect(footer).toContain('aria-label="ChampionCreator GitHub リポジトリ"');
       expect(footer).toContain("assets/social/github-invertocat-white.svg");
       expect(footer.indexOf("不具合報告")).toBeLessThan(footer.indexOf("お問い合わせ"));
-      expect(footer.indexOf("お問い合わせ")).toBeLessThan(footer.indexOf("https://github.com/suisui-swimmy/ChampionCreator"));
+      expect(footer.indexOf("お問い合わせ")).toBeLessThan(footer.indexOf('href="https://github.com/suisui-swimmy/ChampionCreator"'));
       expect(footer).toContain("使用率データ提供元: Pokemon Champions Battle Data");
       expect(footer).toContain("データ更新日:");
       expect(footer.match(/aria-current="page"/g)).toHaveLength(1);
-      expect(footer.match(/app-footer-separator/g)).toHaveLength(5);
+      expect(footer.match(/app-footer-separator/g) ?? []).toHaveLength(footer === appFooter ? 0 : 5);
     }
 
     expect(appFooter).toMatch(/href="\/" aria-current="page"[^>]*>アプリ<\/a>/);
@@ -2543,7 +2547,7 @@ describe("App", () => {
     expect(html).toContain('href="https://x.com/peixe0307"');
     expect(html).toContain('href="https://github.com/suisui-swimmy/ChampionCreator"');
     expect(html).toContain("不具合報告");
-    expect(html).toContain(" | ");
+    expect(html).not.toContain('class="app-footer-separator"');
     expect(html).toContain("お問い合わせ");
     expect(html).not.toContain("不具合報告 / お問い合わせ");
     expect(html).toContain("assets/social/x-logo.svg");
