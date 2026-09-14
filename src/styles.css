@@ -6822,7 +6822,10 @@ textarea {
 
   .mobile-symmetric-board {
     position: relative;
+    /* Keep the bottom divider next to the dock; spare height stays above it. */
+    flex: 1 0 auto;
     display: grid;
+    align-content: start;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
     gap: 34px;
     align-items: start;

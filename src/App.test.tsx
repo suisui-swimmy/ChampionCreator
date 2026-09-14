@@ -1693,6 +1693,7 @@ describe("App", () => {
     expect(css).toMatch(/\.app-workspace\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto 1fr auto;[^}]*min-height:\s*calc\(100svh - 2 \* var\(--mobile-page-gutter\)\);/s);
     expect(css).toMatch(/\.mobile-overview\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
     expect(css).toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*0;/s);
+    expect(css).toMatch(/\.mobile-symmetric-board\s*\{[^}]*flex:\s*1 0 auto;[^}]*align-content:\s*start;[^}]*border-bottom:/s);
     expect(css).not.toMatch(/\.mobile-symmetric-board\s*\{[^}]*min-height:\s*610px;/s);
     expect(css).toMatch(/\.mobile-candidate-dock\s*\{[^}]*position:\s*static;[^}]*margin-top:\s*auto;/s);
   });
