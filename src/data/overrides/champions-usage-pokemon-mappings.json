@@ -21,7 +21,14 @@
         "sp_defense": 148,
         "speed": 112
       },
-      "reviewWhen": "Review or retire this mapping if the source identity stats change or both floette and floetteeternal are published. An explicit floetteeternal entry alone needs no remapping."
+      "nativeTransition": {
+        "checkedAt": "2026-09-15",
+        "source": "https://championsbattledata.com/api",
+        "verifiedSourceDataVersion": "20260915033558364",
+        "evidence": "floette retains historical CSVs through 2026-09-11 with no Current battle summary or CSV paths. floetteeternal has CSVs from 2026-09-12 onward and Current Singles/Doubles summaries and CSV paths. Both retain the verified identity stats.",
+        "policy": "Exclude a verified history-only legacy record when a unique native record has Current data. Keep the legacy mapping for legacy-only API responses and published v1 payloads."
+      },
+      "reviewWhen": "Stop and review if legacy identity stats change, either ID is duplicated, or both legacy and native IDs have Current data. An explicit floetteeternal entry alone needs no remapping."
     }
   ]
 }

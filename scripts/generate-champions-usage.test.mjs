@@ -171,6 +171,74 @@ describe("generate-champions-usage", () => {
     await expect(collectNatureUsageFromFiles({ apiData: apiData(pokemon), catalogs: natureCatalogs, files })).rejects.toThrow(/mapping collision/);
   });
 
+  const historicalFloetteEntry = () => {
+    const pokemon = floetteEntry();
+    pokemon.summary.battleSummary.M6 = pokemon.summary.battleSummary.Current;
+    delete pokemon.summary.battleSummary.Current;
+    pokemon.battleDataCsvs = currentPaths("Floette").map((record) => ({
+      ...record, season: "M6", date: "11_09_2026",
+      path: record.path.replace("battle_data/", "battle_data/M6/11_09_2026/"),
+    }));
+    return pokemon;
+  };
+
+  it.each([false, true])("uses native Current rankings and CSVs alongside legacy history regardless of order (%s)", async (reverse) => {
+    const native = floetteEntry("floetteeternal");
+    native.battleDataCsvs = currentPaths("Floette-Eternal");
+    native.summary.battleSummary.Current.Singles.rows = [{ position: 57 }];
+    native.summary.battleSummary.Current.Doubles.rows = [{ position: 20 }];
+    native.summary.battleSummary.Current.Singles.values.move = ["Protect", "Moonblast"];
+    const pokemon = [historicalFloetteEntry(), native];
+    if (reverse) pokemon.reverse();
+    const source = apiData(pokemon);
+    const before = structuredClone(source);
+    const warn = vi.fn();
+    const natureUsageByFormat = await collectNatureUsageFromFiles({
+      apiData: source, catalogs: natureCatalogs, warn,
+      files: Object.fromEntries(currentPaths("Floette-Eternal").map(({ path }) => [path, natureCsv({ jolly: "56.8%" })])),
+    });
+    const payload = transformApiData(source, { catalogs: natureCatalogs, natureUsageByFormat, warn });
+    const nativeOnly = transformApiData(apiData([native]), { catalogs: natureCatalogs, natureUsageByFormat });
+    expect(payload.formats).toEqual(nativeOnly.formats);
+    for (const format of ["Singles", "Doubles"]) {
+      expect(Object.keys(payload.formats[format])).toEqual(["floetteeternal"]);
+      expect(payload.formats[format].floetteeternal).toMatchObject({
+        ability: ["Flower Veil"], item: ["Floettite"],
+        nature: [{ canonicalName: "Jolly", rank: 1, percentage: 56.8 }, { canonicalName: "Adamant", rank: 2, percentage: 31.3 }],
+      });
+    }
+    expect(payload.formats.Singles.floetteeternal).toMatchObject({ pokemonRank: 57, move: ["Protect", "Moonblast"] });
+    expect(payload.formats.Doubles.floetteeternal.pokemonRank).toBe(20);
+    expect(payload.dataVersion).toMatch(/\+nature-[0-9a-f]{64}\+pokemon-[0-9a-f]{64}$/);
+    expect(source).toEqual(before);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each(["summary", "csv"])("still rejects coexistence if the legacy record retains Current %s", async (kind) => {
+    const legacy = historicalFloetteEntry();
+    if (kind === "summary") legacy.summary.battleSummary.Current = { Doubles: { values: values() } };
+    else legacy.battleDataCsvs.push(currentPaths("Floette")[0]);
+    const source = apiData([legacy, floetteEntry("floetteeternal")]);
+    expect(() => transformApiData(source, { catalogs })).toThrow(/mapping collision/);
+    const files = Object.fromEntries(currentPaths("Floette").map(({ path }) => [path, natureCsv()]));
+    await expect(collectNatureUsageFromFiles({ apiData: source, catalogs: natureCatalogs, files })).rejects.toThrow(/mapping collision/);
+  });
+
+  it("rejects duplicate IDs, absent native Current data, and changed legacy identity during migration", () => {
+    const native = floetteEntry("floetteeternal");
+    for (const pokemon of [
+      [native, floetteEntry("Floette-Eternal")],
+      [historicalFloetteEntry(), native, floetteEntry("Floette-Eternal")],
+      [historicalFloetteEntry(), historicalFloetteEntry(), native],
+      [historicalFloetteEntry(), { ...historicalFloetteEntry(), showdownId: "floetteeternal" }, entry("pikachu", { move: ["Protect"] }, { move: ["Protect"] })],
+    ]) {
+      expect(() => transformApiData(apiData(pokemon), { catalogs })).toThrow(/mapping collision/);
+    }
+    const changed = historicalFloetteEntry();
+    changed.summary.baseStats.sp_attack = 95;
+    expect(() => transformApiData(apiData([changed, native]), { catalogs })).toThrow(/source identity changed/);
+  });
+
   it("leaves an existing output untouched when a provider collision blocks generation", async () => {
     const directory = await mkdtemp(join(tmpdir(), "champions-usage-mapping-"));
     const outputPath = join(directory, "usage.json");

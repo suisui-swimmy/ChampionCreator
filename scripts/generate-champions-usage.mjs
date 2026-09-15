@@ -298,19 +298,34 @@ const mapRankedValues = ({ values, category, canonicalMap, sourceId, format, war
   return result;
 };
 
-const assertSourcePokemonMappings = (apiData) => {
+const hasCurrentPokemonData = (entry) => entry?.summary?.battleSummary?.Current != null
+  || (Array.isArray(entry?.battleDataCsvs) && entry.battleDataCsvs.some((record) => record?.season === "Current"));
+
+// The provider retains historical IDs after moving Current data to a native
+// canonical ID. Exclude only a verified, history-only legacy record; never let
+// source order decide which record supplies rankings or nature percentages.
+const selectSourcePokemonRecords = (apiData) => {
+  const historicalRecords = new Set();
   for (const mapping of pokemonMappings.entries) {
     const sourceRecords = apiData.pokemon.filter((entry) => toID(entry?.showdownId) === mapping.sourceId);
-    if (sourceRecords.length === 0) continue;
     const targetId = toID(mapping.canonicalName);
-    if (sourceRecords.length > 1 || apiData.pokemon.some((entry) => toID(entry?.showdownId) === targetId)) {
+    const nativeRecords = apiData.pokemon.filter((entry) => toID(entry?.showdownId) === targetId);
+    if (sourceRecords.length > 1 || nativeRecords.length > 1) {
       throw new ChampionsUsageDataError(`Pokemon mapping collision: ${mapping.sourceId} and ${targetId}; review the provider mapping before generating usage data`);
     }
+    if (sourceRecords.length === 0) continue;
     const stats = sourceRecords[0]?.summary?.baseStats;
     if (!isObject(stats) || Object.entries(mapping.expectedSourceStats).some(([key, value]) => stats[key] !== value)) {
       throw new ChampionsUsageDataError(`Pokemon source identity changed for ${mapping.sourceId}; review the provider mapping before generating usage data`);
     }
+    if (nativeRecords.length === 1) {
+      if (hasCurrentPokemonData(sourceRecords[0]) || !hasCurrentPokemonData(nativeRecords[0])) {
+        throw new ChampionsUsageDataError(`Pokemon mapping collision: ${mapping.sourceId} and ${targetId}; review the provider mapping before generating usage data`);
+      }
+      historicalRecords.add(sourceRecords[0]);
+    }
   }
+  return apiData.pokemon.filter((entry) => !historicalRecords.has(entry));
 };
 
 const resolvePokemonTargets = ({ sourceId, pokemonMap, warn }) => {
@@ -348,7 +363,7 @@ export const transformApiData = (apiData, {
   dataVersion,
 } = {}) => {
   assertApiShape(apiData);
-  assertSourcePokemonMappings(apiData);
+  const pokemonRecords = selectSourcePokemonRecords(apiData);
   if (!catalogs?.move || !catalogs?.ability || !catalogs?.item || !catalogs?.pokemon) {
     throw new ChampionsUsageDataError("Generated option catalogs are required");
   }
@@ -356,7 +371,7 @@ export const transformApiData = (apiData, {
   const formats = Object.fromEntries(FORMATS.map((format) => [format, {}]));
   const usableValues = Object.fromEntries(FORMATS.map((format) => [format, 0]));
 
-  for (const entry of apiData.pokemon) {
+  for (const entry of pokemonRecords) {
     const sourceId = entry?.showdownId;
     if (typeof sourceId !== "string" || sourceId.trim() === "") {
       warn("[champions-usage] dropped pokemon record without showdownId");
@@ -821,8 +836,8 @@ export const collectNatureUsage = async ({
   if (typeof readFileForPath !== "function") {
     throw new ChampionsUsageDataError("A bulk archive file reader is required");
   }
-  const pathIndex = mapCurrentCsvPaths(apiData, { assetRoot, warn });
-  assertSourcePokemonMappings(apiData);
+  const pokemonRecords = selectSourcePokemonRecords(apiData);
+  const pathIndex = mapCurrentCsvPaths({ ...apiData, pokemon: pokemonRecords }, { assetRoot, warn });
   const entries = archiveEntries === undefined
     ? undefined
     : archiveEntries instanceof Set
@@ -832,7 +847,7 @@ export const collectNatureUsage = async ({
   const readCache = new Map();
   const usableNatureCount = Object.fromEntries(FORMATS.map((format) => [format, 0]));
 
-  for (const entry of apiData.pokemon) {
+  for (const entry of pokemonRecords) {
     const sourceId = entry?.showdownId;
     if (typeof sourceId !== "string" || sourceId.trim() === "") continue;
     const targets = resolvePokemonTargets({ sourceId, pokemonMap: catalogs.pokemon, warn });
@@ -939,7 +954,7 @@ export const run = async ({
     loadCatalogs(catalogDirectory),
   ]);
   assertApiShape(apiData);
-  assertSourcePokemonMappings(apiData);
+  selectSourcePokemonRecords(apiData);
   const extracted = await extractBulkArchiveImpl({
     zipBytes: resolvedZipBytes,
     apiData,
