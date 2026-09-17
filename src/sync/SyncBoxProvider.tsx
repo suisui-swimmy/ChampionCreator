@@ -36,6 +36,8 @@ export interface SyncBoxContextValue {
   readonly snapshot: SyncBoxSnapshot;
   readonly isAvailable: boolean;
   readonly isSynchronizing: boolean;
+  /** A current-source sync has returned, independently of later background work. */
+  readonly initialSyncSettled: boolean;
   readonly lastSyncError: string | null;
   readonly issueCount: number;
   readonly conflicts: readonly SyncBoxConflictDetail[];
@@ -167,6 +169,7 @@ export function SyncBoxProvider({
   const suspendedSourceRef = useRef<string | null>(null);
   const pendingSynchronizationsRef = useRef(new Set<Promise<unknown>>());
   const [repositoryGeneration, setRepositoryGeneration] = useState(0);
+  const [initialSyncSourceKey, setInitialSyncSourceKey] = useState<string | null>(null);
 
   const active = useMemo<ActiveRepository | null>(() => {
     const ownerUid = getSyncBoxOwnerUid(authState, migration);
@@ -241,6 +244,7 @@ export function SyncBoxProvider({
       try {
         const result = await repository.synchronize(trigger);
         if (operation !== operationRef.current || suspendedRef.current) return result;
+        setInitialSyncSourceKey(active.sourceKey);
         const issueMessage = result.issues.length > 0
           ? "一部のクラウド保存を読み込めませんでした。元データは保持しています"
           : null;
@@ -267,6 +271,7 @@ export function SyncBoxProvider({
         return result;
       } catch (error) {
         if (operation !== operationRef.current || suspendedRef.current) return null;
+        setInitialSyncSourceKey(active.sourceKey);
         setProviderState((current) => ({
           sourceKey: active.sourceKey,
           snapshot: current?.sourceKey === active.sourceKey ? current.snapshot : active.snapshot,
@@ -325,6 +330,7 @@ export function SyncBoxProvider({
 
   useEffect(() => {
     operationRef.current += 1;
+    setInitialSyncSourceKey(null);
     if (!active || (suspendedSourceRef.current !== null && suspendedSourceRef.current !== active.sourceKey)) {
       suspendedRef.current = false;
       suspendedSourceRef.current = null;
@@ -487,6 +493,7 @@ export function SyncBoxProvider({
           snapshot: currentState.snapshot,
           isAvailable: currentState.isAvailable,
           isSynchronizing: currentState.isSynchronizing,
+          initialSyncSettled: initialSyncSourceKey === active.sourceKey,
           lastSyncError: currentState.lastSyncError,
           issueCount: currentState.issueCount,
           conflicts: currentState.snapshot.conflicts,
@@ -502,6 +509,7 @@ export function SyncBoxProvider({
   ), [
     active,
     currentState,
+    initialSyncSourceKey,
     discardAccountData,
     prepareAccountDeletion,
     resolveConflict,

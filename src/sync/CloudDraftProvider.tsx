@@ -70,6 +70,8 @@ export interface CloudDraftContextValue {
   readonly snapshot: CloudDraftSnapshot;
   readonly isAvailable: boolean;
   readonly status: CloudDraftRuntimeStatus;
+  /** A current-source sync has returned, independently of later background work. */
+  readonly initialSyncSettled: boolean;
   readonly lastError: string | null;
   readonly issueCount: number;
   readonly queueCurrentDraft: (draft: DraftStorageDocument) => string | null;
@@ -176,6 +178,7 @@ export function CloudDraftProvider({
   const suspendedSourceRef = useRef<string | null>(null);
   const inFlightSynchronizeRef = useRef<Promise<unknown> | null>(null);
   const [runtimeGeneration, setRuntimeGeneration] = useState(0);
+  const [initialSyncSourceKey, setInitialSyncSourceKey] = useState<string | null>(null);
 
   const active = useMemo<ActiveRuntime | null>(() => {
     const ownerUid = getCloudDraftOwnerUid(authState, migration);
@@ -247,6 +250,7 @@ export function CloudDraftProvider({
     if (suspendedRef.current || !active?.runtime) return null;
     if (isOffline()) {
       clearTimer();
+      setInitialSyncSourceKey(active.sourceKey);
       setProviderState((current) => ({
         sourceKey: active.sourceKey,
         snapshot: current?.sourceKey === active.sourceKey ? current.snapshot : active.snapshot,
@@ -272,6 +276,7 @@ export function CloudDraftProvider({
     try {
       const result = await remoteOperation;
       if (operation !== operationRef.current) return result;
+      setInitialSyncSourceKey(active.sourceKey);
       const snapshot = result.snapshot ?? active.snapshot;
       const issueMessage = result.issues.length > 0
         ? "一部のクラウド下書きを読み込めませんでした。正常な下書きは保持しています"
@@ -292,6 +297,7 @@ export function CloudDraftProvider({
       return result;
     } catch (error) {
       if (operation !== operationRef.current) return null;
+      setInitialSyncSourceKey(active.sourceKey);
       setProviderState((current) => ({
         sourceKey: active.sourceKey,
         snapshot: current?.sourceKey === active.sourceKey ? current.snapshot : active.snapshot,
@@ -349,6 +355,7 @@ export function CloudDraftProvider({
 
   useEffect(() => {
     operationRef.current += 1;
+    setInitialSyncSourceKey(null);
     clearTimer();
     if (!active || (suspendedSourceRef.current !== null && suspendedSourceRef.current !== active.sourceKey)) {
       suspendedRef.current = false;
@@ -473,6 +480,7 @@ export function CloudDraftProvider({
       snapshot: currentState.snapshot,
       isAvailable: currentState.isAvailable,
       status: currentState.status,
+      initialSyncSettled: initialSyncSourceKey === active.sourceKey,
       lastError: currentState.lastError,
       issueCount: currentState.issueCount,
       queueCurrentDraft,
@@ -485,6 +493,7 @@ export function CloudDraftProvider({
   }, [
     active,
     currentState,
+    initialSyncSourceKey,
     deleteDraft,
     discardAccountData,
     prepareAccountDeletion,

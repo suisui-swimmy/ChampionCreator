@@ -1,0 +1,69 @@
+.startup-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: 24px var(--desktop-page-gutter);
+  color: var(--text);
+  background: var(--bg);
+}
+
+.startup-content {
+  width: min(100%, 440px);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.startup-brand {
+  display: block;
+  width: 96px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 20px;
+}
+
+.startup-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--desktop-text-control);
+  line-height: 1.7;
+}
+
+.startup-spinner {
+  display: block;
+  width: var(--desktop-icon-standard);
+  height: var(--desktop-icon-standard);
+  margin: 0 auto 16px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: startup-spin 1s linear infinite;
+}
+
+.startup-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.startup-actions .ui-button {
+  height: auto;
+  min-height: var(--desktop-control-primary);
+  padding: 8px 12px;
+  font-size: var(--footer-body-size);
+  line-height: 1.5;
+  white-space: normal;
+}
+
+@keyframes startup-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+  .startup-screen { padding-inline: var(--mobile-page-gutter); }
+  .startup-message { font-size: var(--mobile-text-control); }
+  .startup-actions .ui-button { min-height: var(--mobile-control-primary); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-spinner { animation: none; }
+}

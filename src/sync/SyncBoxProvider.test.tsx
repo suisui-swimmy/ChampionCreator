@@ -13,8 +13,10 @@ import {
 } from "./SyncBoxProvider";
 import {
   SyncBoxRepositoryError,
+  createSyncBoxRepository,
   type SyncBoxSnapshot,
 } from "./syncBoxRepository";
+import { createMemorySyncRepository } from "./localSyncRepository";
 import {
   SyncMigrationReadinessContext,
   type SyncMigrationReadiness,
@@ -38,6 +40,24 @@ const migrationState = (
 ): SyncMigrationReadiness => ({ status, ownerUid });
 
 describe("SyncBoxProvider activation boundary", () => {
+  it("does not mark a readable local snapshot as completed initial cloud sync", () => {
+    function Probe() {
+      const context = useOptionalSyncBox();
+      return <output>{`${context?.isAvailable}:${context?.initialSyncSettled}`}</output>;
+    }
+    const repository = createSyncBoxRepository({
+      local: createMemorySyncRepository("account-a"),
+      cloud: { readAll: async () => ({ status: "empty", records: [], issues: [] }), write: async () => ({ status: "written", issues: [] }) },
+    });
+    const html = renderToStaticMarkup(
+      <AuthSessionContext.Provider value={{ state: authState("signed-in", "account-a") } as never}>
+        <SyncMigrationReadinessContext.Provider value={migrationState("ready", "account-a")}>
+          <SyncBoxProvider repositoryFactory={() => repository}><Probe /></SyncBoxProvider>
+        </SyncMigrationReadinessContext.Provider>
+      </AuthSessionContext.Provider>,
+    );
+    expect(html).toContain("true:false");
+  });
   it("activates only for the same UID after migration completed", () => {
     expect(getSyncBoxOwnerUid(
       authState("signed-in", "account-a"),
@@ -133,7 +153,7 @@ describe("SyncBoxProvider activation boundary", () => {
     expect(main).toContain('import { SyncBoxProvider } from "./sync/SyncBoxProvider"');
     const migrationChildren = main.match(/<SyncMigrationGate>([\s\S]*?)<\/SyncMigrationGate>/)?.[1];
     // Verify provider containment independently of App's presentation-only props.
-    expect(migrationChildren).toMatch(/<SyncBoxProvider>\s*<App\b[^>]*\/>\s*<\/SyncBoxProvider>/);
+    expect(migrationChildren).toMatch(/<SyncBoxProvider>\s*<AppStartupGate>\s*<App\b[^>]*\/>\s*<\/AppStartupGate>\s*<\/SyncBoxProvider>/);
     expect(guideMain).not.toContain("SyncBoxProvider");
     expect(provider).toContain("active.repository && active.isAvailable");
     expect(provider).toContain('result.status === "success" ? true : previous.isAvailable');

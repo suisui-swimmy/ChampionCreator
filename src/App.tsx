@@ -1969,12 +1969,16 @@ export function App({
   const [mobileScenarioDetailId, setMobileScenarioDetailId] = useState<string | null>(null);
   const [mobileFocusedAttackId, setMobileFocusedAttackId] = useState<string | null>(null);
   const [boxEntries, setBoxEntries] = useState<BoxEntry[]>(
-    () => variant === "tutorial" ? [] : loadBoxEntriesFromBrowser(),
+    () => variant === "tutorial" ? [] : syncBox
+      ? [...syncBox.snapshot.targetEntries]
+      : loadBoxEntriesFromBrowser(),
   );
   const [selectedBoxEntryId, setSelectedBoxEntryId] = useState<string | null>(null);
   const [boxMessage, setBoxMessage] = useState<string | null>(null);
   const [enemyBoxEntries, setEnemyBoxEntries] = useState<EnemyBoxEntry[]>(
-    () => variant === "tutorial" ? [] : loadEnemyBoxEntriesFromBrowser(),
+    () => variant === "tutorial" ? [] : syncBox
+      ? [...syncBox.snapshot.enemyEntries]
+      : loadEnemyBoxEntriesFromBrowser(),
   );
   const [selectedEnemyBoxEntryId, setSelectedEnemyBoxEntryId] = useState<string | null>(null);
   const [enemyBoxMessage, setEnemyBoxMessage] = useState<string | null>(null);
@@ -2058,7 +2062,7 @@ export function App({
   const accountExpectedAuthUidRef = useRef<string | null | undefined>(undefined);
   const accountDeletionLockedRef = useRef(false);
   const suspendDraftPersistenceRef = useRef(false);
-  const boxSourceKeyRef = useRef("device");
+  const boxSourceKeyRef = useRef(syncBox?.sourceKey ?? "device");
   const draftSourceKeyRef = useRef(activeDraftSourceKey);
   const cloudDraftRef = useRef(cloudDraft);
   cloudDraftRef.current = cloudDraft;

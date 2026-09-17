@@ -72,6 +72,7 @@ const renderContext = (
           context.status,
           String(context.isAvailable),
           context.lastError,
+          String(context.initialSyncSettled),
         ].join("|")}
       </output>
     );
@@ -120,6 +121,7 @@ describe("CloudDraftProvider activation and lifecycle boundary", () => {
     expect(html).toContain(
       "account-a|device-a|Test account-a|account:account-a:draft:device-a|championcreator.draft.v1.account-a.device-a|idle|true|",
     );
+    expect(html).toContain("|false</output>");
   });
 
   it("does not reuse a different account source or device identity", () => {

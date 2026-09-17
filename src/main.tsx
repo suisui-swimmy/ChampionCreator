@@ -6,6 +6,7 @@ import { AuthSessionProvider } from "./sync/authSessionContext";
 import { CloudDraftProvider } from "./sync/CloudDraftProvider";
 import { SyncBoxProvider } from "./sync/SyncBoxProvider";
 import { SyncMigrationGate } from "./sync/SyncMigrationGate";
+import { AppStartupGate } from "./sync/AppStartupGate";
 import "./styles.css";
 
 const rootElement = document.getElementById("root");
@@ -24,7 +25,9 @@ createRoot(rootElement).render(
       <SyncMigrationGate>
         <CloudDraftProvider>
           <SyncBoxProvider>
-            <App footerStartup={footerStartup} />
+            <AppStartupGate>
+              <App footerStartup={footerStartup} />
+            </AppStartupGate>
           </SyncBoxProvider>
         </CloudDraftProvider>
       </SyncMigrationGate>
