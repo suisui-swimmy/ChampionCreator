@@ -57,6 +57,7 @@ export default defineConfig({
         app: "index.html",
         guide: "guide/index.html",
         privacy: "privacy/index.html",
+        shareProbe: "share-probe/index.html",
       },
     },
   },
