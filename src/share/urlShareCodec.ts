@@ -2,6 +2,9 @@ import { parseShareStateDocument, type ShareStateDocument } from "../ui/shareSta
 import { SHARE_ATTACK_V1, SHARE_SCENARIO_V1, SHARE_TARGET_V1 } from "./urlShareDefaultsV1";
 
 export const SHARE_LINK_PREFIX = "p1.";
+export const PRODUCTION_SHARE_PREFIX = "s1.";
+export type ShareProvenance = { app: string; calc: string };
+export type SharedAdjustment = { document: ShareStateDocument; provenance: ShareProvenance };
 export const MAX_SHARE_TOKEN_LENGTH = 16_384;
 export const MAX_SHARE_JSON_BYTES = 200_000;
 const MAX_SCENARIOS = 64;
@@ -133,7 +136,7 @@ const ensureCompression = () => {
   }
 };
 
-export const encodeShareToken = async (document: ShareStateDocument): Promise<string> => {
+const encodeEnvelope = async (document: ShareStateDocument, provenance?: ShareProvenance): Promise<string> => {
   ensureCompression();
   if (document.schemaVersion !== 13) return fail("この検証版では条件schema 13のみ共有できます");
   const clean = JSON.parse(comparableShareJson(document)) as ShareStateDocument;
@@ -146,27 +149,47 @@ export const encodeShareToken = async (document: ShareStateDocument): Promise<st
     })),
   };
   decodeCompact(payload);
-  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const bytes = new TextEncoder().encode(JSON.stringify(provenance ? { ...payload, v: provenance } : payload));
   if (bytes.length > MAX_SHARE_JSON_BYTES) return fail("共有データのサイズが上限を超えています");
   const compressed = await readBounded(new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip")), MAX_SHARE_JSON_BYTES);
-  const token = SHARE_LINK_PREFIX + btoa(Array.from(compressed, (v) => String.fromCharCode(v)).join(""))
+  const token = (provenance ? PRODUCTION_SHARE_PREFIX : SHARE_LINK_PREFIX) + btoa(Array.from(compressed, (v) => String.fromCharCode(v)).join(""))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   if (token.length > MAX_SHARE_TOKEN_LENGTH) return fail("共有URLが長すぎます");
   return token;
 };
 
-export const decodeShareToken = async (token: string): Promise<ShareStateDocument> => {
+const decodeEnvelope = async (token: string, prefix: string): Promise<unknown> => {
   ensureCompression();
   if (token.length > MAX_SHARE_TOKEN_LENGTH) return fail("共有URLが長すぎます");
-  if (!token.startsWith(SHARE_LINK_PREFIX)) return fail("対応していない共有URLのバージョンです");
-  const encoded = token.slice(SHARE_LINK_PREFIX.length);
+  if (!token.startsWith(prefix)) return fail("対応していない共有URLのバージョンです");
+  const encoded = token.slice(prefix.length);
   if (!/^[A-Za-z0-9_-]+$/.test(encoded) || encoded.length % 4 === 1) return fail("共有URLの文字列が欠けているか、不正です");
   try {
     const bytes = Uint8Array.from(atob(encoded.replace(/-/g, "+").replace(/_/g, "/")), (v) => v.charCodeAt(0));
     const decoded = await readBounded(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")), MAX_SHARE_JSON_BYTES);
-    return decodeCompact(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decoded)));
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decoded));
   } catch (error) {
     if (error instanceof Error && /共有|条件JSON/.test(error.message)) throw error;
     return fail("共有URLを復元できません。リンクが途中で切れていないか確認してください。");
   }
+};
+
+export const encodeShareToken = (document: ShareStateDocument): Promise<string> => encodeEnvelope(document);
+export const decodeShareToken = async (token: string): Promise<ShareStateDocument> => decodeCompact(await decodeEnvelope(token, SHARE_LINK_PREFIX));
+
+const validateProvenance = (value: unknown): ShareProvenance => {
+  if (!isObject(value) || Object.keys(value).sort().join() !== "app,calc"
+    || typeof value.app !== "string" || typeof value.calc !== "string"
+    || !/^[a-zA-Z0-9.+_-]{1,128}$/.test(value.app) || !/^[a-zA-Z0-9.+_-]{1,256}$/.test(value.calc)) return fail("共有URLの作成バージョンが不正です");
+  return { app: value.app, calc: value.calc };
+};
+
+export const encodeSharedAdjustment = (document: ShareStateDocument, provenance: ShareProvenance): Promise<string> =>
+  encodeEnvelope(document, validateProvenance(provenance));
+
+export const decodeSharedAdjustment = async (token: string): Promise<SharedAdjustment> => {
+  const envelope = await decodeEnvelope(token, PRODUCTION_SHARE_PREFIX);
+  if (!isObject(envelope)) return fail();
+  const { v, ...payload } = envelope;
+  return { document: decodeCompact(payload), provenance: validateProvenance(v) };
 };

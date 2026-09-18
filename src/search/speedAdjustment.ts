@@ -405,6 +405,18 @@ const makeInvalidResult = (
   reason,
 });
 
+/** Compare the supplied S allocation, without optimizing it or its nature. */
+export const evaluateCurrentSpeed = (input: SpeedAdjustmentInput) => {
+  const targetSpeed = getTargetSpeed(input);
+  const current = evaluateSpeedCandidate(input, getBuildStatPoints(input.targetBuild).spe, targetSpeed);
+  return {
+    ...current, targetSpeed,
+    requiredSpeed: getRequiredSpeed(targetSpeed, input.comparison, input.requiredSpeedOffset, getOrderMode(input)),
+    passed: passesSpeedInput(input, current.actualSpeed, targetSpeed),
+    notes: getNotes(input),
+  };
+};
+
 const calculateSpeedLine = (
   input: SpeedAdjustmentInput,
   options: { id: string; targetBuildOverride?: Build; referenceNature?: NatureRef } = { id: "line" },

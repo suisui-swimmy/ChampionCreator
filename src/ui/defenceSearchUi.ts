@@ -179,6 +179,7 @@ export interface ScenarioFormState {
 
 export interface OffenseAdjustmentFormState {
   defenderPokemonInput: string;
+  defenderPokemonCanonicalName?: string;
   defenderNatureInput: string;
   defenderAbilityInput: string;
   defenderItemInput: string;
@@ -1115,6 +1116,7 @@ export const buildOffenseAdjustmentInput = (
     attackerBuild,
     defenderBuild: toBuild({
       pokemonInput: offenseForm.defenderPokemonInput,
+      pokemonCanonicalName: offenseForm.defenderPokemonCanonicalName,
       natureInput: offenseForm.defenderNatureInput,
       abilityInput: offenseForm.defenderAbilityInput,
       itemInput: offenseForm.defenderItemInput,
@@ -1211,6 +1213,7 @@ export const createOffenseAdjustmentFormFromScenarioAttack = (
   attackForm: ScenarioAttackFormState,
 ): OffenseAdjustmentFormState => ({
   defenderPokemonInput: attackForm.attackerPokemonInput,
+  defenderPokemonCanonicalName: attackForm.attackerPokemonCanonicalName,
   defenderNatureInput: attackForm.attackerNatureInput,
   defenderAbilityInput: attackForm.attackerAbilityInput,
   defenderItemInput: attackForm.attackerItemInput,

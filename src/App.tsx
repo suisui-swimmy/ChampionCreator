@@ -1,6 +1,11 @@
 import { Fragment, createContext, type ChangeEvent, type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import { AppFooter } from "./ui/AppFooter";
 import { AppWorkspace } from "./ui/AppWorkspace";
+import { ShareDialog } from "./share/ShareDialog";
+import { ShareImportDialog, type SharedImportState } from "./share/ShareImportDialog";
+import { clearShareImportHref, hasShareImportRequest, readSharedAdjustmentHash } from "./share/sharedAdjustment";
+import { createShareStateDocument, type ShareStateDocument } from "./ui/shareState";
+import "./share/share.css";
 import type { FooterStartupState } from "./ui/footerStartup";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
@@ -2001,6 +2006,21 @@ export function App({
     return result.status === "empty" ? null : result;
   });
   const [draftSaveState, setDraftSaveState] = useState<DraftSaveUiState>({ status: "idle" });
+  const [shareDocument, setShareDocument] = useState<ShareStateDocument | null>(null);
+  const [sharedImport, setSharedImport] = useState<SharedImportState | null>(() => (
+    variant === "default" && !staticPreview && typeof window !== "undefined" && hasShareImportRequest(window.location.href)
+      ? { status: "loading" } : null
+  ));
+  const [sharedImportError, setSharedImportError] = useState("");
+  const [sharedImportNotice, setSharedImportNotice] = useState("");
+  useEffect(() => {
+    if (variant !== "default" || staticPreview || !hasShareImportRequest(window.location.href)) return;
+    let active = true;
+    readSharedAdjustmentHash(window.location.hash)
+      .then((shared) => { if (active) setSharedImport({ status: "ready", shared }); })
+      .catch((error: unknown) => { if (active) setSharedImport({ status: "error", message: error instanceof Error ? error.message : "共有内容を読み込めませんでした" }); });
+    return () => { active = false; };
+  }, [variant, staticPreview]);
   const initialCommittedTargetPokemonCanonicalName = resolveCanonicalEntityName(
     "pokemon",
     targetForm.pokemonInput,
@@ -2206,7 +2226,7 @@ export function App({
     const fingerprint = createDraftFingerprint(targetForm, scenarioForms);
     const decision = getDraftAutosaveDecision({
       variant,
-      hasRecovery: draftRecovery !== null,
+      hasRecovery: draftRecovery !== null || sharedImport !== null,
       sourceMatches: draftSourceKeyRef.current === activeDraftSourceKey,
       fingerprint,
       boxBaselineFingerprint: boxBaselineFingerprintRef.current,
@@ -2274,7 +2294,7 @@ export function App({
         cancelDraftSaveRef.current = null;
       }
     };
-  }, [activeDraftSourceKey, activeDraftStorageKey, draftRecovery, scenarioForms, targetForm, variant]);
+  }, [activeDraftSourceKey, activeDraftStorageKey, draftRecovery, sharedImport, scenarioForms, targetForm, variant]);
 
   useEffect(() => {
     if (variant !== "default" || draftSourceKeyRef.current === activeDraftSourceKey) {
@@ -2512,6 +2532,7 @@ export function App({
   };
 
   const saveCurrentDraftNow = () => {
+    if (sharedImport !== null) return;
     cancelPendingDraftSave();
     if (!activeDraftStorageKey) {
       setDraftSaveState({
@@ -3564,6 +3585,51 @@ export function App({
     }
   };
 
+  const closeSharedImport = () => {
+    window.history.replaceState(window.history.state, "", clearShareImportHref(window.location.href));
+    setSharedImport(null);
+    setSharedImportError("");
+  };
+
+  const handleSharedImport = (destination: "work" | "box") => {
+    if (sharedImport?.status !== "ready") return;
+    if (!isBoxSourceReady || draftSourceKeyRef.current !== activeDraftSourceKey || accountDeletionLockedRef.current) {
+      setSharedImportError("保存先が切り替わりました。確認が終わってからもう一度操作してください。");
+      return;
+    }
+    const { target, scenarios } = sharedImport.shared.document;
+    if (destination === "box") {
+      const entry = createBoxEntryFromState(target, scenarios);
+      const error = saveTargetBoxEntries([entry, ...boxEntries]);
+      if (error) { setSharedImportError(error); return; }
+      setBoxEntries([entry, ...boxEntries]);
+      setSelectedBoxEntryId(entry.id);
+      setBoxMessage("共有された調整を追加しました");
+      setSharedImportNotice("共有された調整をボックスに追加しました");
+      if (!draftRecovery) setBoxOpen(true);
+      closeSharedImport();
+      return;
+    }
+    if (!activeDraftStorageKey) { setSharedImportError(unavailableDraftStorageMessage); return; }
+    // Commit the replacement locally before changing the visible work. On a
+    // storage failure, retain both the original draft and the import dialog.
+    const saved = saveDraftToBrowser(target, scenarios, { storageKey: activeDraftStorageKey });
+    if (saved.status !== "success") { setSharedImportError(saved.message); return; }
+    cancelPendingDraftSave();
+    resetActiveSearch();
+    setAppliedAdjustmentId(null);
+    boxBaselineFingerprintRef.current = null;
+    pendingBoxCommitFingerprintRef.current = null;
+    syncCommittedPokemonCanonicalNames(target, scenarios);
+    setTargetForm(target);
+    setScenarioForms(scenarios);
+    setDraftRecovery(null);
+    applyCurrentDraftSaveResult(createDraftFingerprint(target, scenarios), saved);
+    setBoxOpen(false); setEnemyBoxOpen(false); setMobileSheet(null);
+    setSharedImportNotice("共有された調整を読み込みました");
+    closeSharedImport();
+  };
+
   const handleLoadBoxEntry = (entryId: string) => {
     if (!ensureBoxSourceReady("target")) return;
     if (entryId === BLANK_BOX_SLOT_ID) {
@@ -4216,6 +4282,7 @@ export function App({
               value={activeSuggestionFormat}
               onChange={handleSuggestionFormatChange}
             />
+            <button type="button" className="readme-link share-trigger" aria-label="この調整を共有" aria-haspopup="dialog" aria-expanded={shareDocument !== null} onClick={() => setShareDocument(structuredClone(createShareStateDocument(targetForm, scenarioForms)))}><img src={getAssetSrc("assets/ui/share-2.svg")} alt="" aria-hidden="true" /></button>
             <button
               type="button"
               className={`account-sync-trigger ${accountSyncStatus}`}
@@ -4312,7 +4379,20 @@ export function App({
         />
       ) : null}
 
-      {variant === "default" && draftRecovery ? (
+      {variant === "default" && shareDocument ? <ShareDialog document={shareDocument} applicationUrl={window.location.href} onClose={() => setShareDocument(null)} /> : null}
+      {variant === "default" && sharedImport ? <ShareImportDialog
+        state={sharedImport}
+        error={sharedImportError}
+        hasWork={draftRecovery !== null || Boolean(targetForm.pokemonInput.trim())}
+        canImport={isBoxSourceReady && draftSourceKeyRef.current === activeDraftSourceKey && !accountDeletionLockedRef.current}
+        scopeLabel={syncBox?.mode === "account" ? "ログイン中のアカウント" : "このブラウザ"}
+        onUse={() => handleSharedImport("work")}
+        onSave={() => handleSharedImport("box")}
+        onClose={closeSharedImport}
+      /> : null}
+      {sharedImportNotice ? <p className="shared-import-notice" role="status">{sharedImportNotice}</p> : null}
+
+      {variant === "default" && draftRecovery && !sharedImport ? (
         <DraftRecoveryDialog
           recovery={draftRecovery}
           onRestore={handleRestoreDraft}
