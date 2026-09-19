@@ -26,42 +26,11 @@
 .share-import-stat-points small { margin-left: 2px; font-size: var(--desktop-text-meta); }
 .share-import-actual-stats { color: var(--muted); }
 .share-import-preview-note { grid-column: 1 / -1; color: var(--muted); font-size: var(--desktop-text-interactive-small); }
-.share-action-link, .share-use-link { display: inline-flex; justify-content: center; align-items: center; min-height: var(--desktop-control-primary); padding: 8px 12px; color: var(--text); font-size: 14px; text-underline-offset: 3px; }
+.share-action-link { display: inline-flex; justify-content: center; align-items: center; min-height: var(--desktop-control-primary); padding: 8px 12px; color: var(--text); font-size: 14px; text-underline-offset: 3px; }
 .share-url-label { display: grid; gap: 6px; font-size: var(--desktop-text-control); }
 .share-url-label span { color: var(--muted); }
 .share-url-label textarea { width: 100%; min-width: 0; resize: vertical; color: var(--text); background: var(--surface-inset); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px; font: inherit; overflow-wrap: anywhere; }
-.share-dialog :is(button,a,textarea):focus-visible, .shared-page :is(a,summary):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-body.shared-page-body { min-width: 0; }
-.shared-page { max-width: 780px; padding: 24px var(--desktop-page-gutter); margin: 0 auto; line-height: 1.7; overflow-wrap: anywhere; }
-.shared-page h1, .shared-page h2, .shared-page h3 { font-size: var(--desktop-text-heading); margin: 0; }
-.shared-page p { margin: 8px 0; }
-.shared-page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
-.shared-page-header a { display: inline-flex; align-items: center; min-height: var(--desktop-control-standard); }
-.shared-page-header img { width: 220px; max-width: 100%; height: auto; }
-.shared-page-header span { color: var(--muted); font-size: var(--desktop-text-interactive-small); }
-.shared-target { border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 16px; background: var(--surface); }
-.shared-target-heading { display: flex; align-items: center; gap: 12px; }
-.shared-target-heading img { flex-shrink: 0; object-fit: contain; }
-.shared-stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,3.2em),1fr)); gap: 8px; text-align: center; margin: 16px 0 8px; }
-.shared-stat-grid dt { font-weight: 700; }
-.shared-stat-grid dd { margin: 0; font-size: var(--desktop-text-heading); }
-.shared-stat-grid dd span { font-size: var(--desktop-text-meta); margin-left: 3px; }
-.shared-stat-grid .shared-actual-stat { color: var(--muted); font-size: var(--desktop-text-control); }
-.shared-scenarios { display: grid; gap: 10px; margin: 16px 0; }
-.shared-scenario { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.shared-scenario summary { min-height: var(--desktop-control-comfort); cursor: pointer; padding: 10px 12px; font-size: var(--desktop-text-control); }
-.shared-scenario summary strong { display: inline; font-size: var(--desktop-text-interactive-small); font-weight: 400; margin-left: 12px; }
-.shared-status-pass { color: var(--green); }
-.shared-status-fail, .shared-status-error { color: var(--orange); }
-.shared-status-disabled, .shared-status-pending { color: var(--muted); }
-.shared-scenario-body { border-top: 1px solid var(--line); padding: 12px; }
-.shared-attack { padding: 12px 0; }
-.shared-attack + .shared-attack { border-top: 1px solid var(--line); }
-.shared-attack h3 { font-size: var(--desktop-text-control); }
-.shared-attack ol { padding-left: 22px; }
-.shared-import-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 20px 0; }
-.share-use-link { border: 1px solid var(--gold); border-radius: var(--radius); background: var(--gold-soft); text-decoration: none; }
-.shared-footer, .shared-provenance { font-size: var(--desktop-text-interactive-small); color: var(--muted); }
+.share-dialog :is(button,a,textarea):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .shared-import-notice { margin: 8px 16px; color: var(--gold); }
 @media (min-width: 721px) and (max-width: 1180px) {
   .app-shell .topbar .brand-line { flex-wrap: wrap; gap: 4px; }
@@ -72,10 +41,7 @@ body.shared-page-body { min-width: 0; }
   .share-url-label textarea { font-size: var(--mobile-text-input); }
   .share-close.ui-button { width: var(--mobile-control-standard); min-width: var(--mobile-control-standard); height: var(--mobile-control-standard); min-height: var(--mobile-control-standard); }
   .share-import-preview { --share-import-artwork-size: 64px; column-gap: 12px; }
-  .share-actions .ui-button, .share-action-link, .share-use-link { min-height: var(--mobile-control-primary); }
-  .shared-page { padding: 16px 12px; }
-  .shared-scenario summary { min-height: var(--mobile-control-comfort); }
-  .shared-stat-grid { gap: 4px; }
+  .share-actions .ui-button, .share-action-link { min-height: var(--mobile-control-primary); }
 }
 @media (max-width: 480px) {
   .share-import-preview { grid-template-areas: "art identity" "stats stats"; }
@@ -85,6 +51,4 @@ body.shared-page-body { min-width: 0; }
   .app-shell .topbar.has-draft-status { grid-template-areas: "description" "brand" "actions" "status"; }
   .topbar .brand-line h1, .topbar .topbar-action-row { justify-self: center; }
   .share-dialog { padding: 12px; }
-  .shared-target { padding: 12px; }
-  .shared-stat-grid { grid-template-columns: repeat(3,minmax(0,1fr)); row-gap: 12px; }
 }

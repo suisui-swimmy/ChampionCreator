@@ -1,6 +1,6 @@
 import type { ScenarioAttackFormState, TargetFormState } from "../ui/defenceSearchUi";
 
-// Wire-format defaults, frozen for probe v1 / condition schema 13.
+// Wire-format defaults, frozen for s1 / condition schema 13.
 // Never replace these with the app's evolving createDefault* helpers.
 export const SHARE_TARGET_V1: TargetFormState = {
   pokemonInput: "メガマフォクシー", natureInput: "おくびょう", abilityInput: "", itemInput: "",

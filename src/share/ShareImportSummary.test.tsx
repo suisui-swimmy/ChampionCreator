@@ -3,11 +3,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { getShareImportSummary, ShareImportSummary } from "./ShareImportSummary";
 import { ShareImportDialog } from "./ShareImportDialog";
-import { createProbeDocument, PROBE_CASES } from "./probe/fixtures";
+import { createShareTestDocument, SHARE_TEST_CASES } from "./testFixtures/fixtures";
 
 describe("share import preview", () => {
   it("shows the stored six-stat allocation and actual stats without changing the input", () => {
-    const document = createProbeDocument(PROBE_CASES[0]);
+    const document = createShareTestDocument(SHARE_TEST_CASES[0]);
     const original = JSON.stringify(document);
     expect(getShareImportSummary(document.target).actualStats).toEqual({ hp: 157, atk: 111, def: 125, spa: 207, spd: 135, spe: 145 });
     const html = renderToStaticMarkup(<ShareImportSummary target={document.target} scenarioCount={3} />);
@@ -25,7 +25,7 @@ describe("share import preview", () => {
   });
 
   it("recalculates different allocations and uses maxHP for Dynamax", () => {
-    const { target } = createProbeDocument(PROBE_CASES[0]);
+    const { target } = createShareTestDocument(SHARE_TEST_CASES[0]);
     target.statPoints = { hp: 32, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
     expect(getShareImportSummary(target).actualStats?.hp).toBe(185);
     target.dmaxEnabled = true;
@@ -33,7 +33,7 @@ describe("share import preview", () => {
   });
 
   it("keeps SP visible while marking an unresolved actual-stat preview unavailable", () => {
-    const { target } = createProbeDocument(PROBE_CASES[0]);
+    const { target } = createShareTestDocument(SHARE_TEST_CASES[0]);
     target.pokemonInput = "未登録のポケモン";
     delete target.pokemonCanonicalName;
     const html = renderToStaticMarkup(<ShareImportSummary target={target} scenarioCount={0} />);
@@ -44,7 +44,7 @@ describe("share import preview", () => {
   });
 
   it("groups the three actions together and uses the shared close asset and primitive", () => {
-    const shared = { document: createProbeDocument(PROBE_CASES[0]), provenance: { app: "0.31.2", calc: "test" } };
+    const shared = { document: createShareTestDocument(SHARE_TEST_CASES[0]), provenance: { app: "0.31.2", calc: "test" } };
     const html = renderToStaticMarkup(<ShareImportDialog state={{ status: "ready", shared }} error="" hasWork canImport scopeLabel="このブラウザ" onUse={() => {}} onSave={() => {}} onClose={() => {}} />);
     const start = html.indexOf('class="share-actions share-import-actions"');
     const actions = html.slice(start, html.indexOf("</div>", start));

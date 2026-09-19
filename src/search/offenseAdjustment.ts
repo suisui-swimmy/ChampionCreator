@@ -233,16 +233,6 @@ const isInvariantLine = (evaluations: OffenseCandidateEvaluation[]): boolean => 
   ));
 };
 
-/** Evaluate the supplied build once; do not search for a different allocation. */
-export const evaluateCurrentOffense = (input: OffenseAdjustmentInput) => {
-  const evaluation = evaluateCandidate(input, { owner: "attacker", stat: "atk", role: "damage" }, getBuildStatPoints(input.attackerBuild).atk);
-  return {
-    ...evaluation,
-    passed: evaluation.koProbability + KO_EPSILON >= input.targetKoProbability,
-    targetKoProbability: input.targetKoProbability,
-  };
-};
-
 const formatLineLabel = (reference: MoveStatReference): string =>
   reference.owner === "target"
     ? `相手${statCodes[reference.stat]}参照`

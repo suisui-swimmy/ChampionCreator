@@ -52,14 +52,6 @@ export const readSharedAdjustmentHash = async (hash: string): Promise<SharedAdju
   return shared;
 };
 
-export const getShareImportHref = (sharedPageUrl: string): string => {
-  const page = new URL(sharedPageUrl);
-  const app = new URL("../", page);
-  app.searchParams.set("import-share", "1");
-  app.hash = page.hash;
-  return app.href;
-};
-
 export const hasShareImportRequest = (href: string): boolean => new URL(href).searchParams.has("import-share");
 export const clearShareImportHref = (href: string): string => {
   const url = new URL(href);
