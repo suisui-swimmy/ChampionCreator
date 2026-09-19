@@ -9,8 +9,9 @@ describe("production sharing", () => {
     const document = createProbeDocument(PROBE_CASES[2]);
     const original = JSON.stringify(document);
     const url = new URL(await createSharedAdjustmentUrl(document, "https://example.com/cc/?tracking=ignored#old"));
-    expect(url.pathname).toBe("/cc/share/");
-    expect(url.search).toBe("");
+    expect(url.pathname).toBe("/cc/");
+    expect(url.search).toBe("?import-share=1");
+    expect(hasShareImportRequest(url.href)).toBe(true);
     expect(url.hash).toMatch(/^#share=s1\./);
     const shared = await readSharedAdjustmentHash(url.hash);
     expect(comparableShareJson(shared.document)).toBe(comparableShareJson(document));
@@ -50,5 +51,16 @@ describe("production sharing", () => {
     expect(hasShareImportRequest(href)).toBe(true);
     expect(hasShareImportRequest("https://example.com/cc/")).toBe(false);
     expect(clearShareImportHref(href.replace("?import", "?keep=yes&import"))).toBe("https://example.com/cc/?keep=yes");
+  });
+
+  it("generates direct import links from index.html and keeps old viewer links usable", async () => {
+    const direct = await createSharedAdjustmentUrl(createProbeDocument(PROBE_CASES[0]), "https://example.com/cc/index.html");
+    const url = new URL(direct);
+    expect(url.pathname).toBe("/cc/");
+    expect(hasShareImportRequest(direct)).toBe(true);
+    const oldViewer = new URL("share/", url);
+    oldViewer.hash = url.hash;
+    expect(getShareImportHref(oldViewer.href)).toBe(direct);
+    expect((await readSharedAdjustmentHash(oldViewer.hash)).document.target.statPoints).toEqual({ hp: 4, atk: 0, def: 27, spa: 10, spd: 0, spe: 25 });
   });
 });

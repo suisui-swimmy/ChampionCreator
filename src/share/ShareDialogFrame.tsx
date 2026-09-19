@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useId, useRef } from "react";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { Button } from "../ui/primitives";
+import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 
 export function ShareDialogFrame({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -21,7 +22,7 @@ export function ShareDialogFrame({ title, children, onClose }: { title: string; 
       else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }}>
-    <div className="share-dialog-heading"><h2 id={titleId}>{title}</h2><button type="button" className="share-close" aria-label="閉じる" onClick={onClose}><Cross2Icon aria-hidden="true" /></button></div>
+    <div className="share-dialog-heading"><h2 id={titleId}>{title}</h2><Button size="icon" className="share-close" aria-label="閉じる" onClick={onClose}><img src={getPublicAssetUrl("assets/ui/close.svg")} alt="" aria-hidden="true" /></Button></div>
     {children}
   </dialog>;
 }

@@ -38,7 +38,8 @@ export const createSharedAdjustmentUrl = async (document: ShareStateDocument, ap
   validateSharedConditions(document);
   const base = new URL(applicationUrl);
   base.search = ""; base.hash = "";
-  const url = new URL("share/", base);
+  const url = new URL("./", base);
+  url.searchParams.set("import-share", "1");
   url.hash = `share=${await encodeSharedAdjustment(document, { app: appVersionInfo.appVersion, calc: appVersionInfo.smogonCalcVersion })}`;
   if (url.href.length > SHARE_URL_MAX_LENGTH) throw new Error(`共有URLが${url.href.length.toLocaleString()}文字になりました。4,000文字以内になるよう、不要なシナリオや攻撃を減らしてください。`);
   return url.href;

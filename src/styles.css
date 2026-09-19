@@ -1426,6 +1426,13 @@ textarea:focus-visible,
   line-height: 1.2;
 }
 
+.target-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .box-access-button {
   display: grid;
   place-items: center;

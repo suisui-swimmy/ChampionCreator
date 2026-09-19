@@ -24,7 +24,7 @@ export function ShareDialog({ document, applicationUrl, onClose }: { document: S
     {error ? <p role="alert">{error}</p> : !url ? <p role="status">共有URLを作成しています…</p> : <>
       <label className="share-url-label">共有URL <span>{url.length.toLocaleString()}文字</span><textarea ref={textRef} value={url} readOnly rows={3} onFocus={(event) => event.currentTarget.select()} /></label>
       {url.length > SHARE_URL_WARNING_LENGTH ? <p className="share-warning">2,000文字を超えています。Discordの通常メッセージでは送れません。投稿先の文字数制限を確認してください。</p> : null}
-      <div className="share-actions"><Button variant="primary" onClick={() => void copy()}>URLをコピー</Button><a className="share-action-link" href={url} target="_blank" rel="noreferrer">共有画面を確認</a></div>
+      <div className="share-actions"><Button variant="primary" onClick={() => void copy()}>URLをコピー</Button><a className="share-action-link" href={url} target="_blank" rel="noreferrer">取り込み画面を確認</a></div>
     </>}
     <p role="status" aria-live="polite">{notice}</p>
   </ShareDialogFrame>;

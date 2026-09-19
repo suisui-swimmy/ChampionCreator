@@ -1,4 +1,4 @@
-import { Fragment, createContext, type ChangeEvent, type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent, type Ref, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { Fragment, createContext, type ChangeEvent, type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent, type ReactNode, type Ref, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import { AppFooter } from "./ui/AppFooter";
 import { AppWorkspace } from "./ui/AppWorkspace";
 import { ShareDialog } from "./share/ShareDialog";
@@ -4245,6 +4245,19 @@ export function App({
     }
   })();
 
+  const shareAction = variant === "default" ? (
+    <button
+      type="button"
+      className="box-access-button share-trigger"
+      aria-label="この調整を共有"
+      aria-haspopup="dialog"
+      aria-expanded={shareDocument !== null}
+      onClick={() => setShareDocument(structuredClone(createShareStateDocument(targetForm, scenarioForms)))}
+    >
+      <img src={getAssetSrc("assets/ui/share-2.svg")} alt="" aria-hidden="true" />
+    </button>
+  ) : null;
+
   return (
     <SuggestionUsageContext.Provider value={{
       data: activeUsageData,
@@ -4282,7 +4295,6 @@ export function App({
               value={activeSuggestionFormat}
               onChange={handleSuggestionFormatChange}
             />
-            <button type="button" className="readme-link share-trigger" aria-label="この調整を共有" aria-haspopup="dialog" aria-expanded={shareDocument !== null} onClick={() => setShareDocument(structuredClone(createShareStateDocument(targetForm, scenarioForms)))}><img src={getAssetSrc("assets/ui/share-2.svg")} alt="" aria-hidden="true" /></button>
             <button
               type="button"
               className={`account-sync-trigger ${accountSyncStatus}`}
@@ -4587,6 +4599,7 @@ export function App({
 
       <main className="workbench">
         <TargetPanel
+          shareAction={shareAction}
           targetForm={targetForm}
           onUpdateField={updateTargetField}
           onUpdateEv={updateTargetEv}
@@ -5771,6 +5784,7 @@ function RankSelectField({ label, value, onChange }: RankSelectFieldProps) {
 }
 
 type TargetPanelProps = {
+  shareAction?: ReactNode;
   targetForm: TargetFormState;
   canonicalPokemon?: string;
   artwork: PokemonArtworkMatch | null;
@@ -6735,6 +6749,7 @@ function BoxPanel({
 }
 
 function TargetPanel({
+  shareAction,
   targetForm,
   canonicalPokemon,
   artwork,
@@ -6800,7 +6815,8 @@ function TargetPanel({
         <div>
           <h2 id="target-title">調整対象</h2>
         </div>
-        <div className="mobile-sheet-heading-actions">
+        <div className="target-heading-actions mobile-sheet-heading-actions">
+          {shareAction}
           <button
             className={`box-access-button${isBoxPanelOpen ? " active" : ""}`}
             type="button"
