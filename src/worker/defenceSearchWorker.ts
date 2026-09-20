@@ -1,4 +1,5 @@
 import type { Build, CandidateResult, DefenceSearchStatKey, Scenario, StatTable } from "../domain/model";
+import type { SpeedScenarioCondition } from "../domain/speed";
 import {
   compareFailureCandidateResults,
   countDefenceEvCandidates,
@@ -20,6 +21,7 @@ export interface DefenceSearchWorkerRunOptions {
   partialResultLimit?: number;
   minimumStatPoints?: Partial<StatTable>;
   searchStatKeys?: DefenceSearchStatKey[];
+  speedConditions?: SpeedScenarioCondition[];
   progressInterval?: number;
   partialResultInterval?: number;
   yieldEvery?: number;
@@ -153,6 +155,7 @@ export const runDefenceSearchWorkerTask = async (
     maxResults,
     minimumStatPoints: options.minimumStatPoints,
     searchStatKeys: options.searchStatKeys,
+    speedConditions: options.speedConditions,
   };
 
   try {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createTrickRoomFixture } from "./testFixtures/speedIntegration";
 import type { Build, CandidateResult, Scenario } from "../domain/model";
 import type {
   ActiveDefenceSearchRequest,
@@ -48,7 +49,6 @@ import {
   type BulkMaximizeWorkerClientAdapter,
   type DefenceSearchWorkerClientAdapter,
   type OffenseScenarioResult,
-  type SpeedScenarioResult,
 } from "./defenceSearchUi";
 import type { OffenseAdjustmentResult } from "../search/offenseAdjustment";
 import type { SpeedAdjustmentResult } from "../search/speedAdjustment";
@@ -144,35 +144,6 @@ const makeOffenseResult = (
     damageRange: result.damageRange ?? null,
     hpEventEvaluations: result.hpEventEvaluations ?? [],
     reason: result.reason ?? "火力条件を満たします",
-    reference: result.reference,
-  },
-});
-
-const makeSpeedResult = (
-  attackId: string,
-  result: Partial<SpeedAdjustmentResult> = {},
-): SpeedScenarioResult => ({
-  id: `scenario-speed-${attackId}-${result.id ?? "line"}`,
-  scenarioId: "scenario-speed",
-  scenarioLabel: "素早さ調整A",
-  attackId,
-  attackLabel: attackId,
-  result: {
-    id: result.id ?? "line",
-    status: result.status ?? "pass",
-    passed: result.passed ?? true,
-    canApply: result.canApply ?? true,
-    label: result.label ?? "Sライン",
-    comparison: result.comparison ?? "outspeed",
-    orderMode: result.orderMode ?? "normal",
-    relation: result.relation ?? "outspeed",
-    requiredStatPoints: result.requiredStatPoints ?? 0,
-    actualSpeed: result.actualSpeed ?? 120,
-    targetSpeed: result.targetSpeed ?? 119,
-    requiredSpeed: result.requiredSpeed ?? 120,
-    targetStatPoints: result.targetStatPoints ?? 0,
-    notes: result.notes ?? [],
-    reason: result.reason ?? "Sライン 0 SPで達成します",
     reference: result.reference,
   },
 });
@@ -1678,34 +1649,61 @@ describe("resolveIntegratedOffenseRequirements", () => {
 });
 
 describe("resolveIntegratedSpeedRequirements", () => {
-  it("folds passing speed lines into fixed S requirements", () => {
-    const target = {
-      ...createDefaultTargetForm(),
-      statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 4 },
-    };
-    const requirements = resolveIntegratedSpeedRequirements(target, [
-      makeSpeedResult("speed-a", { requiredStatPoints: 18 }),
-      makeSpeedResult("speed-b", { requiredStatPoints: 12 }),
-    ]);
-
-    expect(requirements.fixedStatPoints.spe).toBe(18);
-    expect(requirements.selectedResults.map((entry) => entry.attackId)).toEqual(["speed-a", "speed-b"]);
+  it("checks every normal speed condition at the same fixed S", () => {
+    const { target, scenarios, speed } = createTrickRoomFixture(4);
+    scenarios[1].attacks = [
+      { ...speed, speedOrderMode: "normal", id: "speed-a" },
+      { ...speed, speedOrderMode: "normal", id: "speed-b", speedRequiredOffset: 3 },
+    ];
+    const requirements = resolveIntegratedSpeedRequirements(target, scenarios);
+    expect(requirements.fixedStatPoints.spe).toBe(13);
+    expect(requirements.selectedResults.map((entry) => entry.result.statPoints)).toEqual([13, 13]);
+    expect(requirements.selectedResults.map((entry) => entry.result.actualSpeed)).toEqual([83, 83]);
     expect(requirements.blockingReasons).toEqual([]);
   });
 
-  it("reports blocking speed lines that cannot be satisfied", () => {
-    const requirements = resolveIntegratedSpeedRequirements(createDefaultTargetForm(), [
-      makeSpeedResult("failed-speed", {
-        status: "fail",
-        passed: false,
-        canApply: false,
-        requiredStatPoints: 32,
-        relation: "miss",
-        reason: "最大 32 SPでも確定抜きに届きません",
-      }),
-    ]);
+  it.each([10, 11])("rejects fixed S%s even though a lower standalone proposal passes", (spe) => {
+    const { target, scenarios, speed } = createTrickRoomFixture(spe);
+    expect(calculateSpeedAdjustmentFromUi(target, speed)).toMatchObject({ passed: true, requiredStatPoints: 9 });
+    expect(() => buildIntegratedDefenceSearchInput(target, scenarios)).toThrow(`現在S${70 + spe}`);
+    expect(() => buildIntegratedDefenceSearchInput(target, scenarios)).toThrow("S79以下");
+    expect(() => buildIntegratedDefenceSearchInput(target, scenarios)).toThrow("S9 SPへの変更");
+    expect(target.statPoints.spe).toBe(spe);
+  });
 
-    expect(requirements.blockingReasons[0]).toContain("最大 32 SPでも確定抜きに届きません");
+  it("preserves a passing manual S and sends canonical conditions to the Worker", () => {
+    const { target, scenarios } = createTrickRoomFixture(9);
+    const client = new FakeWorkerClient();
+    const { input } = startDefenceSearchFromUi(client, target, scenarios, () => undefined);
+    expect(input.build.statPoints?.spe).toBe(9);
+    expect(input.scenarios).toHaveLength(1);
+    expect(client.options?.speedConditions).toEqual(input.speedConditions);
+    expect(input.speedConditions?.[0].condition.opponentBuild?.pokemon.canonicalName).toBe("Farigiraf");
+  });
+
+  it("allows explicit ties but rejects mutually incompatible normal and reversed bounds", () => {
+    const { target, scenarios, speed } = createTrickRoomFixture(10);
+    scenarios[1].attacks = [{ ...speed, speedRequiredOffset: 0 }];
+    expect(resolveIntegratedSpeedRequirements(target, scenarios).selectedResults[0].result).toMatchObject({
+      statPoints: 10, actualSpeed: 80, status: "tie", passed: true,
+    });
+    target.statPoints.spe = 8;
+    scenarios[1].attacks = [speed, { ...speed, id: "normal", speedOrderMode: "normal" }];
+    expect(calculateSpeedAdjustmentsFromScenarios(target, scenarios).every((entry) => entry.result.passed)).toBe(true);
+    expect(() => buildIntegratedDefenceSearchInput(target, scenarios)).toThrow("すべての素早さ条件を満たす配分がありません");
+  });
+
+  it("finds a shared S within compatible normal and reversed bounds regardless of card order", () => {
+    const { target, scenarios, speed } = createTrickRoomFixture(8);
+    const normal = { ...speed, id: "normal", speedOrderMode: "normal" as const,
+      speedTargetMode: "manual" as const, speedTargetValue: 79 };
+    for (const attacks of [[speed, normal], [normal, speed]]) {
+      scenarios[1].attacks = attacks;
+      const requirements = resolveIntegratedSpeedRequirements(target, scenarios);
+      expect(requirements.fixedStatPoints.spe).toBe(9);
+      expect(requirements.selectedResults.every((entry) => entry.result.passed)).toBe(true);
+      expect(requirements.blockingReasons).toEqual([]);
+    }
   });
 
   it("applies integrated S requirements without mutating H/B/D form values", () => {
@@ -1779,7 +1777,8 @@ describe("buildMaximizeRemainingBulkInputFromUi", () => {
     expect(input.build.statPoints?.atk).toBe(4);
     expect(input.build.statPoints?.spe).toBeGreaterThanOrEqual(10);
     expect(input.natureCandidates?.length).toBe(25);
-    expect(input.protectedActualStats?.spe).toBeGreaterThan(0);
+    expect(input.speedConditions).toHaveLength(1);
+    expect(input.protectedActualStats?.spe).toBeUndefined();
   });
 
   it("does not require an active defence scenario for standalone bulk maximization", () => {

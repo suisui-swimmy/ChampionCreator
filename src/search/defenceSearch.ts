@@ -15,6 +15,7 @@ import {
   CHAMPIONS_TOTAL_STAT_POINTS,
   isLegalStatPointTable,
   isLegalStatPointValue,
+  getBuildStatPoints,
   smogonEvTableToStatPoints,
   statPointTableToSmogonEvs,
   sumStatPoints,
@@ -33,6 +34,10 @@ import type {
   StatTable,
 } from "../domain/model";
 import { getBuildBulkScore } from "./bulkScore";
+import type { SpeedScenarioCondition } from "../domain/speed";
+import { evaluateSpeedConditions } from "./speedAdjustment";
+
+export { getBuildStatPoints } from "../domain/championsStats";
 
 const DEFAULT_MAX_RESULTS = 20;
 const SURVIVAL_EPSILON = 1e-12;
@@ -49,6 +54,7 @@ export interface DefenceSearchOptions {
   calculateHit?: CalculateHit;
   minimumStatPoints?: Partial<StatTable>;
   searchStatKeys?: readonly DefenceSearchStatKey[] | null;
+  speedConditions?: readonly SpeedScenarioCondition[];
 }
 
 interface ScenarioEvaluationOptions {
@@ -91,9 +97,6 @@ export const isLegalEvValue = (ev: number): boolean => {
 
 export const isLegalEvTable = (evs: StatTable): boolean =>
   isLegalStatPointTable(smogonEvTableToStatPoints(evs));
-
-export const getBuildStatPoints = (build: Build): StatTable =>
-  build.statPoints ?? smogonEvTableToStatPoints(build.evs);
 
 export const getFixedEvBudget = (build: Build): number =>
   sumNumbers(FIXED_EV_KEYS.map((key) => statPointTableToSmogonEvs(getBuildStatPoints(build))[key]));
@@ -670,6 +673,8 @@ export const evaluateCandidate = (
 ): CandidateResult => {
   const appliedBuild = applyDefenceStatPointCandidate(defenderBuild, candidate);
   const scenarioResults = scenarios.map((scenario) => evaluateScenario(appliedBuild, scenario, options));
+  const speedResults = evaluateSpeedConditions(appliedBuild, options.speedConditions ?? []);
+  const failedSpeed = speedResults.find((entry) => !entry.result.passed);
   const bulkScore = getBuildBulkScore(appliedBuild);
   const appliedStatPoints = getBuildStatPoints(appliedBuild);
   const usedStatPointBudget = sumStatPoints(appliedStatPoints);
@@ -690,9 +695,12 @@ export const evaluateCandidate = (
     remainingStatPointBudget,
     usedEvBudget,
     remainingEvBudget,
-    passed: appliedPointsAreLegal && scenarioResults.every((result) => result.passed),
+    passed: appliedPointsAreLegal && scenarioResults.every((result) => result.passed) && !failedSpeed,
     scenarioResults,
-    bottleneckLabel: worstScenario?.bottleneckLabel ?? "No active scenarios",
+    ...(speedResults.length > 0 ? { speedResults } : {}),
+    bottleneckLabel: failedSpeed
+      ? `${failedSpeed.scenarioLabel} / ${failedSpeed.attackLabel}: ${failedSpeed.result.reason}`
+      : worstScenario?.bottleneckLabel ?? "No active scenarios",
   };
 };
 

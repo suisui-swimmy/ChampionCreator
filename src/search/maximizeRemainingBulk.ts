@@ -3,6 +3,7 @@ import {
   CHAMPIONS_TOTAL_STAT_POINTS,
   isLegalStatPointTable,
   isLegalStatPointValue,
+  getBuildStatPoints,
   statPointTableToSmogonEvs,
   sumStatPoints,
 } from "../domain/championsStats";
@@ -15,7 +16,8 @@ import type {
   StatTable,
 } from "../domain/model";
 import { computeBulkScore, getBuildDerivedStats } from "./bulkScore";
-import { getBuildStatPoints } from "./defenceSearch";
+import type { SpeedScenarioCondition } from "../domain/speed";
+import { evaluateSpeedConditions } from "./speedAdjustment";
 
 export { computeBulkScore, getBuildDerivedStats } from "./bulkScore";
 export type { BulkScore } from "../domain/model";
@@ -69,6 +71,7 @@ export interface MaximizeRemainingBulkInput {
   natureCandidates?: BulkNatureCandidate[];
   minimumStatPoints?: Partial<Pick<StatTable, "hp" | "def" | "spd">>;
   protectedActualStats?: Partial<Pick<StatTable, "atk" | "spa" | "spe">>;
+  speedConditions?: SpeedScenarioCondition[];
   keepCurrentPhysicalSpecialBulk?: boolean;
 }
 
@@ -289,6 +292,9 @@ const evaluateBulkCandidateWithContext = (
   }
 
   if (!passesProtectedActualStats(derivedStats, input.protectedActualStats)) {
+    return null;
+  }
+  if (evaluateSpeedConditions(candidateBuild, input.speedConditions ?? []).some((entry) => !entry.result.passed)) {
     return null;
   }
 

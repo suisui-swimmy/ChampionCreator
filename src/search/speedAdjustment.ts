@@ -3,6 +3,7 @@ import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
   clampStatPointValue,
+  getBuildStatPoints,
   statPointTableToSmogonEvs,
   sumStatPoints,
 } from "../domain/championsStats";
@@ -14,33 +15,15 @@ import type {
   StatBoostTable,
   StatTable,
 } from "../domain/model";
-import { getBuildStatPoints } from "./defenceSearch";
-
-export type SpeedAdjustmentStatus = "pass" | "tie" | "fail" | "unresolved" | "invalid";
-export type SpeedComparisonMode = "outspeed" | "tie";
-export type SpeedManualMultiplier = "auto" | "2" | "1.5" | "0.5";
-export type SpeedOrderMode = "normal" | "trick-room";
-export type SpeedRelation = "outspeed" | "tie" | "miss";
-
-export interface SpeedAdjustmentInput {
-  targetBuild: Build;
-  opponentBuild?: Build;
-  opponentLabel: string;
-  field: FieldState;
-  targetBoosts: StatBoostTable;
-  opponentBoosts: StatBoostTable;
-  targetSide: SideState;
-  opponentSide: SideState;
-  comparison: SpeedComparisonMode;
-  orderMode?: SpeedOrderMode;
-  requiredSpeedOffset?: number;
-  manualTargetSpeed?: number;
-  targetItemMultiplier: SpeedManualMultiplier;
-  targetAbilityMultiplier: SpeedManualMultiplier;
-  opponentItemMultiplier: SpeedManualMultiplier;
-  opponentAbilityMultiplier: SpeedManualMultiplier;
-  boostedNature?: NatureRef;
-}
+import type {
+  SpeedAdjustmentInput, SpeedAdjustmentStatus, SpeedComparisonMode,
+  SpeedConditionEvaluation, SpeedManualMultiplier, SpeedOrderMode, SpeedRelation,
+  SpeedScenarioCondition, SpeedScenarioEvaluation,
+} from "../domain/speed";
+export type {
+  SpeedAdjustmentInput, SpeedAdjustmentStatus, SpeedComparisonMode,
+  SpeedManualMultiplier, SpeedOrderMode, SpeedRelation,
+} from "../domain/speed";
 
 export interface SpeedAdjustmentResult {
   id: string;
@@ -404,6 +387,57 @@ const makeInvalidResult = (
   notes: [],
   reason,
 });
+
+export const evaluateSpeedCondition = (input: SpeedAdjustmentInput): SpeedConditionEvaluation => {
+  const statPoints = getBuildStatPoints(input.targetBuild).spe;
+  const orderMode = getOrderMode(input);
+  try {
+    const targetSpeed = getTargetSpeed(input);
+    const evaluation = evaluateSpeedCandidate(input, statPoints, targetSpeed);
+    const requiredSpeed = getRequiredSpeed(targetSpeed, input.comparison, input.requiredSpeedOffset, orderMode);
+    const passed = passesSpeedInput(input, evaluation.actualSpeed, targetSpeed);
+    const limitLabel = `S${requiredSpeed}${orderMode === "trick-room" ? "以下" : "以上"}`;
+    return {
+      status: passed ? evaluation.relation === "tie" ? "tie" : "pass" : "fail",
+      passed,
+      orderMode,
+      relation: evaluation.relation,
+      statPoints,
+      actualSpeed: evaluation.actualSpeed,
+      targetSpeed,
+      requiredSpeed,
+      notes: getNotes(input),
+      reason: passed
+        ? `現在S${evaluation.actualSpeed}で条件を満たします (${limitLabel})`
+        : `現在S${evaluation.actualSpeed}では条件を満たしません。${limitLabel}が必要です`,
+    };
+  } catch (error) {
+    return {
+      status: "invalid", passed: false, orderMode, relation: "miss", statPoints,
+      actualSpeed: null, targetSpeed: 0, requiredSpeed: 0, notes: [],
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+export const buildSpeedConditionInput = (
+  build: Build,
+  { condition }: SpeedScenarioCondition,
+): SpeedAdjustmentInput => ({
+  ...condition,
+  targetBuild: {
+    ...build,
+    ...(condition.targetStatus !== undefined ? { status: condition.targetStatus } : {}),
+  },
+});
+
+export const evaluateSpeedConditions = (
+  build: Build,
+  conditions: readonly SpeedScenarioCondition[],
+): SpeedScenarioEvaluation[] => conditions.map(({ condition, ...identity }) => ({
+  ...identity,
+  result: evaluateSpeedCondition(buildSpeedConditionInput(build, { ...identity, condition })),
+}));
 
 const calculateSpeedLine = (
   input: SpeedAdjustmentInput,

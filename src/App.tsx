@@ -7,6 +7,7 @@ import { clearShareImportHref, hasShareImportRequest, readSharedAdjustmentHash }
 import { createShareStateDocument, type ShareStateDocument } from "./ui/shareState";
 import "./share/share.css";
 import type { FooterStartupState } from "./ui/footerStartup";
+import type { SpeedScenarioEvaluation } from "./domain/speed";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import {
@@ -9528,7 +9529,7 @@ const formatOffenseCandidateDetail = (
 
 const formatBottleneckDisplayLabel = (label: string): string => `最厳条件: ${label}`;
 
-const getSpeedResultTone = (result: SpeedAdjustmentResult): "green" | "red" | "blue" | "purple" => {
+const getSpeedResultTone = (result: Pick<SpeedAdjustmentResult, "status" | "passed">): "green" | "red" | "blue" | "purple" => {
   if (result.status === "unresolved" || result.status === "invalid") {
     return "purple";
   }
@@ -9551,7 +9552,7 @@ const formatSpeedRelationLabel = (result: Pick<SpeedAdjustmentResult, "orderMode
 };
 
 const formatSpeedResultDetail = (
-  entry: SpeedScenarioResult,
+  entry: SpeedScenarioResult | SpeedScenarioEvaluation,
   targetLabel: string,
   scenario: ScenarioFormState | undefined,
 ): string => {
@@ -9559,9 +9560,10 @@ const formatSpeedResultDetail = (
   const opponentLabel = attack?.speedTargetMode === "manual" && attack.speedTargetValue > 0
     ? `任意S${attack.speedTargetValue}`
     : attack?.attackerPokemonInput.trim() || entry.attackLabel;
-  const requiredStatPointLabel = entry.result.requiredStatPoints === null
+  const statPoints = "statPoints" in entry.result ? entry.result.statPoints : entry.result.requiredStatPoints;
+  const requiredStatPointLabel = statPoints === null
     ? "S-"
-    : `S${entry.result.requiredStatPoints}`;
+    : `S${statPoints}`;
   const actualSpeedLabel = entry.result.actualSpeed === null ? "-" : String(entry.result.actualSpeed);
   const noteLabel = entry.result.notes.length > 0 ? ` / ${entry.result.notes.join(" / ")}` : "";
 
@@ -9988,7 +9990,7 @@ export function ResultsPanel({
                       </section>
                     );
                   })}
-                  {speedResults.map((entry) => {
+                  {(candidate.speedResults ?? []).map((entry) => {
                     const scenarioLabel = scenarioLabels.get(entry.scenarioId) ?? entry.scenarioLabel;
                     return (
                       <section className="candidate-scenario-detail" key={entry.id}>

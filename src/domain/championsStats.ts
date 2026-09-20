@@ -1,4 +1,4 @@
-import type { StatKey, StatTable } from "./model";
+import type { Build, StatKey, StatTable } from "./model";
 
 export const CHAMPIONS_TOTAL_STAT_POINTS = 66;
 export const CHAMPIONS_MAX_STAT_POINTS_PER_STAT = 32;
@@ -37,6 +37,9 @@ export const smogonEvTableToStatPoints = (evs: StatTable): StatPointTable => ({
   spd: smogonEvToStatPoints(evs.spd),
   spe: smogonEvToStatPoints(evs.spe),
 });
+
+export const getBuildStatPoints = (build: Build): StatTable =>
+  build.statPoints ?? smogonEvTableToStatPoints(build.evs);
 
 export const clampStatPointValue = (statPoints: number): number => {
   if (!Number.isFinite(statPoints)) {

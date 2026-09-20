@@ -5,7 +5,9 @@ import { statPointTableToSmogonEvs } from "../domain/championsStats";
 import type { Build, EntityRef, FieldState, Scenario, ScenarioHit, SideState, StatTable } from "../domain/model";
 import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
-import { applyDefenceStatPointCandidate, searchDefenceCandidates } from "../search/defenceSearch";
+import { applyDefenceStatPointCandidate, evaluateCandidate, finalizeDefenceSearchResults, searchDefenceCandidates } from "../search/defenceSearch";
+import { buildDefenceSearchInput, buildSpeedConditionsFromScenarios } from "../ui/defenceSearchUi";
+import { createTrickRoomFixture } from "../ui/testFixtures/speedIntegration";
 import {
   DefenceSearchWorkerClient,
   isCurrentWorkerMessage,
@@ -17,6 +19,49 @@ import {
   type DefenceSearchWorkerMessage,
   type DefenceSearchWorkerRequest,
 } from "./defenceSearchWorker";
+
+describe("fixed speed conditions across Worker results", () => {
+  it.each([9, 10, 11])("filters S%s in both partial and complete results", async (spe) => {
+    const { target, scenarios } = createTrickRoomFixture(spe);
+    // Deliberately bypass UI preflight: the Worker must independently enforce S.
+    const input = buildDefenceSearchInput(target, scenarios);
+    const speedConditions = buildSpeedConditionsFromScenarios(target, scenarios);
+    const options = { maxResults: null, searchStatKeys: input.searchStatKeys, speedConditions,
+      partialResultInterval: 100, yieldEvery: 10000 };
+    const messages: DefenceSearchWorkerMessage[] = [];
+    await runDefenceSearchWorkerTask({ type: "start", requestId: "fixed-speed", ...input, options },
+      (message) => messages.push(message));
+    const complete = messages.find((message) => message.type === "complete");
+    expect(complete?.type).toBe("complete");
+    if (complete?.type !== "complete") throw new Error("Missing completion");
+    const partials = messages.filter((message) => message.type === "partialResult");
+    if (spe === 9) {
+      expect(complete.candidates.length).toBeGreaterThan(0);
+      expect(partials.length).toBeGreaterThan(0);
+      expect(complete.passingCandidateCount).toBe(complete.candidates.length);
+      expect(complete.candidates).toEqual(searchDefenceCandidates(input.build, input.scenarios, options));
+      for (const candidate of [...complete.candidates, ...partials.flatMap((message) => message.candidates)]) {
+        expect(candidate.appliedStatPoints.spe).toBe(9);
+        expect(candidate.speedResults?.[0].result).toMatchObject({ statPoints: 9, actualSpeed: 79, targetSpeed: 80, passed: true });
+      }
+    } else {
+      expect(complete.candidates).toEqual([]);
+      expect(complete.passingCandidateCount).toBe(0);
+      expect(partials).toEqual([]);
+      expect(complete.strictestFailureLabel).toContain(`現在S${spe + 70}`);
+    }
+  });
+
+  it("rechecks speed when finalizing previously accepted defence candidates", () => {
+    const { target, scenarios } = createTrickRoomFixture(11);
+    const input = buildDefenceSearchInput(target, scenarios);
+    const acceptedWithoutSpeed = evaluateCandidate(input.build, input.scenarios, { hp: 2, def: 26, spd: 0 });
+    expect(acceptedWithoutSpeed.passed).toBe(true);
+    expect(finalizeDefenceSearchResults(input.build, input.scenarios, [acceptedWithoutSpeed], {
+      speedConditions: buildSpeedConditionsFromScenarios(target, scenarios),
+    })).toEqual([]);
+  });
+});
 
 const mustResolve = <K extends EntityKind>(kind: K, input: string): EntityRef<K> => {
   const ref = toEntityRef(resolveEntity(kind, input), kind);

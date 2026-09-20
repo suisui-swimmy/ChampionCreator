@@ -14,6 +14,7 @@ import { toEntityRef } from "../domain/model";
 import { resolveEntity } from "../localization/resolver";
 import {
   calculateSpeedAdjustment,
+  evaluateSpeedCondition,
   getAutomaticSpeedModifierSources,
   type SpeedAdjustmentInput,
 } from "./speedAdjustment";
@@ -179,6 +180,58 @@ describe("getAutomaticSpeedModifierSources", () => {
       }),
       { ...emptyField, weather: "rain" },
     )).toEqual({});
+  });
+});
+
+describe("evaluateSpeedCondition", () => {
+  it.each([[9, 79, true], [10, 80, false], [11, 81, false]] as const)(
+    "evaluates S%s exactly under Trick Room without searching for a replacement",
+    (spe, actualSpeed, passed) => {
+      const input = makeInput({
+        targetBuild: makeBuild("target", "ドドゲザン", "いじっぱり", { ...zeroStatPoints, spe }),
+        opponentBuild: undefined, manualTargetSpeed: 80, requiredSpeedOffset: 1, orderMode: "trick-room",
+      });
+      const before = structuredClone(input);
+      expect(evaluateSpeedCondition(input)).toMatchObject({ statPoints: spe, actualSpeed, passed, requiredSpeed: 79 });
+      expect(calculateSpeedAdjustment(input)).toMatchObject({ passed: true, requiredStatPoints: 9 });
+      expect(input).toEqual(before);
+    },
+  );
+
+  it("allows a tie only when the required offset permits it", () => {
+    const input = makeInput({ targetBuild: makeBuild("target", "ドドゲザン", "いじっぱり", {
+      ...zeroStatPoints, spe: 10,
+    }), opponentBuild: undefined, manualTargetSpeed: 80, orderMode: "trick-room", requiredSpeedOffset: 0 });
+    expect(evaluateSpeedCondition(input)).toMatchObject({ status: "tie", passed: true, relation: "tie" });
+    expect(evaluateSpeedCondition({ ...input, requiredSpeedOffset: 1 })).toMatchObject({
+      status: "fail", passed: false, relation: "tie",
+    });
+  });
+
+  it("uses the same Calc speed path for both sides and manual overrides", () => {
+    const input = makeInput({
+      targetBuild: makeBuild("target", "ドドゲザン", "いじっぱり", { ...zeroStatPoints, spe: 11 }, {
+        item: mustResolve("item", "こだわりスカーフ"), ability: mustResolve("ability", "すいすい"), status: "par",
+      }),
+      field: { ...emptyField, weather: "rain" }, targetBoosts: { spe: 1 },
+      targetSide: { ...emptySide, tailwind: true },
+      targetItemMultiplier: "0.5", targetAbilityMultiplier: "1.5",
+    });
+    const result = evaluateSpeedCondition(input);
+    expect(result.actualSpeed).toBe(calculateSmogonFinalSpeed(input.targetBuild, input.field, input.targetSide, {
+      boosts: input.targetBoosts, manualItemMultiplier: 0.5, manualAbilityMultiplier: 1.5,
+    }));
+    expect(result.targetSpeed).toBe(calculateSmogonFinalSpeed(input.opponentBuild!, input.field, input.opponentSide, {
+      boosts: input.opponentBoosts,
+    }));
+    expect(result.notes).toContain("調整対象: おいかぜ 2倍");
+    expect(result.notes).toContain("調整対象: 道具倍率 手動 0.5倍");
+    expect(result.notes).not.toContain("調整対象: すいすい 雨 2倍");
+  });
+
+  it("does not silently pass an invalid speed condition", () => {
+    expect(evaluateSpeedCondition(makeInput({ opponentBuild: undefined, manualTargetSpeed: undefined })))
+      .toMatchObject({ status: "invalid", passed: false, actualSpeed: null });
   });
 });
 

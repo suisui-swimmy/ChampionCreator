@@ -5188,6 +5188,15 @@ describe("App", () => {
       passed: true,
       bottleneckLabel: "シナリオ1 +3.7%",
       scenarioResults: [],
+      speedResults: [{
+        id: "candidate-speed-evaluation", scenarioId: "scenario-speed-test", scenarioLabel: "素早さ調整",
+        attackId: "attack-speed-test", attackLabel: "最速ピカチュウ",
+        result: {
+          status: "pass", passed: true, orderMode: "normal", relation: "outspeed",
+          statPoints: 12, actualSpeed: 151, targetSpeed: 150, requiredSpeed: 151,
+          notes: ["こだわりスカーフ 1.5倍"], reason: "現在S151で条件を満たします",
+        },
+      }],
     };
     const html = renderToStaticMarkup(
       <ResultsPanel
@@ -5212,8 +5221,8 @@ describe("App", () => {
             comparison: "outspeed",
             orderMode: "normal",
             relation: "outspeed",
-            requiredStatPoints: 12,
-            actualSpeed: 151,
+            requiredStatPoints: 9,
+            actualSpeed: 148,
             targetSpeed: 150,
             requiredSpeed: 151,
             targetStatPoints: 0,
@@ -5236,6 +5245,7 @@ describe("App", () => {
     expect(html).toContain("相手S 150");
     expect(html).toContain(">PASS</em>");
     expect(html).toContain("S12 メガマフォクシー → 任意S150 : 自分 151 / 相手 150 / 抜ける / こだわりスカーフ 1.5倍");
+    expect(html).not.toContain("自分 148");
     expect(html).toContain('aria-label="SPバー: H 3 / A 0 / B 32 / C 2 / D 0 / S 12"');
     expect(html).toContain("シナリオ1 +3.7%");
     expect(html).toContain("最厳条件: シナリオ1 +3.7%");

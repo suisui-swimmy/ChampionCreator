@@ -3,7 +3,6 @@ import { createAdjustmentTutorialState } from "../ui/adjustmentExample";
 import {
   buildIntegratedDefenceSearchInput,
   calculateOffenseAdjustmentsForCandidateRanking,
-  calculateSpeedAdjustmentsForCandidateRanking,
 } from "../ui/defenceSearchUi";
 import { searchDefenceCandidates } from "../search/defenceSearch";
 
@@ -16,12 +15,13 @@ export function buildGuideExample() {
   const input = buildIntegratedDefenceSearchInput(target, scenarios);
   const candidates = searchDefenceCandidates(input.build, input.scenarios, {
     maxResults: null, minimumStatPoints: input.minimumStatPoints, searchStatKeys: input.searchStatKeys,
+    speedConditions: input.speedConditions,
   });
   if (candidates.length !== 1) throw new Error("The guide sample must produce exactly one candidate.");
   const [candidate] = candidates;
   const appliedTarget = { ...target, statPoints: candidate.appliedStatPoints };
   const offense = calculateOffenseAdjustmentsForCandidateRanking(appliedTarget, scenarios).find((entry) => entry.result.passed);
-  const speed = calculateSpeedAdjustmentsForCandidateRanking(appliedTarget, scenarios).find((entry) => entry.result.passed);
+  const speed = candidate.speedResults?.find((entry) => entry.result.passed);
   const defenceForm = scenarios.find((entry) => entry.adjustmentType === "defence")?.attacks[0];
   const offenseForm = scenarios.find((entry) => entry.adjustmentType === "offense")?.attacks[0];
   const speedForm = scenarios.find((entry) => entry.adjustmentType === "speed")?.attacks[0];

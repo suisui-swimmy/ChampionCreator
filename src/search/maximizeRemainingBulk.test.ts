@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createTrickRoomFixture } from "../ui/testFixtures/speedIntegration";
+import { buildMaximizeRemainingBulkInputFromUi } from "../ui/defenceSearchUi";
 import type { EntityKind } from "../data/localizationTypes";
 import { statPointTableToSmogonEvs, type StatPointTable } from "../domain/championsStats";
 import type { Build, EntityRef, NatureRef, StatTable } from "../domain/model";
@@ -53,6 +55,35 @@ const makeBuild = (
   ivs: defaultIvs,
   statPoints,
   evs: statPointTableToSmogonEvs(statPoints),
+});
+
+describe("bulk maximization with speed conditions", () => {
+  it("rejects an invalid fixed speed before maximizing", () => {
+    const { target, scenarios } = createTrickRoomFixture(11);
+    expect(() => buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true }))
+      .toThrow("現在S81では条件を満たしません");
+  });
+
+  it("rejects a faster nature under Trick Room and permits a slower one", () => {
+    const { target, scenarios } = createTrickRoomFixture(9);
+    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true });
+    const statPoints = { ...zeroStatPoints, hp: 32, def: 25, spe: 9 };
+    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("ようき"))).toBeNull();
+    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("のんき"))?.candidate.derivedStats.spe).toBe(71);
+    const results = maximizeRemainingBulk(input, { maxResults: 50 });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((result) => result.candidate.derivedStats.spe <= 79)).toBe(true);
+    expect(results.every((result) => result.candidate.statPoints.spe === 9 && result.candidate.usedTotal <= 66)).toBe(true);
+  });
+
+  it("preserves a normal-order lower bound after nature changes", () => {
+    const { target, scenarios, speed } = createTrickRoomFixture(11);
+    scenarios[1].attacks = [{ ...speed, speedOrderMode: "normal" }];
+    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true });
+    const statPoints = { ...zeroStatPoints, hp: 32, def: 23, spe: 11 };
+    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("のんき"))).toBeNull();
+    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("ようき"))?.candidate.derivedStats.spe).toBe(89);
+  });
 });
 
 describe("computeBulkScore", () => {

@@ -26,6 +26,7 @@ import type {
 } from "../domain/model";
 import {
   CHAMPIONS_TOTAL_STAT_POINTS,
+  CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   clampStatPointTable,
   clampStatPointValue,
   statPointTableToSmogonEvs,
@@ -61,6 +62,8 @@ import {
 import { getMoveDefenderStatKeys } from "../domain/moveStatReference";
 import {
   calculateSpeedAdjustment,
+  buildSpeedConditionInput,
+  evaluateSpeedConditions,
   getAutomaticSpeedModifierSources,
   type SpeedAdjustmentInput,
   type SpeedAdjustmentResult,
@@ -68,6 +71,7 @@ import {
   type SpeedManualMultiplier,
   type SpeedOrderMode,
 } from "../search/speedAdjustment";
+import type { SpeedScenarioCondition, SpeedScenarioEvaluation } from "../domain/speed";
 import {
   type BulkNatureCandidate,
   type MaximizeRemainingBulkInput,
@@ -213,6 +217,7 @@ export interface DefenceSearchInput {
   scenarios: Scenario[];
   minimumStatPoints?: Partial<StatPointTable>;
   searchStatKeys?: DefenceSearchStatKey[];
+  speedConditions?: SpeedScenarioCondition[];
 }
 
 export interface OffenseScenarioResult {
@@ -242,7 +247,8 @@ export interface IntegratedOffenseRequirements {
 
 export interface IntegratedSpeedRequirements {
   fixedStatPoints: Partial<Pick<StatPointTable, "spe">>;
-  selectedResults: SpeedScenarioResult[];
+  selectedResults: SpeedScenarioEvaluation[];
+  speedConditions?: SpeedScenarioCondition[];
   blockingReasons: string[];
 }
 
@@ -1671,63 +1677,65 @@ export const applyIntegratedOffenseRequirementsToTargetForm = (
   };
 };
 
-const createSpeedRequirementChoice = (
-  entry: SpeedScenarioResult,
-): { result: SpeedScenarioResult; fixedStatPoints: Partial<Pick<StatPointTable, "spe">> } | null => {
-  const { result } = entry;
-  if (!result.passed || !result.canApply || result.requiredStatPoints === null) {
-    return null;
-  }
-  return {
-    result: entry,
-    fixedStatPoints: { spe: result.requiredStatPoints },
-  };
-};
-
-const getSpeedResultSourceLabel = (entry: SpeedScenarioResult): string =>
-  `${entry.scenarioLabel} / ${entry.attackLabel} / ${entry.result.label}`;
+export const buildSpeedConditionsFromScenarios = (
+  targetForm: TargetFormState,
+  scenarioForms: ScenarioFormState[],
+): SpeedScenarioCondition[] => scenarioForms
+  .filter((scenario) => scenario.enabled && scenario.adjustmentType === "speed")
+  .flatMap((scenario) => scenario.attacks.flatMap((attack, attackIndex) => {
+    if (!hasSpeedTarget(attack)) return [];
+    const { targetBuild, boostedNature: _boostedNature, ...condition } = buildSpeedAdjustmentInput(targetForm, attack);
+    return [{
+      id: `${scenario.id}-${attack.id}-speed-evaluation`,
+      scenarioId: scenario.id,
+      scenarioLabel: scenario.label,
+      attackId: attack.id,
+      attackLabel: formatScenarioAttackLabel(scenario.adjustmentType, attackIndex, attack.label),
+      condition: { ...condition, targetStatus: targetBuild.status },
+    }];
+  }));
 
 export const resolveIntegratedSpeedRequirements = (
   targetForm: TargetFormState,
-  speedResults: SpeedScenarioResult[],
+  scenarioForms: ScenarioFormState[],
 ): IntegratedSpeedRequirements => {
   const baseStatPoints = clampStatPointTable(targetForm.statPoints);
-  const groupedResults = new Map<string, SpeedScenarioResult[]>();
-  const blockingReasons: string[] = [];
-  const selectedResults: SpeedScenarioResult[] = [];
-  let requiredSpe = baseStatPoints.spe;
-
-  for (const entry of speedResults) {
-    const key = `${entry.scenarioId}:${entry.attackId}`;
-    groupedResults.set(key, [...(groupedResults.get(key) ?? []), entry]);
+  const speedConditions = buildSpeedConditionsFromScenarios(targetForm, scenarioForms);
+  if (speedConditions.length === 0) {
+    return { fixedStatPoints: { spe: baseStatPoints.spe }, selectedResults: [], speedConditions, blockingReasons: [] };
   }
+  const build = buildTargetBuildFromUi(targetForm, "integrated-speed-target");
+  const maxSpe = Math.min(CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
+    CHAMPIONS_TOTAL_STAT_POINTS - sumStatPoints(baseStatPoints) + baseStatPoints.spe);
 
-  for (const group of groupedResults.values()) {
-    const choices = group
-      .map(createSpeedRequirementChoice)
-      .filter((choice): choice is NonNullable<typeof choice> => Boolean(choice));
-
-    if (choices.length > 0) {
-      const best = choices.reduce((currentBest, choice) => (
-        (choice.fixedStatPoints.spe ?? 0) < (currentBest.fixedStatPoints.spe ?? 0)
-          ? choice
-          : currentBest
-      ));
-      requiredSpe = Math.max(requiredSpe, best.fixedStatPoints.spe ?? 0);
-      selectedResults.push(best.result);
-      continue;
-    }
-
-    if (!group.some((entry) => entry.result.passed)) {
-      const failed = group.find((entry) => !entry.result.passed) ?? group[0];
-      blockingReasons.push(`${getSpeedResultSourceLabel(failed)}: ${failed.result.reason}`);
+  // Each condition is checked at the same S; a downward proposal is not proof
+  // that the user's fixed S satisfies a Trick Room upper bound.
+  for (let spe = baseStatPoints.spe; spe <= maxSpe; spe += 1) {
+    const statPoints = { ...baseStatPoints, spe };
+    const selectedResults = evaluateSpeedConditions({
+      ...build, statPoints, evs: statPointTableToSmogonEvs(statPoints),
+    }, speedConditions);
+    if (selectedResults.every((entry) => entry.result.passed)) {
+      return { fixedStatPoints: { spe }, selectedResults, speedConditions, blockingReasons: [] };
     }
   }
 
+  const currentResults = evaluateSpeedConditions(build, speedConditions);
   return {
-    fixedStatPoints: { spe: requiredSpe },
-    selectedResults,
-    blockingReasons,
+    fixedStatPoints: { spe: baseStatPoints.spe },
+    selectedResults: [],
+    speedConditions,
+    blockingReasons: [
+      `入力済みS${baseStatPoints.spe} SP以上で、すべての素早さ条件を満たす配分がありません`,
+      ...currentResults.map((entry, index) => {
+        const proposal = !entry.result.passed && entry.result.orderMode === "trick-room"
+          ? calculateSpeedAdjustment(buildSpeedConditionInput(build, speedConditions[index]))
+          : undefined;
+        const hint = proposal?.passed && proposal.requiredStatPoints !== null
+          ? `（S${proposal.requiredStatPoints} SPへの変更でこの条件を達成できます）` : "";
+        return `${entry.scenarioLabel} / ${entry.attackLabel}: ${entry.result.reason}${hint}`;
+      }),
+    ],
   };
 };
 
@@ -1752,18 +1760,17 @@ export const buildIntegratedDefenceSearchInput = (
   const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
   const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
   const requirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
-  const speedResults = calculateSpeedAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
-  const speedRequirements = resolveIntegratedSpeedRequirements(baselineTargetForm, speedResults);
-
   if (requirements.blockingReasons.length > 0) {
     throw new Error(`火力調整条件を候補一覧へ統合できません: ${requirements.blockingReasons.join(" / ")}`);
   }
+  const offenseTargetForm = applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, requirements);
+  const speedRequirements = resolveIntegratedSpeedRequirements(offenseTargetForm, scenarioForms);
   if (speedRequirements.blockingReasons.length > 0) {
     throw new Error(`素早さ調整条件を候補一覧へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
   }
 
   const integratedTargetForm = applyIntegratedSpeedRequirementsToTargetForm(
-    applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, requirements),
+    offenseTargetForm,
     speedRequirements,
   );
   const fixedBudget =
@@ -1785,6 +1792,7 @@ export const buildIntegratedDefenceSearchInput = (
   const defenceInput = buildDefenceSearchInput(integratedTargetForm, scenarioForms);
   return {
     ...defenceInput,
+    speedConditions: speedRequirements.speedConditions,
     minimumStatPoints: requirements.minimumStatPoints,
     searchStatKeys: mergeDefenceSearchStatKeys(
       defenceInput.searchStatKeys,
@@ -1807,7 +1815,6 @@ const createBulkNatureCandidates = (): BulkNatureCandidate[] =>
 const getProtectedActualStatsForBulkMaximize = (
   build: Build,
   offenseRequirements: IntegratedOffenseRequirements,
-  speedRequirements: IntegratedSpeedRequirements,
 ): Partial<Pick<StatPointTable, "atk" | "spa" | "spe">> => {
   const stats = getBuildDerivedStats(build);
   const protectedStats: Partial<Pick<StatPointTable, "atk" | "spa" | "spe">> = {};
@@ -1818,10 +1825,6 @@ const getProtectedActualStatsForBulkMaximize = (
   if (offenseRequirements.selectedResults.some((entry) => entry.result.stat === "spa")) {
     protectedStats.spa = stats.spa;
   }
-  if (speedRequirements.selectedResults.length > 0) {
-    protectedStats.spe = stats.spe;
-  }
-
   return protectedStats;
 };
 
@@ -1833,12 +1836,13 @@ export const buildMaximizeRemainingBulkInputFromUi = (
   const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
   const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
   const offenseRequirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
-  const speedResults = calculateSpeedAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
-  const speedRequirements = resolveIntegratedSpeedRequirements(baselineTargetForm, speedResults);
-
   if (offenseRequirements.blockingReasons.length > 0) {
     throw new Error(`火力調整条件を耐久最大化へ統合できません: ${offenseRequirements.blockingReasons.join(" / ")}`);
   }
+  const speedRequirements = resolveIntegratedSpeedRequirements(
+    applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, offenseRequirements),
+    scenarioForms,
+  );
   if (speedRequirements.blockingReasons.length > 0) {
     throw new Error(`素早さ調整条件を耐久最大化へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
   }
@@ -1869,10 +1873,10 @@ export const buildMaximizeRemainingBulkInputFromUi = (
     allowNatureChange: options.allowNatureChange,
     natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined,
     minimumStatPoints: offenseRequirements.minimumStatPoints,
+    speedConditions: speedRequirements.speedConditions,
     protectedActualStats: getProtectedActualStatsForBulkMaximize(
       build,
       offenseRequirements,
-      speedRequirements,
     ),
     keepCurrentPhysicalSpecialBulk: true,
   };
@@ -2045,6 +2049,7 @@ export const startDefenceSearchFromUi = (
     partialResultLimit: options.partialResultLimit ?? 20,
     minimumStatPoints: input.minimumStatPoints,
     searchStatKeys: input.searchStatKeys,
+    speedConditions: input.speedConditions,
     progressInterval: 250,
     partialResultInterval: 1,
     yieldEvery: 250,

@@ -1,6 +1,7 @@
 import type { EntityKind, SourceStatus } from "../data/localizationTypes";
 import type { ResolveResult, ResolveStatus } from "../localization/resolver";
 import type { HpEvent, HpEventEvaluation } from "./hpEvents";
+import type { SpeedScenarioEvaluation } from "./speed";
 
 declare const canonicalNameBrand: unique symbol;
 declare const displayNameJaBrand: unique symbol;
@@ -200,6 +201,7 @@ export interface CandidateResult {
   remainingEvBudget: number;
   passed: boolean;
   scenarioResults: ScenarioEvaluation[];
+  speedResults?: SpeedScenarioEvaluation[];
   bottleneckLabel: string;
 }
 
