@@ -9527,8 +9527,6 @@ const formatOffenseCandidateDetail = (
   return `${movePowerLabel}${sourceLabel} → ${defenderLabel} : ${damageLabel} / KO率 ${formatPercent(entry.result.koProbability)}`;
 };
 
-const formatBottleneckDisplayLabel = (label: string): string => `最厳条件: ${label}`;
-
 const getSpeedResultTone = (result: Pick<SpeedAdjustmentResult, "status" | "passed">): "green" | "red" | "blue" | "purple" => {
   if (result.status === "unresolved" || result.status === "invalid") {
     return "purple";
@@ -9687,6 +9685,7 @@ export function ResultsPanel({
   ));
   const showStandaloneAdjustmentResults = (
     candidates.length === 0
+    && !resultAlertMessage
     && !hasEnabledDefenceScenario
     && (offenseResults.length > 0 || speedResults.length > 0)
   );
@@ -9797,9 +9796,11 @@ export function ResultsPanel({
       ) : null}
 
       <div className="candidate-table" role="table" aria-label="候補一覧">
-        <div className="candidate-row header" role="row">
-          <span>順位</span><span>H/A/B/C/D/S</span><span /><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
-        </div>
+        {!showStandaloneAdjustmentResults ? (
+          <div className="candidate-row header" role="row">
+            <span>順位</span><span>H/A/B/C/D/S</span><span /><span>使用SP</span><span>残りSP</span><span>最厳条件</span><span /><span />
+          </div>
+        ) : null}
         {resultAlertMessage ? (
           <div className="empty-result impossible-result result-alert" role="alert">
             <strong>FAIL</strong>
@@ -9872,7 +9873,8 @@ export function ResultsPanel({
                       </span>
                     </span>
                     <span className="candidate-bottleneck">
-                      {formatBottleneckDisplayLabel(candidate.bottleneckLabel)}
+                      <span className="candidate-bottleneck-prefix visually-hidden">最厳条件: </span>
+                      {candidate.bottleneckLabel}
                     </span>
                     <span className="candidate-disclosure" aria-hidden="true">
                       <ChevronRightIcon className="disclosure-chevron" />

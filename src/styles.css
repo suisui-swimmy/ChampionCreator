@@ -5381,9 +5381,9 @@ textarea {
 
 .adjustment-result-row {
   display: grid;
-  grid-template-columns: 12px minmax(76px, 112px) minmax(112px, 160px) minmax(66px, 82px) minmax(58px, 74px) 60px;
+  grid-template-columns: 12px max-content minmax(0, 1fr) auto auto minmax(24px, 0.4fr) auto;
   align-items: center;
-  gap: 6px;
+  gap: 6px 8px;
   min-width: 0;
   border-top: 1px solid rgba(124, 143, 144, 0.12);
   padding-top: 7px;
@@ -5416,9 +5416,19 @@ textarea {
 .adjustment-result-row small {
   grid-column: 2 / -1;
   color: #a9b8b7;
+  line-height: 1.5;
+}
+
+.adjustment-result-row .adjustment-result-source,
+.adjustment-result-row small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .adjustment-apply-button {
+  grid-column: 7;
   justify-self: end;
   min-width: 52px;
 }
@@ -5429,11 +5439,11 @@ textarea {
   overflow-x: hidden;
   --candidate-row-columns:
     34px
-    minmax(286px, 560px)
+    minmax(0, 560px)
     minmax(10px, 1fr)
     44px
     44px
-    minmax(96px, 136px)
+    minmax(110px, 136px)
     18px;
 }
 
@@ -5596,6 +5606,13 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.candidate-row-toggle > .candidate-bottleneck {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .candidate-disclosure {
@@ -5963,6 +5980,11 @@ textarea {
 }
 
 @media (min-width: 721px) {
+  .adjustment-result-metric,
+  .adjustment-result-row em {
+    margin-inline-start: 8px;
+  }
+
   .suggestion-format-toggle {
     min-height: var(--desktop-control-standard);
   }
@@ -8241,6 +8263,16 @@ textarea {
     white-space: normal;
   }
 
+  .mobile-candidate-layout .candidate-bottleneck-prefix {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: inherit;
+  }
+
   .mobile-candidate-layout .candidate-disclosure {
     grid-row: 1;
     grid-column: 3;
@@ -8313,7 +8345,7 @@ textarea {
   }
 
   .mobile-candidate-layout .adjustment-result-row {
-    grid-template-columns: 12px minmax(0, 1fr) auto 58px;
+    grid-template-columns: 12px minmax(0, 1fr) auto auto;
     gap: 4px 7px;
     align-items: start;
   }

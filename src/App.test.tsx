@@ -4489,7 +4489,7 @@ describe("App", () => {
     expect(html).toContain('class="candidate-budget-value remaining is-zero"');
     expect(html).toContain('<span class="visually-hidden">使用SP</span>33');
     expect(html).toContain('<span class="visually-hidden">残りSP</span>33');
-    expect(html).toContain("最厳条件: モバイル候補1");
+    expect(html).toContain('<span class="candidate-bottleneck-prefix visually-hidden">最厳条件: </span>モバイル候補1');
     expect(html.match(/位の候補を調整対象へ適用/g)).toHaveLength(5);
     expect(html).toContain('id="mobile-candidate-1-details"');
     expect(html).not.toContain('class="mobile-sheet-close"');
@@ -4927,7 +4927,7 @@ describe("App", () => {
     expect(html).toContain('class="candidate-budget-value remaining has-remaining"');
     expect(html).toContain('class="candidate-bottleneck"');
     expect(html).toContain("シナリオA +0.0%");
-    expect(html).toContain("最厳条件: シナリオA +0.0%");
+    expect(html).toContain('<span class="candidate-bottleneck-prefix visually-hidden">最厳条件: </span>シナリオA +0.0%');
     expect(html).toContain('class="candidate-sp-bars"');
     expect(html).toContain('aria-label="SPバー: H 6 / A 0 / B 13 / C 0 / D 0 / S 0"');
     expect(html).toContain(">H</span><span>6</span>");
@@ -5014,6 +5014,7 @@ describe("App", () => {
     );
 
     expect(html).toContain("火力・素早さライン結果");
+    expect(html).not.toContain('class="candidate-row header"');
     expect(html).toContain(">Cライン</strong>");
     expect(html).toContain("火力のみ / くさむすび");
     expect(html).toContain("KO 100.0%");
@@ -5248,7 +5249,7 @@ describe("App", () => {
     expect(html).not.toContain("自分 148");
     expect(html).toContain('aria-label="SPバー: H 3 / A 0 / B 32 / C 2 / D 0 / S 12"');
     expect(html).toContain("シナリオ1 +3.7%");
-    expect(html).toContain("最厳条件: シナリオ1 +3.7%");
+    expect(html).toContain('<span class="candidate-bottleneck-prefix visually-hidden">最厳条件: </span>シナリオ1 +3.7%');
     expect(html).toContain("自分 151");
     expect(html).toContain("相手 150");
     expect(html).toContain("抜ける");
