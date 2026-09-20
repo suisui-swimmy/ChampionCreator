@@ -31,7 +31,35 @@
 .share-url-label span { color: var(--muted); }
 .share-url-label textarea { width: 100%; min-width: 0; resize: vertical; color: var(--text); background: var(--surface-inset); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px; font: inherit; overflow-wrap: anywhere; }
 .share-dialog :is(button,a,textarea):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-.shared-import-notice { margin: 8px 16px; color: var(--gold); }
+.shared-import-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  position: fixed;
+  z-index: calc(var(--box-overlay-z) + 3);
+  top: max(16px, env(safe-area-inset-top));
+  inset-inline: 16px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 10px 16px;
+  border: 1px solid var(--gold-line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  font-size: var(--desktop-text-control);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.shared-import-notice img {
+  flex: none;
+  width: var(--desktop-icon-standard);
+  height: var(--desktop-icon-standard);
+  margin-top: calc((1.6em - var(--desktop-icon-standard)) / 2);
+}
+.shared-import-notice span { min-width: 0; }
 @media (min-width: 721px) and (max-width: 1180px) {
   .app-shell .topbar .brand-line { flex-wrap: wrap; gap: 4px; }
   .app-shell .topbar .brand-description { flex-basis: 100%; }

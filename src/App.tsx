@@ -2014,6 +2014,11 @@ export function App({
   const [sharedImportError, setSharedImportError] = useState("");
   const [sharedImportNotice, setSharedImportNotice] = useState("");
   useEffect(() => {
+    if (!sharedImportNotice) return;
+    const timeout = window.setTimeout(() => setSharedImportNotice(""), 4_000);
+    return () => window.clearTimeout(timeout);
+  }, [sharedImportNotice]);
+  useEffect(() => {
     if (variant !== "default" || staticPreview || !hasShareImportRequest(window.location.href)) return;
     let active = true;
     readSharedAdjustmentHash(window.location.hash)
@@ -4402,7 +4407,12 @@ export function App({
         onSave={() => handleSharedImport("box")}
         onClose={closeSharedImport}
       /> : null}
-      {sharedImportNotice ? <p className="shared-import-notice" role="status">{sharedImportNotice}</p> : null}
+      {sharedImportNotice ? (
+        <p className="shared-import-notice" role="status" aria-atomic="true">
+          <img src={getAssetSrc("assets/ui/notice-info.svg")} alt="" aria-hidden="true" />
+          <span>{sharedImportNotice}</span>
+        </p>
+      ) : null}
 
       {variant === "default" && draftRecovery && !sharedImport ? (
         <DraftRecoveryDialog
