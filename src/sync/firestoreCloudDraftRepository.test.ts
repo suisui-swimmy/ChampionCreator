@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDefaultScenarioForms,
   createDefaultTargetForm,
@@ -21,6 +21,8 @@ type FakeStoredDocument = {
 type FakeDatabase = {
   readonly documents: Map<string, FakeStoredDocument>;
 };
+
+const TEST_NOW = "2026-08-21T00:00:02.000Z";
 
 const makeTimestamp = (value: string) => ({
   toDate: () => new Date(value),
@@ -100,7 +102,7 @@ const createFakeDependencies = (
     }
     return result;
   },
-  serverTimestamp: () => makeTimestamp("2026-08-21T00:00:02.000Z"),
+  serverTimestamp: () => makeTimestamp(TEST_NOW),
   timestampFromDate: (date) => makeTimestamp(date.toISOString()),
 });
 
@@ -114,6 +116,17 @@ const createRepository = (
 });
 
 describe("FirestoreCloudDraftRepository", () => {
+  beforeEach(() => {
+    // Mutation inputs omit updatedAt, so their validation uses the current
+    // time. Keep it aligned with the fixed server/expiry fixtures on every run.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(TEST_NOW));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("uses the per-user drafts path and creates normalized revision one records", async () => {
     expect(getCloudDraftCollectionPath("uid-a")).toBe("users/uid-a/drafts");
     const database: FakeDatabase = { documents: new Map() };
@@ -276,6 +289,28 @@ describe("FirestoreCloudDraftRepository", () => {
     expect(result.status).toBe("error");
     expect(result.error?.kind).toBe("permission-denied");
     expect(result.error?.message).not.toContain("secret backend details");
+  });
+
+  it.each([
+    [-1, "invalid"],
+    [0, "invalid"],
+    [1, "written"],
+    [30 * 24 * 60 * 60 * 1_000, "written"],
+    [30 * 24 * 60 * 60 * 1_000 + 1, "invalid"],
+  ] as const)("validates expiry %i ms from the clock when updatedAt is omitted", async (offset, status) => {
+    const database: FakeDatabase = { documents: new Map() };
+    const result = await createRepository(database).write(makeMutation("expiry-boundary", {
+      expiresAt: new Date(Date.parse(TEST_NOW) + offset).toISOString(),
+    }));
+
+    expect(result.status).toBe(status);
+    if (status === "invalid") {
+      expect(result.issue?.code).toBe("invalid-mutation");
+      expect(database.documents.size).toBe(0);
+    } else {
+      expect(result.draft?.updatedAt).toBe(TEST_NOW);
+      expect((await createRepository(database).readAll()).drafts).toHaveLength(1);
+    }
   });
 
   it.each([
