@@ -9,6 +9,7 @@ import {
   collectNatureUsageFromFiles,
   createEmptyPayload,
   extractBulkArchive,
+  fetchCurrentCsv,
   makeCatalogs,
   parseNatureCsv,
   resolveArchiveCsvPath,
@@ -577,6 +578,82 @@ describe("generate-champions-usage", () => {
     })).rejects.toThrow(/no usable stat_alignment/);
   });
 
+  it("fills missing Indeedee form CSVs from exact Current paths without mixing formats or forms", async () => {
+    const source = apiData([
+      natureEntry("pikachu", "Pikachu"),
+      natureEntry("indeedee", "Indeedee"),
+      natureEntry("indeedeef", "Indeedee-F"),
+    ]);
+    const formCatalogs = { ...natureCatalogs, pokemon: new Map([
+      ...catalogs.pokemon, ["indeedee", "indeedee"], ["indeedeef", "indeedeef"],
+    ]) };
+    const missingFiles = Object.fromEntries([
+      ["Singles/Indeedee", "71.1%"], ["Doubles/Indeedee", "34.4%"],
+      ["Singles/Indeedee-F", "12.3%"], ["Doubles/Indeedee-F", "0.0%"],
+    ].map(([path, jolly]) => [`pokemon_champions_assets/battle_data/${path}.csv`, natureCsv({ jolly })]));
+    const readMissingCurrentCsv = vi.fn(async (path) => missingFiles[path]);
+    const files = {
+      "battle_data/Singles/Pikachu.csv": natureCsv(),
+      "battle_data/Doubles/Pikachu.csv": natureCsv(),
+      // Similar or historical names must never be used for either form.
+      "battle_data/Singles/Indeedee Male.csv": natureCsv({ jolly: "99%" }),
+      "battle_data/M5/Doubles/Indeedee-F.csv": natureCsv({ jolly: "99%" }),
+    };
+    const options = { apiData: source, catalogs: formCatalogs, files, warn: vi.fn() };
+    const before = await collectNatureUsageFromFiles(options);
+    const usage = await collectNatureUsageFromFiles({ ...options, readMissingCurrentCsv });
+    expect(before.Singles.indeedee).toBeUndefined();
+    expect(readMissingCurrentCsv.mock.calls.map(([path]) => path).sort()).toEqual(Object.keys(missingFiles).sort());
+    expect(usage.Singles.indeedee[0].percentage).toBe(71.1);
+    expect(usage.Doubles.indeedee[0].percentage).toBe(34.4);
+    expect(usage.Singles.indeedeef[0].percentage).toBe(12.3);
+    expect(usage.Doubles.indeedeef[0].percentage).toBe(0);
+    expect(usage.Singles.pikachu).toEqual(before.Singles.pikachu);
+    const payload = transformApiData(source, { catalogs: formCatalogs, natureUsageByFormat: usage });
+    expect(validatePayload(payload).formats.Doubles.indeedeef.nature).toEqual(usage.Doubles.indeedeef);
+    expect(payload.dataVersion).not.toBe(transformApiData(source, {
+      catalogs: formCatalogs, natureUsageByFormat: before,
+    }).dataVersion);
+  });
+
+  it("keeps absent fallback CSVs unavailable and validates downloaded percentages", async () => {
+    const options = {
+      apiData: apiData([natureEntry("pikachu", "Pikachu"), natureEntry("rotomwash", "Rotom-Wash")]),
+      catalogs: natureCatalogs,
+      files: {
+        "battle_data/Singles/Pikachu.csv": natureCsv(),
+        "battle_data/Doubles/Pikachu.csv": natureCsv(),
+      },
+      warn: vi.fn(),
+    };
+    const missing = await collectNatureUsageFromFiles({ ...options, readMissingCurrentCsv: async () => null });
+    expect(missing.Singles.rotomwash).toBeUndefined();
+    await expect(collectNatureUsageFromFiles({
+      ...options, readMissingCurrentCsv: async () => natureCsv({ jolly: "101%" }),
+    })).rejects.toThrow(/outside 0 through 100/);
+    await expect(collectNatureUsageFromFiles({
+      ...options, readMissingCurrentCsv: async () => { throw new Error("network failure"); },
+    })).rejects.toThrow("network failure");
+    await expect(collectNatureUsageFromFiles({
+      ...options,
+      files: { "battle_data/unrelated.csv": natureCsv() },
+      readMissingCurrentCsv: async () => natureCsv(),
+    })).rejects.toThrow(/no usable stat_alignment/);
+  });
+
+  it("fetches only the indexed CSV, distinguishes 404 from server failures, and rejects unsafe paths", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, text: async () => natureCsv() }));
+    const path = "pokemon_champions_assets/battle_data/Singles/Indeedee-F.csv";
+    expect(await fetchCurrentCsv(path, { fetchImpl })).toBe(natureCsv());
+    expect(fetchImpl).toHaveBeenCalledWith(`https://championsbattledata.com/${path}`, {
+      headers: { accept: "text/csv" },
+    });
+    expect(await fetchCurrentCsv(path, { fetchImpl: async () => ({ status: 404 }) })).toBeNull();
+    await expect(fetchCurrentCsv(path, { fetchImpl: async () => ({ ok: false, status: 503 }) })).rejects.toThrow(/HTTP 503/);
+    await expect(fetchCurrentCsv("battle_data/../outside.csv", { fetchImpl })).rejects.toThrow(/parent traversal/);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("fails when either Current format has no usable nature data", async () => {
     await expect(collectNatureUsageFromFiles({
       apiData: apiData([natureEntry("pikachu", "Pikachu")]),
@@ -698,7 +775,7 @@ describe("generate-champions-usage", () => {
     await expect(access(failedDirectory)).rejects.toThrow();
   });
 
-  it("fetches the API and bulk ZIP exactly once and always cleans the injected extraction", async () => {
+  it.each([false, true])("fetches API/ZIP once, fills missing CSVs (%s), and cleans extraction", async (missingCsv) => {
     const directory = await mkdtemp(join(tmpdir(), "champions-usage-run-test-"));
     const outputPath = join(directory, "usage.json");
     const catalogEntries = {
@@ -718,10 +795,19 @@ describe("generate-champions-usage", () => {
     const apiUrl = "https://example.test/api";
     const bulkZipUrl = "https://example.test/battle_data.zip";
     const sourceApiData = apiData([natureEntry("pikachu", "Pikachu")]);
+    if (missingCsv) {
+      sourceApiData.pokemon.push(natureEntry("rotomwash", "Rotom-Wash"));
+      await writeFile(join(directory, "pokemon-options.gen.json"), JSON.stringify({ entries: [
+        makeCatalogEntry("pikachu", "Pikachu"), makeCatalogEntry("rotomwash", "Rotom-Wash"),
+      ] }));
+    }
     const zipBytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
     const fetchImpl = vi.fn(async (url) => {
       if (url === apiUrl) return { ok: true, status: 200, json: async () => sourceApiData };
       if (url === bulkZipUrl) return { ok: true, status: 200, arrayBuffer: async () => zipBytes.buffer };
+      if (missingCsv && ["Singles", "Doubles"].some((format) => (
+        url === `https://example.test/pokemon_champions_assets/battle_data/${format}/Rotom-Wash.csv`
+      ))) return { ok: true, status: 200, text: async () => natureCsv({ jolly: "12.3%" }) };
       throw new Error(`unexpected fetch URL: ${url}`);
     });
     const cleanup = vi.fn(async () => {});
@@ -746,8 +832,12 @@ describe("generate-champions-usage", () => {
         warn: vi.fn(),
       });
 
-      expect(fetchImpl).toHaveBeenCalledTimes(2);
-      expect(fetchImpl.mock.calls.map(([url]) => url).sort()).toEqual([apiUrl, bulkZipUrl].sort());
+      expect(fetchImpl).toHaveBeenCalledTimes(missingCsv ? 4 : 2);
+      expect(fetchImpl.mock.calls.slice(0, 2).map(([url]) => url).sort()).toEqual([apiUrl, bulkZipUrl].sort());
+      if (missingCsv) {
+        expect(result.payload.formats.Singles.rotomwash.nature[0].percentage).toBe(12.3);
+        expect(result.payload.formats.Doubles.rotomwash.nature[0].percentage).toBe(12.3);
+      }
       expect(extractBulkArchiveImpl).toHaveBeenCalledTimes(1);
       expect(extractBulkArchiveImpl.mock.calls[0][0].zipBytes).toEqual(zipBytes);
       expect(cleanup).toHaveBeenCalledTimes(1);

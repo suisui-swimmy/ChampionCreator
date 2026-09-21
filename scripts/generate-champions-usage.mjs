@@ -475,6 +475,26 @@ export const fetchBulkZip = async (zipUrl = BULK_ZIP_URL, fetchImpl = globalThis
   }
 };
 
+// The provider's ZIP can lag behind its Current index. Fetch only the exact
+// indexed path, never a guessed filename, historical CSV, or related form.
+export const fetchCurrentCsv = async (sourcePath, {
+  apiUrl = API_URL,
+  assetRoot = DEFAULT_ASSET_ROOT,
+  fetchImpl = globalThis.fetch,
+} = {}) => {
+  normalizeCurrentCsvPath(sourcePath, { assetRoot });
+  const path = normalizePathForArchive(sourcePath, "API Current CSV path");
+  const url = new URL(`/${path.split("/").map(encodeURIComponent).join("/")}`, apiUrl);
+  const response = await fetchImpl(url.href, {
+    headers: { accept: "text/csv" },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new ChampionsUsageDataError(`Champions usage Current CSV request failed: HTTP ${response.status} (${sourcePath})`);
+  }
+  return response.text();
+};
+
 const normalizePathForArchive = (value, pathLabel = "archive path") => {
   assertNonEmptyString(value, pathLabel);
   const normalized = value.replace(/\\/g, "/").replace(/\/+$/, "");
@@ -826,6 +846,7 @@ export const collectNatureUsage = async ({
   catalogs,
   archiveEntries,
   readFileForPath,
+  readMissingCurrentCsv,
   assetRoot = apiData?.assetRoot ?? DEFAULT_ASSET_ROOT,
   warn = emitWarning,
 } = {}) => {
@@ -858,31 +879,36 @@ export const collectNatureUsage = async ({
       const archivePath = entries
         ? resolveArchiveCsvPath(pathRecord.sourcePath, entries, { assetRoot })
         : pathRecord.archivePath;
+      let csvText;
       if (!archivePath) {
         warn(`[champions-usage] Current ${format} CSV is missing from bulk ZIP for ${sourceId}: ${pathRecord.sourcePath}`);
-        continue;
+        csvText = await readMissingCurrentCsv?.(pathRecord.sourcePath);
+        if (csvText == null) continue;
       }
-      let natureRanking = readCache.get(archivePath);
+      const cacheKey = archivePath ?? pathRecord.sourcePath;
+      let natureRanking = readCache.get(cacheKey);
       if (!natureRanking) {
-        let csvText;
-        try {
-          csvText = await readFileForPath(archivePath);
-        } catch (error) {
-          warn(`[champions-usage] could not read Current ${format} CSV for ${sourceId}: ${pathRecord.sourcePath} (${error.message})`);
-          continue;
+        if (archivePath) {
+          try {
+            csvText = await readFileForPath(archivePath);
+          } catch (error) {
+            warn(`[champions-usage] could not read Current ${format} CSV for ${sourceId}: ${pathRecord.sourcePath} (${error.message})`);
+            continue;
+          }
         }
         natureRanking = parseNatureCsv(csvText, {
           natureMap: catalogs.nature,
           sourcePath: pathRecord.sourcePath,
           warn,
         });
-        readCache.set(archivePath, natureRanking);
+        readCache.set(cacheKey, natureRanking);
       }
       if (natureRanking.length === 0) {
         warn(`[champions-usage] Current ${format} CSV has no stat_alignment rows for ${sourceId}: ${pathRecord.sourcePath}`);
         continue;
       }
-      usableNatureCount[format] += natureRanking.length;
+      // A broken/empty ZIP must still fail closed even if individual CSVs work.
+      if (archivePath) usableNatureCount[format] += natureRanking.length;
       for (const target of targets) {
         if (usageByFormat[format][target]) continue;
         usageByFormat[format][target] = natureRanking.map((datum) => ({ ...datum }));
@@ -903,6 +929,7 @@ export const collectNatureUsageFromFiles = async ({
   apiData,
   catalogs,
   files,
+  readMissingCurrentCsv,
   assetRoot = apiData?.assetRoot ?? DEFAULT_ASSET_ROOT,
   warn = emitWarning,
 } = {}) => {
@@ -912,6 +939,7 @@ export const collectNatureUsageFromFiles = async ({
     apiData,
     catalogs,
     archiveEntries,
+    readMissingCurrentCsv,
     readFileForPath: async (archivePath) => {
       const value = fileMap.get(archivePath);
       if (value === undefined) throw new Error("file is not present in test archive");
@@ -967,6 +995,11 @@ export const run = async ({
       catalogs,
       archiveEntries: extracted.archiveEntries,
       readFileForPath: extracted.readFileForPath,
+      readMissingCurrentCsv: (sourcePath) => fetchCurrentCsv(sourcePath, {
+        apiUrl,
+        assetRoot: apiData.assetRoot ?? DEFAULT_ASSET_ROOT,
+        fetchImpl,
+      }),
       assetRoot: apiData.assetRoot ?? DEFAULT_ASSET_ROOT,
       warn,
     });

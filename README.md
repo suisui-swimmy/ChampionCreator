@@ -298,11 +298,11 @@ Pokémon Champions、Z-A、過去作を含む公式ゲーム由来の入力デ�
 
 ### 使用率データの取得・生成・validation
 
-入力補助の参照元は[Pokemon Champions Battle Data](https://championsbattledata.com/)の`Current`です。[generate-champions-usage.mjs](scripts/generate-champions-usage.mjs)が集約APIと提供元のbulk ZIPを取得し、技・特性・持ち物、ポケモン順位、上位10件の性格使用率を同じ形式・フォームへ正規化します。性格CSVはAPIが示すパスに対応付け、欠けたファイルを別フォームや旧名のCSVから推測して補いません。
+入力補助の参照元は[Pokemon Champions Battle Data](https://championsbattledata.com/)の`Current`です。[generate-champions-usage.mjs](scripts/generate-champions-usage.mjs)が集約APIと提供元のbulk ZIPを取得し、技・特性・持ち物、ポケモン順位、上位10件の性格使用率を同じ形式・フォームへ正規化します。性格CSVはAPIが示すパスに対応付け、ZIPに該当ファイルがない場合だけ、同じ提供元のAPI指定`Current` CSVを直接取得します。別フォーム・旧名・過去シーズンのCSVから推測して補いません。
 
 ポケモン順位は提供元の`Current`各形式における`position` / `column_position`を、使用率schema v1のoptional `pokemonRank`として生成・検証します。技などの行内`rank`や別形式・過去データから順位を補完しません。順位を持つ既存の日本語入力候補だけを使い、フォームの順位を推測せず、同一canonicalの表示別名は重複させません。提供元で集約されるギルガルドは初期状態のシールドフォルム1件として選択できます。旧使用率JSONは引き続き読み込め、share / box schemaには順位を保存しません。
 
-性格の不正な％、範囲外値、重複・衝突、不正な展開パスはvalidation errorです。個別の不明候補や欠損CSVは警告して該当データを欠落として扱いますが、ZIPに利用可能な性格データがない、または片方の`Current`形式全体で利用可能な性格データがない場合は生成を停止します。変換と失敗条件は[generatorテスト](scripts/generate-champions-usage.test.mjs)、配信JSONの受け入れは[使用率schema](src/usage/schema.ts)と[テスト](src/usage/schema.test.ts)を参照してください。
+性格の不正な％、範囲外値、重複・衝突、不正な展開パスはvalidation errorです。直接取得したCSVにもZIP内と同じ検証を適用します。個別の不明候補、直接取得でも404となる欠損CSVは警告して該当データを欠落として扱い、通信失敗・404以外のHTTPエラーは生成を停止します。ZIPに利用可能な性格データがない、または片方の`Current`形式全体で利用可能な性格データがない場合も、直接取得の成否にかかわらず生成を停止します。変換と失敗条件は[generatorテスト](scripts/generate-champions-usage.test.mjs)、配信JSONの受け入れは[使用率schema](src/usage/schema.ts)と[テスト](src/usage/schema.test.ts)を参照してください。
 
 出力は`public/data/champions-usage-current.json`で、git管理せずローカルまたはGitHub Actionsで生成します。schema v1の旧JSONも読み込め、任意項目の性格使用率やポケモン順位がない場合は未取得として扱います。ブラウザは生成済みJSONを読み、使用率取得のために提供元をruntime scrapingしません。画面の候補順・初期入力・欠落表示は[入力サジェストと性格の使用率](#入力サジェストと性格の使用率)を参照してください。
 
