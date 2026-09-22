@@ -1824,16 +1824,56 @@ textarea:focus-visible,
   display: grid;
   grid-column: 2;
   grid-row: 2;
-  grid-template-columns: minmax(180px, 1fr) auto auto;
+  grid-template-columns: minmax(90px, 1fr) minmax(0, auto);
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
 }
 
+.search-progress-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.search-progress-row > .search-progress {
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+}
+
+.search-progress-row .progress-cancel-button {
+  flex: 0 0 var(--desktop-control-standard);
+  width: var(--desktop-control-standard);
+  height: var(--desktop-control-standard);
+  min-width: var(--desktop-control-standard);
+  padding: 0;
+}
+
+.progress-cancel-button img {
+  display: block;
+  width: var(--desktop-icon-standard);
+  height: var(--desktop-icon-standard);
+}
+
+.search-progress-row .progress-cancel-button:disabled { opacity: 1; }
+.progress-cancel-button:disabled img { filter: brightness(0.28); }
+
+.stable-button-label {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+}
+.stable-button-label > span { grid-area: 1 / 1; }
+.stable-button-label-reserve { visibility: hidden; }
+
 .search-progress {
   position: relative;
   min-width: 0;
-  height: 32px;
+  min-height: var(--desktop-control-compact);
   overflow: hidden;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
@@ -1853,17 +1893,24 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 100%;
+  min-height: calc(var(--desktop-control-compact) - 2px);
   gap: 10px;
   padding: 0 10px;
   color: rgba(238, 241, 237, 0.72);
-  font-size: 11px;
+  font-size: var(--desktop-text-meta);
   font-weight: 700;
 }
 
 .search-progress-label strong {
+  flex: 0 0 auto;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--desktop-text-control);
+}
+
+.search-progress-label > span {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .target-summary {
@@ -6591,6 +6638,17 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .search-progress-row .progress-cancel-button {
+    flex-basis: var(--mobile-control-standard);
+    width: var(--mobile-control-standard);
+    height: var(--mobile-control-standard);
+    min-width: var(--mobile-control-standard);
+  }
+  .progress-cancel-button img {
+    width: var(--mobile-icon-standard);
+    height: var(--mobile-icon-standard);
+  }
+
   .app-workspace {
     display: grid;
     grid-template-rows: auto 1fr auto;
@@ -6957,8 +7015,7 @@ textarea {
   .mobile-scenario-title span,
   .mobile-attack-summary small,
   .mobile-attack-summary em,
-  .mobile-target-mini-spread,
-  .mobile-candidate-actions > span {
+  .mobile-target-mini-spread {
     overflow: hidden;
     color: var(--muted);
     font-size: var(--mobile-text-meta);
@@ -7431,46 +7488,8 @@ textarea {
     font-size: var(--mobile-text-meta);
   }
 
-  .mobile-progress-line {
-    height: 5px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: #101415;
-  }
-
-  .mobile-progress-line span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, rgba(189, 141, 31, 0.72), rgba(245, 197, 66, 0.82));
-  }
-
   .mobile-candidate-actions {
     justify-content: end;
-  }
-
-  .mobile-candidate-actions > span {
-    margin-right: auto;
-  }
-
-  .mobile-search-counts {
-    display: inline-flex;
-    flex: 1 1 auto;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .mobile-search-counts > span:first-child {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mobile-search-counts > span:last-child {
-    flex: 0 0 auto;
-    white-space: nowrap;
   }
 
   .mobile-candidate-actions .ui-button {
@@ -8920,12 +8939,6 @@ textarea {
   .mobile-candidate-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .mobile-search-counts {
-    grid-column: 1 / -1;
-    width: 100%;
-    margin-right: 0;
   }
 
   .mobile-candidate-actions .ui-button {

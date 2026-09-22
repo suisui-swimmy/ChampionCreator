@@ -82,6 +82,14 @@ type OffenseCandidateEvaluation = {
   hpEventEvaluations: HpEventEvaluation[];
 };
 
+export interface CurrentOffenseEvaluation {
+  passed: boolean;
+  koProbability: number;
+  targetKoProbability: number;
+  hitEvaluation: ScenarioHitEvaluation;
+  hpEventEvaluations: HpEventEvaluation[];
+}
+
 const emptySide: SideState = {
   reflect: false,
   lightScreen: false,
@@ -188,6 +196,17 @@ const evaluateCandidate = (
   const defenderBuild = reference.owner === "target"
     ? withStatPoint(baseDefender, reference.stat, statPoints)
     : baseDefender;
+  const evaluation = evaluateCurrentOffense({ ...input, attackerBuild, defenderBuild });
+  return {
+    statPoints,
+    actualStat: getActualStat(reference.owner === "attacker" ? attackerBuild : defenderBuild, reference.stat),
+    ...evaluation,
+  };
+};
+
+/** Evaluate the supplied builds once, without searching or replacing any stat or nature. */
+export const evaluateCurrentOffense = (input: OffenseAdjustmentInput): CurrentOffenseEvaluation => {
+  const { attackerBuild, defenderBuild } = input;
   const hit = buildOffenseHit(attackerBuild, input);
   const hitEvaluation = calculateSmogonHit(
     defenderBuild,
@@ -211,10 +230,11 @@ const evaluateCandidate = (
     }],
   });
 
+  const koProbability = getHpSequenceKoProbability(hpSequence, defenderBuild.id);
   return {
-    statPoints,
-    actualStat: getActualStat(reference.owner === "attacker" ? attackerBuild : defenderBuild, reference.stat),
-    koProbability: getHpSequenceKoProbability(hpSequence, defenderBuild.id),
+    passed: koProbability + KO_EPSILON >= input.targetKoProbability,
+    targetKoProbability: input.targetKoProbability,
+    koProbability,
     hitEvaluation,
     hpEventEvaluations: hpSequence.hpEventEvaluations,
   };

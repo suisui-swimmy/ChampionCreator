@@ -23,14 +23,14 @@ export function AppFooter({ versionLabel, usageDate, startup }: {
         <h2 id="app-footer-about-title">ChampionCreatorについて</h2>
         <p>ChampionCreatorは、ポケモンチャンピオンズの耐久・火力・素早さをまとめて調整できる、能力ポイント（SP）の自動配分ツールです。</p>
         <p>「この攻撃を耐えたい」「この技で倒したい」「この相手より速くしたい」など、複数の仮想敵に対する条件を同時に満たす配分候補を、合計66SP以内で探せます。</p>
-        <p>調整対象と仮想敵の条件を入力して「計算開始」。候補ごとの配分・残りSP・ダメージや確率を比較し、選んだ配分を適用できます。配分と入力条件は調整対象ボックスにまとめて保存でき、計算とブラウザ内への保存はログインなしで利用できます。</p>
+        <p>調整対象と仮想敵の条件を入力して「配分を探索」。候補ごとの配分・残りSP・ダメージや確率を比較し、選んだ配分を適用できます。配分と入力条件は調整対象ボックスにまとめて保存でき、計算とブラウザ内への保存はログインなしで利用できます。</p>
         <details className="app-footer-details" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
           <summary><ChevronRightIcon aria-hidden="true" />計算方法と検証について</summary>
           <div className="app-footer-explanation">
             <h3>計算の基盤</h3>
             <p>攻撃技のダメージ計算は、「<a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc</a>」を基盤にしています。チャンピオンズ向けに一部の技データや仕様差への対応を加え、<a href="https://github.com/suisui-swimmy/ChampionCreator#damage-calculation-boundary" target="_blank" rel="noreferrer">変更内容と参照元</a>を公開しています。</p>
             <h3>ChampionCreatorの処理と検証</h3>
-            <p>SP配分の探索と、指定した定数ダメージ・回復を含むHPの推移は、ChampionCreator側で処理します。「計算開始」で探す配分候補は、設定した条件を満たすか再評価します。入力条件の反映、定数ダメージ・回復の処理、SP上限の扱いなどを、<a href="https://github.com/suisui-swimmy/ChampionCreator#データと検証" target="_blank" rel="noreferrer">代表的な条件の自動テスト</a>で確認しています。</p>
+            <p>SP配分の探索と、指定した定数ダメージ・回復を含むHPの推移は、ChampionCreator側で処理します。「配分を探索」で探す配分候補は、設定した条件を満たすか再評価します。入力条件の反映、定数ダメージ・回復の処理、SP上限の扱いなどを、<a href="https://github.com/suisui-swimmy/ChampionCreator#データと検証" target="_blank" rel="noreferrer">代表的な条件の自動テスト</a>で確認しています。</p>
             <h3>対応範囲と制限</h3>
             <p>ChampionCreatorは、入力した条件と対応済みの効果を対象に計算する非公式ツールです。未対応の処理やゲームとの仕様差により、実際のゲーム内の結果と異なる場合があります。詳しい<a href="https://github.com/suisui-swimmy/ChampionCreator#制限" target="_blank" rel="noreferrer">対応範囲と制限</a>は、公開ドキュメントをご確認ください。</p>
           </div>

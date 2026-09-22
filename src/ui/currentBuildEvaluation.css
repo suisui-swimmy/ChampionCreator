@@ -1,0 +1,99 @@
+.calculation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.calculation-actions .ui-button,
+.current-build-results .current-build-check-button {
+  min-height: var(--desktop-control-primary);
+  height: auto;
+  font-size: 14px;
+  white-space: normal;
+}
+.calculation-actions .current-build-check-button { border-color: var(--gold-line); }
+.result-view-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+.result-view-tabs button {
+  min-height: var(--desktop-control-standard);
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--desktop-text-control);
+  cursor: pointer;
+}
+.result-view-tabs button[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--gold); }
+.result-view-tabs button:focus-visible,
+.current-build-condition summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.current-build-results { min-width: 0; font-size: var(--desktop-text-control); overflow-wrap: anywhere; }
+.current-build-heading,
+.current-build-spread,
+.current-build-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.current-build-heading { justify-content: space-between; }
+.current-build-heading h2 { margin: 0; font-size: var(--desktop-text-heading); }
+.current-build-spread { margin-top: 12px; }
+.current-build-spread > span { color: var(--muted); }
+.current-build-spread .candidate-stat-spread { flex-wrap: wrap; }
+.current-build-summary { margin: 12px 0; padding: 12px; background: var(--surface-inset); border-radius: var(--radius); }
+.current-build-summary.pass > strong { color: var(--green); }
+.current-build-summary.fail > strong { color: var(--red); }
+.current-build-summary.blocked > strong { color: var(--orange); }
+.current-build-summary > span { color: var(--muted); }
+.current-build-condition { border-top: 1px solid var(--line); }
+.current-build-condition summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(45px, auto) 16px;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--desktop-control-comfort);
+  padding: 12px 4px;
+  cursor: pointer;
+  list-style: none;
+}
+.current-build-condition summary::-webkit-details-marker { display: none; }
+.current-condition-name,
+.current-condition-metric { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
+.current-condition-name small,
+.current-condition-metric small { font-size: var(--desktop-text-interactive-small); color: var(--muted); }
+.current-condition-name > span { font-size: var(--desktop-text-interactive-small); }
+.current-condition-status { color: var(--orange); }
+.current-build-condition.pass .current-condition-status { color: var(--green); }
+.current-build-condition.fail .current-condition-status { color: var(--red); }
+.current-condition-chevron { width: 16px; height: 16px; }
+.current-build-condition[open] .current-condition-chevron { transform: rotate(90deg); }
+.current-condition-message { margin: 0 4px 12px; color: var(--orange); }
+.current-condition-details { padding: 0 4px 12px; line-height: 1.7; }
+.current-condition-details ul { padding-left: 20px; margin: 6px 0 12px; }
+.current-condition-details p { margin: 6px 0; }
+
+@media (max-width: 720px) {
+  .mobile-candidate-dock .mobile-candidate-actions { display: flex; flex-direction: column; align-items: stretch; }
+  .mobile-candidate-actions .calculation-actions { display: flex; width: 100%; }
+  .mobile-candidate-actions .calculation-actions .ui-button { flex: 1 1 110px; width: auto; min-width: 0; white-space: normal; }
+  .mobile-candidate-actions .calculation-actions .ui-button,
+  .current-build-results .current-build-check-button { min-height: var(--mobile-control-primary); font-size: 14px; }
+  .result-view-tabs button { flex: 1; min-width: 0; min-height: var(--mobile-control-standard); font-size: var(--mobile-text-control); }
+  .current-build-results { font-size: var(--mobile-text-control); }
+  .current-build-heading h2 { font-size: var(--mobile-text-heading); }
+  .current-build-condition summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 16px; gap: 10px; min-height: var(--mobile-control-comfort); }
+  .current-condition-name { grid-column: 1; grid-row: 1; }
+  .current-condition-status { grid-column: 2; grid-row: 1; text-align: right; }
+  .current-condition-chevron { grid-column: 3; grid-row: 1; }
+  .current-condition-metric { grid-row: 2; }
+  .current-condition-name small,
+  .current-condition-metric small,
+  .current-condition-name > span { font-size: var(--mobile-text-interactive-small); }
+}

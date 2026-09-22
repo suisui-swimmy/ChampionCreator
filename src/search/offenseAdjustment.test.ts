@@ -15,6 +15,7 @@ import { resolveEntity } from "../localization/resolver";
 import {
   calculateKoProbability,
   calculateOffenseAdjustment,
+  evaluateCurrentOffense,
   type OffenseAdjustmentInput,
 } from "./offenseAdjustment";
 
@@ -254,6 +255,12 @@ describe("calculateOffenseAdjustment", () => {
         }),
       ],
     });
+    const before = JSON.stringify(input);
+    expect(evaluateCurrentOffense({ ...input, hpEvents: [sandstormEvent] })).toMatchObject({ passed: true, koProbability: 1 });
+    expect(evaluateCurrentOffense({ ...input, hpEvents: [sandstormEvent, sitrusEvent] })).toMatchObject({
+      passed: false, koProbability: 0, hpEventEvaluations: withSitrus.hpEventEvaluations,
+    });
+    expect(JSON.stringify(input)).toBe(before);
   });
 
   it("counts a defender KO even when Life Orb recoil then faints the attacker", () => {

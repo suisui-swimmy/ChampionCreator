@@ -1,6 +1,9 @@
 import { Fragment, createContext, type ChangeEvent, type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent, type ReactNode, type Ref, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import { AppFooter } from "./ui/AppFooter";
 import { AppWorkspace } from "./ui/AppWorkspace";
+import { useCurrentBuildCheck, type CurrentBuildCheckState } from "./ui/useCurrentBuildCheck";
+import { CalculationProgress } from "./ui/CalculationProgress";
+import "./ui/currentBuildEvaluation.css";
 import { ShareDialog } from "./share/ShareDialog";
 import { ShareImportDialog, type SharedImportState } from "./share/ShareImportDialog";
 import { clearShareImportHref, hasShareImportRequest, readSharedAdjustmentHash } from "./share/sharedAdjustment";
@@ -238,7 +241,7 @@ import {
 } from "./sync/CloudDraftProvider";
 import type { CloudDraftRecord } from "./sync/cloudDraftTypes";
 import natureOptionsData from "./data/generated/nature-options.gen.json";
-import { Button, SelectField, StatusBadge, StepperControl, UiPopover } from "./ui/primitives";
+import { Button, SelectField, StableButtonLabel, StatusBadge, StepperControl, UiPopover } from "./ui/primitives";
 import {
   DefenceSearchWorkerClient,
   type ActiveDefenceSearchRequest,
@@ -2069,6 +2072,8 @@ export function App({
   const previousVariantRef = useRef(variant);
   const workerClientRef = useRef<DefenceSearchWorkerClient | null>(null);
   const activeRequestRef = useRef<ActiveDefenceSearchRequest | null>(null);
+  const currentBuildCheck = useCurrentBuildCheck(targetForm, scenarioForms);
+  const [resultView, setResultView] = useState<"candidates" | "current">("candidates");
   const applyTimerRef = useRef<number | null>(null);
   const boxImportInputRef = useRef<HTMLInputElement | null>(null);
   const enemyBoxImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -2114,6 +2119,7 @@ export function App({
     accountDeletionLockedRef.current = false;
     setAccountDeletion({ stage: "idle" });
     setAccountOpen(false);
+    currentBuildCheck.invalidate();
     activeRequestRef.current?.cancel();
     activeRequestRef.current = null;
     setSelectedCandidateId(null);
@@ -2186,9 +2192,9 @@ export function App({
   const hasStandaloneAdjustmentResults = offenseResults.length > 0 || speedResults.length > 0;
   const canRunAdjustment = hasEnabledDefenceScenario || hasStandaloneAdjustmentResults;
   const runButtonLabel = hasEnabledDefenceScenario
-    ? "計算開始"
+    ? "配分を探索"
     : hasStandaloneAdjustmentResults
-      ? "結果確認"
+      ? "必要配分を計算"
       : "シナリオなし";
 
   const resultAlertMessage =
@@ -2431,6 +2437,7 @@ export function App({
   }, [scenarioForms, targetBuildPreview]);
 
   const resetActiveSearch = () => {
+    currentBuildCheck.invalidate();
     activeRequestRef.current?.cancel();
     activeRequestRef.current = null;
     setSelectedCandidateId(null);
@@ -3336,6 +3343,7 @@ export function App({
   };
 
   const handleRun = () => {
+    setResultView("candidates");
     if (searchState.status === "running") {
       return;
     }
@@ -3370,6 +3378,11 @@ export function App({
       dispatchSearch({ type: "cancel", requestId: activeRequest.requestId });
     }
     activeRequestRef.current = null;
+  };
+
+  const handleCheckCurrentBuild = () => {
+    setResultView("current");
+    currentBuildCheck.run();
   };
 
   const handleAllowBulkNatureChange = (value: boolean) => {
@@ -4578,6 +4591,12 @@ export function App({
         resultAlertMessage={resultAlertMessage}
         canRunAdjustment={canRunAdjustment}
         runButtonLabel={runButtonLabel}
+        currentBuildCheckState={currentBuildCheck.state}
+        onCheckCurrentBuild={handleCheckCurrentBuild}
+        onCancelCurrentBuild={currentBuildCheck.cancel}
+        isBulkRunning={bulkMaximizeState.status === "running"}
+        resultView={resultView}
+        onResultViewChange={setResultView}
         isBoxPanelOpen={boxOpen}
         onOpenBoxPanel={toggleBoxPanel}
         isEnemyBoxPanelOpen={enemyBoxOpen}
@@ -4658,43 +4677,37 @@ export function App({
           onCloseMobileSheet={closeMobileSheet}
         />
         <section className="search-control-bar" aria-label="探索操作">
-          <div
-            className="search-progress"
-            role="progressbar"
-            aria-label="探索進捗"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(searchState.progress * 100)}
-          >
-            <span
-              className="search-progress-fill"
-              style={{ width: `${Math.round(searchState.progress * 100)}%` }}
-              aria-hidden="true"
-            />
-            <span className="search-progress-label" aria-live="polite">
-              <strong>{Math.round(searchState.progress * 100)}%</strong>
-              <span>評価 {searchState.searchedCandidates} / {searchState.totalCandidates || "-"}</span>
-            </span>
+          <CalculationProgress
+            search={searchState}
+            current={currentBuildCheck.state}
+            view={resultView}
+            onCancelSearch={handleCancel}
+            onCancelCurrent={currentBuildCheck.cancel}
+          />
+          <div className="calculation-actions">
+            <Button
+              variant="primary"
+              id="runButton"
+              onClick={handleRun}
+              disabled={searchState.status === "running" || currentBuildCheck.state.status === "running" || !canRunAdjustment}
+            >
+              <StableButtonLabel idle={runButtonLabel} busy="計算中..." running={searchState.status === "running"} />
+            </Button>
+            <Button
+              className="current-build-check-button"
+              onClick={handleCheckCurrentBuild}
+              disabled={currentBuildCheck.state.status === "running" || searchState.status === "running" || bulkMaximizeState.status === "running"}
+            >
+              <StableButtonLabel idle="現在の配分を確認" busy="確認中..." running={currentBuildCheck.state.status === "running"} />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            onClick={handleCancel}
-            disabled={searchState.status !== "running"}
-          >
-            キャンセル
-          </Button>
-          <Button
-            variant="primary"
-            id="runButton"
-            onClick={handleRun}
-            disabled={searchState.status === "running" || !canRunAdjustment}
-          >
-            {searchState.status === "running"
-              ? "計算中..."
-              : runButtonLabel}
-          </Button>
         </section>
         <ResultsPanel
+          currentBuildCheckState={currentBuildCheck.state}
+          checkDisabled={searchState.status === "running" || bulkMaximizeState.status === "running"}
+          resultView={resultView}
+          onResultViewChange={setResultView}
+          onCheckCurrentBuild={handleCheckCurrentBuild}
           candidates={searchState.candidates}
           passingCandidateCount={searchState.passingCandidateCount}
           selectedCandidateId={selectedCandidateId}
@@ -5927,6 +5940,12 @@ type MobileOverviewProps = {
   resultAlertMessage: string | null;
   canRunAdjustment: boolean;
   runButtonLabel: string;
+  currentBuildCheckState: CurrentBuildCheckState;
+  onCheckCurrentBuild: () => void;
+  onCancelCurrentBuild: () => void;
+  isBulkRunning: boolean;
+  resultView: "candidates" | "current";
+  onResultViewChange: (value: "candidates" | "current") => void;
   isBoxPanelOpen: boolean;
   onOpenBoxPanel: () => void;
   isEnemyBoxPanelOpen: boolean;
@@ -6114,6 +6133,12 @@ function MobileOverview({
   resultAlertMessage,
   canRunAdjustment,
   runButtonLabel,
+  currentBuildCheckState,
+  onCheckCurrentBuild,
+  onCancelCurrentBuild,
+  isBulkRunning,
+  resultView,
+  onResultViewChange,
   isBoxPanelOpen,
   onOpenBoxPanel,
   isEnemyBoxPanelOpen,
@@ -6498,39 +6523,35 @@ function MobileOverview({
       </section>
 
       <section className="mobile-candidate-dock" aria-label="候補一覧と探索操作">
-        <div
-          className="mobile-progress-line"
-          role="progressbar"
-          aria-label="探索進捗"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(searchProgress * 100)}
-        >
-          <span style={{ width: `${Math.round(searchProgress * 100)}%` }} aria-hidden="true" />
-        </div>
+        <CalculationProgress
+          search={{ status: searchStatus, progress: searchProgress, searchedCandidates, totalCandidates }}
+          current={currentBuildCheckState}
+          view={resultView}
+          onCancelSearch={onCancel}
+          onCancelCurrent={onCancelCurrentBuild}
+        />
         <div className="mobile-candidate-actions">
-          <span className="mobile-search-counts">
-            <span>評価 {searchedCandidates}/{totalCandidates || "-"}</span>
-            <span>合格 {passingCandidateCount}</span>
-          </span>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={onCancel}
-            disabled={searchStatus !== "running"}
-          >
-            キャンセル
-          </Button>
-          <Button
-            variant="primary"
-            size="small"
-            onClick={onRun}
-            disabled={searchStatus === "running" || !canRunAdjustment}
-          >
-            {searchStatus === "running" ? "計算中..." : runButtonLabel}
-          </Button>
+          <div className="calculation-actions">
+            <Button
+              variant="primary"
+              size="small"
+              onClick={onRun}
+              disabled={searchStatus === "running" || currentBuildCheckState.status === "running" || !canRunAdjustment}
+            >
+              <StableButtonLabel idle={runButtonLabel} busy="計算中..." running={searchStatus === "running"} />
+            </Button>
+            <Button className="current-build-check-button" onClick={onCheckCurrentBuild}
+              disabled={currentBuildCheckState.status === "running" || searchStatus === "running" || isBulkRunning}>
+              <StableButtonLabel idle="現在の配分を確認" busy="確認中..." running={currentBuildCheckState.status === "running"} />
+            </Button>
+          </div>
         </div>
         <ResultsPanel
+          currentBuildCheckState={currentBuildCheckState}
+          checkDisabled={searchStatus === "running" || isBulkRunning}
+          resultView={resultView}
+          onResultViewChange={onResultViewChange}
+          onCheckCurrentBuild={onCheckCurrentBuild}
           displayMode="mobile-inline"
           pageSize={MOBILE_RESULTS_PAGE_SIZE}
           candidates={candidates}
@@ -9454,6 +9475,11 @@ function ScenarioNumberField({
 }
 
 type ResultsPanelProps = {
+  checkDisabled?: boolean;
+  currentBuildCheckState?: CurrentBuildCheckState;
+  resultView?: "candidates" | "current";
+  onResultViewChange?: (value: "candidates" | "current") => void;
+  onCheckCurrentBuild?: () => void;
   displayMode?: "panel" | "mobile-inline";
   pageSize?: number;
   candidates: CandidateResult[];
@@ -9648,7 +9674,103 @@ function StandaloneAdjustmentResults({
   );
 }
 
+const currentBuildStatusLabels = {
+  pass: "PASS", fail: "FAIL", incomplete: "入力不足", unresolved: "未解決", unsupported: "計算未対応", invalid: "入力エラー",
+} as const;
+
+export function CurrentBuildResults({ state, onCheck, disabled = false }: { state: CurrentBuildCheckState; onCheck: () => void; disabled?: boolean }) {
+  const result = state.result;
+  const summary = state.status === "running" ? "現在の配分を確認中..."
+    : state.status === "stale" ? "入力が変更されました。現在の配分は未確認です。"
+    : state.status === "canceled" ? "確認を中止しました。"
+    : state.status === "error" ? state.error
+    : !result ? "現在の配分は未確認です。"
+    : result.issue ? `${currentBuildStatusLabels[result.issue.status]}: ${result.issue.message}`
+    : result.status === "empty" ? "確認する条件がありません。"
+    : result.status === "pass" ? "すべての条件を満たしています。"
+    : result.status === "fail" ? "満たしていない条件があります。"
+    : "判定できない条件があります。";
+  return (
+    <div className="current-build-results" aria-busy={state.status === "running"}>
+      <div className="current-build-heading">
+        <h2>現在の配分</h2>
+        <Button className="current-build-check-button" onClick={onCheck} disabled={disabled || state.status === "running"}>
+          <StableButtonLabel idle={state.status === "idle" ? "現在の配分を確認" : "再確認"}
+            busy="確認中..." running={state.status === "running"} />
+        </Button>
+      </div>
+      {result?.build ? <div className="current-build-spread">
+        <strong>{result.build.pokemon.displayNameJa}</strong>
+        <span>{result.build.nature?.displayNameJa ?? "性格補正なし"}</span>
+        {result.build.statPoints ? <>
+          <CandidateStatPointSpread statPoints={result.build.statPoints} />
+          <span>合計{sumStatPoints(result.build.statPoints)} / 66 SP</span>
+        </> : null}
+      </div> : null}
+      <div className={`current-build-summary ${result?.status ?? ""}`} role="status" aria-atomic="true">
+        <strong>{summary}</strong>
+        {result && result.conditions.length > 0 ? <span>
+          達成 {result.conditions.filter((condition) => condition.status === "pass").length} / {result.conditions.length} 条件
+        </span> : null}
+      </div>
+      {result?.conditions.map((condition) => {
+        const defence = condition.defence;
+        const offense = condition.offense;
+        const speed = condition.speed;
+        const actual = defence ? `生存率 ${formatPercent(defence.survivalProbability)}`
+          : offense ? `KO率 ${formatPercent(offense.koProbability)}`
+          : speed ? `実効S ${speed.actualSpeed}` : "—";
+        const required = defence ? `${defence.requiredSurvivedHits}回耐久・${formatPercent(defence.minSurvivalProbability)}以上`
+          : offense ? `KO率 ${formatPercent(offense.targetKoProbability)}以上`
+          : speed ? `S ${speed.requiredSpeed}${speed.orderMode === "trick-room" ? "以下" : "以上"}` : "—";
+        const hits = defence?.hitEvaluations ?? (offense ? [offense.hitEvaluation] : []);
+        const events = defence?.hpEventEvaluations ?? offense?.hpEventEvaluations ?? [];
+        const kind = condition.kind === "defence" ? "耐久" : condition.kind === "offense" ? "火力" : "素早さ";
+        return <details className={`current-build-condition ${condition.status}`} key={condition.id}>
+          <summary>
+            <span className="current-condition-name"><small>{kind}</small><strong>{condition.scenarioLabel}</strong>
+              {condition.label !== condition.scenarioLabel ? <span>{condition.label}</span> : null}
+            </span>
+            <span className="current-condition-metric"><small>現在の結果</small><span>{actual}</span></span>
+            <span className="current-condition-metric"><small>必要条件</small><span>{required}</span></span>
+            <strong className="current-condition-status">{currentBuildStatusLabels[condition.status]}</strong>
+            <ChevronRightIcon className="current-condition-chevron" aria-hidden="true" />
+          </summary>
+          {condition.message ? <p className="current-condition-message">{condition.message}</p> : null}
+          <div className="current-condition-details">
+            {defence && hits.length > 1 ? <p>生存率は、最も余裕の少ない耐久条件の結果です。</p> : null}
+            {hits.map((hit, index) => {
+              const hitEvents = offense ? events : events.filter((event) => event.cardId === hit.hitId);
+              const formatEvent = (event: HpEventEvaluation) => <li className="candidate-hp-event-detail" key={`${event.eventId}-${event.occurrence}`}>
+                {formatHpEventEvaluation(event, condition.kind === "offense" ? "offense" : "defence")}
+              </li>;
+              return <section key={hit.hitId}>
+                <strong>{condition.hitLabels?.[index]}</strong>
+                <ul>
+                  {hitEvents.filter((event) => event.sequenceContext === "priorMove").map(formatEvent)}
+                  <li>{hit.description ? formatLocalizedDamageDescription(hit.description)
+                    : `ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}</li>
+                  {hit.movePower ? <li>{formatMovePowerEvaluation(hit.movePower)}</li> : null}
+                  {hitEvents.filter((event) => event.sequenceContext !== "priorMove").map(formatEvent)}
+                </ul>
+              </section>;
+            })}
+            {speed ? <><p>{speed.reason}{speed.relation === "tie" ? "（同速）" : ""}</p>
+              {speed.notes.map((note) => <p key={note}>{note}</p>)}
+            </> : null}
+          </div>
+        </details>;
+      })}
+    </div>
+  );
+}
+
 export function ResultsPanel({
+  checkDisabled = false,
+  currentBuildCheckState,
+  resultView = "candidates",
+  onResultViewChange,
+  onCheckCurrentBuild = () => undefined,
   displayMode = "panel",
   pageSize = RESULTS_PAGE_SIZE,
   candidates,
@@ -9719,6 +9841,7 @@ export function ResultsPanel({
       : `候補 ${candidates.length} 件`;
   const mobileInline = displayMode === "mobile-inline";
   const titleId = mobileInline ? "mobile-candidate-title" : "results-title";
+  const resultTabsId = useId();
 
   useEffect(() => {
     setCandidatePage(1);
@@ -9733,8 +9856,32 @@ export function ResultsPanel({
       className={mobileInline
         ? "mobile-candidate-results mobile-candidate-layout"
         : "results-panel mobile-candidate-layout"}
-      aria-labelledby={titleId}
+      aria-label={currentBuildCheckState ? "計算結果" : undefined}
+      aria-labelledby={currentBuildCheckState ? undefined : titleId}
     >
+      {currentBuildCheckState ? <div className="result-view-tabs" role="tablist" aria-label="結果の種類">
+        {(["candidates", "current"] as const).map((view, index) => <button
+          key={view} type="button" role="tab" id={`${resultTabsId}-${view}-tab`}
+          aria-controls={`${resultTabsId}-${view}-panel`} aria-selected={resultView === view}
+          tabIndex={resultView === view ? 0 : -1}
+          onClick={() => onResultViewChange?.(view)}
+          onKeyDown={(event) => {
+            const next = event.key === "Home" ? 0 : event.key === "End" ? 1
+              : event.key === "ArrowRight" || event.key === "ArrowLeft" ? 1 - index : null;
+            if (next === null) return;
+            event.preventDefault();
+            onResultViewChange?.(next === 0 ? "candidates" : "current");
+            (event.currentTarget.parentElement?.children[next] as HTMLButtonElement | undefined)?.focus();
+          }}
+        >{view === "candidates" ? "探索候補" : "現在の配分"}</button>)}
+      </div> : null}
+      {currentBuildCheckState ? <div id={`${resultTabsId}-current-panel`} role="tabpanel"
+        aria-labelledby={`${resultTabsId}-current-tab`} hidden={resultView !== "current"}>
+        <CurrentBuildResults state={currentBuildCheckState} onCheck={onCheckCurrentBuild} disabled={checkDisabled} />
+      </div> : null}
+      <div id={`${resultTabsId}-candidates-panel`} role={currentBuildCheckState ? "tabpanel" : undefined}
+        aria-labelledby={currentBuildCheckState ? `${resultTabsId}-candidates-tab` : undefined}
+        hidden={Boolean(currentBuildCheckState) && resultView !== "candidates"}>
       <div className="section-heading">
         <div>
           <h2 id={titleId}>候補一覧</h2>
@@ -10042,6 +10189,7 @@ export function ResultsPanel({
           </Button>
         </div>
       ) : null}
+      </div>
     </section>
   );
 }

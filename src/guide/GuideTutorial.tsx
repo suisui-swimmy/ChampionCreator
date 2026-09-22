@@ -6,7 +6,7 @@ import { getPublicAssetUrl } from "../ui/publicAssetUrl";
 
 const tutorialSteps = [
   { id: 1, label: "入力内容を確認する" },
-  { id: 2, label: "「計算開始」を押す" },
+  { id: 2, label: "「配分を探索」を押す" },
   { id: 3, label: "候補の詳細を見る" },
   { id: 4, label: "候補を適用する" },
 ] as const;
@@ -43,9 +43,9 @@ export const getTutorialMessage = (status: SearchStatus, candidateApplied: boole
     return "エラーのある入力欄を見直すか、「サンプルに戻す」でやり直してください。";
   }
   if (status === "canceled") {
-    return "もう一度「計算開始」を押すと再計算できます。";
+    return "もう一度「配分を探索」を押すと再計算できます。";
   }
-  return "条件は入力済みです。「計算開始」を押してください。";
+  return "条件は入力済みです。「配分を探索」を押してください。";
 };
 
 export function GuideTutorial() {

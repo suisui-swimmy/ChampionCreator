@@ -2,6 +2,7 @@ import * as Select from "@radix-ui/react-select";
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import { type ButtonHTMLAttributes, type ReactNode, useId } from "react";
+import { getPublicAssetUrl } from "./publicAssetUrl";
 
 type ButtonVariant = "primary" | "ghost" | "danger";
 type ButtonSize = "default" | "small" | "icon";
@@ -34,6 +35,49 @@ export function Button({
       {...props}
     />
   );
+}
+
+export function SearchProgress({
+  progress,
+  searchedCandidates,
+  totalCandidates,
+  label = "探索進捗",
+  canCancel = false,
+  onCancel,
+}: {
+  progress: number;
+  searchedCandidates: number;
+  totalCandidates: number;
+  label?: string;
+  canCancel?: boolean;
+  onCancel?: () => void;
+}) {
+  const percent = Math.round(progress * 100);
+  return (
+    <div className="search-progress-row">
+      <div className="search-progress" role="progressbar" aria-label={label}
+        aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+        <span className="search-progress-fill" style={{ width: `${percent}%` }} aria-hidden="true" />
+        <span className="search-progress-label" aria-live="polite">
+          <strong>{percent}%</strong>
+          <span>評価 {searchedCandidates} / {totalCandidates || "-"}</span>
+        </span>
+      </div>
+      <Button size="icon" className="progress-cancel-button" aria-label="計算を中止"
+        disabled={!canCancel} onClick={onCancel}>
+        <img src={getPublicAssetUrl("assets/ui/circle-x.svg")} alt="" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
+/** Reserve both labels' width and height while only the visible text changes. */
+export function StableButtonLabel({ idle, busy, running }: { idle: string; busy: string; running: boolean }) {
+  return <span className="stable-button-label">
+    <span className="stable-button-label-reserve" aria-hidden="true">{idle}</span>
+    <span className="stable-button-label-reserve" aria-hidden="true">{busy}</span>
+    <span>{running ? busy : idle}</span>
+  </span>;
 }
 
 type StepperAction = {
