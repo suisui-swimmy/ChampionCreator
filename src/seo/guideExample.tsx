@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createAdjustmentTutorialState } from "../ui/adjustmentExample";
 import {
   buildIntegratedDefenceSearchInput,
-  calculateOffenseAdjustmentsForCandidateRanking,
 } from "../ui/defenceSearchUi";
 import { searchDefenceCandidates } from "../search/defenceSearch";
 
@@ -15,21 +14,21 @@ export function buildGuideExample() {
   const input = buildIntegratedDefenceSearchInput(target, scenarios);
   const candidates = searchDefenceCandidates(input.build, input.scenarios, {
     maxResults: null, minimumStatPoints: input.minimumStatPoints, searchStatKeys: input.searchStatKeys,
-    speedConditions: input.speedConditions,
+    speedConditions: input.speedConditions, offenseConditions: input.offenseConditions,
   });
   if (candidates.length !== 1) throw new Error("The guide sample must produce exactly one candidate.");
   const [candidate] = candidates;
-  const appliedTarget = { ...target, statPoints: candidate.appliedStatPoints };
-  const offense = calculateOffenseAdjustmentsForCandidateRanking(appliedTarget, scenarios).find((entry) => entry.result.passed);
+  const offense = candidate.offenseResults?.find((entry) => entry.passed);
   const speed = candidate.speedResults?.find((entry) => entry.result.passed);
   const defenceForm = scenarios.find((entry) => entry.adjustmentType === "defence")?.attacks[0];
-  const offenseForm = scenarios.find((entry) => entry.adjustmentType === "offense")?.attacks[0];
+  const offenseScenario = scenarios.find((entry) => entry.adjustmentType === "offense");
+  const offenseForm = offenseScenario?.attacks[0] ? { ...offenseScenario.attacks[0], ...offenseScenario.offense?.opponent, targetKoProbabilityPercent: offenseScenario.offense?.targetKoProbabilityPercent ?? 100 } : undefined;
   const speedForm = scenarios.find((entry) => entry.adjustmentType === "speed")?.attacks[0];
   if (!candidate?.passed || !offense || !speed || speed.result.actualSpeed === null || !defenceForm || !offenseForm || !speedForm) {
     throw new Error("The guide sample no longer satisfies all three adjustment conditions.");
   }
   return {
-    target, candidate, candidateCount: candidates.length, offense: offense.result,
+    target, candidate, candidateCount: candidates.length, offense,
     speed: { ...speed.result, actualSpeed: speed.result.actualSpeed },
     defenceForm, offenseForm, speedForm,
   };

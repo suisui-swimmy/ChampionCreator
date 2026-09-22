@@ -1,3 +1,4 @@
+import { initializeOffenseScenario } from "../ui/defenceSearchUi";
 import { describe, expect, it, vi } from "vitest";
 import { createDefaultBoxExampleEntry, type BoxEntry } from "../ui/boxStorage";
 import { createDefaultScenarioForms } from "../ui/defenceSearchUi";
@@ -36,7 +37,7 @@ const enemyEntry = (id: string, name = id): EnemyBoxEntry => ({
   },
   payload: {
     schemaVersion: SHARE_SCHEMA_VERSION,
-    scenarios: createDefaultScenarioForms(),
+    scenarios: createDefaultScenarioForms().map(initializeOffenseScenario),
   },
 });
 

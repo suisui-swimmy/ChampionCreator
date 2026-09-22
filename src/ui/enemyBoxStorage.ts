@@ -4,6 +4,7 @@ import {
 } from "./shareState";
 import {
   createDefaultTargetForm,
+  initializeOffenseScenario,
   type ScenarioFormState,
 } from "./defenceSearchUi";
 
@@ -73,7 +74,7 @@ export const createEnemyBoxEntrySummary = (
 ): EnemyBoxEntrySummary => {
   const enabledScenarios = scenarios.filter((scenario) => scenario.enabled);
   const pokemonName = enabledScenarios
-    .flatMap((scenario) => scenario.attacks)
+    .flatMap((scenario) => scenario.adjustmentType === "offense" && scenario.offense ? [scenario.offense.opponent] : scenario.attacks)
     .map((attack) => attack.attackerPokemonInput.trim())
     .find(Boolean) ?? "未設定";
   const counts = enabledScenarios.reduce(
@@ -120,7 +121,7 @@ export const createEnemyBoxEntryFromScenarios = (
     summary,
     payload: {
       schemaVersion: SHARE_SCHEMA_VERSION,
-      scenarios,
+      scenarios: scenarios.map(initializeOffenseScenario),
     },
   };
 };

@@ -31,7 +31,7 @@ import {
   getMoveStatReferencePlan,
   type MoveStatReference,
 } from "../domain/moveStatReference";
-import { getBuildStatPoints } from "./defenceSearch";
+import { getBuildStatPoints } from "../domain/championsStats";
 
 export type OffenseAdjustmentStatus = "pass" | "fail" | "fixed" | "unresolved" | "invalid";
 
@@ -72,6 +72,8 @@ export interface OffenseAdjustmentResult {
   description?: string;
   reason: string;
   reference?: OffenseAdjustmentResult;
+  requiredAllocation?: StatTable;
+  sequence?: import("./offenseSequence").OffenseSequenceEvaluation;
 }
 
 type OffenseCandidateEvaluation = {

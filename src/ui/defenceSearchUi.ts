@@ -27,6 +27,8 @@ import type {
 import {
   CHAMPIONS_TOTAL_STAT_POINTS,
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
+  isLegalStatPointTable,
+  isLegalStatPointValue,
   clampStatPointTable,
   clampStatPointValue,
   statPointTableToSmogonEvs,
@@ -79,6 +81,7 @@ import {
 } from "../search/maximizeRemainingBulk";
 import { getBuildDerivedStats } from "../search/bulkScore";
 import natureOptionsData from "../data/generated/nature-options.gen.json";
+import { searchOffenseAllocation, offenseSequenceResult, type OffenseSequenceCondition } from "../search/offenseSequence";
 
 export type SpeedTargetMode = "opponent" | "manual";
 export type LevelInputMode = "auto" | "manual";
@@ -138,6 +141,8 @@ export interface ScenarioAttackFormState {
   attackerStatPoints: StatPointTable;
   attackerBoosts: StatBoostTable;
   defenderBoosts: StatBoostTable;
+  offenseAttackerBoosts?: Partial<StatBoostTable>;
+  offenseAttackerStatus?: PokemonStatus;
   moveInput: string;
   movePowerMode: MovePowerMode;
   movePowerValue: number;
@@ -179,7 +184,26 @@ export interface ScenarioFormState {
   enabled: boolean;
   adjustmentType: ScenarioAdjustmentType;
   attacks: ScenarioAttackFormState[];
+  offense?: OffenseScenarioSettings;
 }
+
+export const offenseOpponentKeys = [
+  "attackerPokemonInput", "attackerPokemonCanonicalName", "attackerNatureInput",
+  "attackerAbilityInput", "attackerItemInput", "attackerTeraTypeInput", "attackerTypeOverride",
+  "attackerTeraEnabled", "attackerDmaxEnabled", "attackerLevel", "attackerLevelMode", "attackerStatPoints",
+] as const;
+export type OffenseOpponentForm = Pick<ScenarioAttackFormState, typeof offenseOpponentKeys[number]>;
+export interface OffenseScenarioSettings {
+  opponent: OffenseOpponentForm;
+  targetKoProbabilityPercent: number;
+}
+export const createOffenseScenarioSettings = (attack: ScenarioAttackFormState): OffenseScenarioSettings => ({
+  opponent: Object.fromEntries(offenseOpponentKeys.map((key) => [key, structuredClone(attack[key])])) as OffenseOpponentForm,
+  targetKoProbabilityPercent: attack.targetKoProbabilityPercent,
+});
+export const initializeOffenseScenario = (scenario: ScenarioFormState): ScenarioFormState =>
+  scenario.adjustmentType === "offense" && !scenario.offense && scenario.attacks[0]
+    ? { ...scenario, offense: createOffenseScenarioSettings(scenario.attacks[0]) } : scenario;
 
 export interface OffenseAdjustmentFormState {
   defenderPokemonInput: string;
@@ -218,6 +242,7 @@ export interface DefenceSearchInput {
   minimumStatPoints?: Partial<StatPointTable>;
   searchStatKeys?: DefenceSearchStatKey[];
   speedConditions?: SpeedScenarioCondition[];
+  offenseConditions?: OffenseSequenceCondition[];
 }
 
 export interface OffenseScenarioResult {
@@ -264,6 +289,7 @@ export interface SearchUiState {
   passingCandidateCount: number;
   errorMessage: string | null;
   strictestFailureLabel: string | null;
+  offenseResults?: OffenseScenarioResult[];
 }
 
 export type SearchUiAction =
@@ -282,6 +308,7 @@ export type SearchUiAction =
       candidates: CandidateResult[];
       passingCandidateCount?: number;
       strictestFailureLabel?: string | null;
+      offenseResults?: OffenseScenarioResult[];
     }
   | { type: "error"; requestId?: string; message: string }
   | { type: "cancel"; requestId?: string }
@@ -1269,6 +1296,40 @@ const makeOffenseAdjustmentMessageResult = (
   reason,
 });
 
+export const buildOffenseSequenceCondition = (
+  target: TargetFormState, scenario: ScenarioFormState,
+): OffenseSequenceCondition => {
+  const settings = scenario.offense;
+  if (!settings) throw new Error(`${scenario.label}: 共通の仮想敵を入力してください`);
+  if (!settings.opponent.attackerPokemonInput.trim()) throw new Error(`${scenario.label}: 仮想敵のポケモンを入力してください`);
+  if (!Object.values(settings.opponent.attackerStatPoints).every(isLegalStatPointValue)
+    || !Number.isInteger(settings.opponent.attackerLevel) || settings.opponent.attackerLevel < 1 || settings.opponent.attackerLevel > 100) {
+    throw new Error(`${scenario.label}: 仮想敵のSP・レベルが不正です`);
+  }
+  const probability = settings.targetKoProbabilityPercent;
+  if (!Number.isFinite(probability) || probability < 0 || probability > 100) throw new Error("KO率は0〜100%で入力してください");
+  if (!scenario.attacks.length) throw new Error(`${scenario.label}: 技を入力してください`);
+  const attacks = scenario.attacks.map((attack, index) => {
+    if (!attack.moveInput.trim()) throw new Error(`${scenario.label} / ${formatScenarioAttackLabel("offense", index, attack.label)}: 技を入力してください`);
+    if ([...Object.values(attack.attackerBoosts), ...Object.values(attack.offenseAttackerBoosts ?? {})]
+      .some((rank) => !Number.isInteger(rank) || rank < -6 || rank > 6)) throw new Error(`${scenario.label}: 能力ランクが不正です`);
+    const merged = { ...attack, ...settings.opponent, targetKoProbabilityPercent: probability };
+    const input = buildOffenseAdjustmentInput(target, createOffenseAdjustmentFormFromScenarioAttack(merged));
+    input.attackerBoosts = { ...target.boosts, ...attack.offenseAttackerBoosts };
+    input.attackerBuild = { ...input.attackerBuild, status: attack.offenseAttackerStatus === "none" ? undefined : attack.offenseAttackerStatus };
+    if ((attack.hpEvents ?? []).some((event) => event.enabled && !getHpEventRuleDefinition(event.effectId))) throw new Error("計算未対応の定数ダメージ・回復が含まれています");
+    const range = getMoveHitCountRangeFromInput(attack.moveInput);
+    return { ...input, id: attack.id, label: formatScenarioAttackLabel("offense", index, attack.label),
+      ...(range ? { moveHits: Math.max(range.minHits, Math.min(range.maxHits, Math.trunc(attack.repeat))) } : {}) };
+  });
+  return { id: scenario.id, scenarioId: scenario.id, scenarioLabel: scenario.label,
+    defenderBuild: attacks[0].defenderBuild, targetKoProbability: probability / 100, attacks };
+};
+
+export const buildOffenseSequenceConditions = (target: TargetFormState, scenarios: ScenarioFormState[]) =>
+  scenarios.filter((scenario) => scenario.enabled && scenario.adjustmentType === "offense")
+    .map((scenario) => buildOffenseSequenceCondition(target, initializeOffenseScenario(scenario)));
+
 export const calculateOffenseAdjustmentFromUi = (
   targetForm: TargetFormState,
   offenseForm: OffenseAdjustmentFormState,
@@ -1294,7 +1355,7 @@ export const calculateOffenseAdjustmentFromUi = (
   }
 };
 
-export const calculateOffenseAdjustmentsFromScenarios = (
+const calculateLegacyOffenseAdjustmentsFromScenarios = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
 ): OffenseScenarioResult[] => scenarioForms
@@ -1312,6 +1373,29 @@ export const calculateOffenseAdjustmentsFromScenarios = (
         result,
       }));
     }));
+
+/** Synchronous entrypoint for static generation/tests. Interactive requests run this enumeration in a Worker. */
+const resolveSequenceAllocationFromUi = (target: TargetFormState, scenarios: ScenarioFormState[]) => {
+  const conditions = buildOffenseSequenceConditions(target, scenarios);
+  const iterator = searchOffenseAllocation(buildTargetBuildFromUi(target), conditions, buildSpeedConditionsFromScenarios(target, scenarios));
+  let next = iterator.next();
+  while (!next.done) next = iterator.next();
+  return { allocation: next.value, conditions };
+};
+export const calculateOffenseAdjustmentsFromScenarios = (target: TargetFormState, scenarios: ScenarioFormState[]): OffenseScenarioResult[] => {
+  if (!scenarios.some((scenario) => scenario.adjustmentType === "offense" && scenario.offense)) return calculateLegacyOffenseAdjustmentsFromScenarios(target, scenarios);
+  try {
+    const { allocation, conditions } = resolveSequenceAllocationFromUi(target, scenarios);
+    if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
+    return allocation.evaluations.map((evaluation, index) => ({ id: evaluation.scenarioId,
+      scenarioId: evaluation.scenarioId, scenarioLabel: evaluation.scenarioLabel, attackId: conditions[index].attacks[0].id,
+      attackLabel: "連続攻撃", result: offenseSequenceResult(evaluation, allocation.build) }));
+  } catch (error) {
+    return scenarios.filter((scenario) => scenario.enabled && scenario.adjustmentType === "offense").map((scenario) => ({
+      id: scenario.id, scenarioId: scenario.id, scenarioLabel: scenario.label, attackId: scenario.attacks[0]?.id ?? "", attackLabel: "連続攻撃",
+      result: makeOffenseAdjustmentMessageResult("invalid", error instanceof Error ? error.message : String(error)) }));
+  }
+};
 
 const hasSpeedTarget = (form: ScenarioAttackFormState): boolean =>
   form.speedTargetMode === "manual"
@@ -1757,6 +1841,15 @@ export const buildIntegratedDefenceSearchInput = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
 ): DefenceSearchInput => {
+  if (scenarioForms.some((scenario) => scenario.adjustmentType === "offense" && scenario.offense)) {
+    const baseline = createOffenseSearchBaselineTargetForm(targetForm);
+    const { allocation, conditions } = resolveSequenceAllocationFromUi(baseline, scenarioForms);
+    if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
+    const input = buildDefenceSearchInput({ ...baseline, statPoints: allocation.build.statPoints! }, scenarioForms);
+    return { ...input, build: allocation.build, minimumStatPoints: allocation.minimumStatPoints,
+      offenseConditions: conditions, speedConditions: buildSpeedConditionsFromScenarios(baseline, scenarioForms),
+      searchStatKeys: mergeDefenceSearchStatKeys(input.searchStatKeys, getDefenceSearchStatKeysFromMinimums(allocation.minimumStatPoints)) };
+  }
   const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
   const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
   const requirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
@@ -1801,6 +1894,17 @@ export const buildIntegratedDefenceSearchInput = (
   };
 };
 
+/** Normalize only. Allocation belongs to the Worker, never to an input render. */
+export const buildUnallocatedSearchInput = (target: TargetFormState, scenarios: ScenarioFormState[]): DefenceSearchInput => {
+  if (!isLegalStatPointTable(target.statPoints)) throw new Error("SPは各能力0〜32、合計66以内で入力してください");
+  const baseline = createOffenseSearchBaselineTargetForm(target);
+  const defence: DefenceSearchInput = scenarios.some((scenario) => scenario.enabled && scenario.adjustmentType === "defence")
+    ? buildDefenceSearchInput(baseline, scenarios) : { build: buildTargetBuildFromUi(baseline), scenarios: [], searchStatKeys: [] };
+  return { ...defence,
+    offenseConditions: buildOffenseSequenceConditions(baseline, scenarios),
+    speedConditions: buildSpeedConditionsFromScenarios(baseline, scenarios) };
+};
+
 type GeneratedNatureOption = {
   label: string;
 };
@@ -1833,6 +1937,15 @@ export const buildMaximizeRemainingBulkInputFromUi = (
   scenarioForms: ScenarioFormState[],
   options: { allowNatureChange: boolean },
 ): MaximizeRemainingBulkInput => {
+  if (scenarioForms.some((scenario) => scenario.adjustmentType === "offense" && scenario.offense)) {
+    const { allocation, conditions } = resolveSequenceAllocationFromUi(createOffenseSearchBaselineTargetForm(targetForm), scenarioForms);
+    if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
+    return { build: allocation.build, currentBuild: buildTargetBuildFromUi(targetForm),
+      minimumStatPoints: allocation.minimumStatPoints, offenseConditions: conditions,
+      speedConditions: buildSpeedConditionsFromScenarios(targetForm, scenarioForms),
+      allowNatureChange: options.allowNatureChange,
+      natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined };
+  }
   const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
   const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
   const offenseRequirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
@@ -1926,6 +2039,7 @@ export const searchUiReducer = (
       };
     case "complete":
       return {
+        offenseResults: action.offenseResults,
         ...state,
         status: "complete",
         activeRequestId: null,
@@ -2039,7 +2153,7 @@ export const startDefenceSearchFromUi = (
   dispatch: SearchUiDispatch,
   options: { requestId?: string; maxResults?: number | null; partialResultLimit?: number } = {},
 ): { request: ActiveDefenceSearchRequest; input: DefenceSearchInput } => {
-  const input = buildIntegratedDefenceSearchInput(targetForm, scenarioForms);
+  const input = buildUnallocatedSearchInput(targetForm, scenarioForms);
   const requestId = options.requestId ?? createDefenceSearchRequestId();
   dispatch({ type: "start", requestId });
 
@@ -2050,6 +2164,9 @@ export const startDefenceSearchFromUi = (
     minimumStatPoints: input.minimumStatPoints,
     searchStatKeys: input.searchStatKeys,
     speedConditions: input.speedConditions,
+    offenseConditions: input.offenseConditions,
+    prepareOffenseAllocation: true,
+    standalone: input.scenarios.length === 0,
     progressInterval: 250,
     partialResultInterval: 1,
     yieldEvery: 250,
@@ -2073,6 +2190,7 @@ export const startDefenceSearchFromUi = (
         candidates: message.candidates,
         passingCandidateCount: message.passingCandidateCount,
         strictestFailureLabel: message.strictestFailureLabel ?? null,
+        offenseResults: message.offenseResults,
       }),
       onError: (message) => dispatch({
         type: "error",
@@ -2094,9 +2212,12 @@ export const startMaximizeRemainingBulkFromUi = (
     allowNatureChange: false,
   },
 ): { request: ActiveDefenceSearchRequest; input: MaximizeRemainingBulkInput } => {
-  const input = buildMaximizeRemainingBulkInputFromUi(targetForm, scenarioForms, {
-    allowNatureChange: options.allowNatureChange,
-  });
+  const input: MaximizeRemainingBulkInput = {
+    build: buildTargetBuildFromUi(targetForm), allowNatureChange: options.allowNatureChange,
+    natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined,
+    offenseConditions: buildOffenseSequenceConditions(targetForm, scenarioForms),
+    speedConditions: buildSpeedConditionsFromScenarios(targetForm, scenarioForms), prepareOffenseAllocation: true,
+  };
   const requestId = options.requestId ?? createBulkMaximizeRequestId();
   dispatch({ type: "start", requestId });
 
@@ -2153,6 +2274,14 @@ export const applyOffenseAdjustmentToTarget = (
   targetForm: TargetFormState,
   result: OffenseAdjustmentResult | undefined,
 ): TargetFormState => {
+  if (result?.canApply && result.requiredAllocation) {
+    const points = { ...targetForm.statPoints, atk: result.requiredAllocation.atk, spa: result.requiredAllocation.spa,
+      hp: Math.max(targetForm.statPoints.hp, result.requiredAllocation.hp),
+      def: Math.max(targetForm.statPoints.def, result.requiredAllocation.def),
+      spd: Math.max(targetForm.statPoints.spd, result.requiredAllocation.spd),
+      spe: Math.max(targetForm.statPoints.spe, result.requiredAllocation.spe) };
+    return sumStatPoints(points) <= CHAMPIONS_TOTAL_STAT_POINTS ? { ...targetForm, statPoints: points } : targetForm;
+  }
   if (
     !result?.canApply
     || result.requiredStatPoints === null

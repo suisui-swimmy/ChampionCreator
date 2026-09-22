@@ -1,9 +1,12 @@
+import { parseShareStateDocument } from "../ui/shareState";
 import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { comparableShareJson, decodeSharedAdjustment, encodeSharedAdjustment, MAX_SHARE_JSON_BYTES, MAX_SHARE_TOKEN_LENGTH } from "./urlShareCodec";
-import { createShareTestDocument, SHARE_TEST_CASES } from "./testFixtures/fixtures";
+import { createShareTestDocument as createLegacyShareTestDocument, SHARE_TEST_CASES } from "./testFixtures/fixtures";
 import { createDefaultBeatUpParticipants } from "../ui/defenceSearchUi";
+
+const createShareTestDocument: typeof createLegacyShareTestDocument = (fixture) => parseShareStateDocument(JSON.stringify(createLegacyShareTestDocument(fixture)));
 
 const provenance = { app: "0.31.3", calc: "test" };
 const encode = (document: Parameters<typeof encodeSharedAdjustment>[0]) => encodeSharedAdjustment(document, provenance);
@@ -25,7 +28,7 @@ describe("URL share transport", () => {
   it("requires valid source versions and rejects the retired probe format", async () => {
     const original = createShareTestDocument(SHARE_TEST_CASES[0]);
     const token = await encode(original);
-    await expect(decodeSharedAdjustment(token.replace("s1.", "p1."))).rejects.toThrow("バージョン");
+    await expect(decodeSharedAdjustment(token.replace("s2.", "p1."))).rejects.toThrow("バージョン");
     expect(() => encodeSharedAdjustment(original, { app: "<invalid>", calc: "test" })).toThrow("作成バージョン");
     await expect(decodeSharedAdjustment(tokenFrom({ s: 13, t: {}, c: [] }, { app: "0.31.3" }))).rejects.toThrow("作成バージョン");
   });
@@ -40,7 +43,7 @@ describe("URL share transport", () => {
     expect(new Set(restored.scenarios.flatMap((s) => s.attacks.map((a) => a.id))).size)
       .toBe(restored.scenarios.reduce((n, s) => n + s.attacks.length, 0));
     expect(JSON.stringify(original)).toBe(before);
-    expect(token).toMatch(/^s1\.[A-Za-z0-9_-]+$/);
+    expect(token).toMatch(/^s2\.[A-Za-z0-9_-]+$/);
   });
 
   it("preserves manual types, power, levels, HP-event order, beat-up slots, and disabled scenarios", async () => {
@@ -67,7 +70,7 @@ describe("URL share transport", () => {
 
   it("rejects unsupported versions, bad alphabet, truncation, and too-long tokens", async () => {
     const token = await encode(createShareTestDocument(SHARE_TEST_CASES[0]));
-    await expect(decode(token.replace("s1.", "s2."))).rejects.toThrow("バージョン");
+    await expect(decode(token.replace("s2.", "s3."))).rejects.toThrow("バージョン");
     await expect(decode(`${token}%20`)).rejects.toThrow("不正");
     await expect(decode(token.slice(0, -10))).rejects.toThrow();
     await expect(decode("s1." + "A".repeat(MAX_SHARE_TOKEN_LENGTH))).rejects.toThrow("長すぎ");

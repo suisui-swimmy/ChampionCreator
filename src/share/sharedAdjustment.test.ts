@@ -1,8 +1,11 @@
+import { parseShareStateDocument } from "../ui/shareState";
 import { describe, expect, it } from "vitest";
 import { appVersionInfo } from "../appVersion";
-import { createShareTestDocument, SHARE_TEST_CASES } from "./testFixtures/fixtures";
+import { createShareTestDocument as createLegacyShareTestDocument, SHARE_TEST_CASES } from "./testFixtures/fixtures";
 import { comparableShareJson, encodeSharedAdjustment } from "./urlShareCodec";
 import { clearShareImportHref, createSharedAdjustmentUrl, hasShareImportRequest, readSharedAdjustmentHash } from "./sharedAdjustment";
+
+const createShareTestDocument: typeof createLegacyShareTestDocument = (fixture) => parseShareStateDocument(JSON.stringify(createLegacyShareTestDocument(fixture)));
 
 describe("production sharing", () => {
   it("round-trips applied SP, every scenario, and source version without account state", async () => {
@@ -12,7 +15,7 @@ describe("production sharing", () => {
     expect(url.pathname).toBe("/cc/");
     expect(url.search).toBe("?import-share=1");
     expect(hasShareImportRequest(url.href)).toBe(true);
-    expect(url.hash).toMatch(/^#share=s1\./);
+    expect(url.hash).toMatch(/^#share=s2\./);
     const shared = await readSharedAdjustmentHash(url.hash);
     expect(comparableShareJson(shared.document)).toBe(comparableShareJson(document));
     expect(shared.provenance).toEqual({ app: appVersionInfo.appVersion, calc: appVersionInfo.smogonCalcVersion });

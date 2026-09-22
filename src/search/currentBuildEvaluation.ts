@@ -1,3 +1,4 @@
+import { evaluateOffenseSequence, type OffenseSequenceCondition, type OffenseSequenceEvaluation } from "./offenseSequence";
 import type { Build, EntityRef, Scenario, ScenarioEvaluation } from "../domain/model";
 import type { SpeedAdjustmentInput, SpeedConditionEvaluation } from "../domain/speed";
 import { getBuildStatPoints, isLegalStatPointTable, isLegalStatPointValue } from "../domain/championsStats";
@@ -18,7 +19,7 @@ export interface CurrentBuildConditionIdentity {
 }
 export type CurrentBuildCondition = CurrentBuildConditionIdentity & (
   | { kind: "defence"; scenario: Scenario; issue?: never }
-  | { kind: "offense"; input: OffenseAdjustmentInput; issue?: never }
+  | { kind: "offense"; input: OffenseAdjustmentInput; sequence?: OffenseSequenceCondition; issue?: never }
   | { kind: "speed"; input: SpeedAdjustmentInput; issue?: never }
   | { issue: CurrentBuildIssue }
 );
@@ -31,7 +32,7 @@ export interface CurrentBuildConditionResult extends CurrentBuildConditionIdenti
   status: "pass" | "fail" | CurrentBuildIssueStatus;
   message?: string;
   defence?: ScenarioEvaluation;
-  offense?: CurrentOffenseEvaluation;
+  offense?: CurrentOffenseEvaluation | OffenseSequenceEvaluation;
   speed?: SpeedConditionEvaluation;
 }
 export interface CurrentBuildEvaluationResult {
@@ -46,6 +47,7 @@ export const classifyCurrentBuildIssue = (error: unknown): CurrentBuildIssue => 
   if (message.includes("canonical name に解決できません")) {
     return { status: "unresolved", message: message.replace("canonical name に解決できません", "特定できません") };
   }
+  if (/技を入力してください|ポケモンを入力してください|共通の仮想敵を入力してください/.test(message)) return { status: "incomplete", message };
   return { status: /未対応|not supported|not found/i.test(message) ? "unsupported" : "invalid", message };
 };
 
@@ -79,6 +81,14 @@ export const evaluateCurrentBuildCondition = (
         return { ...identity, ...classifyCurrentBuildIssue(speed.reason) };
       }
       return { ...identity, status: speed.passed ? "pass" : "fail", speed };
+    }
+    if (condition.kind === "offense" && condition.sequence) {
+      for (const attack of condition.sequence.attacks) {
+        assertBuild(attack.defenderBuild); assertSupportedEntity(attack.move);
+        if (attack.hpEvents?.some((event) => event.enabled && !getHpEventRuleDefinition(event.effectId))) throw new Error("計算未対応の定数ダメージ・回復が含まれています");
+      }
+      const offense = evaluateOffenseSequence(build, condition.sequence);
+      return { ...identity, status: offense.passed ? "pass" : "fail", offense };
     }
     const hits = condition.kind === "defence" ? condition.scenario.hits : [];
     if (condition.kind === "defence" && (!condition.scenario.enabled || !condition.scenario.constraint.enabled || !hits.length)) {

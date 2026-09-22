@@ -1,3 +1,4 @@
+import { evaluateOffenseConditions, type OffenseSequenceCondition } from "./offenseSequence";
 import { calculateSmogonHit, toSmogonPokemon } from "../calc/smogonAdapter";
 import {
   buildHpSequenceMoveUses,
@@ -55,6 +56,7 @@ export interface DefenceSearchOptions {
   minimumStatPoints?: Partial<StatTable>;
   searchStatKeys?: readonly DefenceSearchStatKey[] | null;
   speedConditions?: readonly SpeedScenarioCondition[];
+  offenseConditions?: readonly OffenseSequenceCondition[];
 }
 
 interface ScenarioEvaluationOptions {
@@ -674,6 +676,8 @@ export const evaluateCandidate = (
   const appliedBuild = applyDefenceStatPointCandidate(defenderBuild, candidate);
   const scenarioResults = scenarios.map((scenario) => evaluateScenario(appliedBuild, scenario, options));
   const speedResults = evaluateSpeedConditions(appliedBuild, options.speedConditions ?? []);
+  const offenseResults = evaluateOffenseConditions(appliedBuild, options.offenseConditions ?? []);
+  const failedOffense = offenseResults.find((entry) => !entry.passed);
   const failedSpeed = speedResults.find((entry) => !entry.result.passed);
   const bulkScore = getBuildBulkScore(appliedBuild);
   const appliedStatPoints = getBuildStatPoints(appliedBuild);
@@ -695,10 +699,11 @@ export const evaluateCandidate = (
     remainingStatPointBudget,
     usedEvBudget,
     remainingEvBudget,
-    passed: appliedPointsAreLegal && scenarioResults.every((result) => result.passed) && !failedSpeed,
+    passed: appliedPointsAreLegal && scenarioResults.every((result) => result.passed) && !failedSpeed && !failedOffense,
     scenarioResults,
+    ...(offenseResults.length ? { offenseResults } : {}),
     ...(speedResults.length > 0 ? { speedResults } : {}),
-    bottleneckLabel: failedSpeed
+    bottleneckLabel: failedOffense ? `${failedOffense.scenarioLabel}: KO条件に届きません` : failedSpeed
       ? `${failedSpeed.scenarioLabel} / ${failedSpeed.attackLabel}: ${failedSpeed.result.reason}`
       : worstScenario?.bottleneckLabel ?? "No active scenarios",
   };

@@ -1,7 +1,7 @@
 import { parseShareStateDocument, type ShareStateDocument } from "../ui/shareState";
 import { SHARE_ATTACK_V1, SHARE_SCENARIO_V1, SHARE_TARGET_V1 } from "./urlShareDefaultsV1";
 
-const SHARE_LINK_PREFIX = "s1.";
+const SHARE_LINK_PREFIX = "s2.";
 export type ShareProvenance = { app: string; calc: string };
 export type SharedAdjustment = { document: ShareStateDocument; provenance: ShareProvenance };
 export const MAX_SHARE_TOKEN_LENGTH = 16_384;
@@ -63,9 +63,9 @@ const checkStats = (value: unknown, enforceTotal: boolean) => {
     || (enforceTotal && (stats as number[]).reduce((sum, v) => sum + v, 0) > 66)) return fail("共有データのSP配分が不正です");
 };
 
-const decodeCompact = (value: unknown): ShareStateDocument => {
+const decodeCompact = (value: unknown, version: 1 | 2 = 2): ShareStateDocument => {
   comparable(value); // Limits and unsafe-key rejection before object expansion.
-  if (!isObject(value) || value.s !== 13 || Object.keys(value).some((key) => !["s", "t", "c"].includes(key))
+  if (!isObject(value) || value.s !== (version === 1 ? 13 : 14) || Object.keys(value).some((key) => !["s", "t", "c"].includes(key))
     || !Array.isArray(value.c) || value.c.length > MAX_SCENARIOS) return fail();
   const target = expand(SHARE_TARGET_V1, value.t, ["pokemonCanonicalName", "typeOverride"]);
   checkStats(target.statPoints, true);
@@ -77,9 +77,9 @@ const decodeCompact = (value: unknown): ShareStateDocument => {
     if (attackCount > MAX_ATTACKS) return fail("共有データの攻撃件数が多すぎます");
     const { attacks, ...fields } = scenario;
     return {
-      ...expand(SHARE_SCENARIO_V1, fields), id: `share-s-${i}`,
+      ...expand(SHARE_SCENARIO_V1, fields, version === 2 ? ["offense"] : []), id: `share-s-${i}`,
       attacks: attacks.map((attack, j) => {
-        const expanded = expand(SHARE_ATTACK_V1, attack, ["attackerPokemonCanonicalName", "attackerTypeOverride"]);
+        const expanded = expand(SHARE_ATTACK_V1, attack, ["attackerPokemonCanonicalName", "attackerTypeOverride", ...(version === 2 ? ["offenseAttackerBoosts", "offenseAttackerStatus"] : [])]);
         // Existing opponent forms retain values for multiple adjustment axes;
         // even the built-in speed example keeps A32/C32/S32. Preserve them.
         checkStats(expanded.attackerStatPoints, false);
@@ -100,11 +100,11 @@ const decodeCompact = (value: unknown): ShareStateDocument => {
       }),
     };
   });
-  const document = { schemaVersion: 13, target, scenarios };
-  const parsed = parseShareStateDocument(JSON.stringify(document));
+  const document = { schemaVersion: version === 1 ? 13 : 14, target, scenarios };
+  const parsed = parseShareStateDocument(JSON.stringify(document), false);
   // A damaged link must not appear valid after the legacy parser fills/clamps values.
   if (comparableShareJson(parsed) !== comparableShareJson(document)) return fail("共有データの値を正しく復元できません");
-  return parsed;
+  return parseShareStateDocument(JSON.stringify(document));
 };
 
 const readBounded = async (stream: ReadableStream<Uint8Array>, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> => {
@@ -137,10 +137,10 @@ const ensureCompression = () => {
 
 const encodeEnvelope = async (document: ShareStateDocument, provenance: ShareProvenance): Promise<string> => {
   ensureCompression();
-  if (document.schemaVersion !== 13) return fail("この共有形式では条件schema 13のみ共有できます");
+  if (document.schemaVersion !== 14) return fail("この共有形式では条件schema 14のみ共有できます");
   const clean = JSON.parse(comparableShareJson(document)) as ShareStateDocument;
   const payload = {
-    s: 13,
+    s: 14,
     t: compact(clean.target as unknown as JsonObject, SHARE_TARGET_V1 as unknown as JsonObject),
     c: clean.scenarios.map(({ attacks, ...fields }) => ({
       ...compact(fields, SHARE_SCENARIO_V1),
@@ -160,7 +160,7 @@ const encodeEnvelope = async (document: ShareStateDocument, provenance: SharePro
 const decodeEnvelope = async (token: string): Promise<unknown> => {
   ensureCompression();
   if (token.length > MAX_SHARE_TOKEN_LENGTH) return fail("共有URLが長すぎます");
-  if (!token.startsWith(SHARE_LINK_PREFIX)) return fail("対応していない共有URLのバージョンです");
+  if (!/^s[12]\./.test(token)) return fail("対応していない共有URLのバージョンです");
   const encoded = token.slice(SHARE_LINK_PREFIX.length);
   if (!/^[A-Za-z0-9_-]+$/.test(encoded) || encoded.length % 4 === 1) return fail("共有URLの文字列が欠けているか、不正です");
   try {
@@ -187,5 +187,5 @@ export const decodeSharedAdjustment = async (token: string): Promise<SharedAdjus
   const envelope = await decodeEnvelope(token);
   if (!isObject(envelope)) return fail();
   const { v, ...payload } = envelope;
-  return { document: decodeCompact(payload), provenance: validateProvenance(v) };
+  return { document: decodeCompact(payload, token.startsWith("s1.") ? 1 : 2), provenance: validateProvenance(v) };
 };

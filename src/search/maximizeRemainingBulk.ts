@@ -1,3 +1,4 @@
+import { evaluateOffenseConditions, type OffenseSequenceCondition } from "./offenseSequence";
 import {
   CHAMPIONS_MAX_STAT_POINTS_PER_STAT,
   CHAMPIONS_TOTAL_STAT_POINTS,
@@ -72,6 +73,9 @@ export interface MaximizeRemainingBulkInput {
   minimumStatPoints?: Partial<Pick<StatTable, "hp" | "def" | "spd">>;
   protectedActualStats?: Partial<Pick<StatTable, "atk" | "spa" | "spe">>;
   speedConditions?: SpeedScenarioCondition[];
+  offenseConditions?: OffenseSequenceCondition[];
+  prepareOffenseAllocation?: boolean;
+  currentBuild?: Build;
   keepCurrentPhysicalSpecialBulk?: boolean;
 }
 
@@ -157,7 +161,8 @@ const prepareMaximizeRemainingBulkContext = (
     );
   }
 
-  const currentStats = getBuildDerivedStats(input.build);
+  if (input.currentBuild && !isLegalStatPointTable(getBuildStatPoints(input.currentBuild))) throw new Error("現在のSP配分が不正です");
+  const currentStats = getBuildDerivedStats(input.currentBuild ?? input.build);
   return {
     buildStatPoints,
     currentStats,
@@ -294,6 +299,7 @@ const evaluateBulkCandidateWithContext = (
   if (!passesProtectedActualStats(derivedStats, input.protectedActualStats)) {
     return null;
   }
+  if (evaluateOffenseConditions(candidateBuild, input.offenseConditions ?? []).some((entry) => !entry.passed)) return null;
   if (evaluateSpeedConditions(candidateBuild, input.speedConditions ?? []).some((entry) => !entry.result.passed)) {
     return null;
   }

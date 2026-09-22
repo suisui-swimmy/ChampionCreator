@@ -1,3 +1,4 @@
+import { initializeOffenseScenario } from "./defenceSearchUi";
 import { describe, expect, it, vi } from "vitest";
 import {
   BOX_STORAGE_KEY,
@@ -37,7 +38,7 @@ const createMemoryStorage = () => {
 describe("currentWorkPersistence", () => {
   it("persists the current target box and removes its superseded draft", () => {
     const target = { ...createDefaultTargetForm(), pokemonInput: "オオニューラ" };
-    const scenarios = createDefaultScenarioForms();
+    const scenarios = createDefaultScenarioForms().map(initializeOffenseScenario);
     const entry = createBoxEntryFromState(target, scenarios, {
       id: "current-work",
       now: "2026-08-18T00:00:00.000Z",
@@ -67,7 +68,7 @@ describe("currentWorkPersistence", () => {
 
   it("does not discard the draft when the target-box save fails", () => {
     const target = createDefaultTargetForm();
-    const scenarios = createDefaultScenarioForms();
+    const scenarios = createDefaultScenarioForms().map(initializeOffenseScenario);
     const entry = createBoxEntryFromState(target, scenarios);
     const memory = createMemoryStorage();
     saveDraftToBrowser(target, scenarios, { storage: memory.storage });
@@ -88,7 +89,7 @@ describe("currentWorkPersistence", () => {
 
   it("keeps the successful box write while returning a draft-discard error", () => {
     const target = createDefaultTargetForm();
-    const scenarios = createDefaultScenarioForms();
+    const scenarios = createDefaultScenarioForms().map(initializeOffenseScenario);
     const entry = createBoxEntryFromState(target, scenarios);
     const discardError: DraftMutationResult = {
       status: "error",

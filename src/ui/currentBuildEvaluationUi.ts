@@ -4,6 +4,7 @@ import { toEntityRef, type StatBoostTable, type StatTable } from "../domain/mode
 import { resolveEntity } from "../localization/resolver";
 import { classifyCurrentBuildIssue, type CurrentBuildCondition, type CurrentBuildEvaluationInput, type CurrentBuildIssue } from "../search/currentBuildEvaluation";
 import {
+  buildOffenseSequenceCondition,
   buildDefenceSearchInput, buildOffenseAdjustmentInput, buildSpeedAdjustmentInput, buildTargetBuildFromUi,
   createOffenseAdjustmentFormFromScenarioAttack, formatScenarioAttackLabel,
   type ScenarioAttackFormState, type ScenarioFormState, type TargetFormState,
@@ -72,6 +73,14 @@ export const buildCurrentBuildEvaluationInput = (
       } catch (error) {
         conditions.push({ ...base, issue: classifyCurrentBuildIssue(error) });
       }
+      continue;
+    }
+    if (scenario.adjustmentType === "offense" && scenario.offense) {
+      try {
+        const sequence = buildOffenseSequenceCondition(target, scenario);
+        conditions.push({ ...base, kind: "offense", input: sequence.attacks[0], sequence,
+          hitLabels: sequence.attacks.map((attack) => `${attack.label} / ${attack.moveInput}`) });
+      } catch (error) { conditions.push({ ...base, issue: classifyCurrentBuildIssue(error) }); }
       continue;
     }
     for (const [index, attack] of scenario.attacks.entries()) {

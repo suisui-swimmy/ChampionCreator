@@ -202,6 +202,7 @@ export interface CandidateResult {
   passed: boolean;
   scenarioResults: ScenarioEvaluation[];
   speedResults?: SpeedScenarioEvaluation[];
+  offenseResults?: import("../search/offenseSequence").OffenseSequenceEvaluation[];
   bottleneckLabel: string;
 }
 

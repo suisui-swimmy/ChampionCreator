@@ -4291,9 +4291,9 @@ describe("App", () => {
 
     const html = renderExampleApp();
 
-    expect(html).toContain('aria-label="火力調整A 仮想敵能力"');
-    expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
-    expect(html).toContain('aria-label="火力調整A 仮想敵D SP"');
+    expect(html).toContain('aria-label="共通の仮想敵 仮想敵能力"');
+    expect(html).toContain('aria-label="共通の仮想敵 仮想敵H SP"');
+    expect(html).toContain('aria-label="共通の仮想敵 仮想敵D SP"');
     expect(html).toContain('aria-label="火力調整A 仮想敵Dランク: 0"');
     expect(html).not.toContain('aria-label="火力調整A 仮想敵A SP"');
     expect(html).not.toContain('aria-label="火力調整A 仮想敵B SP"');
@@ -5326,7 +5326,7 @@ describe("App", () => {
     expect(html).toContain("assets/types/fire.png");
     expect(html).toContain("assets/types/dark.png");
     expect(html).toContain("耐久調整Aのタイプのロックを解除");
-    expect(html).toContain("火力調整Aのタイプのロックを解除");
+    expect(html).toContain("共通の仮想敵のタイプのロックを解除");
     expect(html).toContain("素早さ調整Aのタイプのロックを解除");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
@@ -5419,8 +5419,8 @@ describe("App", () => {
     expect(html).toContain('value="メガマフォクシー"');
     expect(html).toContain('value="メガゲンガー"');
     expect(html).toContain('value="サイコキネシス"');
-    expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
-    expect(html).toContain('aria-label="火力調整A 仮想敵H SP" placeholder="H SP"');
+    expect(html).toContain('aria-label="共通の仮想敵 仮想敵H SP"');
+    expect(html).toContain('aria-label="共通の仮想敵 仮想敵H SP" placeholder="H SP"');
     expect(html).toContain('value="32"');
     expect(html).not.toContain('value="Dragonite"');
     expect(html).not.toContain('label="Dragonite"');

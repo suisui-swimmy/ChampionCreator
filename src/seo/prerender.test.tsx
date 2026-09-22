@@ -26,7 +26,7 @@ describe("search-readable initial HTML", () => {
     expect(candidate.scenarioResults.every((result) => result.passed && result.survivalProbability >= 0.9)).toBe(true);
     expect(candidate.scenarioResults[0].survivalProbability).toBe(0.9375);
     expect(offense.koProbability).toBe(1);
-    expect(candidate.appliedStatPoints.spa).toBe(offense.requiredStatPoints);
+    expect(candidate.offenseResults).toEqual([offense]);
     expect(candidate.appliedStatPoints.spe).toBe(speed.statPoints);
     expect([speed.actualSpeed, speed.targetSpeed]).toEqual([145, 143]);
     expect([defenceForm.gameType, offenseForm.gameType, speedForm.gameType]).toEqual(["doubles", "doubles", "doubles"]);

@@ -97,7 +97,7 @@ describe("current allocation evaluation", () => {
   it("retains fractional probability thresholds without rounding down", () => {
     const { target, scenarios } = createAdjustmentExampleState();
     scenarios[0].attacks[0].minSurvivalProbabilityPercent = 90.5;
-    scenarios[1].attacks[0].targetKoProbabilityPercent = 99.5;
+    scenarios[1].offense!.targetKoProbabilityPercent = 99.5;
     const result = evaluateCurrentBuild(buildCurrentBuildEvaluationInput(target, scenarios));
     expect(result.conditions[0].defence?.minSurvivalProbability).toBe(0.905);
     expect(result.conditions[1].offense?.targetKoProbability).toBe(0.995);

@@ -3934,6 +3934,36 @@ textarea {
   flex: 0 0 var(--desktop-attack-card-width);
 }
 
+.offense-common-title {
+  margin: 0 0 8px;
+  font-size: var(--desktop-text-heading);
+  color: var(--text);
+}
+
+.offense-common-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offense-common-ko {
+  font-size: var(--mobile-text-meta);
+  color: var(--text);
+}
+
+.offense-attack-order {
+  margin: 0 0 8px;
+  font-size: var(--desktop-text-control);
+  color: var(--text);
+}
+
+.offense-attack-card .scenario-defender-ranks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
 .attack-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3973,6 +4003,15 @@ textarea {
   grid-template-columns: 24px 46px 1fr 30px;
   gap: 6px;
   align-items: center;
+}
+
+.offense-attack-card .attack-card-header {
+  grid-template-columns: var(--desktop-control-standard) minmax(0, 1fr) var(--desktop-control-standard);
+}
+
+.attack-condition-card.offense-opponent-card .attacker-stat-row,
+.attack-condition-card.offense-opponent-card .attacker-stat-header {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .attack-direction-button {
@@ -7902,6 +7941,15 @@ textarea {
     touch-action: pan-y;
   }
 
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-row.offense .scenario-attack-lane {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-row.offense .scenario-attack-lane > * {
+    flex: 0 0 auto;
+  }
+
   .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-attack-lane > *,
   .mobile-scenarios-open .mobile-scenario-detail-panel .scenario-attack-lane > .attack-add-card {
     width: 100%;
@@ -7925,6 +7973,10 @@ textarea {
   .mobile-scenarios-open .attack-card-header {
     grid-template-columns: 36px 50px minmax(0, 1fr) 36px;
     gap: 8px;
+  }
+
+  .mobile-scenarios-open .offense-attack-card .attack-card-header {
+    grid-template-columns: var(--mobile-control-standard) minmax(0, 1fr) var(--mobile-control-standard);
   }
 
   .mobile-scenarios-open .attack-direction-button {
@@ -9062,4 +9114,9 @@ textarea {
   .mobile-target-open .ev-row {
     grid-template-columns: 26px 10px 38px 42px minmax(64px, 1fr) 40px;
   }
+}
+
+/* The shared identity remains readable when control text is enlarged. */
+.offense-opponent-card .attack-card-level-type-row {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11em), 1fr));
 }

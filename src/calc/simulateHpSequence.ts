@@ -60,6 +60,7 @@ export interface HpSequenceCard {
 
 export interface HpSequenceSimulationInput {
   cards: HpSequenceCard[];
+  onCardComplete?: (card: HpSequenceCard, states: readonly HpSequenceState[]) => void;
 }
 
 export interface HpSequenceState {
@@ -709,6 +710,7 @@ const getInitialDistribution = (
 
 export const simulateHpSequence = ({
   cards,
+  onCardComplete,
 }: HpSequenceSimulationInput): HpSequenceSimulationResult => {
   const initial = getInitialDistribution(cards);
   let distribution = initial.distribution;
@@ -862,6 +864,7 @@ export const simulateHpSequence = ({
         }
       }
     }
+    onCardComplete?.(card, [...distribution.values()]);
   }
 
   const publicStates = new Map<string, HpSequenceState>();

@@ -1,3 +1,5 @@
+import { searchOffenseAllocation, offenseSequenceResult, type OffenseAllocation, type OffenseSequenceCondition } from "../search/offenseSequence";
+import type { OffenseScenarioResult } from "../ui/defenceSearchUi";
 import type { Build, CandidateResult, DefenceSearchStatKey, Scenario, StatTable } from "../domain/model";
 import type { SpeedScenarioCondition } from "../domain/speed";
 import {
@@ -22,6 +24,9 @@ export interface DefenceSearchWorkerRunOptions {
   minimumStatPoints?: Partial<StatTable>;
   searchStatKeys?: DefenceSearchStatKey[];
   speedConditions?: SpeedScenarioCondition[];
+  offenseConditions?: OffenseSequenceCondition[];
+  prepareOffenseAllocation?: boolean;
+  standalone?: boolean;
   progressInterval?: number;
   partialResultInterval?: number;
   yieldEvery?: number;
@@ -77,6 +82,7 @@ export interface DefenceSearchWorkerCompleteMessage {
   candidates: CandidateResult[];
   passingCandidateCount: number;
   strictestFailureLabel?: string | null;
+  offenseResults?: OffenseScenarioResult[];
 }
 
 export interface DefenceSearchWorkerErrorMessage {
@@ -135,12 +141,34 @@ const toErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
+const prepareAllocation = async (
+  build: Build, conditions: OffenseSequenceCondition[], speeds: SpeedScenarioCondition[], requestId: string,
+  emit: DefenceSearchWorkerEmit, isCanceled: DefenceSearchWorkerCancelCheck,
+): Promise<OffenseAllocation | null> => {
+  const iterator = searchOffenseAllocation(build, conditions, speeds);
+  let next = iterator.next();
+  let evaluated = 0;
+  while (!next.done) {
+    if (isCanceled(requestId)) return null;
+    evaluated = next.value;
+    if (next.value === 1 || next.value % 32 === 0) {
+      emit({ type: "progress", requestId, searchedCandidates: next.value, totalCandidates: 0, progress: 0 });
+      await yieldToWorker();
+      if (isCanceled(requestId)) return null;
+    }
+    next = iterator.next();
+  }
+  if (!isCanceled(requestId)) emit({ type: "progress", requestId, searchedCandidates: evaluated, totalCandidates: evaluated, progress: 0 });
+  return next.value;
+};
+
 export const runDefenceSearchWorkerTask = async (
   request: DefenceSearchWorkerStartRequest,
   emit: DefenceSearchWorkerEmit,
   isCanceled: DefenceSearchWorkerCancelCheck = () => false,
 ): Promise<void> => {
-  const { requestId, build, scenarios } = request;
+  const { requestId, scenarios } = request;
+  let build = request.build;
   const options = request.options ?? {};
   const maxResults = options.maxResults === undefined
     ? DEFAULT_MAX_RESULTS
@@ -156,9 +184,29 @@ export const runDefenceSearchWorkerTask = async (
     minimumStatPoints: options.minimumStatPoints,
     searchStatKeys: options.searchStatKeys,
     speedConditions: options.speedConditions,
+    offenseConditions: options.offenseConditions,
   };
 
   try {
+    let offenseResults: OffenseScenarioResult[] | undefined;
+    if (options.prepareOffenseAllocation) {
+      const allocation = await prepareAllocation(build, options.offenseConditions ?? [], options.speedConditions ?? [], requestId, emit, isCanceled);
+      if (isCanceled(requestId)) return;
+      if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
+      build = allocation.build;
+      searchOptions.minimumStatPoints = allocation.minimumStatPoints;
+      searchOptions.searchStatKeys = [...new Set([...(options.searchStatKeys ?? []),
+        ...(["hp", "def", "spd"] as const).filter((key) => (allocation.minimumStatPoints[key] ?? 0) > 0)])];
+      offenseResults = allocation.evaluations.map((evaluation, index) => ({
+        id: evaluation.scenarioId, scenarioId: evaluation.scenarioId, scenarioLabel: evaluation.scenarioLabel,
+        attackId: options.offenseConditions![index].attacks[0].id, attackLabel: "連続攻撃",
+        result: offenseSequenceResult(evaluation, build),
+      }));
+      if (options.standalone) {
+        emit({ type: "complete", requestId, candidates: [], passingCandidateCount: 0, offenseResults });
+        return;
+      }
+    }
     const totalCandidates = countDefenceEvCandidates(build, searchOptions);
     if (maxResults !== null && maxResults <= 0) {
       emit({
@@ -189,7 +237,7 @@ export const runDefenceSearchWorkerTask = async (
 
       searchedCandidates += 1;
 
-      if (!meetsMinimumStatPointRequirements(candidate, options.minimumStatPoints)) {
+      if (!meetsMinimumStatPointRequirements(candidate, searchOptions.minimumStatPoints)) {
         if (
           searchedCandidates === 1
           || searchedCandidates % progressInterval === 0
@@ -274,6 +322,7 @@ export const runDefenceSearchWorkerTask = async (
       requestId,
       candidates: finalCandidates,
       passingCandidateCount: finalCandidates.length,
+      offenseResults,
       strictestFailureLabel: finalCandidates.length === 0 ? closestFailedResult?.bottleneckLabel ?? null : null,
     });
   } catch (error) {
@@ -292,10 +341,19 @@ export const runMaximizeRemainingBulkWorkerTask = async (
   emit: DefenceSearchWorkerEmit,
   isCanceled: DefenceSearchWorkerCancelCheck = () => false,
 ): Promise<void> => {
-  const { requestId, input } = request;
+  const { requestId } = request;
+  let input = request.input;
   const maxResults = Math.max(1, Math.trunc(request.options?.maxResults ?? 1));
 
   try {
+    if (input.prepareOffenseAllocation) {
+      const allocation = await prepareAllocation(input.build, input.offenseConditions ?? [], input.speedConditions ?? [], requestId,
+        (message) => emit(message.type === "progress" ? { ...message, type: "bulkProgress" } : message), isCanceled);
+      if (isCanceled(requestId)) return;
+      if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
+      input = { ...input, minimumStatPoints: allocation.minimumStatPoints,
+        currentBuild: input.build, build: allocation.build };
+    }
     const totalCandidates = countMaximizeRemainingBulkCandidates(input);
     emit({
       type: "bulkProgress",

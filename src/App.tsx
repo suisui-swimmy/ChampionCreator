@@ -1,3 +1,5 @@
+import { getMoveHitCountRangeFromInput } from "./domain/moveHitCounts";
+import { offenseSequenceResult } from "./search/offenseSequence";
 import { Fragment, createContext, type ChangeEvent, type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent, type ReactNode, type Ref, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import { AppFooter } from "./ui/AppFooter";
 import { AppWorkspace } from "./ui/AppWorkspace";
@@ -94,11 +96,12 @@ import {
   applyBeatUpGameTypeDefaults,
   applyBeatUpParticipants,
   buildScenarioAttackBuildFromUi,
-  buildIntegratedDefenceSearchInput,
+  buildUnallocatedSearchInput,
+  initializeOffenseScenario,
+  createOffenseScenarioSettings,
   buildMovePowerPreviewInputFromUi,
   buildTargetBuildFromUi,
   bulkMaximizeUiReducer,
-  calculateOffenseAdjustmentsForCandidateRanking,
   calculateSpeedAdjustmentsForCandidateRanking,
   createDefaultAttackerStatPoints,
   createDefaultScenarioAttackForm,
@@ -1147,7 +1150,7 @@ function NatureStatModifier({
 export const applyScenarioAdjustmentTypeDefaults = (
   scenario: ScenarioFormState,
   adjustmentType: ScenarioAdjustmentType,
-): ScenarioFormState => ({
+): ScenarioFormState => initializeOffenseScenario({
   ...scenario,
   adjustmentType,
   attacks: scenario.attacks.map((attack) => ({
@@ -1956,7 +1959,7 @@ export function App({
     () => initialTargetForm ?? createBlankTargetForm(),
   );
   const [scenarioForms, setScenarioForms] = useState<ScenarioFormState[]>(
-    () => initialScenarioForms ?? [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))],
+    () => (initialScenarioForms ?? [createBlankScenario(0, toScenarioGameType(activeSuggestionFormat))]).map(initializeOffenseScenario),
   );
   const [searchState, dispatchSearch] = useReducer(searchUiReducer, undefined, createInitialSearchUiState);
   const [bulkMaximizeState, dispatchBulkMaximize] = useReducer(
@@ -2145,7 +2148,7 @@ export function App({
 
   const previewInput = useMemo(() => {
     try {
-      return { input: buildIntegratedDefenceSearchInput(targetForm, scenarioForms), error: null };
+      return { input: buildUnallocatedSearchInput(targetForm, scenarioForms), error: null };
     } catch (error) {
       return { input: null, error: error instanceof Error ? error.message : String(error) };
     }
@@ -2173,10 +2176,12 @@ export function App({
     [scenarioForms],
   );
 
-  const offenseResults = useMemo(
-    () => calculateOffenseAdjustmentsForCandidateRanking(targetForm, scenarioForms),
-    [targetForm, scenarioForms],
-  );
+  const offenseResults = (searchState.offenseResults ?? []).map((entry) => {
+    const allocation = entry.result.requiredAllocation;
+    const canApply = entry.result.canApply && (!allocation || statKeys.reduce((sum, key) => sum
+      + (key === "atk" || key === "spa" ? allocation[key] : Math.max(targetForm.statPoints[key], allocation[key])), 0) <= CHAMPIONS_TOTAL_STAT_POINTS);
+    return { ...entry, result: { ...entry.result, canApply } };
+  });
   const speedResults = useMemo(
     () => calculateSpeedAdjustmentsForCandidateRanking(targetForm, scenarioForms),
     [targetForm, scenarioForms],
@@ -2189,7 +2194,7 @@ export function App({
   const hasEnabledDefenceScenario = scenarioForms.some((scenario) => (
     scenario.enabled && scenario.adjustmentType === "defence"
   ));
-  const hasStandaloneAdjustmentResults = offenseResults.length > 0 || speedResults.length > 0;
+  const hasStandaloneAdjustmentResults = scenarioForms.some((scenario) => scenario.enabled && scenario.adjustmentType !== "defence");
   const canRunAdjustment = hasEnabledDefenceScenario || hasStandaloneAdjustmentResults;
   const runButtonLabel = hasEnabledDefenceScenario
     ? "配分を探索"
@@ -2411,7 +2416,7 @@ export function App({
           scenarioForms.flatMap((scenario) => scenario.attacks.flatMap((attack) => {
             try {
               const build = buildScenarioAttackBuildFromUi(
-                attack,
+                scenario.adjustmentType === "offense" && scenario.offense ? { ...attack, ...scenario.offense.opponent } : attack,
                 `${scenario.id}-${attack.id}-attacker`,
               );
               const attacker = toSmogonPokemon(build);
@@ -3172,7 +3177,14 @@ export function App({
 
   const updateScenarioAttackerEv = (id: string, key: StatKey, value: number) => {
     resetActiveSearch();
-    const [scenarioId, attackId] = id.split(":");
+    const scenarioId = scenarioForms.filter((scenario) => id.startsWith(`${scenario.id}:`)).sort((a, b) => b.id.length - a.id.length)[0]?.id ?? "";
+    const attackId = id.slice(scenarioId.length + 1);
+    if (attackId === "offense-opponent") {
+      setScenarioForms((current) => current.map((scenario) => scenario.id === scenarioId && scenario.offense
+        ? { ...scenario, offense: { ...scenario.offense, opponent: { ...scenario.offense.opponent,
+          attackerStatPoints: { ...scenario.offense.opponent.attackerStatPoints, [key]: value } } } } : scenario));
+      return;
+    }
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
         ? {
@@ -3199,8 +3211,11 @@ export function App({
     const previousCommittedPokemon = key === "attackerPokemonInput" && canonicalName
       ? committedAttackPokemonCanonicalNamesRef.current.get(usageDefaultAttackKey)
       : undefined;
-    setScenarioForms((current) => current.map((scenario) => (
-      scenario.id === scenarioId
+    setScenarioForms((current) => current.map((original) => {
+      const common = original.id === scenarioId && attackId === "offense-opponent" && original.offense;
+      const scenario = common ? { ...original, attacks: [{ ...original.attacks[0], ...common.opponent,
+        id: attackId, targetKoProbabilityPercent: common.targetKoProbabilityPercent }] } : original;
+      const updated = (scenario.id === scenarioId
         ? {
             ...scenario,
             attacks: scenario.attacks.map((attack) => (
@@ -3262,7 +3277,9 @@ export function App({
             )),
           }
         : scenario
-    )));
+      );
+      return common ? { ...original, offense: createOffenseScenarioSettings(updated.attacks[0]) } : updated;
+    }));
     if (key === "attackerPokemonInput" && canonicalName) {
       const nextCommittedPokemon = {
         canonicalName,
@@ -3345,11 +3362,6 @@ export function App({
   const handleRun = () => {
     setResultView("candidates");
     if (searchState.status === "running") {
-      return;
-    }
-
-    if (!hasEnabledDefenceScenario) {
-      setSelectedCandidateId(null);
       return;
     }
 
@@ -6435,6 +6447,7 @@ function MobileOverview({
                       >
                         <span className="mobile-scenario-title">
                           <strong>{scenario.label}</strong>
+                          {scenario.adjustmentType === "offense" && scenario.offense ? <span className="offense-common-ko">KO率 {scenario.offense.targetKoProbabilityPercent}%</span> : null}
                         </span>
                       </button>
                       <button
@@ -6462,7 +6475,9 @@ function MobileOverview({
                     </button>
 
                     <div className="mobile-attack-rail" aria-label={`${scenario.label}の攻撃一覧`}>
-                      {scenario.attacks.map((attack, attackIndex) => {
+                      {scenario.attacks.map((originalAttack, attackIndex) => {
+                        const offense = scenario.adjustmentType === "offense" ? scenario.offense : undefined;
+                        const attack = offense ? { ...originalAttack, ...offense.opponent } : originalAttack;
                         const attackerArtwork = findPokemonArtwork({
                           input: attack.attackerPokemonInput,
                           canonicalName: attack.attackerPokemonCanonicalName,
@@ -6489,7 +6504,7 @@ function MobileOverview({
                               <small>{scenario.adjustmentType === "speed"
                                 ? attack.attackerPokemonInput || "未設定"
                                 : attack.moveInput || attack.attackerPokemonInput || "未設定"}</small>
-                              <em>{formatMobileAttackMeta(
+                              <em>{offense ? `攻撃回数 ${attackIndex + 1}/${scenario.attacks.length}` : formatMobileAttackMeta(
                                 attack,
                                 scenario.adjustmentType,
                               )}</em>
@@ -7473,6 +7488,10 @@ function ScenarioRow({
     : scenario.attacks;
   const attacksToRender = visibleAttacks.length > 0 ? visibleAttacks : scenario.attacks.slice(0, 1);
 
+  const offense = scenario.adjustmentType === "offense" ? scenario.offense : undefined;
+  const commonAttack = offense && scenario.attacks[0] ? { ...scenario.attacks[0], ...offense.opponent,
+    id: "offense-opponent", targetKoProbabilityPercent: offense.targetKoProbabilityPercent } : null;
+  const sharedStatKeys = offense ? Array.from(new Set(scenario.attacks.flatMap((attack) => getOffenseDefenderStatKeys(attack.moveInput, { teraEnabled: targetForm.teraEnabled })))) : undefined;
   return (
     <article
       className={`scenario-row ${scenario.adjustmentType}${isTrickRoomSpeedScenario ? " trick-room" : ""}${scenario.enabled ? "" : " disabled"}`}
@@ -7515,12 +7534,20 @@ function ScenarioRow({
       </div>
 
       <div className="scenario-attack-lane">
+        {commonAttack ? <AttackCard attack={commonAttack} attackIndex={0} scenarioId={scenario.id}
+          adjustmentType="offense" offensePart="opponent" sharedStatKeys={sharedStatKeys}
+          actualStats={attackerActualStats[`${scenario.id}-${scenario.attacks[0].id}-attacker`]}
+          targetForm={targetForm} targetActualStats={targetActualStats} supportsDoublesAttack={false} canRemove={false}
+          onRemoveAttack={onRemoveAttack} onToggleAdjustmentType={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
+          onUpdateAttack={onUpdateAttack} onUpdateAttackerEv={onUpdateAttackerEv} /> : null}
         {attacksToRender.map((attack) => {
           const attackIndex = scenario.attacks.findIndex((item) => item.id === attack.id);
           return (
             <AttackCard
               key={attack.id}
-              attack={attack}
+              attack={offense ? { ...attack, ...offense.opponent } : attack}
+              offensePart={offense ? "attack" : undefined}
+              attackTotal={scenario.attacks.length}
               attackIndex={attackIndex >= 0 ? attackIndex : 0}
               scenarioId={scenario.id}
               adjustmentType={scenario.adjustmentType}
@@ -7558,6 +7585,9 @@ function ScenarioRow({
 type AttackCardProps = {
   attack: ScenarioAttackFormState;
   attackIndex: number;
+  offensePart?: "opponent" | "attack";
+  attackTotal?: number;
+  sharedStatKeys?: StatKey[];
   scenarioId: string;
   adjustmentType: ScenarioAdjustmentType;
   actualStats?: StatTable;
@@ -8486,6 +8516,9 @@ function SpeedMultiplierControl({
 function AttackCard({
   attack,
   attackIndex,
+  offensePart,
+  attackTotal,
+  sharedStatKeys,
   scenarioId,
   adjustmentType,
   actualStats,
@@ -8506,7 +8539,7 @@ function AttackCard({
   const isManualSpeedTarget = attack.speedTargetMode === "manual";
   const isTrickRoomSpeed = attack.speedOrderMode === "trick-room";
   const speedPrimaryConditionLabel = isTrickRoomSpeed ? "確定トリル先制" : "確定抜き";
-  const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
+  const attackLabel = offensePart === "opponent" ? "共通の仮想敵" : formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
   const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
   const directionIconPath = isSpeedAdjustment
     ? isTrickRoomSpeed
@@ -8568,7 +8601,7 @@ function AttackCard({
   const moveStatReferenceOptions = {
     teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
   };
-  const offenseDefenderStatKeys = getOffenseDefenderStatKeysFromMoveContext(
+  const offenseDefenderStatKeys = sharedStatKeys ?? getOffenseDefenderStatKeysFromMoveContext(
     attack.moveInput,
     moveStatReferenceOptions,
     targetReferenceKeySet,
@@ -8683,8 +8716,8 @@ function AttackCard({
     </section>
   );
   return (
-    <section className="attack-condition-card" aria-label={attackLabel}>
-      <div className="attack-card-header">
+    <section className={`attack-condition-card${offensePart ? ` offense-${offensePart}-card` : ""}`} aria-label={attackLabel}>
+      {offensePart === "opponent" ? <div className="offense-common-header"><PokemonArtworkFrame match={attackerArtwork} fallbackLabel={attack.attackerPokemonInput} variant="attack" dynamaxEffect={attack.attackerDmaxEnabled} /><h3 className="offense-common-title">共通の仮想敵</h3></div> : <div className="attack-card-header">
         <button
           className={`attack-direction-button ${adjustmentDirection}`}
           type="button"
@@ -8697,7 +8730,7 @@ function AttackCard({
             style={{ backgroundImage: `url("${getAssetSrc(directionIconPath)}")` }}
           />
         </button>
-        <PokemonArtworkFrame
+        {offensePart !== "attack" ? <PokemonArtworkFrame
           match={attackerArtwork}
           fallbackLabel={attack.attackerPokemonInput}
           variant="attack"
@@ -8706,7 +8739,7 @@ function AttackCard({
             "gmax",
             attack.attackerPokemonCanonicalName,
           )}
-        />
+        /> : null}
         <input
           className="inline-title-input"
           value={attackLabel}
@@ -8723,10 +8756,11 @@ function AttackCard({
         >
           <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
         </Button>
-      </div>
+      </div>}
+      {offensePart === "attack" ? <div className="offense-attack-order">攻撃回数 {attackIndex + 1}/{attackTotal}</div> : null}
 
-      <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
-        <div className={`attack-card-field-row attack-card-identity-row${isAbilitySupport ? " single" : ""}`}>
+      <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}${offensePart === "attack" ? " offense-attack-fields" : ""}`}>
+        {offensePart !== "attack" ? <div className={`attack-card-field-row attack-card-identity-row${isAbilitySupport ? " single" : ""}`}>
           <ScenarioTextField
             kind="pokemon"
             label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
@@ -8751,8 +8785,8 @@ function AttackCard({
               onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
             />
           ) : null}
-        </div>
-        {!isSpeedAdjustment ? (
+        </div> : null}
+        {!isSpeedAdjustment && offensePart !== "opponent" ? (
           <div className="attack-card-field-row attack-move-power-cell">
             <ScenarioTextField
               kind="move"
@@ -8806,7 +8840,7 @@ function AttackCard({
             )}
           </div>
         ) : null}
-        <div className={`attack-card-field-row attack-card-details-row${isAbilitySupport ? " single" : ""}`}>
+        {offensePart !== "attack" ? <div className={`attack-card-field-row attack-card-details-row${isAbilitySupport ? " single" : ""}`}>
           {!isAbilitySupport ? (
             <ScenarioTextField
               kind="item"
@@ -8832,8 +8866,8 @@ function AttackCard({
             onChange={onInput("attackerAbilityInput")}
             onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
           />
-        </div>
-        {!isAbilitySupport ? (
+        </div> : null}
+        {!isAbilitySupport && offensePart !== "attack" ? (
           <div className="attack-card-field-row attack-card-level-type-row">
             <LevelLockField
               ownerLabel={attackLabel}
@@ -8854,7 +8888,7 @@ function AttackCard({
             />
           </div>
         ) : null}
-        {!isAbilitySupport ? (
+        {!isAbilitySupport && offensePart !== "attack" ? (
           <MechanicControls
             pokemonInput={attack.attackerPokemonInput}
             pokemonCanonicalName={attack.attackerPokemonCanonicalName}
@@ -9062,7 +9096,7 @@ function AttackCard({
         </>
       ) : isOffenseAdjustment ? (
         <>
-          <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-ko-title`}>
+          {offensePart !== "attack" ? <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-ko-title`}>
             <h3 id={`${scenarioId}-${attack.id}-ko-title`}>火力条件</h3>
             <div className="attack-number-grid attack-setting-section-body">
               <ScenarioNumberField
@@ -9075,14 +9109,14 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "targetKoProbabilityPercent", value)}
               />
             </div>
-          </section>
+          </section> : null}
 
           <section
             className="attack-setting-section attack-setting-section--indented"
             aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}
           >
-            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>状況条件</h3>
-            <div className="attack-field-grid attack-setting-section-body">
+            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>{offensePart === "opponent" ? "仮想敵能力" : "状況条件"}</h3>
+            {offensePart !== "opponent" ? <div className="attack-field-grid attack-setting-section-body">
               <SelectField
                 label="ルール"
                 value={attack.gameType}
@@ -9107,15 +9141,15 @@ function AttackCard({
                 options={terrainOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
               />
-            </div>
+            </div> : null}
 
-            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 仮想敵能力`}>
+            {offensePart !== "attack" ? <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 仮想敵能力`}>
               <div className="ev-table attacker-stat-table offense-defender-stat-table" aria-label={`${attackLabel} 仮想敵能力`}>
                 <div className="ev-header attacker-stat-header">
                   <span>能力</span>
                   <span>実数値</span>
                   <span>SP</span>
-                  <span>ランク</span>
+                  {offensePart !== "opponent" ? <span>ランク</span> : null}
                 </div>
                 {offenseDefenderStatKeys.map((key) => (
                   <div
@@ -9124,7 +9158,7 @@ function AttackCard({
                   >
                     <strong>
                       <StatIcon stat={key} />
-                      <span>仮想敵</span>
+                      {offensePart !== "opponent" ? <span>仮想敵</span> : null}
                     </strong>
                     <span className="actual-stat-with-modifier">
                       <NatureStatModifier natureLabel={attack.attackerNatureInput} stat={key} />
@@ -9138,7 +9172,7 @@ function AttackCard({
                       onFocus={selectInputValueOnFocus}
                       onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
                     />
-                    {key !== "hp" ? (
+                    {key !== "hp" && offensePart !== "opponent" ? (
                       <RankSelectField
                         label={`${attackLabel} 仮想敵${statLabels[key]}ランク`}
                         value={attack.attackerBoosts[key] ?? 0}
@@ -9148,15 +9182,35 @@ function AttackCard({
                         })}
                       />
                     ) : (
-                      <span className="attacker-stat-role">仮想敵</span>
+                      offensePart !== "opponent" ? <span className="attacker-stat-role">仮想敵</span> : null
                     )}
                   </div>
                 ))}
               </div>
-            </section>
+            </section> : null}
+            {offensePart === "attack" ? <div className="scenario-defender-ranks">
+              <span>仮想敵</span>
+              {offenseDefenderStatKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp").map((key) => <div className="scenario-defender-rank" key={key}><StatIcon stat={key} /><RankSelectField label={`${attackLabel} 仮想敵${statLabels[key]}ランク`}
+                value={attack.attackerBoosts[key] ?? 0} onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", { ...attack.attackerBoosts, [key]: value })} /></div>)}
+            </div> : null}
           </section>
 
-          {battleModifiersSection}
+          {offensePart === "attack" ? <section className="attack-setting-section">
+            <h3>調整対象条件</h3>
+            <SelectField label="状態異常" value={attack.offenseAttackerStatus ?? "none"} options={statusOptions}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "offenseAttackerStatus", value)} />
+            <div className="scenario-defender-ranks">
+              {Array.from(new Set(statReferencePlan.references.filter((reference) => reference.owner === "attacker" && reference.stat !== "hp").map((reference) => reference.stat as Exclude<StatKey, "hp">))).map((key) =>
+                <div className="scenario-defender-rank" key={key}><StatIcon stat={key} /><RankSelectField label={`${attackLabel} 調整対象${statLabels[key]}ランク`}
+                  value={attack.offenseAttackerBoosts?.[key] ?? targetForm.boosts[key] ?? 0}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "offenseAttackerBoosts", { ...attack.offenseAttackerBoosts, [key]: value })} /></div>)}
+            </div>
+            {getMoveHitCountRangeFromInput(attack.moveInput) && !isBeatUp ? <ScenarioStepperField label="連続技のヒット数"
+              value={attack.repeat} min={getMoveHitCountRangeFromInput(attack.moveInput)!.minHits}
+              max={getMoveHitCountRangeFromInput(attack.moveInput)!.maxHits}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)} /> : null}
+          </section> : null}
+          {offensePart !== "opponent" ? battleModifiersSection : null}
         </>
       ) : (
         <>
@@ -9322,7 +9376,7 @@ function AttackCard({
           </section>
         </>
       )}
-      {!isAbilitySupport && !isSpeedAdjustment ? (
+      {!isAbilitySupport && !isSpeedAdjustment && offensePart !== "opponent" ? (
         <HpEventsEditor
           attack={attack}
           adjustmentType={adjustmentType}
@@ -9525,6 +9579,10 @@ const formatOffenseCandidateDetail = (
   targetLabel: string,
   scenario: ScenarioFormState | undefined,
 ): string => {
+  if (entry.result.sequence) {
+    const sequence = entry.result.sequence;
+    return sequence.steps.map((step, index) => `${index + 1}/${sequence.steps.length} ${step.label}: ${formatDamageRange(step.hitEvaluation.damageRange.min, step.hitEvaluation.damageRange.max)} / 残りHP ${step.remainingHp.min}〜${step.remainingHp.max}`).join(" → ") + ` / KO率 ${formatPercent(sequence.koProbability)}`;
+  }
   const attacker = scenario?.attacks.find((attack) => attack.id === entry.attackId);
   const defenderLabel = attacker?.attackerPokemonInput.trim() || entry.attackLabel;
   const moveLabel = attacker?.moveInput.trim() || "技";
@@ -9723,7 +9781,7 @@ export function CurrentBuildResults({ state, onCheck, disabled = false }: { stat
         const required = defence ? `${defence.requiredSurvivedHits}回耐久・${formatPercent(defence.minSurvivalProbability)}以上`
           : offense ? `KO率 ${formatPercent(offense.targetKoProbability)}以上`
           : speed ? `S ${speed.requiredSpeed}${speed.orderMode === "trick-room" ? "以下" : "以上"}` : "—";
-        const hits = defence?.hitEvaluations ?? (offense ? [offense.hitEvaluation] : []);
+        const hits = defence?.hitEvaluations ?? (offense ? ("hitEvaluations" in offense ? offense.hitEvaluations : [offense.hitEvaluation]) : []);
         const events = defence?.hpEventEvaluations ?? offense?.hpEventEvaluations ?? [];
         const kind = condition.kind === "defence" ? "耐久" : condition.kind === "offense" ? "火力" : "素早さ";
         return <details className={`current-build-condition ${condition.status}`} key={condition.id}>
@@ -9740,7 +9798,7 @@ export function CurrentBuildResults({ state, onCheck, disabled = false }: { stat
           <div className="current-condition-details">
             {defence && hits.length > 1 ? <p>生存率は、最も余裕の少ない耐久条件の結果です。</p> : null}
             {hits.map((hit, index) => {
-              const hitEvents = offense ? events : events.filter((event) => event.cardId === hit.hitId);
+              const hitEvents = events.filter((event) => event.cardId === hit.hitId);
               const formatEvent = (event: HpEventEvaluation) => <li className="candidate-hp-event-detail" key={`${event.eventId}-${event.occurrence}`}>
                 {formatHpEventEvaluation(event, condition.kind === "offense" ? "offense" : "defence")}
               </li>;
@@ -9750,6 +9808,7 @@ export function CurrentBuildResults({ state, onCheck, disabled = false }: { stat
                   {hitEvents.filter((event) => event.sequenceContext === "priorMove").map(formatEvent)}
                   <li>{hit.description ? formatLocalizedDamageDescription(hit.description)
                     : `ダメージ ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}</li>
+                  {offense && "steps" in offense && offense.steps[index] ? <li>攻撃後の残りHP {offense.steps[index].remainingHp.min}〜{offense.steps[index].remainingHp.max} / KO率 {formatPercent(offense.steps[index].koProbability)}</li> : null}
                   {hit.movePower ? <li>{formatMovePowerEvaluation(hit.movePower)}</li> : null}
                   {hitEvents.filter((event) => event.sequenceContext !== "priorMove").map(formatEvent)}
                 </ul>
@@ -10110,7 +10169,10 @@ export function ResultsPanel({
                       </section>
                     );
                   })}
-                  {offenseResults.map((entry) => {
+                  {(candidate.offenseResults?.map((evaluation) => ({
+                    id: evaluation.scenarioId, scenarioId: evaluation.scenarioId, scenarioLabel: evaluation.scenarioLabel,
+                    attackId: "", attackLabel: "連続攻撃", result: { ...offenseSequenceResult(evaluation, candidate.appliedStatPoints), canApply: false },
+                  })) ?? offenseResults).map((entry) => {
                     const scenarioLabel = scenarioLabels.get(entry.scenarioId) ?? entry.scenarioLabel;
                     return (
                       <section className="candidate-scenario-detail" key={entry.id}>

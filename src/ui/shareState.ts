@@ -1,5 +1,8 @@
 import {
   createDefaultScenarioAttackForm,
+  initializeOffenseScenario,
+  createOffenseScenarioSettings,
+  offenseOpponentKeys,
   createDefaultBeatUpParticipants,
   createDefaultScenarioForms,
   createDefaultTargetForm,
@@ -25,7 +28,7 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 13;
+export const SHARE_SCHEMA_VERSION = 14;
 export const POKEMON_TYPE_OVERRIDE_SCHEMA_VERSION = 13;
 
 /** Schema version in which the current speed-state fields were introduced. */
@@ -46,6 +49,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const mergeObject = <T extends object>(base: T, value: unknown): T => (
   isRecord(value) ? { ...base, ...value } as T : base
 );
+
+const comparableValue = (value: unknown): string => JSON.stringify(value, (_key, entry: unknown) =>
+  isRecord(entry) ? Object.fromEntries(Object.keys(entry).sort().map((key) => [key, entry[key]])) : entry);
 
 const pokemonStatuses = new Set<PokemonStatus>(["none", "slp", "psn", "brn", "frz", "par", "tox"]);
 const scenarioAdjustmentTypes = new Set<ScenarioAdjustmentType>(["defence", "offense", "speed"]);
@@ -70,6 +76,7 @@ type SupportedShareSchemaVersion =
   | 10
   | 11
   | 12
+  | 13
   | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeTypeOverride = (
@@ -323,6 +330,12 @@ const normalizeAttack = (
   legacyTargetStatus: PokemonStatus,
   sourceSchemaVersion: SupportedShareSchemaVersion,
 ): ScenarioAttackFormState => {
+  if (sourceSchemaVersion >= 14 && isRecord(value)) {
+    if (value.offenseAttackerBoosts !== undefined && (!isRecord(value.offenseAttackerBoosts)
+      || Object.entries(value.offenseAttackerBoosts).some(([key, rank]) => !["atk", "def", "spa", "spd", "spe"].includes(key)
+        || typeof rank !== "number" || !Number.isInteger(rank) || rank < -6 || rank > 6))) throw new Error("条件JSONの火力ランクが不正です");
+    if (value.offenseAttackerStatus !== undefined && !pokemonStatuses.has(value.offenseAttackerStatus as PokemonStatus)) throw new Error("条件JSONの火力状態異常が不正です");
+  }
   const defaults = createDefaultScenarioAttackForm(`attack-${index + 1}`, `攻撃${String.fromCharCode(65 + index)}`);
   const input = mergeObject(defaults, value) as ScenarioAttackFormState & Record<string, unknown>;
   const attackerPokemonCanonicalName = normalizePokemonCanonicalHint(
@@ -537,9 +550,28 @@ const normalizeScenario = (
     ))
     : defaults.attacks;
 
+  let offense = input.offense;
+  if (sourceSchemaVersion >= 14 && (input.adjustmentType === "offense" || offense !== undefined)) {
+    if (!isRecord(offense) || !isRecord(offense.opponent)
+      || typeof offense.targetKoProbabilityPercent !== "number" || !Number.isFinite(offense.targetKoProbabilityPercent)
+      || offense.targetKoProbabilityPercent < 0 || offense.targetKoProbabilityPercent > 100) {
+      throw new Error("条件JSONの火力調整の共通仮想敵・KO率が不正です");
+    }
+    const optional = new Set(["attackerPokemonCanonicalName", "attackerTypeOverride"]);
+    for (const key of offenseOpponentKeys) {
+      if (!optional.has(key) && !Object.hasOwn(offense.opponent, key)) throw new Error(`条件JSONの共通仮想敵に ${key} がありません`);
+    }
+    const normalized = normalizeAttack({ ...createDefaultScenarioAttackForm(), ...offense.opponent }, 0, legacyTargetStatus, sourceSchemaVersion);
+    const opponent = createOffenseScenarioSettings(normalized).opponent;
+    if (comparableValue(opponent) !== comparableValue(offense.opponent)) {
+      throw new Error("条件JSONの共通仮想敵の値が不正です");
+    }
+    offense = { opponent, targetKoProbabilityPercent: offense.targetKoProbabilityPercent };
+  }
   return {
     ...defaults,
     ...input,
+    ...(offense ? { offense } : {}),
     id: typeof input.id === "string" && input.id ? input.id : `scenario-${index + 1}`,
     label: typeof input.label === "string" && input.label ? input.label : `シナリオ${index + 1}`,
     adjustmentType: normalizeScenarioAdjustmentType(input.adjustmentType, defaults.adjustmentType),
@@ -553,7 +585,7 @@ export const createShareStateDocument = (
 ): ShareStateDocument => ({
   schemaVersion: SHARE_SCHEMA_VERSION,
   target,
-  scenarios,
+  scenarios: scenarios.map(initializeOffenseScenario),
 });
 
 export const stringifyShareStateDocument = (
@@ -561,12 +593,13 @@ export const stringifyShareStateDocument = (
   scenarios: ScenarioFormState[],
 ): string => `${JSON.stringify(createShareStateDocument(target, scenarios), null, 2)}\n`;
 
-export const parseShareStateDocument = (json: string): ShareStateDocument => {
+export const parseShareStateDocument = (json: string, migrate = true): ShareStateDocument => {
   const parsed = JSON.parse(json) as unknown;
   if (
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 13
       && parsed.schemaVersion !== 12
       && parsed.schemaVersion !== 11
       && parsed.schemaVersion !== 10
@@ -592,7 +625,7 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
     : "none";
   const sourceSchemaVersion = parsed.schemaVersion as SupportedShareSchemaVersion;
 
-  return {
+  const document: ShareStateDocument = {
     schemaVersion: SHARE_SCHEMA_VERSION,
     target: normalizeTarget(parsed.target, sourceSchemaVersion),
     scenarios: parsed.scenarios.map((scenario, index) => normalizeScenario(
@@ -602,4 +635,20 @@ export const parseShareStateDocument = (json: string): ShareStateDocument => {
       sourceSchemaVersion,
     )),
   };
+  if (!migrate) return { ...document, schemaVersion: sourceSchemaVersion as typeof SHARE_SCHEMA_VERSION };
+  if (sourceSchemaVersion < 14) {
+    const usedIds = new Set(document.scenarios.map((scenario) => scenario.id));
+    document.scenarios = document.scenarios.flatMap((scenario) => {
+      if (scenario.adjustmentType !== "offense") return [scenario];
+      return scenario.attacks.map((attack, index) => {
+        let id = index === 0 ? scenario.id : `${scenario.id}:offense:${index}`;
+        while (index > 0 && usedIds.has(id)) id += ":copy";
+        usedIds.add(id);
+        return { ...scenario, id,
+          label: scenario.attacks.length > 1 ? `${scenario.label} / ${attack.label}` : scenario.label,
+          attacks: [attack], offense: createOffenseScenarioSettings(attack) };
+      });
+    });
+  }
+  return document;
 };
