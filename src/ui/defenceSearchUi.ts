@@ -735,6 +735,60 @@ export const applyMoveInputDefaults = (
   };
 };
 
+/** Count direct hits, using the same move-specific limits as the calc input. */
+const getAttackDirectHitCount = (attack: ScenarioAttackFormState): number => {
+  if (isBeatUpInput(attack.moveInput)) {
+    return Math.max(1, Math.min(getBeatUpParticipantLimit(attack.gameType), attack.beatUpParticipants.length));
+  }
+  const range = getMoveHitCountRangeFromInput(attack.moveInput);
+  return clampInt(attack.repeat, range?.minHits ?? 1, range?.maxHits ?? 10);
+};
+
+export const getDefenceHitsBefore = (scenario: ScenarioFormState, attackId: string): number => {
+  let count = 0;
+  for (const attack of scenario.attacks) {
+    if (attack.id === attackId) break;
+    if (attack.moveInput.trim()) count += getAttackDirectHitCount(attack);
+  }
+  return count;
+};
+
+export const getDefenceCumulativeCountLimit = (scenario: ScenarioFormState): number =>
+  Math.max(10, scenario.attacks.reduce((total, attack) => total + getAttackDirectHitCount(attack), 0));
+
+/**
+ * Card defaults operate in local hit counts. Convert around an editing transaction
+ * so adding/changing/removing a preceding card keeps the selected checkpoint.
+ * Full-card checkpoints follow hit-count changes; manual partial checkpoints keep
+ * their offset inside the card. Saved state is not rewritten merely by loading it.
+ */
+export const updateDefenceCumulativeCounts = (
+  scenario: ScenarioFormState,
+  update: (localScenario: ScenarioFormState) => ScenarioFormState,
+): ScenarioFormState => {
+  if (scenario.adjustmentType !== "defence") return update(scenario);
+  const localAttacks = scenario.attacks.map((attack) => ({
+    ...attack,
+    requiredSurvivedHits: Math.max(1, attack.requiredSurvivedHits - getDefenceHitsBefore(scenario, attack.id)),
+  }));
+  const previous = new Map(localAttacks.map((attack) => [attack.id, attack]));
+  const localScenario = { ...scenario, attacks: localAttacks };
+  const next = update(localScenario);
+  if (next === localScenario) return scenario;
+  let hitsBefore = 0;
+  const attacks = next.attacks.map((attack) => {
+    const old = previous.get(attack.id);
+    const count = getAttackDirectHitCount(attack);
+    const followsFullCard = old && old.requiredSurvivedHits === getAttackDirectHitCount(old)
+      && attack.requiredSurvivedHits === old.requiredSurvivedHits;
+    const localRequired = followsFullCard ? count : attack.requiredSurvivedHits;
+    const result = { ...attack, requiredSurvivedHits: hitsBefore + localRequired };
+    if (attack.moveInput.trim()) hitsBefore += count;
+    return result;
+  });
+  return { ...next, attacks };
+};
+
 const toBeatUpMoveContext = (
   canonicalMoveName: string,
   attacker: Build,
@@ -952,8 +1006,8 @@ const toScenarioHit = (
     ? clampInt(attackForm.repeat, moveHitRange.minHits, moveHitRange.maxHits)
     : Math.max(1, clampInt(attackForm.repeat, 1, 10));
   const requiredSurvivedHits = Math.max(
-    Math.max(1, clampInt(attackForm.requiredSurvivedHits, 1, 10)),
-    Math.min(10, hitsBefore + 1),
+    Math.max(1, clampInt(attackForm.requiredSurvivedHits, 1, getDefenceCumulativeCountLimit(scenarioForm))),
+    hitsBefore + 1,
   );
   const attacker = buildScenarioAttackBuildFromUi(
     attackForm,

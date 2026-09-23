@@ -2044,7 +2044,7 @@ describe("App", () => {
     for (const operation of [
       "表示された候補を選んで入力を確定してください。",
       "元のタイプに戻す", "▲ / ▼", "参加者と攻撃順", "HP基準",
-      "耐久回数", "耐久確率", "KO確率", "トリックルームを有効に",
+      "累計回数", "耐久確率", "KO確率", "トリックルームを有効に",
       "持ち物・状態・天候を入力しても、定数ダメージや回復は自動追加されません。",
       "計算に含めたい効果は、ここで追加してください。",
       "「適用」だけではボックスに保存されません。",
@@ -3257,7 +3257,7 @@ describe("App", () => {
     const survivalStepper = assertUiStepperShape(
       html,
       "number-stepper",
-      'aria-label="耐久回数"',
+      'aria-label="累計回数"',
       attackStepper.end,
     );
     expect(attackStepper.block).toContain('value="1"');
@@ -3269,12 +3269,12 @@ describe("App", () => {
     expect(html).toContain(`<label class="row-label" for="${attackInputId}">攻撃回数</label>`);
     expect(attackStepper.block).toContain('aria-label="攻撃回数を1下げる"');
     expect(attackStepper.block).toContain('aria-label="攻撃回数を1上げる"');
-    expect(survivalStepper.block).toContain('aria-label="耐久回数を1下げる"');
-    expect(survivalStepper.block).toContain('aria-label="耐久回数を1上げる"');
+    expect(survivalStepper.block).toContain('aria-label="累計回数を1下げる"');
+    expect(survivalStepper.block).toContain('aria-label="累計回数を1上げる"');
     expectStepperButtonDisabled(attackStepper.block, "攻撃回数を1下げる", true);
     expectStepperButtonDisabled(attackStepper.block, "攻撃回数を1上げる", false);
-    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1下げる", true);
-    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1上げる", false);
+    expectStepperButtonDisabled(survivalStepper.block, "累計回数を1下げる", true);
+    expectStepperButtonDisabled(survivalStepper.block, "累計回数を1上げる", false);
     expect(html).toMatch(/<input(?=[^>]*aria-label="耐久確率 %")(?=[^>]*value="90")[^>]*>/);
     expect(html).not.toContain('aria-label="耐久確率 %を1下げる"');
     expect(html).not.toContain('aria-label="耐久確率 %を1上げる"');
@@ -3304,13 +3304,13 @@ describe("App", () => {
     const maxSurvivalStepper = assertUiStepperShape(
       maxHtml,
       "number-stepper",
-      'aria-label="耐久回数"',
+      'aria-label="累計回数"',
       maxAttackStepper.end,
     );
     expectStepperButtonDisabled(maxAttackStepper.block, "攻撃回数を1下げる", false);
     expectStepperButtonDisabled(maxAttackStepper.block, "攻撃回数を1上げる", true);
-    expectStepperButtonDisabled(maxSurvivalStepper.block, "耐久回数を1下げる", false);
-    expectStepperButtonDisabled(maxSurvivalStepper.block, "耐久回数を1上げる", true);
+    expectStepperButtonDisabled(maxSurvivalStepper.block, "累計回数を1下げる", false);
+    expectStepperButtonDisabled(maxSurvivalStepper.block, "累計回数を1上げる", true);
   });
 
   it("formats the actually applied power without mixing it with damage", () => {
@@ -3372,14 +3372,14 @@ describe("App", () => {
     const survivalStepper = assertUiStepperShape(
       html,
       "number-stepper",
-      'aria-label="耐久回数"',
+      'aria-label="累計回数"',
       attackStepper.end,
     );
     const survivalInputStart = survivalStepper.block.indexOf("<input");
     const survivalInputEnd = survivalStepper.block.indexOf(">", survivalInputStart);
     expect(survivalStepper.block.slice(survivalInputStart, survivalInputEnd + 1)).not.toContain('disabled=""');
-    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1下げる", true);
-    expectStepperButtonDisabled(survivalStepper.block, "耐久回数を1上げる", false);
+    expectStepperButtonDisabled(survivalStepper.block, "累計回数を1下げる", true);
+    expectStepperButtonDisabled(survivalStepper.block, "累計回数を1上げる", false);
   });
 
   it("keeps HP events collapsed in attack cards and summarizes them on mobile", () => {
@@ -4260,7 +4260,7 @@ describe("App", () => {
     expect(html.indexOf(">状況条件<")).toBeLessThan(html.indexOf('class="attack-stat-section'));
     expect(html).not.toContain('id="scenario-defence-attack-a-stat-title">能力</h3>');
     expect(html).toContain(">調整対象条件<");
-    expect(html).toContain(">耐久回数<");
+    expect(html).toContain(">累計回数<");
     expect(html).toContain(">耐久確率<");
     expect(html).not.toContain("<span>詳細補正</span>");
     expect(html).not.toContain(">補正なし<");

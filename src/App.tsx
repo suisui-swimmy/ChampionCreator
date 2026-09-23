@@ -93,6 +93,9 @@ import {
   applyAttackerLevelMode,
   applyTargetLevelMode,
   applyMoveInputDefaults,
+  updateDefenceCumulativeCounts,
+  getDefenceHitsBefore,
+  getDefenceCumulativeCountLimit,
   applyBeatUpGameTypeDefaults,
   applyBeatUpParticipants,
   buildScenarioAttackBuildFromUi,
@@ -1173,7 +1176,7 @@ export const syncScenarioGameTypesToSuggestionFormat = (
   format: SuggestionFormat,
 ): ScenarioFormState[] => {
   const gameType = toScenarioGameType(format);
-  return scenarios.map((scenario) => {
+  return scenarios.map((original) => updateDefenceCumulativeCounts(original, (scenario) => {
     let changed = false;
     const attacks = scenario.attacks.map((attack) => {
       if (attack.gameType === gameType) {
@@ -1185,7 +1188,7 @@ export const syncScenarioGameTypesToSuggestionFormat = (
     });
 
     return changed ? { ...scenario, attacks } : scenario;
-  });
+  }));
 };
 
 export const applySpeedOrderModeDefaults = (
@@ -3215,7 +3218,7 @@ export function App({
       const common = original.id === scenarioId && attackId === "offense-opponent" && original.offense;
       const scenario = common ? { ...original, attacks: [{ ...original.attacks[0], ...common.opponent,
         id: attackId, targetKoProbabilityPercent: common.targetKoProbabilityPercent }] } : original;
-      const updated = (scenario.id === scenarioId
+      const applyUpdate = (scenario: ScenarioFormState): ScenarioFormState => (scenario.id === scenarioId
         ? {
             ...scenario,
             attacks: scenario.attacks.map((attack) => (
@@ -3278,6 +3281,9 @@ export function App({
           }
         : scenario
       );
+      const affectsHitCounts = ["moveInput", "repeat", "beatUpParticipants", "gameType", "attackerPokemonInput"].includes(key);
+      const updated = scenario.id === scenarioId && affectsHitCounts
+        ? updateDefenceCumulativeCounts(scenario, applyUpdate) : applyUpdate(scenario);
       return common ? { ...original, offense: createOffenseScenarioSettings(updated.attacks[0]) } : updated;
     }));
     if (key === "attackerPokemonInput" && canonicalName) {
@@ -3299,23 +3305,12 @@ export function App({
     const nextAttack = createBlankAttack(scenarioToExtend.attacks.length);
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
-        ? (() => {
-            const requiredSurvivedHits = Math.min(
-              10,
-              scenario.attacks.reduce((total, attack) => total + Math.max(1, Math.trunc(attack.repeat)), 0) + 1,
-            );
-            return {
-              ...scenario,
-              attacks: [
-                ...scenario.attacks,
-                {
-                  ...nextAttack,
-                  requiredSurvivedHits,
-                  gameType: scenario.attacks[0]?.gameType ?? nextAttack.gameType,
-                },
-              ],
-            };
-          })()
+        ? updateDefenceCumulativeCounts(scenario, (local) => ({
+            ...local,
+            attacks: [...local.attacks, { ...nextAttack, requiredSurvivedHits: local.adjustmentType === "defence" ? 1
+              : Math.min(10, local.attacks.reduce((total, attack) => total + Math.max(1, Math.trunc(attack.repeat)), 0) + 1),
+              gameType: local.attacks[0]?.gameType ?? nextAttack.gameType }],
+          }))
         : scenario
     )));
     return nextAttack.id;
@@ -3331,12 +3326,9 @@ export function App({
 
     setScenarioForms((current) => current.map((scenario) => (
       scenario.id === scenarioId
-        ? {
-            ...scenario,
-            attacks: scenario.attacks.length <= 1
-              ? scenario.attacks
-              : scenario.attacks.filter((attack) => attack.id !== attackId),
-          }
+        ? scenario.attacks.length <= 1 ? scenario : updateDefenceCumulativeCounts(scenario, (local) => ({
+            ...local, attacks: local.attacks.filter((attack) => attack.id !== attackId),
+          }))
         : scenario
     )));
     setMobileFocusedAttackId((current) => (current === attackId ? nextFocusedAttackId : current));
@@ -7548,6 +7540,8 @@ function ScenarioRow({
               attack={offense ? { ...attack, ...offense.opponent } : attack}
               offensePart={offense ? "attack" : undefined}
               attackTotal={scenario.attacks.length}
+              cumulativeMinimum={getDefenceHitsBefore(scenario, attack.id) + 1}
+              cumulativeMaximum={getDefenceCumulativeCountLimit(scenario)}
               attackIndex={attackIndex >= 0 ? attackIndex : 0}
               scenarioId={scenario.id}
               adjustmentType={scenario.adjustmentType}
@@ -7587,6 +7581,8 @@ type AttackCardProps = {
   attackIndex: number;
   offensePart?: "opponent" | "attack";
   attackTotal?: number;
+  cumulativeMinimum?: number;
+  cumulativeMaximum?: number;
   sharedStatKeys?: StatKey[];
   scenarioId: string;
   adjustmentType: ScenarioAdjustmentType;
@@ -8518,6 +8514,8 @@ function AttackCard({
   attackIndex,
   offensePart,
   attackTotal,
+  cumulativeMinimum = 1,
+  cumulativeMaximum = 10,
   sharedStatKeys,
   scenarioId,
   adjustmentType,
@@ -9226,10 +9224,10 @@ function AttackCard({
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)}
               />
               <ScenarioStepperField
-                label="耐久回数"
+                label="累計回数"
                 value={attack.requiredSurvivedHits}
-                min={1}
-                max={10}
+                min={cumulativeMinimum}
+                max={cumulativeMaximum}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "requiredSurvivedHits", value)}
               />
               <ScenarioNumberField

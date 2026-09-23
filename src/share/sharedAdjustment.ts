@@ -1,3 +1,4 @@
+import { getDefenceCumulativeCountLimit } from "../ui/defenceSearchUi";
 import { appVersionInfo } from "../appVersion";
 import { resolveEntityWithCanonicalHint } from "../localization/resolver";
 import type { ShareStateDocument } from "../ui/shareState";
@@ -12,10 +13,12 @@ const statuses = ["none", "slp", "psn", "brn", "frz", "par", "tox"];
 const multipliers = ["auto", "2", "1.5", "0.5"];
 
 /** External links must not rely on the UI conversion layer clamping invalid input. */
-export const validateSharedConditions = (document: ShareStateDocument): void => {
+export const validateSharedConditions = (document: ShareStateDocument, legacyCumulativeLimit = false): void => {
   for (const scenario of document.scenarios) {
     for (const attack of scenario.attacks) {
-      requireValue(inRange(attack.repeat, 1, 10) && inRange(attack.requiredSurvivedHits, 1, 10), "攻撃回数");
+      requireValue(inRange(attack.repeat, 1, 10), "攻撃回数");
+      requireValue(inRange(attack.requiredSurvivedHits, 1,
+        !legacyCumulativeLimit && scenario.adjustmentType === "defence" ? getDefenceCumulativeCountLimit(scenario) : 10), "累計回数");
       requireValue(Number.isFinite(attack.minSurvivalProbabilityPercent) && attack.minSurvivalProbabilityPercent >= 0 && attack.minSurvivalProbabilityPercent <= 100
         && Number.isFinite(attack.targetKoProbabilityPercent) && attack.targetKoProbabilityPercent >= 0 && attack.targetKoProbabilityPercent <= 100, "確率");
       requireValue([attack.attackerStatus, attack.defenderStatus, attack.speedTargetStatus].every((v) => statuses.includes(v)), "状態異常");
@@ -48,7 +51,7 @@ export const createSharedAdjustmentUrl = async (document: ShareStateDocument, ap
 export const readSharedAdjustmentHash = async (hash: string): Promise<SharedAdjustment> => {
   if (!hash.startsWith("#share=")) throw new Error("共有データが見つかりません。リンク全体をコピーして開き直してください。");
   const shared = await decodeSharedAdjustment(hash.slice(7));
-  validateSharedConditions(shared.document);
+  validateSharedConditions(shared.document, hash.startsWith("#share=s1."));
   return shared;
 };
 
