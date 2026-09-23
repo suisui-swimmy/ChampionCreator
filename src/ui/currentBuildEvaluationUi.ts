@@ -1,7 +1,5 @@
 import { isLegalStatPointTable, isLegalStatPointValue } from "../domain/championsStats";
-import { isActiveAllyAbilityCanonicalName } from "../domain/allyAbilitySupport";
-import { toEntityRef, type StatBoostTable, type StatTable } from "../domain/model";
-import { resolveEntity } from "../localization/resolver";
+import { type StatBoostTable, type StatTable } from "../domain/model";
 import { classifyCurrentBuildIssue, type CurrentBuildCondition, type CurrentBuildEvaluationInput, type CurrentBuildIssue } from "../search/currentBuildEvaluation";
 import {
   buildOffenseSequenceCondition,
@@ -27,9 +25,6 @@ const validateOpponent = (attack: ScenarioAttackFormState) => {
   validateNumbers(attack.attackerStatPoints, attack.attackerLevel, attack.attackerBoosts, false);
 };
 const incomplete = (message: string): CurrentBuildIssue => ({ status: "incomplete", message });
-const isSupport = (attack: ScenarioAttackFormState) => !attack.moveInput.trim()
-  && isActiveAllyAbilityCanonicalName(toEntityRef(resolveEntity("ability", attack.attackerAbilityInput), "ability")?.canonicalName);
-
 /** Prepare canonical conditions only. Never run the integrated allocation/line search. */
 export const buildCurrentBuildEvaluationInput = (
   target: TargetFormState,
@@ -52,7 +47,7 @@ export const buildCurrentBuildEvaluationInput = (
     }
     if (scenario.adjustmentType === "defence") {
       try {
-        const damageAttacks = scenario.attacks.filter((attack) => !isSupport(attack));
+        const damageAttacks = scenario.attacks;
         const missing = damageAttacks.find((attack) => !attack.moveInput.trim() || !attack.attackerPokemonInput.trim());
         if (!damageAttacks.length || missing) {
           conditions.push({ ...base, issue: incomplete(missing

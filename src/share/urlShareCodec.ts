@@ -1,7 +1,7 @@
 import { parseShareStateDocument, type ShareStateDocument } from "../ui/shareState";
 import { SHARE_ATTACK_V1, SHARE_SCENARIO_V1, SHARE_TARGET_V1 } from "./urlShareDefaultsV1";
 
-const SHARE_LINK_PREFIX = "s3.";
+const SHARE_LINK_PREFIX = "s4.";
 export type ShareProvenance = { app: string; calc: string };
 export type SharedAdjustment = { document: ShareStateDocument; provenance: ShareProvenance };
 export const MAX_SHARE_TOKEN_LENGTH = 16_384;
@@ -63,7 +63,7 @@ const checkStats = (value: unknown, enforceTotal: boolean) => {
     || (enforceTotal && (stats as number[]).reduce((sum, v) => sum + v, 0) > 66)) return fail("共有データのSP配分が不正です");
 };
 
-const decodeCompact = (value: unknown, version: 1 | 2 | 3 = 3): ShareStateDocument => {
+const decodeCompact = (value: unknown, version: 1 | 2 | 3 | 4 = 4): ShareStateDocument => {
   comparable(value); // Limits and unsafe-key rejection before object expansion.
   if (!isObject(value) || value.s !== (12 + version) || Object.keys(value).some((key) => !["s", "t", "c"].includes(key))
     || !Array.isArray(value.c) || value.c.length > MAX_SCENARIOS) return fail();
@@ -79,7 +79,7 @@ const decodeCompact = (value: unknown, version: 1 | 2 | 3 = 3): ShareStateDocume
     return {
       ...expand(SHARE_SCENARIO_V1, fields, version >= 2 ? ["offense"] : []), id: `share-s-${i}`,
       attacks: attacks.map((attack, j) => {
-        const expanded = expand(SHARE_ATTACK_V1, attack, ["attackerPokemonCanonicalName", "attackerTypeOverride", ...(version >= 2 ? ["offenseAttackerBoosts", "offenseAttackerStatus"] : []), ...(version >= 3 ? ["offenseMoveUses"] : [])]);
+        const expanded = expand(SHARE_ATTACK_V1, attack, ["attackerPokemonCanonicalName", "attackerTypeOverride", ...(version >= 2 ? ["offenseAttackerBoosts", "offenseAttackerStatus"] : []), ...(version >= 3 ? ["offenseMoveUses"] : []), ...(version >= 4 ? ["battleAbilities"] : [])]);
         // Existing opponent forms retain values for multiple adjustment axes;
         // even the built-in speed example keeps A32/C32/S32. Preserve them.
         checkStats(expanded.attackerStatPoints, false);
@@ -137,10 +137,10 @@ const ensureCompression = () => {
 
 const encodeEnvelope = async (document: ShareStateDocument, provenance: ShareProvenance): Promise<string> => {
   ensureCompression();
-  if (document.schemaVersion !== 15) return fail("この共有形式では条件schema 15のみ共有できます");
+  if (document.schemaVersion !== 16) return fail("この共有形式では条件schema 16のみ共有できます");
   const clean = JSON.parse(comparableShareJson(document)) as ShareStateDocument;
   const payload = {
-    s: 15,
+    s: 16,
     t: compact(clean.target as unknown as JsonObject, SHARE_TARGET_V1 as unknown as JsonObject),
     c: clean.scenarios.map(({ attacks, ...fields }) => ({
       ...compact(fields, SHARE_SCENARIO_V1),
@@ -160,7 +160,7 @@ const encodeEnvelope = async (document: ShareStateDocument, provenance: SharePro
 const decodeEnvelope = async (token: string): Promise<unknown> => {
   ensureCompression();
   if (token.length > MAX_SHARE_TOKEN_LENGTH) return fail("共有URLが長すぎます");
-  if (!/^s[123]\./.test(token)) return fail("対応していない共有URLのバージョンです");
+  if (!/^s[1234]\./.test(token)) return fail("対応していない共有URLのバージョンです");
   const encoded = token.slice(SHARE_LINK_PREFIX.length);
   if (!/^[A-Za-z0-9_-]+$/.test(encoded) || encoded.length % 4 === 1) return fail("共有URLの文字列が欠けているか、不正です");
   try {
@@ -187,5 +187,5 @@ export const decodeSharedAdjustment = async (token: string): Promise<SharedAdjus
   const envelope = await decodeEnvelope(token);
   if (!isObject(envelope)) return fail();
   const { v, ...payload } = envelope;
-  return { document: decodeCompact(payload, token.startsWith("s1.") ? 1 : token.startsWith("s2.") ? 2 : 3), provenance: validateProvenance(v) };
+  return { document: decodeCompact(payload, token.startsWith("s1.") ? 1 : token.startsWith("s2.") ? 2 : token.startsWith("s3.") ? 3 : 4), provenance: validateProvenance(v) };
 };

@@ -35,7 +35,7 @@ import {
   sumStatPoints,
   type StatPointTable,
 } from "../domain/championsStats";
-import { isActiveAllyAbilityCanonicalName } from "../domain/allyAbilitySupport";
+import { toBattleAbilityRefs, type BattleAbilitiesForm } from "./battleAbilities";
 import type { HpEvent } from "../domain/hpEvents";
 import {
   compileHpEventForMove,
@@ -162,7 +162,9 @@ export interface ScenarioAttackFormState {
   lightScreen: boolean;
   auroraVeil: boolean;
   helpingHand: boolean;
+  /** Legacy input, migrated to battleAbilities on load/save. */
   friendGuard: boolean;
+  battleAbilities?: BattleAbilitiesForm;
   speedTargetMode: SpeedTargetMode;
   speedComparison: SpeedComparisonMode;
   speedRequiredOffset: number;
@@ -246,7 +248,9 @@ export interface OffenseAdjustmentFormState {
   lightScreen: boolean;
   auroraVeil: boolean;
   helpingHand: boolean;
+  /** Legacy input, migrated to battleAbilities on load/save. */
   friendGuard: boolean;
+  battleAbilities?: BattleAbilitiesForm;
 }
 
 export interface DefenceSearchInput {
@@ -1044,17 +1048,7 @@ const toScenarioHit = (
     id: `${scenarioForm.id}-hit-${index + 1}`,
     attacker,
     defenderStatus: attackForm.defenderStatus === "none" ? undefined : attackForm.defenderStatus,
-    allyAbilities: attackForm.gameType === "doubles"
-      ? scenarioForm.attacks
-        .filter((allyForm) => allyForm.id !== attackForm.id)
-        .map((allyForm) => resolveOptional(
-          "ability",
-          allyForm.attackerAbilityInput,
-          `${allyForm.label || "味方"}の特性`,
-        ))
-        .filter((ability): ability is NonNullable<typeof ability> => Boolean(ability))
-        .filter((ability) => isActiveAllyAbilityCanonicalName(ability.canonicalName))
-      : undefined,
+    ...toBattleAbilityRefs(attackForm, "defence"),
     move,
     moveHits: moveContext ? repeat : moveHitRange ? repeat : undefined,
     ...(movePowerOverride ? { movePowerOverride } : {}),
@@ -1082,7 +1076,6 @@ const toScenarioHit = (
       reflect: attackForm.reflect,
       lightScreen: attackForm.lightScreen,
       auroraVeil: attackForm.auroraVeil,
-      friendGuard: attackForm.gameType === "doubles" && attackForm.friendGuard,
     },
   };
 };
@@ -1214,6 +1207,7 @@ export const buildOffenseAdjustmentInput = (
   );
   return {
     attackerBuild,
+    ...toBattleAbilityRefs(offenseForm, "offense"),
     defenderBuild: toBuild({
       pokemonInput: offenseForm.defenderPokemonInput,
       pokemonCanonicalName: offenseForm.defenderPokemonCanonicalName,
@@ -1245,7 +1239,6 @@ export const buildOffenseAdjustmentInput = (
       reflect: offenseForm.reflect,
       lightScreen: offenseForm.lightScreen,
       auroraVeil: offenseForm.auroraVeil,
-      friendGuard: offenseForm.gameType === "doubles" && offenseForm.friendGuard,
     },
     boostedNatures: {
       atk: mustResolve("nature", "いじっぱり", "A上昇補正"),
@@ -1340,6 +1333,7 @@ export const createOffenseAdjustmentFormFromScenarioAttack = (
   auroraVeil: attackForm.auroraVeil,
   helpingHand: attackForm.helpingHand,
   friendGuard: attackForm.friendGuard,
+  battleAbilities: attackForm.battleAbilities,
 });
 
 const makeOffenseAdjustmentMessageResult = (

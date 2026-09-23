@@ -57,7 +57,7 @@ describe("offense sequences", () => {
     expect(result.hitEvaluation.damageRollsByHit).toHaveLength(5);
     expect(result.steps[0].cumulativeUses).toBe(2);
   });
-  it("preserves pre-feature move-use semantics and persists the new count through JSON and s3", async () => {
+  it("preserves pre-feature move-use semantics and persists the new count through JSON and s4", async () => {
     const { target, scenario } = fixture(["タネマシンガン"]);
     scenario.attacks[0].repeat = 5;
     const legacy = { ...createShareStateDocument(target, [scenario]), schemaVersion: 14 };
@@ -126,6 +126,26 @@ describe("offense sequences", () => {
     expect(completed?.type).toBe("complete");
     if (completed?.type === "complete") expect(completed.offenseResults?.[0].result.sequence?.passed).toBe(true);
   });
+  it("re-evaluates field abilities in allocation, final candidates and remaining bulk", async () => {
+    const { target, scenario, build } = fixture();
+    scenario.attacks[0].battleAbilities = { targetAlly: ["Battery"], opponentAlly: [] };
+    scenario.attacks[1].battleAbilities = { targetAlly: [], opponentAlly: ["Friend Guard"] };
+    const condition = buildOffenseSequenceCondition(target, scenario);
+    const sync = finish(searchOffenseAllocation(build, [condition]));
+    expect(sync).not.toBeNull();
+    const messages: DefenceSearchWorkerMessage[] = [];
+    await runDefenceSearchWorkerTask({ type: "start", requestId: "abilities", build, scenarios: [], options: {
+      prepareOffenseAllocation: true, standalone: true, offenseConditions: [condition],
+    } }, (message) => messages.push(message));
+    const completed = messages.find((message) => message.type === "complete");
+    expect(completed?.type === "complete" && completed.offenseResults?.[0].result.sequence?.koProbability)
+      .toBe(sync!.evaluations[0].koProbability);
+    const candidates = maximizeRemainingBulk({ build: sync!.build, offenseConditions: [condition] }, { maxResults: 1 });
+    expect(candidates.length).toBeGreaterThan(0);
+    for (const candidate of candidates) {
+      expect(evaluateCandidate(sync!.build, [], candidate.candidate.statPoints, { offenseConditions: [condition] }).passed).toBe(true);
+    }
+  });
   it("stops allocation on cancel without posting completion", async () => {
     const { build, condition } = fixture(); let canceled = false;
     const messages: DefenceSearchWorkerMessage[] = [];
@@ -176,12 +196,12 @@ describe("offense sequences", () => {
     scenario.attacks.push({ ...scenario.attacks[0], id: "blank", moveInput: "" });
     expect(() => buildOffenseSequenceCondition(target, scenario)).toThrow("技を入力");
   });
-  it("round-trips the common opponent and per-card rank overrides in s3", async () => {
+  it("round-trips the common opponent and per-card rank overrides in s4", async () => {
     const { target, scenario } = fixture();
     scenario.attacks[1].offenseAttackerBoosts = { spa: -2 };
     const document = createShareStateDocument(target, [scenario]);
     const token = await encodeSharedAdjustment(document, { app: "0.33.0", calc: "test" });
-    expect(token.startsWith("s3.")).toBe(true);
+    expect(token.startsWith("s4.")).toBe(true);
     const decoded = (await decodeSharedAdjustment(token)).document;
     expect(decoded.scenarios[0].offense).toEqual(scenario.offense);
     expect(decoded.scenarios[0].attacks[1].offenseAttackerBoosts).toEqual({ spa: -2 });

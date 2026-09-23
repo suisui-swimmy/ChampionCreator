@@ -35,7 +35,8 @@ import {
   type HpStatMarkerRuleId,
   type HpStatMarkerRuleKind,
 } from "./domain/hpStatMarkerRules";
-import { isActiveAllyAbilityCanonicalName } from "./domain/allyAbilitySupport";
+import { BattleAbilitiesEditor } from "./ui/BattleAbilitiesEditor";
+import { getBattleAbilities } from "./ui/battleAbilities";
 import { getMovePowerCatalogEntry, type MovePowerCatalogEntry } from "./domain/movePowerCatalog";
 import { getHpEventRuleDefinition } from "./calc/hpEventRules";
 import {
@@ -570,24 +571,9 @@ const hasHpDependentMoveCalculationFromForm = (
   }
 };
 
-export const isAbilitySupportCard = (
-  adjustmentType: ScenarioAdjustmentType,
-  moveInput: string,
-  abilityInput: string,
-): boolean => (
-  adjustmentType === "defence"
-  && !moveInput.trim()
-  && isActiveAllyAbilityCanonicalName(resolveCanonicalEntityName("ability", abilityInput))
-);
-
 export const shouldAutoFillUsageMoveForAttack = (
   adjustmentType: ScenarioAdjustmentType,
-  moveInput: string,
-  abilityInput: string,
-): boolean => (
-  adjustmentType === "defence"
-  && !isAbilitySupportCard(adjustmentType, moveInput, abilityInput)
-);
+): boolean => adjustmentType === "defence";
 
 export const isUnresolvedEntityInput = (
   kind: EntityKind,
@@ -1585,11 +1571,7 @@ export const applyUsageDefaultsForAttackPokemonSelection = (
     previousDefaults.abilityInput,
     nextDefaults.abilityInput,
   );
-  const moveInput = shouldAutoFillUsageMoveForAttack(
-    adjustmentType,
-    attack.moveInput,
-    abilityInput,
-  )
+  const moveInput = shouldAutoFillUsageMoveForAttack(adjustmentType)
     ? applyUsageDefaultInputValue(
       attack.moveInput,
       previousDefaults.moveInput,
@@ -3312,7 +3294,8 @@ export function App({
             ...local,
             attacks: [...local.attacks, { ...nextAttack, requiredSurvivedHits: local.adjustmentType === "defence" ? 1
               : Math.min(10, local.attacks.reduce((total, attack) => total + Math.max(1, Math.trunc(attack.repeat)), 0) + 1),
-              gameType: local.attacks[0]?.gameType ?? nextAttack.gameType }],
+              gameType: local.attacks.at(-1)?.gameType ?? nextAttack.gameType,
+              battleAbilities: structuredClone(getBattleAbilities(local.attacks.at(-1) ?? nextAttack, local.adjustmentType)) }],
           }))
         : scenario
     )));
@@ -7547,11 +7530,6 @@ function ScenarioRow({
               actualStats={attackerActualStats[`${scenario.id}-${attack.id}-attacker`]}
               targetForm={targetForm}
               targetActualStats={targetActualStats}
-              supportsDoublesAttack={scenario.attacks.some((otherAttack) => (
-                otherAttack.id !== attack.id &&
-                Boolean(otherAttack.moveInput.trim()) &&
-                otherAttack.gameType === "doubles"
-              ))}
               canRemove={scenario.attacks.length > 1}
               onRemoveAttack={onRemoveAttack}
               onToggleAdjustmentType={() => onToggleScenarioAdjustmentFromDirection(scenario.id)}
@@ -7595,7 +7573,6 @@ type AttackCardProps = {
   actualStats?: StatTable;
   targetForm: TargetFormState;
   targetActualStats: StatTable | null;
-  supportsDoublesAttack: boolean;
   canRemove: boolean;
   onRemoveAttack: (scenarioId: string, attackId: string) => void;
   onToggleAdjustmentType: () => void;
@@ -8076,789 +8053,782 @@ function BeatUpPowerField({
                           <small>使用者</small>
                         </span>
                       ) : (
-                        <ScenarioTextField
-                          kind="pokemon"
-                          label={`参加ポケモン${index + 1}`}
-                          showLabel={false}
-                          value={participant.pokemonInput}
-                          onChange={(event) => updateParticipant(index, { pokemonInput: event.target.value })}
-                          onSelectValue={(pokemonInput) => updateParticipant(index, { pokemonInput })}
-                        />
-                      )}
-                    </div>
-                    <div className={`move-power-inline-control beat-up-participant-power ${isManual ? "is-manual" : "is-automatic"}`}>
-                      {isManual ? (
-                        <input
-                          {...numericInputProps}
-                          value={participant.powerValue}
-                          min={1}
-                          max={10_000}
-                          aria-label={`${index + 1}番目の任意威力`}
-                          onFocus={selectInputValueOnFocus}
-                          onChange={(event) => updateParticipant(index, {
-                            powerValue: clampNumberInput(toNumber(event.target.value, 1), 1, 10_000),
-                          })}
-                        />
-                      ) : (
-                        <strong>{automaticPower ?? "?"}</strong>
-                      )}
-                      <button
-                        className={`move-power-lock-toggle ${isManual ? "is-open" : "is-closed"}`}
-                        type="button"
-                        disabled={!isManual && automaticPower === undefined}
-                        aria-label={isManual
-                          ? `${index + 1}番目の威力を自動入力に戻す`
-                          : `${index + 1}番目の威力の自動入力を解除`}
-                        onClick={() => updateParticipant(index, isManual
-                          ? { powerMode: "auto", powerValue: 0 }
-                          : { powerMode: "manual", powerValue: automaticPower ?? 1 })}
-                      >
-                        <img
-                          src={getAssetSrc(isManual ? "assets/ui/lock-open.svg" : "assets/ui/lock.svg")}
-                          alt=""
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </div>
+            <ScenarioTextField
+                        kind="pokemon"
+                        label={`参加ポケモン${index + 1}`}
+                        showLabel={false}
+                        value={participant.pokemonInput}
+                        onChange={(event) => updateParticipant(index, { pokemonInput: event.target.value })}
+                        onSelectValue={(pokemonInput) => updateParticipant(index, { pokemonInput })}
+                      />
+                    )}
+                  </div>
+                  <div className={`move-power-inline-control beat-up-participant-power ${isManual ? "is-manual" : "is-automatic"}`}>
+                    {isManual ? (
+                      <input
+                        {...numericInputProps}
+                        value={participant.powerValue}
+                        min={1}
+                        max={10_000}
+                        aria-label={`${index + 1}番目の任意威力`}
+                        onFocus={selectInputValueOnFocus}
+                        onChange={(event) => updateParticipant(index, {
+                          powerValue: clampNumberInput(toNumber(event.target.value, 1), 1, 10_000),
+                        })}
+                      />
+                    ) : (
+                      <strong>{automaticPower ?? "?"}</strong>
+                    )}
                     <button
-                      className="beat-up-remove-participant"
+                      className={`move-power-lock-toggle ${isManual ? "is-open" : "is-closed"}`}
                       type="button"
-                      aria-label={`${index + 1}番目の参加ポケモンを削除`}
-                      disabled={participant.source === "attacker"}
-                      onClick={() => removeParticipant(index)}
+                      disabled={!isManual && automaticPower === undefined}
+                      aria-label={isManual
+                        ? `${index + 1}番目の威力を自動入力に戻す`
+                        : `${index + 1}番目の威力の自動入力を解除`}
+                      onClick={() => updateParticipant(index, isManual
+                        ? { powerMode: "auto", powerValue: 0 }
+                        : { powerMode: "manual", powerValue: automaticPower ?? 1 })}
                     >
-                      <img src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
+                      <img
+                        src={getAssetSrc(isManual ? "assets/ui/lock-open.svg" : "assets/ui/lock.svg")}
+                        alt=""
+                        aria-hidden="true"
+                      />
                     </button>
-                  </li>
-                );
-              })}
-            </ol>
-            <Button
-              variant="ghost"
-              size="small"
-              disabled={participants.length >= limit}
-              onClick={addParticipant}
+                  </div>
+                  <button
+                    className="beat-up-remove-participant"
+                    type="button"
+                    aria-label={`${index + 1}番目の参加ポケモンを削除`}
+                    disabled={participant.source === "attacker"}
+                    onClick={() => removeParticipant(index)}
+                  >
+                    <img src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={participants.length >= limit}
+            onClick={addParticipant}
+          >
+            参加ポケモンを追加
+          </Button>
+          <UiPopover.Arrow className="move-power-popover-arrow" />
+        </UiPopover.Content>
+      </UiPopover.Portal>
+    </UiPopover.Root>
+  </div>
+);
+}
+
+function MovePowerField({
+attackLabel,
+hasMove,
+mode,
+value,
+evaluation,
+catalogEntry,
+assistRule,
+hpDependent,
+manualAllowed,
+unsupported,
+onCommit,
+}: MovePowerFieldProps) {
+const defaultPower = assistRule?.defaultPower ?? 0;
+const selectedPower = mode === "assisted" && isValidManualMovePower(value)
+  ? value
+  : defaultPower;
+const selectedOptionIndex = Math.max(
+  0,
+  assistRule?.options.findIndex((option) => option.power === selectedPower) ?? 0,
+);
+const selectedOption = assistRule?.options[selectedOptionIndex];
+const [showManualEditor, setShowManualEditor] = useState(mode === "manual");
+const manualErrorId = useId();
+const [manualDraft, setManualDraft] = useState(String(
+  mode === "manual" && isValidManualMovePower(value)
+    ? value
+    : selectedOption?.power ?? 1,
+));
+
+useEffect(() => {
+  if (mode === "manual" && isValidManualMovePower(value)) {
+    setManualDraft(String(value));
+    setShowManualEditor(true);
+  } else {
+    setShowManualEditor(false);
+  }
+}, [mode, value]);
+
+const compactPower = (() => {
+  if (evaluation?.source === "status") {
+    return "—";
+  }
+  if (evaluation?.source === "fixed-damage") {
+    return "固定";
+  }
+  if (unsupported || evaluation?.source === "unsupported") {
+    return "個別";
+  }
+  if (evaluation?.perHitBasePowers && evaluation.perHitBasePowers.length > 1) {
+    const uniquePowers = new Set(evaluation.perHitBasePowers);
+    return uniquePowers.size > 1
+      ? evaluation.perHitBasePowers.join("/")
+      : `${evaluation.perHitBasePowers[0]}×${evaluation.perHitBasePowers.length}`;
+  }
+  if (evaluation?.appliedBasePower !== undefined) {
+    return String(evaluation.appliedBasePower);
+  }
+  if ((mode === "assisted" || mode === "manual") && isValidManualMovePower(value)) {
+    return String(value);
+  }
+  if (assistRule) {
+    return String(selectedOption?.power ?? assistRule.defaultPower);
+  }
+  if (catalogEntry?.category === "Status") {
+    return "—";
+  }
+  if ((catalogEntry?.basePower ?? 0) > 0) {
+    return String(catalogEntry?.basePower);
+  }
+  if (hpDependent) {
+    return "自動";
+  }
+  return hasMove ? "自動" : "—";
+})();
+
+const summary = (() => {
+  if (evaluation) {
+    return formatMovePowerEvaluation(evaluation, { hpDependent });
+  }
+  if (unsupported) {
+    return "個別威力（現在の計算には未対応）";
+  }
+  if (mode === "manual" && isValidManualMovePower(value)) {
+    return `威力 ${value}（手動・計算前）`;
+  }
+  if (assistRule) {
+    return `威力 ${selectedOption?.power ?? assistRule.defaultPower}（条件: ${selectedOption?.label ?? "基本値"}）`;
+  }
+  if (catalogEntry?.category === "Status") {
+    return "変化技（数値威力なし）";
+  }
+  if (hpDependent) {
+    return (catalogEntry?.basePower ?? 0) > 0
+      ? `HP依存威力（満タン時 ${catalogEntry?.basePower}・各攻撃直前に自動計算）`
+      : "HP依存威力（各攻撃直前に自動計算）";
+  }
+  if ((catalogEntry?.basePower ?? 0) > 0) {
+    return `威力 ${catalogEntry?.basePower}（基礎値・計算前）`;
+  }
+  return hasMove
+    ? "計算条件が揃うと、実際に使う威力を表示します。"
+    : "技を選ぶと威力を表示します。";
+})();
+const summaryForAria = summary.replace(/。$/u, "");
+const manualValue = Number(manualDraft);
+const manualValueIsValid = isValidManualMovePower(manualValue);
+const canStepDown = Boolean(assistRule && selectedOptionIndex > 0 && mode !== "manual");
+const canStepUp = Boolean(
+  assistRule
+  && selectedOptionIndex < assistRule.options.length - 1
+  && mode !== "manual",
+);
+const commitOption = (index: number) => {
+  const option = assistRule?.options[index];
+  if (option) {
+    onCommit("assisted", option.power);
+  }
+};
+const automaticPowerForUnlock = evaluation?.appliedBasePower
+  ?? ((catalogEntry?.basePower ?? 0) > 0 ? catalogEntry?.basePower : undefined);
+const canUseInlinePowerLock = Boolean(
+  manualAllowed
+  && !assistRule
+  && automaticPowerForUnlock !== undefined
+  && isValidManualMovePower(automaticPowerForUnlock)
+  && evaluation?.source !== "fixed-damage"
+  && evaluation?.source !== "status"
+  && evaluation?.source !== "unsupported"
+  && catalogEntry?.category !== "Status"
+  && !unsupported,
+);
+const updateInlineManualDraft = (nextDraft: string) => {
+  setManualDraft(nextDraft);
+  const nextValue = Number(nextDraft);
+  if (isValidManualMovePower(nextValue)) {
+    onCommit("manual", nextValue);
+  }
+};
+const unlockInlineManualPower = () => {
+  const nextValue = automaticPowerForUnlock;
+  if (nextValue !== undefined && isValidManualMovePower(nextValue)) {
+    setManualDraft(String(nextValue));
+    onCommit("manual", nextValue);
+  }
+};
+const restoreAutomaticPower = () => {
+  onCommit("auto", 0);
+};
+const assistedPowerTrigger = (
+  <UiPopover.Trigger asChild>
+    <button
+      className="move-power-trigger"
+      type="button"
+      aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
+    >
+      <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+    </button>
+  </UiPopover.Trigger>
+);
+
+return (
+  <div
+    className={`move-power-field${assistRule && mode !== "manual" ? " steppable" : ""}`}
+    role="group"
+    aria-label={`${attackLabel} 威力`}
+  >
+    <span className="move-power-label">威力</span>
+    {assistRule ? (
+      <UiPopover.Root
+        onOpenChange={(open) => {
+          if (open) {
+            setShowManualEditor(mode === "manual");
+            setManualDraft(String(
+              mode === "manual" && isValidManualMovePower(value)
+                ? value
+                : selectedOption?.power ?? 1,
+            ));
+          }
+        }}
+      >
+        <div className="move-power-control">
+          {mode !== "manual" ? (
+            <StepperControl
+              className="move-power-condition-stepper"
+              ariaLabel={`${attackLabel} 威力条件ステッパー`}
+              lowerAction={{
+                ariaLabel: `${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`,
+                disabled: !canStepDown,
+                onClick: () => commitOption(selectedOptionIndex - 1),
+              }}
+              upperAction={{
+                ariaLabel: `${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`,
+                disabled: !canStepUp,
+                onClick: () => commitOption(selectedOptionIndex + 1),
+              }}
             >
-              参加ポケモンを追加
-            </Button>
+              {assistedPowerTrigger}
+            </StepperControl>
+          ) : assistedPowerTrigger}
+        </div>
+        <UiPopover.Portal>
+          <UiPopover.Content
+            className="move-power-popover"
+            sideOffset={6}
+            align="end"
+            collisionPadding={8}
+            aria-label={`${attackLabel} 威力条件`}
+          >
+            <div className="move-power-option-group" aria-label={`${attackLabel} 威力条件`}>
+              {assistRule.options.map((option, optionIndex) => (
+                <UiPopover.Close asChild key={`${option.power}-${option.label}`}>
+                  <button
+                    className={`move-power-option${mode !== "manual" && optionIndex === selectedOptionIndex ? " selected" : ""}`}
+                    type="button"
+                    aria-pressed={mode !== "manual" && optionIndex === selectedOptionIndex}
+                    onClick={() => onCommit("assisted", option.power)}
+                  >
+                    <strong>{option.power}</strong>
+                    <span>{option.label}</span>
+                  </button>
+                </UiPopover.Close>
+              ))}
+            </div>
+            <div className="move-power-manual">
+              {showManualEditor ? (
+                <>
+                  <label>
+                    <span>任意の威力</span>
+                    <input
+                      {...numericInputProps}
+                      value={manualDraft}
+                      min={1}
+                      max={10_000}
+                      aria-label={`${attackLabel} 任意威力`}
+                      aria-invalid={!manualValueIsValid}
+                      aria-describedby={!manualValueIsValid ? manualErrorId : undefined}
+                      onFocus={selectInputValueOnFocus}
+                      onChange={(event) => setManualDraft(event.target.value)}
+                    />
+                  </label>
+                  <div className="move-power-manual-actions">
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => {
+                        onCommit("assisted", selectedOption?.power ?? defaultPower);
+                        setShowManualEditor(false);
+                      }}
+                    >
+                      条件指定に戻す
+                    </Button>
+                    <UiPopover.Close asChild>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        disabled={!manualValueIsValid}
+                        onClick={() => onCommit("manual", manualValue)}
+                      >
+                        適用
+                      </Button>
+                    </UiPopover.Close>
+                  </div>
+                  {!manualValueIsValid ? (
+                    <small id={manualErrorId} role="alert">1〜10000の整数で入力してください。</small>
+                  ) : null}
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={() => {
+                    setManualDraft(String(
+                      selectedOption?.power ?? (isValidManualMovePower(value) ? value : 1),
+                    ));
+                    setShowManualEditor(true);
+                  }}
+                >
+                  任意の威力を入力
+                </Button>
+              )}
+            </div>
             <UiPopover.Arrow className="move-power-popover-arrow" />
           </UiPopover.Content>
         </UiPopover.Portal>
       </UiPopover.Root>
-    </div>
-  );
-}
-
-function MovePowerField({
-  attackLabel,
-  hasMove,
-  mode,
-  value,
-  evaluation,
-  catalogEntry,
-  assistRule,
-  hpDependent,
-  manualAllowed,
-  unsupported,
-  onCommit,
-}: MovePowerFieldProps) {
-  const defaultPower = assistRule?.defaultPower ?? 0;
-  const selectedPower = mode === "assisted" && isValidManualMovePower(value)
-    ? value
-    : defaultPower;
-  const selectedOptionIndex = Math.max(
-    0,
-    assistRule?.options.findIndex((option) => option.power === selectedPower) ?? 0,
-  );
-  const selectedOption = assistRule?.options[selectedOptionIndex];
-  const [showManualEditor, setShowManualEditor] = useState(mode === "manual");
-  const manualErrorId = useId();
-  const [manualDraft, setManualDraft] = useState(String(
-    mode === "manual" && isValidManualMovePower(value)
-      ? value
-      : selectedOption?.power ?? 1,
-  ));
-
-  useEffect(() => {
-    if (mode === "manual" && isValidManualMovePower(value)) {
-      setManualDraft(String(value));
-      setShowManualEditor(true);
-    } else {
-      setShowManualEditor(false);
-    }
-  }, [mode, value]);
-
-  const compactPower = (() => {
-    if (evaluation?.source === "status") {
-      return "—";
-    }
-    if (evaluation?.source === "fixed-damage") {
-      return "固定";
-    }
-    if (unsupported || evaluation?.source === "unsupported") {
-      return "個別";
-    }
-    if (evaluation?.perHitBasePowers && evaluation.perHitBasePowers.length > 1) {
-      const uniquePowers = new Set(evaluation.perHitBasePowers);
-      return uniquePowers.size > 1
-        ? evaluation.perHitBasePowers.join("/")
-        : `${evaluation.perHitBasePowers[0]}×${evaluation.perHitBasePowers.length}`;
-    }
-    if (evaluation?.appliedBasePower !== undefined) {
-      return String(evaluation.appliedBasePower);
-    }
-    if ((mode === "assisted" || mode === "manual") && isValidManualMovePower(value)) {
-      return String(value);
-    }
-    if (assistRule) {
-      return String(selectedOption?.power ?? assistRule.defaultPower);
-    }
-    if (catalogEntry?.category === "Status") {
-      return "—";
-    }
-    if ((catalogEntry?.basePower ?? 0) > 0) {
-      return String(catalogEntry?.basePower);
-    }
-    if (hpDependent) {
-      return "自動";
-    }
-    return hasMove ? "自動" : "—";
-  })();
-
-  const summary = (() => {
-    if (evaluation) {
-      return formatMovePowerEvaluation(evaluation, { hpDependent });
-    }
-    if (unsupported) {
-      return "個別威力（現在の計算には未対応）";
-    }
-    if (mode === "manual" && isValidManualMovePower(value)) {
-      return `威力 ${value}（手動・計算前）`;
-    }
-    if (assistRule) {
-      return `威力 ${selectedOption?.power ?? assistRule.defaultPower}（条件: ${selectedOption?.label ?? "基本値"}）`;
-    }
-    if (catalogEntry?.category === "Status") {
-      return "変化技（数値威力なし）";
-    }
-    if (hpDependent) {
-      return (catalogEntry?.basePower ?? 0) > 0
-        ? `HP依存威力（満タン時 ${catalogEntry?.basePower}・各攻撃直前に自動計算）`
-        : "HP依存威力（各攻撃直前に自動計算）";
-    }
-    if ((catalogEntry?.basePower ?? 0) > 0) {
-      return `威力 ${catalogEntry?.basePower}（基礎値・計算前）`;
-    }
-    return hasMove
-      ? "計算条件が揃うと、実際に使う威力を表示します。"
-      : "技を選ぶと威力を表示します。";
-  })();
-  const summaryForAria = summary.replace(/。$/u, "");
-  const manualValue = Number(manualDraft);
-  const manualValueIsValid = isValidManualMovePower(manualValue);
-  const canStepDown = Boolean(assistRule && selectedOptionIndex > 0 && mode !== "manual");
-  const canStepUp = Boolean(
-    assistRule
-    && selectedOptionIndex < assistRule.options.length - 1
-    && mode !== "manual",
-  );
-  const commitOption = (index: number) => {
-    const option = assistRule?.options[index];
-    if (option) {
-      onCommit("assisted", option.power);
-    }
-  };
-  const automaticPowerForUnlock = evaluation?.appliedBasePower
-    ?? ((catalogEntry?.basePower ?? 0) > 0 ? catalogEntry?.basePower : undefined);
-  const canUseInlinePowerLock = Boolean(
-    manualAllowed
-    && !assistRule
-    && automaticPowerForUnlock !== undefined
-    && isValidManualMovePower(automaticPowerForUnlock)
-    && evaluation?.source !== "fixed-damage"
-    && evaluation?.source !== "status"
-    && evaluation?.source !== "unsupported"
-    && catalogEntry?.category !== "Status"
-    && !unsupported,
-  );
-  const updateInlineManualDraft = (nextDraft: string) => {
-    setManualDraft(nextDraft);
-    const nextValue = Number(nextDraft);
-    if (isValidManualMovePower(nextValue)) {
-      onCommit("manual", nextValue);
-    }
-  };
-  const unlockInlineManualPower = () => {
-    const nextValue = automaticPowerForUnlock;
-    if (nextValue !== undefined && isValidManualMovePower(nextValue)) {
-      setManualDraft(String(nextValue));
-      onCommit("manual", nextValue);
-    }
-  };
-  const restoreAutomaticPower = () => {
-    onCommit("auto", 0);
-  };
-  const assistedPowerTrigger = (
-    <UiPopover.Trigger asChild>
-      <button
-        className="move-power-trigger"
-        type="button"
-        aria-label={`${attackLabel} ${summaryForAria}。条件を開く`}
-      >
-        <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
-      </button>
-    </UiPopover.Trigger>
-  );
-
-  return (
-    <div
-      className={`move-power-field${assistRule && mode !== "manual" ? " steppable" : ""}`}
-      role="group"
-      aria-label={`${attackLabel} 威力`}
-    >
-      <span className="move-power-label">威力</span>
-      {assistRule ? (
-        <UiPopover.Root
-          onOpenChange={(open) => {
-            if (open) {
-              setShowManualEditor(mode === "manual");
-              setManualDraft(String(
-                mode === "manual" && isValidManualMovePower(value)
-                  ? value
-                  : selectedOption?.power ?? 1,
-              ));
-            }
-          }}
-        >
-          <div className="move-power-control">
-            {mode !== "manual" ? (
-              <StepperControl
-                className="move-power-condition-stepper"
-                ariaLabel={`${attackLabel} 威力条件ステッパー`}
-                lowerAction={{
-                  ariaLabel: `${attackLabel} 威力条件を下げる${canStepDown ? `: ${assistRule.options[selectedOptionIndex - 1]?.label}` : ""}`,
-                  disabled: !canStepDown,
-                  onClick: () => commitOption(selectedOptionIndex - 1),
-                }}
-                upperAction={{
-                  ariaLabel: `${attackLabel} 威力条件を上げる${canStepUp ? `: ${assistRule.options[selectedOptionIndex + 1]?.label}` : ""}`,
-                  disabled: !canStepUp,
-                  onClick: () => commitOption(selectedOptionIndex + 1),
-                }}
-              >
-                {assistedPowerTrigger}
-              </StepperControl>
-            ) : assistedPowerTrigger}
-          </div>
-          <UiPopover.Portal>
-            <UiPopover.Content
-              className="move-power-popover"
-              sideOffset={6}
-              align="end"
-              collisionPadding={8}
-              aria-label={`${attackLabel} 威力条件`}
-            >
-              <div className="move-power-option-group" aria-label={`${attackLabel} 威力条件`}>
-                {assistRule.options.map((option, optionIndex) => (
-                  <UiPopover.Close asChild key={`${option.power}-${option.label}`}>
-                    <button
-                      className={`move-power-option${mode !== "manual" && optionIndex === selectedOptionIndex ? " selected" : ""}`}
-                      type="button"
-                      aria-pressed={mode !== "manual" && optionIndex === selectedOptionIndex}
-                      onClick={() => onCommit("assisted", option.power)}
-                    >
-                      <strong>{option.power}</strong>
-                      <span>{option.label}</span>
-                    </button>
-                  </UiPopover.Close>
-                ))}
-              </div>
-              <div className="move-power-manual">
-                {showManualEditor ? (
-                  <>
-                    <label>
-                      <span>任意の威力</span>
-                      <input
-                        {...numericInputProps}
-                        value={manualDraft}
-                        min={1}
-                        max={10_000}
-                        aria-label={`${attackLabel} 任意威力`}
-                        aria-invalid={!manualValueIsValid}
-                        aria-describedby={!manualValueIsValid ? manualErrorId : undefined}
-                        onFocus={selectInputValueOnFocus}
-                        onChange={(event) => setManualDraft(event.target.value)}
-                      />
-                    </label>
-                    <div className="move-power-manual-actions">
-                      <Button
-                        variant="ghost"
-                        size="small"
-                        onClick={() => {
-                          onCommit("assisted", selectedOption?.power ?? defaultPower);
-                          setShowManualEditor(false);
-                        }}
-                      >
-                        条件指定に戻す
-                      </Button>
-                      <UiPopover.Close asChild>
-                        <Button
-                          variant="primary"
-                          size="small"
-                          disabled={!manualValueIsValid}
-                          onClick={() => onCommit("manual", manualValue)}
-                        >
-                          適用
-                        </Button>
-                      </UiPopover.Close>
-                    </div>
-                    {!manualValueIsValid ? (
-                      <small id={manualErrorId} role="alert">1〜10000の整数で入力してください。</small>
-                    ) : null}
-                  </>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    onClick={() => {
-                      setManualDraft(String(
-                        selectedOption?.power ?? (isValidManualMovePower(value) ? value : 1),
-                      ));
-                      setShowManualEditor(true);
-                    }}
-                  >
-                    任意の威力を入力
-                  </Button>
-                )}
-              </div>
-              <UiPopover.Arrow className="move-power-popover-arrow" />
-            </UiPopover.Content>
-          </UiPopover.Portal>
-        </UiPopover.Root>
-      ) : canUseInlinePowerLock ? (
-        mode === "manual" ? (
-          <div className="move-power-inline-control is-manual">
-            <input
-              {...numericInputProps}
-              value={manualDraft}
-              min={1}
-              max={10_000}
-              aria-label={`${attackLabel} 任意威力`}
-              aria-invalid={!manualValueIsValid}
-              onFocus={selectInputValueOnFocus}
-              onChange={(event) => updateInlineManualDraft(event.target.value)}
-              onBlur={() => {
-                if (!manualValueIsValid) {
-                  setManualDraft(String(value));
-                }
-              }}
-            />
-            <button
-              className="move-power-lock-toggle is-open"
-              type="button"
-              aria-label={`${attackLabel} 威力を自動入力に戻す`}
-              title="自動入力に戻す"
-              onClick={restoreAutomaticPower}
-            >
-              <img src={getAssetSrc("assets/ui/lock-open.svg")} alt="" aria-hidden="true" />
-            </button>
-          </div>
-        ) : (
-          <div className="move-power-inline-control is-automatic">
-            <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
-            <button
-              className="move-power-lock-toggle is-closed"
-              type="button"
-              aria-label={`${attackLabel} 威力の自動入力を解除`}
-              title="手動入力へ切り替え"
-              onClick={unlockInlineManualPower}
-            >
-              <img src={getAssetSrc("assets/ui/lock.svg")} alt="" aria-hidden="true" />
-            </button>
-          </div>
-        )
-      ) : (
-        <div className="move-power-inline-control is-readonly" aria-label={summaryForAria}>
-          <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+    ) : canUseInlinePowerLock ? (
+      mode === "manual" ? (
+        <div className="move-power-inline-control is-manual">
+          <input
+            {...numericInputProps}
+            value={manualDraft}
+            min={1}
+            max={10_000}
+            aria-label={`${attackLabel} 任意威力`}
+            aria-invalid={!manualValueIsValid}
+            onFocus={selectInputValueOnFocus}
+            onChange={(event) => updateInlineManualDraft(event.target.value)}
+            onBlur={() => {
+              if (!manualValueIsValid) {
+                setManualDraft(String(value));
+              }
+            }}
+          />
+          <button
+            className="move-power-lock-toggle is-open"
+            type="button"
+            aria-label={`${attackLabel} 威力を自動入力に戻す`}
+            title="自動入力に戻す"
+            onClick={restoreAutomaticPower}
+          >
+            <img src={getAssetSrc("assets/ui/lock-open.svg")} alt="" aria-hidden="true" />
+          </button>
         </div>
-      )}
-    </div>
-  );
+      ) : (
+        <div className="move-power-inline-control is-automatic">
+          <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+          <button
+            className="move-power-lock-toggle is-closed"
+            type="button"
+            aria-label={`${attackLabel} 威力の自動入力を解除`}
+            title="手動入力へ切り替え"
+            onClick={unlockInlineManualPower}
+          >
+            <img src={getAssetSrc("assets/ui/lock.svg")} alt="" aria-hidden="true" />
+          </button>
+        </div>
+      )
+    ) : (
+      <div className="move-power-inline-control is-readonly" aria-label={summaryForAria}>
+        <strong className={compactPower.length >= 7 ? "long" : undefined}>{compactPower}</strong>
+      </div>
+    )}
+  </div>
+);
 }
 
 type SpeedMultiplierControlProps = {
-  label: string;
-  ariaLabel: string;
-  value: SpeedManualMultiplier;
-  onChange: (value: SpeedManualMultiplier) => void;
+label: string;
+ariaLabel: string;
+value: SpeedManualMultiplier;
+onChange: (value: SpeedManualMultiplier) => void;
 };
 
 function SpeedMultiplierControl({
-  label,
-  ariaLabel,
-  value,
-  onChange,
+label,
+ariaLabel,
+value,
+onChange,
 }: SpeedMultiplierControlProps) {
-  const isManual = value !== "auto";
+const isManual = value !== "auto";
 
-  return (
-    <div className={`speed-multiplier-control${isManual ? " is-manual" : ""}`}>
-      <SelectField
-        label={label}
-        ariaLabel={isManual ? `${ariaLabel} 手動` : ariaLabel}
-        value={value}
-        options={speedMultiplierOptions}
-        onChange={onChange}
-        valueBadge={isManual ? <span className="speed-manual-badge">手動</span> : undefined}
-      />
-    </div>
-  );
+return (
+  <div className={`speed-multiplier-control${isManual ? " is-manual" : ""}`}>
+    <SelectField
+      label={label}
+      ariaLabel={isManual ? `${ariaLabel} 手動` : ariaLabel}
+      value={value}
+      options={speedMultiplierOptions}
+      onChange={onChange}
+      valueBadge={isManual ? <span className="speed-manual-badge">手動</span> : undefined}
+    />
+  </div>
+);
 }
 
 function AttackCard({
-  attack,
-  attackIndex,
-  commonLocked = false,
-  offenseCumulativeUses = 1,
-  cumulativeMinimum = 1,
-  cumulativeMaximum = 10,
-  sharedStatKeys,
-  scenarioId,
-  adjustmentType,
-  actualStats,
-  targetForm,
-  targetActualStats,
-  supportsDoublesAttack,
-  canRemove,
-  onRemoveAttack,
-  onToggleAdjustmentType,
-  onUpdateAttack,
-  onUpdateAttackerEv,
+attack,
+attackIndex,
+commonLocked = false,
+offenseCumulativeUses = 1,
+cumulativeMinimum = 1,
+cumulativeMaximum = 10,
+sharedStatKeys,
+scenarioId,
+adjustmentType,
+actualStats,
+targetForm,
+targetActualStats,
+canRemove,
+onRemoveAttack,
+onToggleAdjustmentType,
+onUpdateAttack,
+onUpdateAttackerEv,
 }: AttackCardProps) {
-  const onInput = <K extends keyof ScenarioAttackFormState>(key: K) => (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
-  const isOffenseAdjustment = adjustmentType === "offense";
-  const isSpeedAdjustment = adjustmentType === "speed";
-  const isManualSpeedTarget = attack.speedTargetMode === "manual";
-  const isTrickRoomSpeed = attack.speedOrderMode === "trick-room";
-  const speedPrimaryConditionLabel = isTrickRoomSpeed ? "確定トリル先制" : "確定抜き";
-  const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
-  const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
-  const directionIconPath = isSpeedAdjustment
-    ? isTrickRoomSpeed
-      ? "assets/ui/arrow-down-circle.svg"
-      : "assets/ui/arrow-up-circle.svg"
-    : isOffenseAdjustment
-      ? "assets/ui/arrow-right-circle.svg"
-      : "assets/ui/arrow-left-circle.svg";
-  const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(adjustmentType));
-  const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(adjustmentType);
-  const isAbilitySupport = isAbilitySupportCard(
-    adjustmentType,
-    attack.moveInput,
-    attack.attackerAbilityInput,
-  );
-  const attackerArtwork = findPokemonArtwork({
-    input: attack.attackerPokemonInput,
-    canonicalName: attack.attackerPokemonCanonicalName,
-  });
-  const attackerCanonicalPokemon = resolveCanonicalEntityName(
-    "pokemon",
-    attack.attackerPokemonInput,
-    attack.attackerPokemonCanonicalName,
-  );
-  const targetCanonicalPokemon = resolveCanonicalEntityName(
-    "pokemon",
-    targetForm.pokemonInput,
-    targetForm.pokemonCanonicalName,
-  );
-  const suggestionRankingOwners = getAttackSuggestionRankingOwners(
-    adjustmentType,
-    targetCanonicalPokemon,
-    attackerCanonicalPokemon,
-  );
-  const pokemonAbilityOptions = getPokemonAbilityInputPlan(attackerCanonicalPokemon).options;
-  const { searchOptions: moveOptions, menuOptions: moveMenuOptions } = useUsageSuggestionOptions(
-    "move",
-    attack.moveInput,
-    suggestionRankingOwners.move,
-  );
-  const { searchOptions: attackerAbilityOptions, menuOptions: attackerAbilityMenuOptions } = useUsageSuggestionOptions(
-    "ability",
-    attack.attackerAbilityInput,
-    suggestionRankingOwners.ability,
-    pokemonAbilityOptions ?? getEntityInputOptions("ability"),
-  );
-  const { searchOptions: attackerItemOptions, menuOptions: attackerItemMenuOptions } = useUsageSuggestionOptions(
-    "item",
-    attack.attackerItemInput,
-    suggestionRankingOwners.item,
-  );
-  const statReferencePlan = getMoveStatReferencePlan(attack.moveInput, {
-    teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
-  });
-  const targetReferenceKeySet = new Set(statReferencePlan.references
-    .filter((reference) => reference.owner === "target")
-    .map((reference) => reference.stat));
-  const targetReferenceKeys = Array.from(targetReferenceKeySet);
-  const moveStatReferenceOptions = {
-    teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
-  };
-  const offenseDefenderStatKeys = sharedStatKeys ?? getOffenseDefenderStatKeysFromMoveContext(
-    attack.moveInput,
-    moveStatReferenceOptions,
-    targetReferenceKeySet,
-  );
-  const defenderRankKeys = Array.from(new Set<Exclude<StatKey, "hp">>([
-    "def",
-    "spd",
-    ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
-  ]));
-  const moveCanonicalName = resolveCanonicalEntityName("move", attack.moveInput);
-  const isBeatUp = moveCanonicalName === BEAT_UP_CANONICAL_NAME;
-  const movePowerAssistRule = moveCanonicalName
-    ? getMovePowerAssistRule(moveCanonicalName)
-    : undefined;
-  const hpDependentMovePower = moveCanonicalName
-    ? isCurrentHpDependentMoveCanonicalName(moveCanonicalName)
-    : false;
-  const movePowerEvaluation = useMemo(() => {
-    const preview = buildMovePowerPreviewInputFromUi(targetForm, adjustmentType, attack);
-    if (!preview) {
-      return undefined;
-    }
-    try {
-      return calculateSmogonHit(preview.defenderBuild, preview.hit, preview.field).movePower;
-    } catch {
-      return undefined;
-    }
-  }, [adjustmentType, attack, targetForm]);
-  const opponentSpeedModifierSources = useMemo(() => {
-    if (!isSpeedAdjustment || isManualSpeedTarget) {
-      return { item: undefined, ability: undefined };
-    }
+const onInput = <K extends keyof ScenarioAttackFormState>(key: K) => (
+  event: ChangeEvent<HTMLInputElement>,
+) => onUpdateAttack(scenarioId, attack.id, key, event.target.value as ScenarioAttackFormState[K]);
+const isOffenseAdjustment = adjustmentType === "offense";
+const isSpeedAdjustment = adjustmentType === "speed";
+const isManualSpeedTarget = attack.speedTargetMode === "manual";
+const isTrickRoomSpeed = attack.speedOrderMode === "trick-room";
+const speedPrimaryConditionLabel = isTrickRoomSpeed ? "確定トリル先制" : "確定抜き";
+const attackLabel = formatScenarioAttackLabel(adjustmentType, attackIndex, attack.label);
+const adjustmentDirection = isOffenseAdjustment ? "right" : isSpeedAdjustment ? "speed" : "left";
+const directionIconPath = isSpeedAdjustment
+  ? isTrickRoomSpeed
+    ? "assets/ui/arrow-down-circle.svg"
+    : "assets/ui/arrow-up-circle.svg"
+  : isOffenseAdjustment
+    ? "assets/ui/arrow-right-circle.svg"
+    : "assets/ui/arrow-left-circle.svg";
+const nextAdjustmentLabel = getScenarioAdjustmentTypeLabel(nextScenarioAdjustmentType(adjustmentType));
+const currentAdjustmentLabel = getScenarioAdjustmentTypeLabel(adjustmentType);
+const attackerArtwork = findPokemonArtwork({
+  input: attack.attackerPokemonInput,
+  canonicalName: attack.attackerPokemonCanonicalName,
+});
+const attackerCanonicalPokemon = resolveCanonicalEntityName(
+  "pokemon",
+  attack.attackerPokemonInput,
+  attack.attackerPokemonCanonicalName,
+);
+const targetCanonicalPokemon = resolveCanonicalEntityName(
+  "pokemon",
+  targetForm.pokemonInput,
+  targetForm.pokemonCanonicalName,
+);
+const suggestionRankingOwners = getAttackSuggestionRankingOwners(
+  adjustmentType,
+  targetCanonicalPokemon,
+  attackerCanonicalPokemon,
+);
+const pokemonAbilityOptions = getPokemonAbilityInputPlan(attackerCanonicalPokemon).options;
+const { searchOptions: moveOptions, menuOptions: moveMenuOptions } = useUsageSuggestionOptions(
+  "move",
+  attack.moveInput,
+  suggestionRankingOwners.move,
+);
+const { searchOptions: attackerAbilityOptions, menuOptions: attackerAbilityMenuOptions } = useUsageSuggestionOptions(
+  "ability",
+  attack.attackerAbilityInput,
+  suggestionRankingOwners.ability,
+  pokemonAbilityOptions ?? getEntityInputOptions("ability"),
+);
+const { searchOptions: attackerItemOptions, menuOptions: attackerItemMenuOptions } = useUsageSuggestionOptions(
+  "item",
+  attack.attackerItemInput,
+  suggestionRankingOwners.item,
+);
+const statReferencePlan = getMoveStatReferencePlan(attack.moveInput, {
+  teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
+});
+const targetReferenceKeySet = new Set(statReferencePlan.references
+  .filter((reference) => reference.owner === "target")
+  .map((reference) => reference.stat));
+const targetReferenceKeys = Array.from(targetReferenceKeySet);
+const moveStatReferenceOptions = {
+  teraEnabled: isOffenseAdjustment ? targetForm.teraEnabled : attack.attackerTeraEnabled,
+};
+const offenseDefenderStatKeys = sharedStatKeys ?? getOffenseDefenderStatKeysFromMoveContext(
+  attack.moveInput,
+  moveStatReferenceOptions,
+  targetReferenceKeySet,
+);
+const defenderRankKeys = Array.from(new Set<Exclude<StatKey, "hp">>([
+  "def",
+  "spd",
+  ...targetReferenceKeys.filter((key): key is Exclude<StatKey, "hp"> => key !== "hp"),
+]));
+const moveCanonicalName = resolveCanonicalEntityName("move", attack.moveInput);
+const isBeatUp = moveCanonicalName === BEAT_UP_CANONICAL_NAME;
+const movePowerAssistRule = moveCanonicalName
+  ? getMovePowerAssistRule(moveCanonicalName)
+  : undefined;
+const hpDependentMovePower = moveCanonicalName
+  ? isCurrentHpDependentMoveCanonicalName(moveCanonicalName)
+  : false;
+const movePowerEvaluation = useMemo(() => {
+  const preview = buildMovePowerPreviewInputFromUi(targetForm, adjustmentType, attack);
+  if (!preview) {
+    return undefined;
+  }
+  try {
+    return calculateSmogonHit(preview.defenderBuild, preview.hit, preview.field).movePower;
+  } catch {
+    return undefined;
+  }
+}, [adjustmentType, attack, targetForm]);
+const opponentSpeedModifierSources = useMemo(() => {
+  if (!isSpeedAdjustment || isManualSpeedTarget) {
+    return { item: undefined, ability: undefined };
+  }
 
-    try {
-      const sources = getAutomaticSpeedModifierSources(
-        buildScenarioAttackBuildFromUi(attack, "speed-opponent-source"),
-        {
-          gameType: attack.gameType,
-          weather: attack.weather,
-          terrain: attack.terrain,
-        },
-      );
-      return { item: sources.item, ability: sources.ability };
-    } catch {
-      return { item: undefined, ability: undefined };
-    }
-  }, [attack, isManualSpeedTarget, isSpeedAdjustment]);
-  const opponentItemSpeedOverridden = isSpeedAdjustment
-    && attack.speedItemMultiplier !== "auto"
-    && Boolean(opponentSpeedModifierSources.item);
-  const opponentAbilitySpeedOverridden = isSpeedAdjustment
-    && attack.speedAbilityMultiplier !== "auto"
-    && Boolean(opponentSpeedModifierSources.ability);
-  const opponentItemSpeedOverrideDescription = opponentItemSpeedOverridden
-    ? "この素早さ条件では持ち物のS補正を手動倍率に上書き中"
-    : undefined;
-  const opponentAbilitySpeedOverrideDescription = opponentAbilitySpeedOverridden
-    ? "この素早さ条件では特性のS補正を手動倍率に上書き中"
-    : undefined;
-  const speedOpponentStatSection = (
-    <section className="attack-stat-section attack-setting-section-body speed-opponent-stat-section" aria-label={`${attackLabel} 相手S能力`}>
-      <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
-        <div className="ev-header attacker-stat-header">
-          <span>能力</span>
-          <span>実数値</span>
-          <span>SP</span>
-          <span>ランク</span>
-        </div>
-        <div className="ev-row attacker-stat-row spe">
-          <strong>
-            <StatIcon stat="spe" />
-            <span>相手</span>
-          </strong>
-          <span className="actual-stat-with-modifier">
-            <NatureStatModifier natureLabel={attack.attackerNatureInput} stat="spe" />
-            <span className="actual-stat">{actualStats?.spe ?? "-"}</span>
-          </span>
-          <input
-            {...numericInputProps}
-            value={attack.attackerStatPoints.spe}
-            aria-label={`${attackLabel} 相手S SP`}
-            placeholder="S SP"
-            onFocus={selectInputValueOnFocus}
-            onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, "spe", toStatPointInput(event.target.value))}
-          />
-          <RankSelectField
-            label={`${attackLabel} 相手Sランク`}
-            value={attack.attackerBoosts.spe ?? 0}
-            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
-              ...attack.attackerBoosts,
-              spe: value,
-            })}
-          />
-        </div>
+  try {
+    const sources = getAutomaticSpeedModifierSources(
+      buildScenarioAttackBuildFromUi(attack, "speed-opponent-source"),
+      {
+        gameType: attack.gameType,
+        weather: attack.weather,
+        terrain: attack.terrain,
+      },
+    );
+    return { item: sources.item, ability: sources.ability };
+  } catch {
+    return { item: undefined, ability: undefined };
+  }
+}, [attack, isManualSpeedTarget, isSpeedAdjustment]);
+const opponentItemSpeedOverridden = isSpeedAdjustment
+  && attack.speedItemMultiplier !== "auto"
+  && Boolean(opponentSpeedModifierSources.item);
+const opponentAbilitySpeedOverridden = isSpeedAdjustment
+  && attack.speedAbilityMultiplier !== "auto"
+  && Boolean(opponentSpeedModifierSources.ability);
+const opponentItemSpeedOverrideDescription = opponentItemSpeedOverridden
+  ? "この素早さ条件では持ち物のS補正を手動倍率に上書き中"
+  : undefined;
+const opponentAbilitySpeedOverrideDescription = opponentAbilitySpeedOverridden
+  ? "この素早さ条件では特性のS補正を手動倍率に上書き中"
+  : undefined;
+const speedOpponentStatSection = (
+  <section className="attack-stat-section attack-setting-section-body speed-opponent-stat-section" aria-label={`${attackLabel} 相手S能力`}>
+    <div className="ev-table attacker-stat-table speed-stat-table" aria-label={`${attackLabel} 相手S能力`}>
+      <div className="ev-header attacker-stat-header">
+        <span>能力</span>
+        <span>実数値</span>
+        <span>SP</span>
+        <span>ランク</span>
       </div>
-    </section>
-  );
-  const battleModifiersSection = (
-    <section
-      className="attack-setting-section attack-battle-modifiers"
-      aria-labelledby={`${scenarioId}-${attack.id}-battle-modifiers-title`}
-    >
-      <h3 id={`${scenarioId}-${attack.id}-battle-modifiers-title`}>戦闘補正</h3>
-      <div className="scenario-options">
-        <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
-        <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
-        <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
-        <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
-        <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
-        <label><input type="checkbox" checked={attack.friendGuard} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "friendGuard", event.target.checked)} /> フレンドガード</label>
+      <div className="ev-row attacker-stat-row spe">
+        <strong>
+          <StatIcon stat="spe" />
+          <span>相手</span>
+        </strong>
+        <span className="actual-stat-with-modifier">
+          <NatureStatModifier natureLabel={attack.attackerNatureInput} stat="spe" />
+          <span className="actual-stat">{actualStats?.spe ?? "-"}</span>
+        </span>
+        <input
+          {...numericInputProps}
+          value={attack.attackerStatPoints.spe}
+          aria-label={`${attackLabel} 相手S SP`}
+          placeholder="S SP"
+          onFocus={selectInputValueOnFocus}
+          onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, "spe", toStatPointInput(event.target.value))}
+        />
+        <RankSelectField
+          label={`${attackLabel} 相手Sランク`}
+          value={attack.attackerBoosts.spe ?? 0}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+            ...attack.attackerBoosts,
+            spe: value,
+          })}
+        />
       </div>
-    </section>
-  );
-  return (
-    <section className={`attack-condition-card${isOffenseAdjustment ? " offense-attack-card" : ""}`} aria-label={attackLabel}>
-      <div className="attack-card-header">
-        <button
-          className={`attack-direction-button ${adjustmentDirection}`}
-          type="button"
-          aria-label={`${attackLabel} ${currentAdjustmentLabel}。クリックで${nextAdjustmentLabel}に切り替え`}
-          onClick={onToggleAdjustmentType}
-        >
-          <span
-            className="attack-direction-icon"
-            aria-hidden="true"
-            style={{ backgroundImage: `url("${getAssetSrc(directionIconPath)}")` }}
-          />
-        </button>
-        <PokemonArtworkFrame
-          match={attackerArtwork}
-          fallbackLabel={attack.attackerPokemonInput}
-          variant="attack"
-          dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(
-            attack.attackerPokemonInput,
-            "gmax",
-            attack.attackerPokemonCanonicalName,
+    </div>
+  </section>
+);
+const battleAbilitiesSection = attack.gameType === "doubles" ? (
+  <BattleAbilitiesEditor ownerLabel={attackLabel} value={getBattleAbilities(attack, adjustmentType)}
+    onChange={(value) => onUpdateAttack(scenarioId, attack.id, "battleAbilities", value)} />
+) : null;
+const battleModifiersSection = (
+  <section
+    className="attack-setting-section attack-battle-modifiers"
+    aria-labelledby={`${scenarioId}-${attack.id}-battle-modifiers-title`}
+  >
+    <h3 id={`${scenarioId}-${attack.id}-battle-modifiers-title`}>戦闘補正</h3>
+    <div className="scenario-options">
+      <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
+      <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+      <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
+      <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+      <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+    </div>
+  </section>
+);
+return (
+  <section className={`attack-condition-card${isOffenseAdjustment ? " offense-attack-card" : ""}`} aria-label={attackLabel}>
+    <div className="attack-card-header">
+      <button
+        className={`attack-direction-button ${adjustmentDirection}`}
+        type="button"
+        aria-label={`${attackLabel} ${currentAdjustmentLabel}。クリックで${nextAdjustmentLabel}に切り替え`}
+        onClick={onToggleAdjustmentType}
+      >
+        <span
+          className="attack-direction-icon"
+          aria-hidden="true"
+          style={{ backgroundImage: `url("${getAssetSrc(directionIconPath)}")` }}
+        />
+      </button>
+      <PokemonArtworkFrame
+        match={attackerArtwork}
+        fallbackLabel={attack.attackerPokemonInput}
+        variant="attack"
+        dynamaxEffect={attack.attackerDmaxEnabled || isPokemonFormVariant(
+          attack.attackerPokemonInput,
+          "gmax",
+          attack.attackerPokemonCanonicalName,
+        )}
+      />
+      <input
+        className="inline-title-input"
+        value={attackLabel}
+        aria-label="攻撃名"
+        onChange={onInput("label")}
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="icon-button attack-remove-button"
+        aria-label={`${attackLabel}を削除`}
+        disabled={!canRemove}
+        onClick={() => onRemoveAttack(scenarioId, attack.id)}
+      >
+        <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
+      </Button>
+    </div>
+
+    <div className="attack-card-fields">
+      <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-identity-row">
+        <ScenarioTextField
+          kind="pokemon"
+          label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
+          showLabel
+          value={attack.attackerPokemonInput}
+          canonicalNameHint={attack.attackerPokemonCanonicalName}
+          onChange={onInput("attackerPokemonInput")}
+          onSelectValue={(value, canonicalName) => onUpdateAttack(
+            scenarioId,
+            attack.id,
+            "attackerPokemonInput",
+            value,
+            canonicalName,
           )}
         />
-        <input
-          className="inline-title-input"
-          value={attackLabel}
-          aria-label="攻撃名"
-          onChange={onInput("label")}
+        <NatureMatrixField
+          className="scenario-cell"
+          label="性格"
+          value={attack.attackerNatureInput}
+          ownerPokemonCanonicalName={attackerCanonicalPokemon}
+          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="icon-button attack-remove-button"
-          aria-label={`${attackLabel}を削除`}
-          disabled={!canRemove}
-          onClick={() => onRemoveAttack(scenarioId, attack.id)}
-        >
-          <img className="ui-button-icon" src={getAssetSrc("assets/ui/trash-2.svg")} alt="" aria-hidden="true" />
-        </Button>
-      </div>
-
-      <div className={`attack-card-fields${isAbilitySupport ? " support-mode" : ""}`}>
-        <fieldset disabled={commonLocked} className={`attack-shared-fields attack-card-field-row attack-card-identity-row${isAbilitySupport ? " single" : ""}`}>
+      </fieldset>
+      {!isSpeedAdjustment ? (
+        <div className="attack-card-field-row attack-move-power-cell">
           <ScenarioTextField
-            kind="pokemon"
-            label={isOffenseAdjustment || isSpeedAdjustment ? "仮想敵" : "ポケモン"}
+            kind="move"
+            label="技"
             showLabel
-            value={attack.attackerPokemonInput}
-            canonicalNameHint={attack.attackerPokemonCanonicalName}
-            onChange={onInput("attackerPokemonInput")}
-            onSelectValue={(value, canonicalName) => onUpdateAttack(
-              scenarioId,
-              attack.id,
-              "attackerPokemonInput",
-              value,
-              canonicalName,
-            )}
+            value={attack.moveInput}
+            options={moveOptions}
+            menuOptions={moveMenuOptions}
+            onChange={onInput("moveInput")}
+            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
           />
-          {!isAbilitySupport ? (
-            <NatureMatrixField
-              className="scenario-cell"
-              label="性格"
-              value={attack.attackerNatureInput}
-              ownerPokemonCanonicalName={attackerCanonicalPokemon}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
+          {isBeatUp ? (
+            <BeatUpPowerField
+              attackLabel={attackLabel}
+              attackerPokemonInput={isOffenseAdjustment
+                ? targetForm.pokemonInput
+                : attack.attackerPokemonInput}
+              participants={attack.beatUpParticipants}
+              gameType={attack.gameType}
+              evaluation={movePowerEvaluation}
+              onChange={(participants) => onUpdateAttack(
+                scenarioId,
+                attack.id,
+                "beatUpParticipants",
+                participants,
+              )}
             />
-          ) : null}
-        </fieldset>
-        {!isSpeedAdjustment ? (
-          <div className="attack-card-field-row attack-move-power-cell">
-            <ScenarioTextField
-              kind="move"
-              label="技"
-              showLabel
-              value={attack.moveInput}
-              options={moveOptions}
-              menuOptions={moveMenuOptions}
-              onChange={onInput("moveInput")}
-              onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
+          ) : (
+            <MovePowerField
+              attackLabel={attackLabel}
+              hasMove={Boolean(moveCanonicalName)}
+              mode={attack.movePowerMode}
+              value={attack.movePowerValue}
+              evaluation={movePowerEvaluation}
+              catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
+              assistRule={movePowerAssistRule}
+              hpDependent={hpDependentMovePower}
+              manualAllowed={Boolean(
+                moveCanonicalName
+                && isMovePowerOverrideAllowed(moveCanonicalName)
+                && movePowerEvaluation?.source !== "fixed-damage",
+              )}
+              unsupported={Boolean(
+                moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
+              )}
+              onCommit={(mode, value) => {
+                onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
+                onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
+              }}
             />
-            {isBeatUp ? (
-              <BeatUpPowerField
-                attackLabel={attackLabel}
-                attackerPokemonInput={isOffenseAdjustment
-                  ? targetForm.pokemonInput
-                  : attack.attackerPokemonInput}
-                participants={attack.beatUpParticipants}
-                gameType={attack.gameType}
-                evaluation={movePowerEvaluation}
-                onChange={(participants) => onUpdateAttack(
-                  scenarioId,
-                  attack.id,
-                  "beatUpParticipants",
-                  participants,
-                )}
-              />
-            ) : (
-              <MovePowerField
-                attackLabel={attackLabel}
-                hasMove={Boolean(moveCanonicalName)}
-                mode={attack.movePowerMode}
-                value={attack.movePowerValue}
-                evaluation={movePowerEvaluation}
-                catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
-                assistRule={movePowerAssistRule}
-                hpDependent={hpDependentMovePower}
-                manualAllowed={Boolean(
-                  moveCanonicalName
-                  && isMovePowerOverrideAllowed(moveCanonicalName)
-                  && movePowerEvaluation?.source !== "fixed-damage",
-                )}
-                unsupported={Boolean(
-                  moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
-                )}
-                onCommit={(mode, value) => {
-                  onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
-                  onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
-                }}
-              />
-            )}
-          </div>
-        ) : null}
-        <fieldset disabled={commonLocked} className={`attack-shared-fields attack-card-field-row attack-card-details-row${isAbilitySupport ? " single" : ""}`}>
-          {!isAbilitySupport ? (
-            <ScenarioTextField
-              kind="item"
-              label="持ち物"
-              showLabel
-              className={opponentItemSpeedOverridden ? "speed-source-overridden" : undefined}
-              description={opponentItemSpeedOverrideDescription}
-              value={attack.attackerItemInput}
-              placeholder="任意"
-              options={attackerItemOptions}
-              menuOptions={attackerItemMenuOptions}
-              onChange={onInput("attackerItemInput")}
-              onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
-            />
-          ) : null}
+          )}
+        </div>
+      ) : null}
+      <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-details-row">
+                    <ScenarioTextField
+            kind="item"
+            label="持ち物"
+            showLabel
+            className={opponentItemSpeedOverridden ? "speed-source-overridden" : undefined}
+            description={opponentItemSpeedOverrideDescription}
+            value={attack.attackerItemInput}
+            placeholder="任意"
+            options={attackerItemOptions}
+            menuOptions={attackerItemMenuOptions}
+            onChange={onInput("attackerItemInput")}
+            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "attackerItemInput", value)}
+          />
           <AbilityTextField
             className={`scenario-cell${opponentAbilitySpeedOverridden ? " speed-source-overridden" : ""}`}
             label="特性"
@@ -8870,29 +8840,26 @@ function AttackCard({
             onSelectAbility={(value) => onUpdateAttack(scenarioId, attack.id, "attackerAbilityInput", value)}
           />
         </fieldset>
-        {!isAbilitySupport ? (
-          <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-level-type-row">
-            <LevelLockField
-              ownerLabel={attackLabel}
-              className="scenario-cell number-cell number-labeled-field attack-level-field"
-              labelClassName="row-label"
-              mode={attack.attackerLevelMode}
-              value={attack.attackerLevel}
-              onModeChange={(mode) => onUpdateAttack(scenarioId, attack.id, "attackerLevelMode", mode)}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
-            />
-            <PokemonTypeField
-              ownerLabel={attackLabel}
-              pokemonInput={attack.attackerPokemonInput}
-              pokemonCanonicalName={attack.attackerPokemonCanonicalName}
-              value={attack.attackerTypeOverride}
-              teraEnabled={attack.attackerTeraEnabled}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTypeOverride", value)}
-            />
-          </fieldset>
-        ) : null}
-        {!isAbilitySupport ? (
-          <fieldset disabled={commonLocked} className="attack-shared-fields">
+        <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-level-type-row">
+          <LevelLockField
+            ownerLabel={attackLabel}
+            className="scenario-cell number-cell number-labeled-field attack-level-field"
+            labelClassName="row-label"
+            mode={attack.attackerLevelMode}
+            value={attack.attackerLevel}
+            onModeChange={(mode) => onUpdateAttack(scenarioId, attack.id, "attackerLevelMode", mode)}
+            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerLevel", value)}
+          />
+          <PokemonTypeField
+            ownerLabel={attackLabel}
+            pokemonInput={attack.attackerPokemonInput}
+            pokemonCanonicalName={attack.attackerPokemonCanonicalName}
+            value={attack.attackerTypeOverride}
+            teraEnabled={attack.attackerTeraEnabled}
+            onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTypeOverride", value)}
+          />
+        </fieldset>
+        <fieldset disabled={commonLocked} className="attack-shared-fields">
           <MechanicControls
             pokemonInput={attack.attackerPokemonInput}
             pokemonCanonicalName={attack.attackerPokemonCanonicalName}
@@ -8917,20 +8884,10 @@ function AttackCard({
             onDmaxEnabledChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerDmaxEnabled", value)}
             onTeraTypeInputChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerTeraTypeInput", value)}
           />
-          </fieldset>
-        ) : null}
+        </fieldset>
       </div>
 
-      {isAbilitySupport ? (
-        <div className={`attack-support-note${supportsDoublesAttack ? "" : " inactive"}`} role="status">
-          <strong>{supportsDoublesAttack ? "特性サポート有効" : "特性サポート待機中"}</strong>
-          <span>
-            {supportsDoublesAttack
-              ? "同じ行のダブル攻撃へ、影響する特性を自動反映します"
-              : "同じ行の攻撃ルールをダブルにすると、この特性が反映されます"}
-          </span>
-        </div>
-      ) : isSpeedAdjustment ? (
+      {isSpeedAdjustment ? (
         <>
           <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-speed-title`}>
             <h3 id={`${scenarioId}-${attack.id}-speed-title`}>素早さ条件</h3>
@@ -9154,6 +9111,8 @@ function AttackCard({
               />
             </div>
 
+            {battleAbilitiesSection}
+
             <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 仮想敵能力`}>
               <div className="ev-table attacker-stat-table offense-defender-stat-table" aria-label={`${attackLabel} 仮想敵能力`}>
                 <div className="ev-header attacker-stat-header">
@@ -9283,6 +9242,8 @@ function AttackCard({
               />
             </div>
 
+            {battleAbilitiesSection}
+
             <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 能力`}>
               <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} 参照能力`}>
                 <div className="ev-header attacker-stat-header">
@@ -9383,7 +9344,7 @@ function AttackCard({
           </section>
         </>
       )}
-      {!isAbilitySupport && !isSpeedAdjustment ? (
+      {!isSpeedAdjustment ? (
         <HpEventsEditor
           attack={attack}
           adjustmentType={adjustmentType}

@@ -46,7 +46,6 @@ import {
   getNatureUsageOverlayOpacity,
   HpStatMarkerControl,
   getScenarioPanelVisibleScenarios,
-  isAbilitySupportCard,
   isBoxStorageSourceReady,
   isUnresolvedEntityInput,
   formatMovePowerEvaluation,
@@ -77,7 +76,7 @@ import {
   DRAFT_STORAGE_KEY,
   createDraftStorageDocument,
 } from "./ui/draftStorage";
-import { GuideAllyAbilityTip, allyAbilityLabels } from "./guide/GuideAllyAbilityTip";
+import { GuideAllyAbilityTip } from "./guide/GuideAllyAbilityTip";
 import {
   GuideTutorial,
   getTutorialMessage,
@@ -998,32 +997,31 @@ describe("App", () => {
       "Garchomp",
     );
     expect(manualSupport.attackerAbilityInput).toBe("フェアリーオーラ");
-    expect(manualSupport.moveInput).toBe("");
+    expect(manualSupport.moveInput).toBe("10まんボルト");
   });
 
-  it("only treats field-wide or ally-targeting abilities as move-less support cards", () => {
-    for (const skinAbility of [
-      "フェアリースキン",
-      "スカイスキン",
-      "フリーズスキン",
-      "エレキスキン",
-      "ノーマルスキン",
-      "ドラゴンスキン",
-    ]) {
-      expect(isAbilitySupportCard("defence", "", skinAbility)).toBe(false);
-    }
+  it("uses every defense card for an attack, including Pokemon with ally abilities", () => {
+    expect(shouldAutoFillUsageMoveForAttack("defence")).toBe(true);
+    expect(shouldAutoFillUsageMoveForAttack("offense")).toBe(false);
+    expect(shouldAutoFillUsageMoveForAttack("speed")).toBe(false);
+  });
 
-    expect(isAbilitySupportCard("defence", "", "フェアリーオーラ")).toBe(true);
-    expect(isAbilitySupportCard("defence", "", "ダークオーラ")).toBe(true);
-    expect(isAbilitySupportCard("defence", "", "オーラブレイク")).toBe(true);
-    expect(isAbilitySupportCard("defence", "", "はどうのぼうご")).toBe(false);
-    expect(isAbilitySupportCard("defence", "ムーンフォース", "フェアリーオーラ")).toBe(false);
-    expect(isAbilitySupportCard("offense", "", "フェアリーオーラ")).toBe(false);
-    expect(shouldAutoFillUsageMoveForAttack("defence", "", "フェアリーオーラ")).toBe(false);
-    expect(shouldAutoFillUsageMoveForAttack("defence", "", "はどうのぼうご")).toBe(true);
-    expect(shouldAutoFillUsageMoveForAttack("defence", "", "もうか")).toBe(true);
-    expect(shouldAutoFillUsageMoveForAttack("offense", "", "もうか")).toBe(false);
-    expect(shouldAutoFillUsageMoveForAttack("speed", "", "もうか")).toBe(false);
+  it("renders independent field abilities on defense and locked offense cards with no Friend Guard checkbox", () => {
+    const scenarios = createDefaultScenarioForms().filter((scenario) => scenario.adjustmentType !== "speed").map((scenario) => ({
+      ...initializeOffenseScenario(scenario),
+      attacks: [0, 1].map((index) => ({ ...scenario.attacks[0], id: `${scenario.id}-${index}`, gameType: "doubles" as const,
+        battleAbilities: { targetAlly: ["Battery"], opponentAlly: index ? ["Sword of Ruin", "Friend Guard"] : ["Friend Guard"] } })),
+    }));
+    const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={scenarios} />);
+    expect(html.match(/class="attack-advanced-settings battle-abilities-settings"/g)).toHaveLength(4);
+    expect(html).toContain("調整対象の味方の特性");
+    expect(html).toContain("仮想敵の味方の特性");
+    expect(html).toContain("引継ぎ: わざわいのつるぎ・フレンドガード");
+    expect(html).not.toContain("特性サポート");
+    expect(html).not.toContain("> フレンドガード</label>");
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    expect(css).toMatch(/\.battle-abilities-settings > summary\s*\{[^}]*min-height: var\(--desktop-control-comfort\)/);
+    expect(css).toMatch(/\.battle-abilities-settings > summary:focus-visible\s*\{[^}]*outline: 2px solid var\(--gold\)/);
   });
 
   it("keeps mobile text controls large enough to avoid iOS focus zoom", () => {
@@ -1437,7 +1435,7 @@ describe("App", () => {
     expect(modifierSectionCount).toBeGreaterThan(0);
     expect(optionsCount).toBe(modifierSectionCount);
 
-    const labels = ["急所", "てだすけ", "リフレクター", "ひかりのかべ", "オーロラベール", "フレンドガード"];
+    const labels = ["急所", "てだすけ", "リフレクター", "ひかりのかべ", "オーロラベール"];
     const modifierSections = Array.from(html.matchAll(
       /<section class="attack-setting-section attack-battle-modifiers" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/g,
     ));
@@ -1479,7 +1477,7 @@ describe("App", () => {
     const checkedSection = checkedHtml.match(
       /<section class="attack-setting-section attack-battle-modifiers" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/,
     )?.[2] ?? "";
-    expect((checkedSection.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(6);
+    expect((checkedSection.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(5);
     for (const label of labels) {
       expect(checkedSection).toContain(`> ${label}</label>`);
     }
@@ -2097,30 +2095,17 @@ describe("App", () => {
     expect(importantTipIndex).toBeGreaterThan(-1);
     expect(alertIconIndex).toBeGreaterThan(importantTipIndex);
     expect(alertIconIndex).toBeLessThan(importantLabelIndex);
-    const guideAllyAbilityImage = readFileSync(new URL("../public/assets/guide/double-battle-ally-abilities.png", import.meta.url));
-    expect(guideAllyAbilityImage.subarray(1, 4).toString("ascii")).toBe("PNG");
-    expect(guideAllyAbilityImage.readUInt32BE(16)).toBe(871);
-    expect(guideAllyAbilityImage.readUInt32BE(20)).toBe(548);
     expect(allyAbilityTipHtml).toContain('class="guide-tip-icon"');
     expect(allyAbilityTipHtml).toContain("ダブルバトルの味方特性");
-    expect(allyAbilityTipHtml).toContain("同じシナリオの「＋」から味方を追加します。");
-    expect(allyAbilityTipHtml).not.toContain("README");
-    expect(allyAbilityTipHtml).toContain("対応している味方特性");
-    expect(allyAbilityTipHtml).toContain('class="guide-ability-disclosure-trigger"');
-    expect(allyAbilityTipHtml).toContain('aria-expanded="false"');
-    expect(allyAbilityTipHtml).toContain('data-state="closed"');
-    expect(allyAbilityLabels).toHaveLength(14);
-    const disclosureRules = [...guideCss.matchAll(/^\s*\.guide-ability-disclosure-trigger\s*\{([^}]*)\}/gm)].map((match) => match[1]);
-    expect(disclosureRules).toHaveLength(2);
-    expect(disclosureRules[0]).toContain("min-height: var(--desktop-control-comfort)");
-    expect(disclosureRules[0]).toContain("font-size: var(--desktop-text-control)");
-    expect(disclosureRules[1]).toContain("min-height: var(--mobile-control-comfort)");
-    expect(disclosureRules[1]).toContain("font-size: var(--mobile-text-control)");
-    expect(allyAbilityTipHtml).toContain('src="/assets/guide/double-battle-ally-abilities.png"');
+    expect(allyAbilityTipHtml).toContain("攻撃カードの「場の特性」を開きます。");
+    expect(allyAbilityTipHtml).toContain("調整対象の味方の特性");
+    expect(allyAbilityTipHtml).toContain("仮想敵の味方の特性");
+    expect(allyAbilityTipHtml).toContain("README");
+    expect(allyAbilityTipHtml).not.toContain("double-battle-ally-abilities.png");
+    expect(guideHtml).not.toContain("ダブルでは味方の追加にも使います");
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
     for (const ability of ["わざわいのつるぎ", "わざわいのたま", "わざわいのおふだ", "わざわいのうつわ", "フラワーギフト", "バッテリー", "パワースポット", "はがねのせいしん", "フェアリーオーラ", "ダークオーラ", "オーラブレイク", "プラス", "マイナス", "フレンドガード"]) {
       expect(readme).toContain(`\`${ability}\``);
-      expect(allyAbilityLabels).toContain(ability);
     }
     const guideStructuredDataMatch = guideHtml.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(guideStructuredDataMatch).not.toBeNull();

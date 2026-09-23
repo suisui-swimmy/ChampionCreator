@@ -115,7 +115,10 @@ export interface ScenarioHit {
   id: string;
   attacker: Build;
   defenderStatus?: Exclude<PokemonStatus, "none">;
+  /** Third-party abilities on the attacker's side at this attack. */
   allyAbilities?: AbilityRef[];
+  /** Third-party abilities on the defender's side at this attack. */
+  defenderAllyAbilities?: AbilityRef[];
   move: MoveRef;
   moveHits?: number;
   movePowerOverride?: MovePowerOverride;

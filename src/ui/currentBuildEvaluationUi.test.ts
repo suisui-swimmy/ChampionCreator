@@ -72,10 +72,10 @@ describe("current allocation evaluation", () => {
     expect(run().conditions[0].status).toBe("incomplete");
   });
 
-  it("preserves explicit ally-support cards without treating their absent move as incomplete", () => {
+  it("requires an attack when a card has an ally ability but no move", () => {
     const { scenarios, run } = checkExample();
     scenarios[0].attacks.push({ ...createDefaultScenarioAttackForm("ally", "味方"), moveInput: "", attackerAbilityInput: "パワースポット" });
-    expect(run().conditions[0].status).not.toBe("incomplete");
+    expect(run().conditions[0].status).toBe("incomplete");
   });
 
   it("excludes disabled scenarios and never calls no conditions a pass", () => {

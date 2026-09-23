@@ -15,7 +15,7 @@ describe("production sharing", () => {
     expect(url.pathname).toBe("/cc/");
     expect(url.search).toBe("?import-share=1");
     expect(hasShareImportRequest(url.href)).toBe(true);
-    expect(url.hash).toMatch(/^#share=s3\./);
+    expect(url.hash).toMatch(/^#share=s4\./);
     const shared = await readSharedAdjustmentHash(url.hash);
     expect(comparableShareJson(shared.document)).toBe(comparableShareJson(document));
     expect(shared.provenance).toEqual({ app: appVersionInfo.appVersion, calc: appVersionInfo.smogonCalcVersion });

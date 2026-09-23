@@ -85,6 +85,8 @@ export const evaluateCurrentBuildCondition = (
     if (condition.kind === "offense" && condition.sequence) {
       for (const attack of condition.sequence.attacks) {
         assertBuild(attack.defenderBuild); assertSupportedEntity(attack.move);
+        attack.allyAbilities?.forEach(assertSupportedEntity);
+        attack.defenderAllyAbilities?.forEach(assertSupportedEntity);
         if (attack.hpEvents?.some((event) => event.enabled && !getHpEventRuleDefinition(event.effectId))) throw new Error("計算未対応の定数ダメージ・回復が含まれています");
       }
       const offense = evaluateOffenseSequence(build, condition.sequence);
@@ -102,6 +104,7 @@ export const evaluateCurrentBuildCondition = (
       assertBuild(hit.attacker);
       assertSupportedEntity(hit.move);
       hit.allyAbilities?.forEach(assertSupportedEntity);
+      hit.defenderAllyAbilities?.forEach(assertSupportedEntity);
     }
     if (condition.kind === "defence") {
       const defence = evaluateScenario(build, condition.scenario);
@@ -113,6 +116,8 @@ export const evaluateCurrentBuildCondition = (
     assertBuild(condition.input.attackerBuild, true);
     assertBuild(condition.input.defenderBuild);
     assertSupportedEntity(condition.input.move);
+    condition.input.allyAbilities?.forEach(assertSupportedEntity);
+    condition.input.defenderAllyAbilities?.forEach(assertSupportedEntity);
     const offense = evaluateCurrentOffense(condition.input);
     if (offense.hitEvaluation.movePower?.source === "status") {
       return { ...identity, status: "unsupported", message: "変化技の効果によるKO判定は計算未対応です" };

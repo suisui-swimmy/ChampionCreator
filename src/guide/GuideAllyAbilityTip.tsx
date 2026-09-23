@@ -1,23 +1,4 @@
-import * as Collapsible from "@radix-ui/react-collapsible";
-import { ChevronRightIcon } from "@radix-ui/react-icons";
 import { getPublicAssetUrl } from "../ui/publicAssetUrl";
-
-export const allyAbilityLabels = [
-  "わざわいのつるぎ",
-  "わざわいのたま",
-  "わざわいのおふだ",
-  "わざわいのうつわ",
-  "フラワーギフト",
-  "バッテリー",
-  "パワースポット",
-  "はがねのせいしん",
-  "フェアリーオーラ",
-  "ダークオーラ",
-  "オーラブレイク",
-  "プラス",
-  "マイナス",
-  "フレンドガード",
-] as const;
 
 export function GuideAllyAbilityTip() {
   return (
@@ -33,27 +14,9 @@ export function GuideAllyAbilityTip() {
         />
         <strong>ダブルバトルの味方特性</strong>
       </div>
-      <p>味方の特性を計算に含めるときは、ヘッダーを「ダブル」にし、同じシナリオの「＋」から味方を追加します。ポケモンと特性を選んでください。</p>
-      <Collapsible.Root className="guide-ability-disclosure">
-        <Collapsible.Trigger className="guide-ability-disclosure-trigger" type="button">
-          <ChevronRightIcon className="guide-disclosure-chevron" aria-hidden="true" />
-          <span>対応している味方特性</span>
-        </Collapsible.Trigger>
-        <Collapsible.Content className="guide-ability-disclosure-content">
-          <ul>
-            {allyAbilityLabels.map((ability) => <li key={ability}>{ability}</li>)}
-          </ul>
-        </Collapsible.Content>
-      </Collapsible.Root>
-      <img
-        className="guide-ally-ability-image"
-        src={getPublicAssetUrl("assets/guide/double-battle-ally-abilities.png")}
-        width="871"
-        height="548"
-        loading="lazy"
-        decoding="async"
-        alt="ダブルバトルの味方特性を設定した例"
-      />
+      <p>耐久・火力どちらも、ルールを「ダブル」にして、攻撃カードの「場の特性」を開きます。「調整対象の味方の特性」と「仮想敵の味方の特性」を選んでください。</p>
+      <p>「＋」で追加した攻撃には直前の設定を引き継ぎます。途中で味方が交代・ひんしになる想定なら、その攻撃の設定を変更します。</p>
+      <p>対応する特性と計算の条件は、<a href="https://github.com/suisui-swimmy/ChampionCreator#味方特性の対応範囲" target="_blank" rel="noreferrer">README</a>を参照してください。</p>
     </div>
   );
 }

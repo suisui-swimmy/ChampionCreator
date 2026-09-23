@@ -13,6 +13,7 @@ import {
 } from "../domain/championsStats";
 import type { HpEvent, HpEventEvaluation } from "../domain/hpEvents";
 import type {
+  AbilityRef,
   Build,
   BeatUpMoveContext,
   FieldState,
@@ -36,6 +37,8 @@ import { getBuildStatPoints } from "../domain/championsStats";
 export type OffenseAdjustmentStatus = "pass" | "fail" | "fixed" | "unresolved" | "invalid";
 
 export interface OffenseAdjustmentInput {
+  allyAbilities?: AbilityRef[];
+  defenderAllyAbilities?: AbilityRef[];
   attackerBuild: Build;
   defenderBuild: Build;
   move: MoveRef;
@@ -124,6 +127,8 @@ export const buildOffenseHit = (
 ): ScenarioHit => ({
   id: "offense-adjustment-hit",
   attacker: attackerBuild,
+  allyAbilities: input.allyAbilities,
+  defenderAllyAbilities: input.defenderAllyAbilities,
   defenderStatus: input.defenderBuild.status,
   move: input.move,
   movePowerOverride: input.movePowerOverride,

@@ -71,40 +71,37 @@ export const toSmogonSide = (
     isAuroraVeil: side.auroraVeil,
     isHelpingHand: side.helpingHand,
     isTailwind: side.tailwind,
-    isFriendGuard: side.friendGuard,
+    isFriendGuard: side.friendGuard || allyAbilityNames.has("Friend Guard"),
     isFlowerGift: allyAbilityNames.has("Flower Gift"),
     isBattery: allyAbilityNames.has("Battery"),
     isPowerSpot: allyAbilityNames.has("Power Spot"),
     isSteelySpirit: allyAbilityNames.has("Steely Spirit"),
   });
 
-const getAllyAbilityNames = (hit: ScenarioHit): Set<string> =>
-  new Set(hit.allyAbilities?.map((ability) => ability.canonicalName) ?? []);
+const getAllyAbilityNames = (abilities: ScenarioHit["allyAbilities"], field: FieldState): Set<string> =>
+  new Set(field.gameType === "doubles" ? abilities?.map((ability) => ability.canonicalName) ?? [] : []);
 
-const hasPlusMinusSynergy = (hit: ScenarioHit, allyAbilityNames: Set<string>): boolean =>
-  Boolean(
-    hit.attacker.ability &&
-    ["Plus", "Minus"].includes(hit.attacker.ability.canonicalName) &&
-    (allyAbilityNames.has("Plus") || allyAbilityNames.has("Minus")),
-  );
+const hasPlusMinusSynergy = (build: Build, allyAbilityNames: Set<string>): boolean =>
+  Boolean(build.ability && ["Plus", "Minus"].includes(build.ability.canonicalName)
+    && (allyAbilityNames.has("Plus") || allyAbilityNames.has("Minus")));
 
 export const toSmogonField = (field: FieldState, hit: ScenarioHit): Field => {
-  const allyAbilityNames = getAllyAbilityNames(hit);
-
+  const attackerAllies = getAllyAbilityNames(hit.allyAbilities, field);
+  const defenderAllies = getAllyAbilityNames(hit.defenderAllyAbilities, field);
+  const globalAbilities = new Set([...attackerAllies, ...defenderAllies]);
   return new Field({
     gameType: gameTypeByFieldState[field.gameType],
     weather: weatherByFieldState[field.weather],
     terrain: terrainByFieldState[field.terrain],
-    isAuraBreak: allyAbilityNames.has("Aura Break"),
-    isFairyAura: allyAbilityNames.has("Fairy Aura"),
-    isDarkAura: allyAbilityNames.has("Dark Aura"),
-    isBeadsOfRuin: allyAbilityNames.has("Beads of Ruin"),
-    isSwordOfRuin: allyAbilityNames.has("Sword of Ruin"),
-    isTabletsOfRuin: allyAbilityNames.has("Tablets of Ruin"),
-    isVesselOfRuin: allyAbilityNames.has("Vessel of Ruin"),
-    attackerSide: toSmogonSide(hit.attackerSide, allyAbilityNames),
-    // Friend Guard protects the attacker-side ally, not the current defender target.
-    defenderSide: toSmogonSide(hit.defenderSide),
+    isAuraBreak: globalAbilities.has("Aura Break"),
+    isFairyAura: globalAbilities.has("Fairy Aura"),
+    isDarkAura: globalAbilities.has("Dark Aura"),
+    isBeadsOfRuin: globalAbilities.has("Beads of Ruin"),
+    isSwordOfRuin: globalAbilities.has("Sword of Ruin"),
+    isTabletsOfRuin: globalAbilities.has("Tablets of Ruin"),
+    isVesselOfRuin: globalAbilities.has("Vessel of Ruin"),
+    attackerSide: toSmogonSide(hit.attackerSide, attackerAllies),
+    defenderSide: toSmogonSide(hit.defenderSide, defenderAllies),
   });
 };
 
@@ -483,11 +480,11 @@ export const calculateSmogonHit = (
   fieldState: FieldState,
   options: SmogonHitCalculationOptions = {},
 ): ScenarioHitEvaluation => {
-  const allyAbilityNames = getAllyAbilityNames(hit);
+  const allyAbilityNames = getAllyAbilityNames(hit.allyAbilities, fieldState);
   const attacker = toSmogonPokemon(
     hit.attacker,
     hit.attackerBoosts,
-    hasPlusMinusSynergy(hit, allyAbilityNames) || undefined,
+    hasPlusMinusSynergy(hit.attacker, allyAbilityNames) || undefined,
     { currentHp: options.attackerCurrentHp },
   );
   const originalMoveName = hit.move.canonicalName;
@@ -501,7 +498,7 @@ export const calculateSmogonHit = (
       ? defenderBuild
       : { ...defenderBuild, status: hit.defenderStatus },
     hit.defenderBoosts,
-    undefined,
+    hasPlusMinusSynergy(defenderBuild, getAllyAbilityNames(hit.defenderAllyAbilities, fieldState)) || undefined,
     { currentHp: defenderCurrentHp },
   );
   const field = toSmogonField(fieldState, hit);

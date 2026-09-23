@@ -4794,10 +4794,6 @@ textarea {
   grid-template-columns: minmax(76px, 1fr) 72px 58px 58px;
 }
 
-.attack-card-fields.support-mode {
-  align-items: start;
-}
-
 .attack-setting-section {
   display: grid;
   gap: 6px;
@@ -4907,6 +4903,43 @@ textarea {
   display: grid;
   gap: 8px;
   padding: 2px 0 4px;
+}
+
+/* Explicit third-party abilities share the existing compact disclosure controls. */
+.attack-advanced-settings.battle-abilities-settings > summary {
+  min-height: var(--desktop-control-comfort);
+  font-size: var(--desktop-text-control);
+}
+
+.battle-abilities-settings > summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.battle-abilities-content .select-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.battle-abilities-content .select-field-label {
+  white-space: normal;
+  font-size: var(--desktop-text-interactive-small);
+}
+
+.battle-abilities-content .select-trigger {
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  min-height: var(--desktop-control-standard);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.battle-abilities-legacy {
+  margin: 4px 0;
+  font-size: var(--desktop-text-meta);
+  color: var(--muted);
 }
 
 .hp-events-settings {
@@ -5071,32 +5104,6 @@ textarea {
   white-space: nowrap;
 }
 
-.attack-support-note {
-  display: grid;
-  gap: 2px;
-  border: 1px solid #52694f;
-  border-radius: 5px;
-  background: #182019;
-  padding: 8px;
-  color: #b7c8b4;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.attack-support-note strong {
-  color: #ebfe3d;
-  font-size: 12px;
-}
-
-.attack-support-note.inactive {
-  border-color: #796b43;
-  background: #211e16;
-  color: #c7bda0;
-}
-
-.attack-support-note.inactive strong {
-  color: #fba82f;
-}
 
 .attacker-stat-table {
   margin-top: 2px;
@@ -6669,6 +6676,17 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .attack-advanced-settings.battle-abilities-settings > summary {
+    min-height: var(--mobile-control-comfort);
+    font-size: var(--mobile-text-control);
+  }
+
+  .mobile-scenarios-open .battle-abilities-settings .battle-abilities-content .select-trigger {
+    min-height: var(--mobile-control-standard);
+    height: auto;
+    font-size: var(--mobile-text-input);
+  }
+
   .search-progress-row .progress-cancel-button {
     flex-basis: var(--mobile-control-standard);
     width: var(--mobile-control-standard);
@@ -7964,7 +7982,6 @@ textarea {
   }
 
   .mobile-scenarios-open .attack-card-fields,
-  .mobile-scenarios-open .attack-card-fields.support-mode,
   .mobile-scenarios-open .attack-field-grid,
   .mobile-scenarios-open .speed-field-grid,
   .mobile-scenarios-open .speed-condition-grid {

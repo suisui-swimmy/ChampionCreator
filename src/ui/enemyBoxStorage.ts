@@ -1,10 +1,10 @@
 import {
   SHARE_SCHEMA_VERSION,
   parseShareStateDocument,
+  createShareStateDocument,
 } from "./shareState";
 import {
   createDefaultTargetForm,
-  initializeOffenseScenario,
   type ScenarioFormState,
 } from "./defenceSearchUi";
 
@@ -121,7 +121,7 @@ export const createEnemyBoxEntryFromScenarios = (
     summary,
     payload: {
       schemaVersion: SHARE_SCHEMA_VERSION,
-      scenarios: scenarios.map(initializeOffenseScenario),
+      scenarios: createShareStateDocument(createDefaultTargetForm(), scenarios).scenarios,
     },
   };
 };

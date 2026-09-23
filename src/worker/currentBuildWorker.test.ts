@@ -36,6 +36,20 @@ describe("current build Worker", () => {
     })));
     expect(JSON.stringify(input)).toBe(before);
   });
+  it("preserves explicit abilities on both sides and per-attack changes through structured Worker messages", async () => {
+    const { target, scenarios } = createAdjustmentExampleState();
+    for (const scenario of scenarios.filter((row) => row.adjustmentType !== "speed")) {
+      scenario.attacks[0].gameType = "doubles";
+      scenario.attacks[0].battleAbilities = { targetAlly: ["Battery"], opponentAlly: ["Friend Guard"] };
+      scenario.attacks.push({ ...structuredClone(scenario.attacks[0]), id: `${scenario.id}-next`,
+        battleAbilities: { targetAlly: ["Power Spot"], opponentAlly: ["Flower Gift"] }, weather: "sun" });
+    }
+    const input = buildCurrentBuildEvaluationInput(target, scenarios);
+    const messages: CurrentBuildWorkerMessage[] = [];
+    await runCurrentBuildWorkerTask({ type: "start", requestId: "abilities", input: structuredClone(input) }, (message) => messages.push(message));
+    expect(messages.at(-1)).toEqual({ type: "complete", requestId: "abilities", result: evaluateCurrentBuild(input) });
+    expect(evaluateCurrentBuild(input).conditions.some((row) => row.status === "incomplete" || row.status === "unsupported")).toBe(false);
+  });
   it("does not publish completion after cancellation between conditions", async () => {
     let checks = 0;
     const emit = vi.fn();

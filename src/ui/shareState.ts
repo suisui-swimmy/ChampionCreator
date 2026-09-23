@@ -28,7 +28,10 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 15;
+import { getBattleAbilities, validateBattleAbilities } from "./battleAbilities";
+import { migrateBattleAbilities } from "./migrateBattleAbilities";
+
+export const SHARE_SCHEMA_VERSION = 16;
 export const POKEMON_TYPE_OVERRIDE_SCHEMA_VERSION = 13;
 
 /** Schema version in which the current speed-state fields were introduced. */
@@ -78,6 +81,7 @@ type SupportedShareSchemaVersion =
   | 12
   | 13
   | 14
+  | 15
   | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeTypeOverride = (
@@ -532,6 +536,11 @@ const normalizeAttack = (
   }
   if (normalized.attackerTypeOverride === undefined) delete normalized.attackerTypeOverride;
   if (sourceSchemaVersion < 15) delete normalized.offenseMoveUses;
+  if (sourceSchemaVersion < 16) delete normalized.battleAbilities;
+  else {
+    if (normalized.battleAbilities !== undefined) normalized.battleAbilities = validateBattleAbilities(normalized.battleAbilities);
+    if (normalized.friendGuard !== false) throw new Error("条件JSONのフレンドガードは場の特性で指定してください");
+  }
   // speedMoveModifier was part of schema <=10 only. Do not let an unknown
   // legacy key leak back into the current form state after migration.
   delete (normalized as ScenarioAttackFormState & Record<string, unknown>).speedMoveModifier;
@@ -590,7 +599,13 @@ export const createShareStateDocument = (
 ): ShareStateDocument => ({
   schemaVersion: SHARE_SCHEMA_VERSION,
   target,
-  scenarios: scenarios.map(initializeOffenseScenario),
+  scenarios: scenarios.map(initializeOffenseScenario).map((scenario) => ({
+    ...scenario,
+    attacks: scenario.attacks.map((attack) => ({ ...attack, friendGuard: false,
+      ...(attack.battleAbilities || attack.friendGuard
+        ? { battleAbilities: validateBattleAbilities(getBattleAbilities(attack, scenario.adjustmentType)) } : {}),
+    })),
+  })),
 });
 
 export const stringifyShareStateDocument = (
@@ -604,6 +619,7 @@ export const parseShareStateDocument = (json: string, migrate = true): ShareStat
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 15
       && parsed.schemaVersion !== 14
       && parsed.schemaVersion !== 13
       && parsed.schemaVersion !== 12
@@ -642,6 +658,7 @@ export const parseShareStateDocument = (json: string, migrate = true): ShareStat
     )),
   };
   if (!migrate) return { ...document, schemaVersion: sourceSchemaVersion as typeof SHARE_SCHEMA_VERSION };
+  if (sourceSchemaVersion < 16) document.scenarios = document.scenarios.map(migrateBattleAbilities);
   if (sourceSchemaVersion < 14) {
     const usedIds = new Set(document.scenarios.map((scenario) => scenario.id));
     document.scenarios = document.scenarios.flatMap((scenario) => {
