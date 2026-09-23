@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultTargetForm, createDefaultScenarioAttackForm, initializeOffenseScenario, buildOffenseSequenceCondition, buildTargetBuildFromUi, type ScenarioFormState } from "../ui/defenceSearchUi";
+import { createDefaultTargetForm, createDefaultScenarioAttackForm, initializeOffenseScenario, buildOffenseSequenceCondition, buildTargetBuildFromUi, getOffenseMoveUses, getOffenseCumulativeUses, type ScenarioFormState } from "../ui/defenceSearchUi";
 import { evaluateOffenseSequence, searchOffenseAllocation, withOffenseStatPoints } from "./offenseSequence";
 import { evaluateCurrentOffense } from "./offenseAdjustment";
 import { getBuildStatPoints, sumStatPoints } from "../domain/championsStats";
@@ -26,6 +26,57 @@ const fixture = (moves = ["エアスラッシュ", "エアスラッシュ"]) => 
 const finish = <T>(iterator: Generator<number, T>) => { let step = iterator.next(); while (!step.done) step = iterator.next(); return step.value; };
 
 describe("offense sequences", () => {
+  it("evaluates two uses in one card like two single-use cards and derives cumulative uses", () => {
+    const repeated = fixture(["エアスラッシュ"]);
+    repeated.scenario.attacks[0].offenseMoveUses = 2;
+    const condition = buildOffenseSequenceCondition(repeated.target, repeated.scenario);
+    const result = evaluateOffenseSequence(repeated.build, condition);
+    const separate = fixture();
+    const reference = evaluateOffenseSequence(separate.build, separate.condition);
+    expect(result.koProbability).toBe(reference.koProbability);
+    expect(result.steps).toHaveLength(1);
+    expect(result.steps[0]).toMatchObject({ moveUses: 2, cumulativeUses: 2, remainingHp: reference.steps[1].remainingHp });
+    expect(evaluateCurrentBuild(buildCurrentBuildEvaluationInput(repeated.target, [repeated.scenario])).conditions[0].offense?.koProbability).toBe(reference.koProbability);
+    repeated.scenario.attacks.push({ ...repeated.scenario.attacks[0], id: "next", offenseMoveUses: 1 });
+    expect(repeated.scenario.attacks.map((attack) => getOffenseCumulativeUses(repeated.scenario, attack.id))).toEqual([2, 3]);
+    repeated.scenario.attacks[0].offenseMoveUses = 4;
+    expect(getOffenseCumulativeUses(repeated.scenario, "next")).toBe(5);
+    repeated.scenario.attacks.shift();
+    expect(getOffenseCumulativeUses(repeated.scenario, "next")).toBe(1);
+  });
+  it("keeps move uses independent of multi-hit counts", () => {
+    const repeated = fixture(["タネマシンガン"]);
+    repeated.scenario.attacks[0].repeat = 5;
+    repeated.scenario.attacks[0].offenseMoveUses = 2;
+    const condition = buildOffenseSequenceCondition(repeated.target, repeated.scenario);
+    expect(condition.attacks[0]).toMatchObject({ moveUses: 2, moveHits: 5 });
+    const result = evaluateOffenseSequence(repeated.build, condition);
+    const separate = fixture(["タネマシンガン", "タネマシンガン"]);
+    separate.scenario.attacks.forEach((attack) => { attack.repeat = 5; });
+    expect(result.koProbability).toBe(evaluateOffenseSequence(separate.build, buildOffenseSequenceCondition(separate.target, separate.scenario)).koProbability);
+    expect(result.hitEvaluation.damageRollsByHit).toHaveLength(5);
+    expect(result.steps[0].cumulativeUses).toBe(2);
+  });
+  it("preserves pre-feature move-use semantics and persists the new count through JSON and s3", async () => {
+    const { target, scenario } = fixture(["タネマシンガン"]);
+    scenario.attacks[0].repeat = 5;
+    const legacy = { ...createShareStateDocument(target, [scenario]), schemaVersion: 14 };
+    const migrated = parseShareStateDocument(JSON.stringify(legacy));
+    expect(getOffenseMoveUses(migrated.scenarios[0].attacks[0])).toBe(1);
+    expect(migrated.scenarios[0].attacks[0].repeat).toBe(5);
+    scenario.attacks[0].offenseMoveUses = 3;
+    const document = createShareStateDocument(target, [scenario]);
+    expect(parseShareStateDocument(JSON.stringify(document)).scenarios[0].attacks[0].offenseMoveUses).toBe(3);
+    const token = await encodeSharedAdjustment(document, { app: "0.34.0", calc: "test" });
+    const decoded = (await decodeSharedAdjustment(token)).document;
+    expect(decoded.scenarios[0].attacks[0]).toMatchObject({ repeat: 5, offenseMoveUses: 3 });
+  });
+  it.each([0, -1, 1.5, 11, "2", null])("rejects an invalid new move-use count %s", (value) => {
+    const { target, scenario } = fixture();
+    const document = createShareStateDocument(target, [scenario]);
+    (document.scenarios[0].attacks[0] as unknown as Record<string, unknown>).offenseMoveUses = value;
+    expect(() => parseShareStateDocument(JSON.stringify(document))).toThrow("火力の攻撃回数");
+  });
   it("carries one opponent's HP and matches convolution of the two actual Calc rolls", () => {
     const { build, condition } = fixture();
     const single = evaluateCurrentOffense(condition.attacks[0]);
@@ -125,12 +176,12 @@ describe("offense sequences", () => {
     scenario.attacks.push({ ...scenario.attacks[0], id: "blank", moveInput: "" });
     expect(() => buildOffenseSequenceCondition(target, scenario)).toThrow("技を入力");
   });
-  it("round-trips the common opponent and per-card rank overrides in s2", async () => {
+  it("round-trips the common opponent and per-card rank overrides in s3", async () => {
     const { target, scenario } = fixture();
     scenario.attacks[1].offenseAttackerBoosts = { spa: -2 };
     const document = createShareStateDocument(target, [scenario]);
     const token = await encodeSharedAdjustment(document, { app: "0.33.0", calc: "test" });
-    expect(token.startsWith("s2.")).toBe(true);
+    expect(token.startsWith("s3.")).toBe(true);
     const decoded = (await decodeSharedAdjustment(token)).document;
     expect(decoded.scenarios[0].offense).toEqual(scenario.offense);
     expect(decoded.scenarios[0].attacks[1].offenseAttackerBoosts).toEqual({ spa: -2 });

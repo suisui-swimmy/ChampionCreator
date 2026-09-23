@@ -68,6 +68,7 @@ import {
   buildScenarioAttackBuildFromUi,
   buildTargetBuildFromUi,
   createDefaultScenarioForms,
+  initializeOffenseScenario,
   createDefaultTargetForm,
 } from "./ui/defenceSearchUi";
 import { appVersionInfo } from "./appVersion";
@@ -2952,10 +2953,10 @@ describe("App", () => {
     expect(desktopCss.match(/\.attack-level-field \.level-inline-control \{([^}]*)\}/)?.[1])
       .toContain("height: var(--desktop-control-compact)");
 
-    expect(html.match(/class="attack-card-field-row attack-card-identity-row"/g)).toHaveLength(3);
+    expect(countClassToken(html, "attack-card-identity-row")).toBe(3);
     expect(html.match(/class="attack-card-field-row attack-move-power-cell"/g)).toHaveLength(2);
-    expect(html.match(/class="attack-card-field-row attack-card-details-row"/g)).toHaveLength(3);
-    expect(html.match(/class="attack-card-field-row attack-card-level-type-row"/g)).toHaveLength(3);
+    expect(countClassToken(html, "attack-card-details-row")).toBe(3);
+    expect(countClassToken(html, "attack-card-level-type-row")).toBe(3);
     expect(html.match(/class="move-power-inline-control is-readonly"/g)).toHaveLength(2);
     expect(html).toContain('aria-label="威力 70"');
     expect(html).toContain('aria-label="威力 90"');
@@ -4282,6 +4283,30 @@ describe("App", () => {
     expect(html).not.toContain("（この攻撃のみ）");
   });
 
+  it("keeps shared offense inputs inside each card and locks them after the first card", () => {
+    const scenario = initializeOffenseScenario(createDefaultScenarioForms()[1]);
+    scenario.attacks[0].offenseMoveUses = 2;
+    scenario.offense!.targetKoProbabilityPercent = 50;
+    scenario.attacks.push({ ...scenario.attacks[0], id: "second", label: "火力調整B", offenseMoveUses: 1,
+      attackerPokemonInput: "カビゴン", attackerNatureInput: "いじっぱり" });
+    const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={[scenario]} usageData={null} />);
+    expect(countClassToken(html, "attack-condition-card")).toBe(2);
+    expect(html).not.toContain("offense-opponent-card");
+    expect(html).not.toContain("offense-attack-order");
+    expect(html).not.toContain('value="カビゴン"');
+    const cards = html.split('class="attack-condition-card offense-attack-card"').slice(1);
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).not.toContain('<fieldset disabled=""');
+    expect(cards[1].match(/<fieldset disabled=""/g)).toHaveLength(5);
+    expect(cards[1]).toMatch(/<input[^>]*disabled=""[^>]*aria-label="火力調整B 仮想敵H SP"/);
+    const values = (label: string) => [...html.matchAll(/<input\b[^>]*>/g)]
+      .map((match) => match[0]).filter((tag) => tag.includes(`aria-label="${label}"`))
+      .map((tag) => tag.match(/value="([^"]*)"/)?.[1]);
+    expect(values("攻撃回数")).toEqual(["2", "1"]);
+    expect(values("累計回数")).toEqual(["2", "3"]);
+    expect(values("KO率 %")).toEqual(["50", "50"]);
+  });
+
   it("shows only relevant defender stats for offense adjustment moves", () => {
     expect(getOffenseDefenderStatKeys("サイコキネシス")).toEqual(["hp", "spd"]);
     expect(getOffenseDefenderStatKeys("ふいうち")).toEqual(["hp", "def"]);
@@ -4291,9 +4316,9 @@ describe("App", () => {
 
     const html = renderExampleApp();
 
-    expect(html).toContain('aria-label="共通の仮想敵 仮想敵能力"');
-    expect(html).toContain('aria-label="共通の仮想敵 仮想敵H SP"');
-    expect(html).toContain('aria-label="共通の仮想敵 仮想敵D SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵能力"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵D SP"');
     expect(html).toContain('aria-label="火力調整A 仮想敵Dランク: 0"');
     expect(html).not.toContain('aria-label="火力調整A 仮想敵A SP"');
     expect(html).not.toContain('aria-label="火力調整A 仮想敵B SP"');
@@ -5326,7 +5351,7 @@ describe("App", () => {
     expect(html).toContain("assets/types/fire.png");
     expect(html).toContain("assets/types/dark.png");
     expect(html).toContain("耐久調整Aのタイプのロックを解除");
-    expect(html).toContain("共通の仮想敵のタイプのロックを解除");
+    expect(html).toContain("火力調整Aのタイプのロックを解除");
     expect(html).toContain("素早さ調整Aのタイプのロックを解除");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
@@ -5419,8 +5444,8 @@ describe("App", () => {
     expect(html).toContain('value="メガマフォクシー"');
     expect(html).toContain('value="メガゲンガー"');
     expect(html).toContain('value="サイコキネシス"');
-    expect(html).toContain('aria-label="共通の仮想敵 仮想敵H SP"');
-    expect(html).toContain('aria-label="共通の仮想敵 仮想敵H SP" placeholder="H SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵H SP"');
+    expect(html).toContain('aria-label="火力調整A 仮想敵H SP" placeholder="H SP"');
     expect(html).toContain('value="32"');
     expect(html).not.toContain('value="Dragonite"');
     expect(html).not.toContain('label="Dragonite"');

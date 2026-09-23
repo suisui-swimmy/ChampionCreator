@@ -43,8 +43,8 @@ describe("main footer publication contract", () => {
     }
     expect(footer.indexOf('</details>')).toBeGreaterThan(footer.indexOf(paragraphs[3].slice(0, 10)));
     if (surface === "initial HTML") {
-      expect(html.indexOf('</fieldset>')).toBeLessThan(html.indexOf('<footer'));
-      expect(html.slice(html.indexOf('<fieldset'), html.indexOf('</fieldset>'))).toContain('id="runButton"');
+      expect(html.lastIndexOf('</fieldset>', html.indexOf('<footer'))).toBeLessThan(html.indexOf('<footer'));
+      expect(html.slice(html.indexOf('<fieldset'), html.lastIndexOf('</fieldset>', html.indexOf('<footer')))).toContain('id="runButton"');
       expect(footer).not.toContain('aria-busy');
     }
   });

@@ -13,6 +13,7 @@ export interface OffenseSequenceAttack extends OffenseAdjustmentInput {
   id: string;
   label: string;
   moveHits?: number;
+  moveUses?: number;
 }
 export interface OffenseSequenceCondition {
   id: string;
@@ -28,6 +29,8 @@ export interface OffenseSequenceStep {
   hitEvaluation: ScenarioHitEvaluation;
   remainingHp: { min: number; max: number };
   koProbability: number;
+  moveUses: number;
+  cumulativeUses: number;
 }
 export interface OffenseSequenceEvaluation {
   scenarioId: string;
@@ -41,7 +44,7 @@ export interface OffenseSequenceEvaluation {
   hpEventEvaluations: HpEventEvaluation[];
 }
 
-/** Each card is one move use; both identities stay stable across the whole row. */
+/** Move uses and multi-hit counts are independent; both identities stay stable across the row. */
 export const evaluateOffenseSequence = (
   attackerBuild: Build, condition: OffenseSequenceCondition,
 ): OffenseSequenceEvaluation => {
@@ -56,6 +59,8 @@ export const evaluateOffenseSequence = (
   const steps: OffenseSequenceStep[] = [];
   const executedCards = new Set<string>();
   const cards = condition.attacks.map((attack) => {
+    const uses = attack.moveUses ?? 1;
+    if (!Number.isInteger(uses) || uses < 1 || uses > 10) throw new Error("火力の攻撃回数は1〜10で入力してください");
     const defender = { ...defenderBuild, status: attack.defenderBuild.status };
     const user = { ...attacker, status: attack.attackerBuild.status };
     const hit = { ...buildOffenseHit(user, attack), id: attack.id,
@@ -64,8 +69,11 @@ export const evaluateOffenseSequence = (
     const hitEvaluation = calculateSmogonHit(defender, hit, attack.field);
     if (hitEvaluation.movePower?.source === "status") throw new Error("変化技の効果によるKO判定は計算未対応です");
     evaluations.push(hitEvaluation);
-    const moveUses = buildHpSequenceMoveUses({ defenderBuild: defender, hit, field: attack.field,
+    const singleUse = buildHpSequenceMoveUses({ defenderBuild: defender, hit, field: attack.field,
       evaluation: hitEvaluation, includeAttackerAutomaticHpEffects: true });
+    const moveUses = Array.from({ length: uses }, (_, index) => singleUse.map((moveUse) => ({
+      ...moveUse, id: `${moveUse.id}-use-${index + 1}`,
+    }))).flat();
     // HP-sensitive abilities must also see the carried HP, not just HP-dependent moves.
     const rollCache = new Map<string, readonly (readonly number[])[]>();
     for (const moveUse of moveUses) {
@@ -94,9 +102,11 @@ export const evaluateOffenseSequence = (
   const sequence = simulateHpSequence({ cards, onCardComplete: (card, states) => {
     const hp = states.filter((state) => state.probability > 0).map((state) => state.hpByBuildId[defenderBuild.id]);
     const index = steps.length;
+    const moveUses = condition.attacks[index].moveUses ?? 1;
     if (!executedCards.has(card.id)) evaluations[index] = { ...evaluations[index], description: undefined,
       damageRange: { min: 0, max: 0, percentMin: 0, percentMax: 0 } };
     steps.push({ id: card.id, label: condition.attacks[index].label, hitEvaluation: evaluations[index],
+      moveUses, cumulativeUses: (steps[index - 1]?.cumulativeUses ?? 0) + moveUses,
       remainingHp: { min: Math.min(...hp), max: Math.max(...hp) },
       koProbability: states.reduce((total, state) => total + (state.hpByBuildId[defenderBuild.id] <= 0 ? state.probability : 0), 0) });
   } });

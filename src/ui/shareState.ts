@@ -28,7 +28,7 @@ import {
   getBeatUpParticipantLimit,
 } from "../calc/beatUp";
 
-export const SHARE_SCHEMA_VERSION = 14;
+export const SHARE_SCHEMA_VERSION = 15;
 export const POKEMON_TYPE_OVERRIDE_SCHEMA_VERSION = 13;
 
 /** Schema version in which the current speed-state fields were introduced. */
@@ -77,6 +77,7 @@ type SupportedShareSchemaVersion =
   | 11
   | 12
   | 13
+  | 14
   | typeof SHARE_SCHEMA_VERSION;
 
 const normalizeTypeOverride = (
@@ -331,6 +332,9 @@ const normalizeAttack = (
   sourceSchemaVersion: SupportedShareSchemaVersion,
 ): ScenarioAttackFormState => {
   if (sourceSchemaVersion >= 14 && isRecord(value)) {
+    if (sourceSchemaVersion >= 15 && value.offenseMoveUses !== undefined
+      && (typeof value.offenseMoveUses !== "number" || !Number.isInteger(value.offenseMoveUses)
+        || value.offenseMoveUses < 1 || value.offenseMoveUses > 10)) throw new Error("条件JSONの火力の攻撃回数は1〜10で指定してください");
     if (value.offenseAttackerBoosts !== undefined && (!isRecord(value.offenseAttackerBoosts)
       || Object.entries(value.offenseAttackerBoosts).some(([key, rank]) => !["atk", "def", "spa", "spd", "spe"].includes(key)
         || typeof rank !== "number" || !Number.isInteger(rank) || rank < -6 || rank > 6))) throw new Error("条件JSONの火力ランクが不正です");
@@ -527,6 +531,7 @@ const normalizeAttack = (
     delete normalized.attackerPokemonCanonicalName;
   }
   if (normalized.attackerTypeOverride === undefined) delete normalized.attackerTypeOverride;
+  if (sourceSchemaVersion < 15) delete normalized.offenseMoveUses;
   // speedMoveModifier was part of schema <=10 only. Do not let an unknown
   // legacy key leak back into the current form state after migration.
   delete (normalized as ScenarioAttackFormState & Record<string, unknown>).speedMoveModifier;
@@ -599,6 +604,7 @@ export const parseShareStateDocument = (json: string, migrate = true): ShareStat
     !isRecord(parsed)
     || (
       parsed.schemaVersion !== SHARE_SCHEMA_VERSION
+      && parsed.schemaVersion !== 14
       && parsed.schemaVersion !== 13
       && parsed.schemaVersion !== 12
       && parsed.schemaVersion !== 11

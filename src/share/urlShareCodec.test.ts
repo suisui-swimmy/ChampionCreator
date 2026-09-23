@@ -18,6 +18,14 @@ const tokenFrom = (value: unknown, version: unknown = provenance) => {
 };
 
 describe("URL share transport", () => {
+  it("preserves a frozen s2 link with one use per offense card", async () => {
+    const token = readFileSync(new URL("./testFixtures/example.s2.txt", import.meta.url), "utf8").trim();
+    const shared = await decodeSharedAdjustment(token);
+    expect(comparableShareJson(shared.document)).toBe(comparableShareJson(createShareTestDocument(SHARE_TEST_CASES[0])));
+    expect(shared.provenance).toEqual({ app: "0.33.1", calc: "compatibility-fixture" });
+    expect(shared.document.scenarios.filter((scenario) => scenario.adjustmentType === "offense")
+      .flatMap((scenario) => scenario.attacks).every((attack) => (attack.offenseMoveUses ?? 1) === 1)).toBe(true);
+  });
   it("preserves a link generated before removing the standalone pages", async () => {
     const token = readFileSync(new URL("./testFixtures/example.s1.txt", import.meta.url), "utf8").trim();
     const shared = await decodeSharedAdjustment(token);
@@ -28,7 +36,7 @@ describe("URL share transport", () => {
   it("requires valid source versions and rejects the retired probe format", async () => {
     const original = createShareTestDocument(SHARE_TEST_CASES[0]);
     const token = await encode(original);
-    await expect(decodeSharedAdjustment(token.replace("s2.", "p1."))).rejects.toThrow("バージョン");
+    await expect(decodeSharedAdjustment(token.replace("s3.", "p1."))).rejects.toThrow("バージョン");
     expect(() => encodeSharedAdjustment(original, { app: "<invalid>", calc: "test" })).toThrow("作成バージョン");
     await expect(decodeSharedAdjustment(tokenFrom({ s: 13, t: {}, c: [] }, { app: "0.31.3" }))).rejects.toThrow("作成バージョン");
   });
@@ -43,7 +51,7 @@ describe("URL share transport", () => {
     expect(new Set(restored.scenarios.flatMap((s) => s.attacks.map((a) => a.id))).size)
       .toBe(restored.scenarios.reduce((n, s) => n + s.attacks.length, 0));
     expect(JSON.stringify(original)).toBe(before);
-    expect(token).toMatch(/^s2\.[A-Za-z0-9_-]+$/);
+    expect(token).toMatch(/^s3\.[A-Za-z0-9_-]+$/);
   });
 
   it("preserves manual types, power, levels, HP-event order, beat-up slots, and disabled scenarios", async () => {
@@ -70,7 +78,7 @@ describe("URL share transport", () => {
 
   it("rejects unsupported versions, bad alphabet, truncation, and too-long tokens", async () => {
     const token = await encode(createShareTestDocument(SHARE_TEST_CASES[0]));
-    await expect(decode(token.replace("s2.", "s3."))).rejects.toThrow("バージョン");
+    await expect(decode(token.replace("s3.", "s4."))).rejects.toThrow("バージョン");
     await expect(decode(`${token}%20`)).rejects.toThrow("不正");
     await expect(decode(token.slice(0, -10))).rejects.toThrow();
     await expect(decode("s1." + "A".repeat(MAX_SHARE_TOKEN_LENGTH))).rejects.toThrow("長すぎ");

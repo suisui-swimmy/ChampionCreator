@@ -143,6 +143,8 @@ export interface ScenarioAttackFormState {
   defenderBoosts: StatBoostTable;
   offenseAttackerBoosts?: Partial<StatBoostTable>;
   offenseAttackerStatus?: PokemonStatus;
+  /** Move uses within an offense card. Independent of the move's multi-hit count. */
+  offenseMoveUses?: number;
   moveInput: string;
   movePowerMode: MovePowerMode;
   movePowerValue: number;
@@ -204,6 +206,17 @@ export const createOffenseScenarioSettings = (attack: ScenarioAttackFormState): 
 export const initializeOffenseScenario = (scenario: ScenarioFormState): ScenarioFormState =>
   scenario.adjustmentType === "offense" && !scenario.offense && scenario.attacks[0]
     ? { ...scenario, offense: createOffenseScenarioSettings(scenario.attacks[0]) } : scenario;
+
+export const getOffenseMoveUses = (attack: ScenarioAttackFormState): number => attack.offenseMoveUses ?? 1;
+
+export const getOffenseCumulativeUses = (scenario: ScenarioFormState, attackId: string): number => {
+  let total = 0;
+  for (const attack of scenario.attacks) {
+    total += getOffenseMoveUses(attack);
+    if (attack.id === attackId) break;
+  }
+  return total;
+};
 
 export interface OffenseAdjustmentFormState {
   defenderPokemonInput: string;
@@ -1373,7 +1386,10 @@ export const buildOffenseSequenceCondition = (
     input.attackerBuild = { ...input.attackerBuild, status: attack.offenseAttackerStatus === "none" ? undefined : attack.offenseAttackerStatus };
     if ((attack.hpEvents ?? []).some((event) => event.enabled && !getHpEventRuleDefinition(event.effectId))) throw new Error("計算未対応の定数ダメージ・回復が含まれています");
     const range = getMoveHitCountRangeFromInput(attack.moveInput);
+    const moveUses = getOffenseMoveUses(attack);
+    if (!Number.isInteger(moveUses) || moveUses < 1 || moveUses > 10) throw new Error(`${scenario.label}: 火力の攻撃回数は1〜10で入力してください`);
     return { ...input, id: attack.id, label: formatScenarioAttackLabel("offense", index, attack.label),
+      moveUses,
       ...(range ? { moveHits: Math.max(range.minHits, Math.min(range.maxHits, Math.trunc(attack.repeat))) } : {}) };
   });
   return { id: scenario.id, scenarioId: scenario.id, scenarioLabel: scenario.label,

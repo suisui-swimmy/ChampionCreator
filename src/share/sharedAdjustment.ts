@@ -17,6 +17,7 @@ export const validateSharedConditions = (document: ShareStateDocument, legacyCum
   for (const scenario of document.scenarios) {
     for (const attack of scenario.attacks) {
       requireValue(inRange(attack.repeat, 1, 10), "攻撃回数");
+      requireValue(inRange(attack.offenseMoveUses ?? 1, 1, 10), "火力の攻撃回数");
       requireValue(inRange(attack.requiredSurvivedHits, 1,
         !legacyCumulativeLimit && scenario.adjustmentType === "defence" ? getDefenceCumulativeCountLimit(scenario) : 10), "累計回数");
       requireValue(Number.isFinite(attack.minSurvivalProbabilityPercent) && attack.minSurvivalProbabilityPercent >= 0 && attack.minSurvivalProbabilityPercent <= 100
