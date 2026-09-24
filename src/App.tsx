@@ -8674,25 +8674,200 @@ const speedOpponentStatSection = (
     </div>
   </section>
 );
-const battleAbilitiesSection = attack.gameType === "doubles" ? (
-  <BattleAbilitiesEditor ownerLabel={attackLabel} value={getBattleAbilities(attack, adjustmentType)}
+const battleAbilities = getBattleAbilities(attack, adjustmentType);
+const renderSideAbilities = (side: "targetAlly" | "opponentAlly") => attack.gameType === "doubles" ? (
+  <BattleAbilitiesEditor ownerLabel={attackLabel} side={side} value={battleAbilities}
     onChange={(value) => onUpdateAttack(scenarioId, attack.id, "battleAbilities", value)} />
 ) : null;
-const battleModifiersSection = (
-  <section
-    className="attack-setting-section attack-battle-modifiers"
-    aria-labelledby={`${scenarioId}-${attack.id}-battle-modifiers-title`}
-  >
-    <h3 id={`${scenarioId}-${attack.id}-battle-modifiers-title`}>戦闘補正</h3>
-    <div className="scenario-options">
-      <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
-      <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
-      <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
-      <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
-      <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+const renderSideModifiers = (side: "opponent" | "target") => {
+  const isAttackingSide = (side === "target") === isOffenseAdjustment;
+  const sideLabel = side === "target" ? "調整対象" : "仮想敵";
+  return (
+    <div className="scenario-options" role="group" aria-label={`${attackLabel} ${sideLabel}の戦闘補正`}>
+      {isAttackingSide ? (
+        <label><input type="checkbox" checked={attack.helpingHand} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "helpingHand", event.target.checked)} /> てだすけ</label>
+      ) : (
+        <>
+          <label><input type="checkbox" checked={attack.reflect} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "reflect", event.target.checked)} /> リフレクター</label>
+          <label><input type="checkbox" checked={attack.lightScreen} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "lightScreen", event.target.checked)} /> ひかりのかべ</label>
+          <label><input type="checkbox" checked={attack.auroraVeil} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "auroraVeil", event.target.checked)} /> オーロラベール</label>
+        </>
+      )}
+    </div>
+  );
+};
+const moveFields = (
+  <div className="attack-card-field-row attack-move-power-cell">
+    <ScenarioTextField
+      kind="move"
+      label="技"
+      showLabel
+      value={attack.moveInput}
+      options={moveOptions}
+      menuOptions={moveMenuOptions}
+      onChange={onInput("moveInput")}
+      onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
+    />
+    {isBeatUp ? (
+      <BeatUpPowerField
+        attackLabel={attackLabel}
+        attackerPokemonInput={isOffenseAdjustment
+          ? targetForm.pokemonInput
+          : attack.attackerPokemonInput}
+        participants={attack.beatUpParticipants}
+        gameType={attack.gameType}
+        evaluation={movePowerEvaluation}
+        onChange={(participants) => onUpdateAttack(
+          scenarioId,
+          attack.id,
+          "beatUpParticipants",
+          participants,
+        )}
+      />
+    ) : (
+      <MovePowerField
+        attackLabel={attackLabel}
+        hasMove={Boolean(moveCanonicalName)}
+        mode={attack.movePowerMode}
+        value={attack.movePowerValue}
+        evaluation={movePowerEvaluation}
+        catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
+        assistRule={movePowerAssistRule}
+        hpDependent={hpDependentMovePower}
+        manualAllowed={Boolean(
+          moveCanonicalName
+          && isMovePowerOverrideAllowed(moveCanonicalName)
+          && movePowerEvaluation?.source !== "fixed-damage",
+        )}
+        unsupported={Boolean(
+          moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
+        )}
+        onCommit={(mode, value) => {
+          onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
+          onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
+        }}
+      />
+    )}
+  </div>
+);
+const offenseOpponentStats = (
+  <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 仮想敵能力`}>
+    <div className="ev-table attacker-stat-table offense-defender-stat-table" aria-label={`${attackLabel} 仮想敵能力`}>
+      <div className="ev-header attacker-stat-header">
+        <span>能力</span>
+        <span>実数値</span>
+        <span>SP</span>
+        <span>ランク</span>
+      </div>
+      {offenseDefenderStatKeys.map((key) => (
+        <div
+          className={`ev-row attacker-stat-row ${key}`}
+          key={key}
+        >
+          <strong>
+            <StatIcon stat={key} />
+          </strong>
+          <span className="actual-stat-with-modifier">
+            <NatureStatModifier natureLabel={attack.attackerNatureInput} stat={key} />
+            <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
+          </span>
+          <input
+            {...numericInputProps}
+            value={attack.attackerStatPoints[key]}
+            disabled={commonLocked}
+            aria-label={`${attackLabel} 仮想敵${statLabels[key]} SP`}
+            placeholder={`${statLabels[key]} SP`}
+            onFocus={selectInputValueOnFocus}
+            onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
+          />
+          {key !== "hp" ? (
+            <RankSelectField
+              label={`${attackLabel} 仮想敵${statLabels[key]}ランク`}
+              value={attack.attackerBoosts[key] ?? 0}
+              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+                ...attack.attackerBoosts,
+                [key]: value,
+              })}
+            />
+          ) : (
+            <span className="attacker-stat-role" aria-label="HPにランク補正なし">—</span>
+          )}
+        </div>
+      ))}
     </div>
   </section>
 );
+const renderDefenceReferenceStats = (owner: "attacker" | "target") => {
+  const references = statReferencePlan.references.filter((reference) => reference.owner === owner);
+  if (!references.length) return null;
+  return (
+    <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} ${owner === "attacker" ? "能力" : "調整対象の参照能力"}`}>
+      <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} ${owner === "attacker" ? "参照能力" : "調整対象参照能力"}`}>
+        <div className="ev-header attacker-stat-header">
+          <span>能力</span>
+          <span>実数値</span>
+          <span>SP</span>
+          <span>ランク</span>
+        </div>
+        {references.map((reference) => {
+          const key = reference.stat;
+          const isAttacker = reference.owner === "attacker";
+          const sourceLabel = isAttacker ? "仮想敵" : "調整対象";
+          const statPoints = isAttacker ? attack.attackerStatPoints : targetForm.statPoints;
+          const stats = isAttacker ? actualStats : targetActualStats;
+          const nature = isAttacker ? attack.attackerNatureInput : targetForm.natureInput;
+
+          return (
+            <div
+              className={`ev-row attacker-stat-row ${key}${isAttacker ? "" : " target-reference"}`}
+              key={`${reference.owner}-${key}-${reference.role}`}
+            >
+              <strong>
+                <StatIcon stat={key} />
+              </strong>
+              <span className="actual-stat-with-modifier">
+                <NatureStatModifier natureLabel={nature} stat={key} />
+                <span className="actual-stat">{stats?.[key] ?? "-"}</span>
+              </span>
+              {isAttacker ? (
+                <input
+                  {...numericInputProps}
+                  value={statPoints[key]}
+                  aria-label={`${attackLabel} ${statLabels[key]} SP`}
+                  placeholder={`${statLabels[key]} SP`}
+                  onFocus={selectInputValueOnFocus}
+                  onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
+                />
+              ) : (
+                <span className="attacker-reference-sp">{statPoints[key]}</span>
+              )}
+              {isAttacker && key !== "hp" ? (
+                <RankSelectField
+                  label={`${attackLabel} ${statLabels[key]}ランク`}
+                  value={attack.attackerBoosts[key] ?? 0}
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
+                    ...attack.attackerBoosts,
+                    [key]: value,
+                  })}
+                />
+              ) : (
+                <span className="attacker-stat-role">
+                  {reference.role === "power" ? "威力参照" : sourceLabel}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
+const targetRankKeys = isOffenseAdjustment
+  ? Array.from(new Set(statReferencePlan.references
+    .filter((reference) => reference.owner === "attacker" && reference.stat !== "hp")
+    .map((reference) => reference.stat as Exclude<StatKey, "hp">)))
+  : defenderRankKeys;
+const moveHitRange = getMoveHitCountRangeFromInput(attack.moveInput);
 return (
   <section className={`attack-condition-card${isOffenseAdjustment ? " offense-attack-card" : ""}`} aria-label={attackLabel}>
     <div className="attack-card-header">
@@ -8736,6 +8911,8 @@ return (
       </Button>
     </div>
 
+    <section className="attack-setting-section attack-basic-section" aria-label={isSpeedAdjustment ? undefined : `${attackLabel} 仮想敵の基本情報`}>
+      {!isSpeedAdjustment ? <h3>仮想敵の基本情報</h3> : null}
     <div className="attack-card-fields">
       <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-identity-row">
         <ScenarioTextField
@@ -8761,60 +8938,6 @@ return (
           onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerNatureInput", value)}
         />
       </fieldset>
-      {!isSpeedAdjustment ? (
-        <div className="attack-card-field-row attack-move-power-cell">
-          <ScenarioTextField
-            kind="move"
-            label="技"
-            showLabel
-            value={attack.moveInput}
-            options={moveOptions}
-            menuOptions={moveMenuOptions}
-            onChange={onInput("moveInput")}
-            onSelectValue={(value) => onUpdateAttack(scenarioId, attack.id, "moveInput", value)}
-          />
-          {isBeatUp ? (
-            <BeatUpPowerField
-              attackLabel={attackLabel}
-              attackerPokemonInput={isOffenseAdjustment
-                ? targetForm.pokemonInput
-                : attack.attackerPokemonInput}
-              participants={attack.beatUpParticipants}
-              gameType={attack.gameType}
-              evaluation={movePowerEvaluation}
-              onChange={(participants) => onUpdateAttack(
-                scenarioId,
-                attack.id,
-                "beatUpParticipants",
-                participants,
-              )}
-            />
-          ) : (
-            <MovePowerField
-              attackLabel={attackLabel}
-              hasMove={Boolean(moveCanonicalName)}
-              mode={attack.movePowerMode}
-              value={attack.movePowerValue}
-              evaluation={movePowerEvaluation}
-              catalogEntry={moveCanonicalName ? getMovePowerCatalogEntry(moveCanonicalName) : undefined}
-              assistRule={movePowerAssistRule}
-              hpDependent={hpDependentMovePower}
-              manualAllowed={Boolean(
-                moveCanonicalName
-                && isMovePowerOverrideAllowed(moveCanonicalName)
-                && movePowerEvaluation?.source !== "fixed-damage",
-              )}
-              unsupported={Boolean(
-                moveCanonicalName && isSinglePowerMoveUnsupported(moveCanonicalName),
-              )}
-              onCommit={(mode, value) => {
-                onUpdateAttack(scenarioId, attack.id, "movePowerMode", mode);
-                onUpdateAttack(scenarioId, attack.id, "movePowerValue", value);
-              }}
-            />
-          )}
-        </div>
-      ) : null}
       <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-details-row">
                     <ScenarioTextField
             kind="item"
@@ -8886,6 +9009,8 @@ return (
           />
         </fieldset>
       </div>
+
+    </section>
 
       {isSpeedAdjustment ? (
         <>
@@ -9056,290 +9181,83 @@ return (
             </div>
           </section>
         </>
-      ) : isOffenseAdjustment ? (
-        <>
-          <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-ko-title`}>
-            <h3 id={`${scenarioId}-${attack.id}-ko-title`}>火力条件</h3>
-            <div className="attack-number-grid attack-setting-section-body">
-              <ScenarioStepperField label="攻撃回数" value={getOffenseMoveUses(attack)} min={1} max={10}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "offenseMoveUses", value)} />
-              <ScenarioStepperField label="累計回数" value={offenseCumulativeUses} min={offenseCumulativeUses} max={offenseCumulativeUses}
-                disabled onChange={() => undefined} />
-              <fieldset disabled={commonLocked} className="attack-shared-fields">
-              <ScenarioNumberField
-                label="KO率"
-                showLabel
-                value={attack.targetKoProbabilityPercent}
-                min={0}
-                max={100}
-                suffix="%"
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "targetKoProbabilityPercent", value)}
-              />
-              </fieldset>
-            </div>
-          </section>
-
-          <section
-            className="attack-setting-section attack-setting-section--indented"
-            aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}
-          >
-            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>状況条件</h3>
-            <div className="attack-field-grid attack-setting-section-body">
-              <SelectField
-                label="ルール"
-                value={attack.gameType}
-                options={gameTypeOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
-              />
-              <SelectField
-                label="仮想敵状態"
-                value={attack.attackerStatus}
-                options={statusOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
-              />
-              <SelectField
-                label="天候"
-                value={attack.weather}
-                options={weatherOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
-              />
-              <SelectField
-                label="フィールド"
-                value={attack.terrain}
-                options={terrainOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
-              />
-            </div>
-
-            {battleAbilitiesSection}
-
-            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 仮想敵能力`}>
-              <div className="ev-table attacker-stat-table offense-defender-stat-table" aria-label={`${attackLabel} 仮想敵能力`}>
-                <div className="ev-header attacker-stat-header">
-                  <span>能力</span>
-                  <span>実数値</span>
-                  <span>SP</span>
-                  <span>ランク</span>
-                </div>
-                {offenseDefenderStatKeys.map((key) => (
-                  <div
-                    className={`ev-row attacker-stat-row ${key}`}
-                    key={key}
-                  >
-                    <strong>
-                      <StatIcon stat={key} />
-                      <span>仮想敵</span>
-                    </strong>
-                    <span className="actual-stat-with-modifier">
-                      <NatureStatModifier natureLabel={attack.attackerNatureInput} stat={key} />
-                      <span className="actual-stat">{actualStats?.[key] ?? "-"}</span>
-                    </span>
-                    <input
-                      {...numericInputProps}
-                      value={attack.attackerStatPoints[key]}
-                      disabled={commonLocked}
-                      aria-label={`${attackLabel} 仮想敵${statLabels[key]} SP`}
-                      placeholder={`${statLabels[key]} SP`}
-                      onFocus={selectInputValueOnFocus}
-                      onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
-                    />
-                    {key !== "hp" ? (
-                      <RankSelectField
-                        label={`${attackLabel} 仮想敵${statLabels[key]}ランク`}
-                        value={attack.attackerBoosts[key] ?? 0}
-                        onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
-                          ...attack.attackerBoosts,
-                          [key]: value,
-                        })}
-                      />
-                    ) : (
-                      <span className="attacker-stat-role">仮想敵</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          </section>
-
-          <section className="attack-setting-section">
-            <h3>調整対象条件</h3>
-            <SelectField label="状態異常" value={attack.offenseAttackerStatus ?? "none"} options={statusOptions}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "offenseAttackerStatus", value)} />
-            <div className="scenario-defender-ranks">
-              {Array.from(new Set(statReferencePlan.references.filter((reference) => reference.owner === "attacker" && reference.stat !== "hp").map((reference) => reference.stat as Exclude<StatKey, "hp">))).map((key) =>
-                <div className="scenario-defender-rank" key={key}><StatIcon stat={key} /><RankSelectField label={`${attackLabel} 調整対象${statLabels[key]}ランク`}
-                  value={attack.offenseAttackerBoosts?.[key] ?? targetForm.boosts[key] ?? 0}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "offenseAttackerBoosts", { ...attack.offenseAttackerBoosts, [key]: value })} /></div>)}
-            </div>
-            {getMoveHitCountRangeFromInput(attack.moveInput) && !isBeatUp ? <ScenarioStepperField label="連続技のヒット数"
-              value={attack.repeat} min={getMoveHitCountRangeFromInput(attack.moveInput)!.minHits}
-              max={getMoveHitCountRangeFromInput(attack.moveInput)!.maxHits}
-              onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)} /> : null}
-          </section>
-          {battleModifiersSection}
-        </>
       ) : (
         <>
-          <section className="attack-setting-section attack-setting-section--indented" aria-labelledby={`${scenarioId}-${attack.id}-survival-title`}>
-            <h3 id={`${scenarioId}-${attack.id}-survival-title`}>耐久条件</h3>
-            <div className="attack-number-grid attack-setting-section-body">
-              <ScenarioStepperField
-                label="攻撃回数"
-                value={attack.repeat}
-                min={1}
-                max={10}
-                disabled={isBeatUp}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)}
-              />
-              <ScenarioStepperField
-                label="累計回数"
-                value={attack.requiredSurvivedHits}
-                min={cumulativeMinimum}
-                max={cumulativeMaximum}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "requiredSurvivedHits", value)}
-              />
-              <ScenarioNumberField
-                label="耐久確率"
-                showLabel
-                value={attack.minSurvivalProbabilityPercent}
-                min={0}
-                max={100}
-                suffix="%"
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "minSurvivalProbabilityPercent", value)}
-              />
+          <section className="attack-setting-section attack-action-section" aria-labelledby={`${scenarioId}-${attack.id}-action-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-action-title`}>攻撃・判定条件</h3>
+            {moveFields}
+            <div className="attack-number-grid">
+              <ScenarioStepperField label="攻撃回数" value={isOffenseAdjustment ? getOffenseMoveUses(attack) : attack.repeat}
+                min={1} max={10} disabled={!isOffenseAdjustment && isBeatUp}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, isOffenseAdjustment ? "offenseMoveUses" : "repeat", value)} />
+              <ScenarioStepperField label="累計回数" value={isOffenseAdjustment ? offenseCumulativeUses : attack.requiredSurvivedHits}
+                min={isOffenseAdjustment ? offenseCumulativeUses : cumulativeMinimum}
+                max={isOffenseAdjustment ? offenseCumulativeUses : cumulativeMaximum} disabled={isOffenseAdjustment}
+                onChange={(value) => { if (!isOffenseAdjustment) onUpdateAttack(scenarioId, attack.id, "requiredSurvivedHits", value); }} />
+              <fieldset disabled={commonLocked} className="attack-shared-fields">
+                <ScenarioNumberField label={isOffenseAdjustment ? "KO率" : "耐久確率"} showLabel
+                  value={isOffenseAdjustment ? attack.targetKoProbabilityPercent : attack.minSurvivalProbabilityPercent}
+                  min={0} max={100} suffix="%"
+                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, isOffenseAdjustment ? "targetKoProbabilityPercent" : "minSurvivalProbabilityPercent", value)} />
+              </fieldset>
+              <div className="scenario-options attack-critical-option">
+                <label><input type="checkbox" checked={attack.critical} onChange={(event) => onUpdateAttack(scenarioId, attack.id, "critical", event.target.checked)} /> 急所</label>
+              </div>
+            </div>
+            {isOffenseAdjustment && moveHitRange && !isBeatUp ? (
+              <ScenarioStepperField label="連続技のヒット数" value={attack.repeat} min={moveHitRange.minHits} max={moveHitRange.maxHits}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "repeat", value)} />
+            ) : null}
+          </section>
+
+          <section className="attack-setting-section attack-environment-section" aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>場の条件</h3>
+            <div className="attack-field-grid attack-environment-fields">
+              <SelectField label="ルール" value={attack.gameType} options={gameTypeOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)} />
+              <SelectField label="天候" value={attack.weather} options={weatherOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)} />
+              <SelectField label="フィールド" value={attack.terrain} options={terrainOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)} />
             </div>
           </section>
 
-          <section
-            className="attack-setting-section attack-setting-section--indented"
-            aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}
-          >
-            <h3 id={`${scenarioId}-${attack.id}-environment-title`}>状況条件</h3>
-            <div className="attack-field-grid attack-setting-section-body">
-              <SelectField
-                label="ルール"
-                value={attack.gameType}
-                options={gameTypeOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
-              />
-              <SelectField
-                label="状態異常"
-                value={attack.attackerStatus}
-                options={statusOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
-              />
-              <SelectField
-                label="天候"
-                value={attack.weather}
-                options={weatherOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
-              />
-              <SelectField
-                label="フィールド"
-                value={attack.terrain}
-                options={terrainOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
-              />
+          <section className="attack-setting-section attack-side-section" aria-labelledby={`${scenarioId}-${attack.id}-opponent-condition-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-opponent-condition-title`}>仮想敵の戦闘条件</h3>
+            <div className="attack-side-body">
+              <SelectField className="attack-side-status" label="状態異常" ariaLabel={`${attackLabel} 仮想敵の状態異常`}
+                value={attack.attackerStatus} options={statusOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)} />
+              {isOffenseAdjustment ? offenseOpponentStats : renderDefenceReferenceStats("attacker")}
+              {renderSideAbilities("opponentAlly")}
+              {renderSideModifiers("opponent")}
             </div>
+          </section>
 
-            {battleAbilitiesSection}
-
-            <section className="attack-stat-section attack-setting-section-body" aria-label={`${attackLabel} 能力`}>
-              <div className="ev-table attacker-stat-table" aria-label={`${attackLabel} 参照能力`}>
-                <div className="ev-header attacker-stat-header">
-                  <span>能力</span>
-                  <span>実数値</span>
-                  <span>SP</span>
-                  <span>ランク</span>
-                </div>
-                {statReferencePlan.references.map((reference) => {
-                  const key = reference.stat;
-                  const isAttacker = reference.owner === "attacker";
-                  const sourceLabel = isAttacker ? "仮想敵" : "調整対象";
-                  const statPoints = isAttacker ? attack.attackerStatPoints : targetForm.statPoints;
-                  const stats = isAttacker ? actualStats : targetActualStats;
-                  const nature = isAttacker ? attack.attackerNatureInput : targetForm.natureInput;
-
-                  return (
-                    <div
-                      className={`ev-row attacker-stat-row ${key}${isAttacker ? "" : " target-reference"}`}
-                      key={`${reference.owner}-${key}-${reference.role}`}
-                    >
-                      <strong>
-                        <StatIcon stat={key} />
-                        <span>{sourceLabel}</span>
-                      </strong>
-                      <span className="actual-stat-with-modifier">
-                        <NatureStatModifier natureLabel={nature} stat={key} />
-                        <span className="actual-stat">{stats?.[key] ?? "-"}</span>
-                      </span>
-                      {isAttacker ? (
-                        <input
-                          {...numericInputProps}
-                          value={statPoints[key]}
-                          aria-label={`${attackLabel} ${statLabels[key]} SP`}
-                          placeholder={`${statLabels[key]} SP`}
-                          onFocus={selectInputValueOnFocus}
-                          onChange={(event) => onUpdateAttackerEv(`${scenarioId}:${attack.id}`, key, toStatPointInput(event.target.value))}
-                        />
-                      ) : (
-                        <span className="attacker-reference-sp">{statPoints[key]}</span>
-                      )}
-                      {isAttacker && key !== "hp" ? (
-                        <RankSelectField
-                          label={`${attackLabel} ${statLabels[key]}ランク`}
-                          value={attack.attackerBoosts[key] ?? 0}
-                          onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerBoosts", {
-                            ...attack.attackerBoosts,
-                            [key]: value,
-                          })}
-                        />
-                      ) : (
-                        <span className="attacker-stat-role">
-                          {reference.role === "power" ? "威力参照" : sourceLabel}
-                        </span>
-                      )}
+          <section className="attack-setting-section attack-side-section" aria-labelledby={`${scenarioId}-${attack.id}-target-condition-title`}>
+            <h3 id={`${scenarioId}-${attack.id}-target-condition-title`}>調整対象の戦闘条件</h3>
+            <div className="attack-side-body">
+              <SelectField className="attack-side-status" label="状態異常" ariaLabel={`${attackLabel} 調整対象の状態異常`}
+                value={isOffenseAdjustment ? attack.offenseAttackerStatus ?? "none" : attack.defenderStatus} options={statusOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, isOffenseAdjustment ? "offenseAttackerStatus" : "defenderStatus", value)} />
+              {!isOffenseAdjustment ? renderDefenceReferenceStats("target") : null}
+              {targetRankKeys.length ? (
+                <div className="attack-side-ranks" role="group" aria-label={`${attackLabel} 調整対象のランク`}>
+                  <span className="scenario-defender-rank-label">ランク</span>
+                  {targetRankKeys.map((key) => (
+                    <div className="scenario-defender-rank" key={key}>
+                      <StatIcon stat={key} />
+                      <RankSelectField label={`${attackLabel} 調整対象${statLabels[key]}ランク`}
+                        value={isOffenseAdjustment ? attack.offenseAttackerBoosts?.[key] ?? targetForm.boosts[key] ?? 0 : attack.defenderBoosts[key] ?? 0}
+                        onChange={(value) => onUpdateAttack(scenarioId, attack.id, isOffenseAdjustment ? "offenseAttackerBoosts" : "defenderBoosts", {
+                          ...(isOffenseAdjustment ? attack.offenseAttackerBoosts : attack.defenderBoosts), [key]: value,
+                        })} />
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-          </section>
-
-          {battleModifiersSection}
-
-          <section
-            className="attack-setting-section attack-setting-section--indented attack-setting-section--target-condition"
-            aria-labelledby={`${scenarioId}-${attack.id}-target-condition-title`}
-          >
-            <h3 id={`${scenarioId}-${attack.id}-target-condition-title`}>調整対象条件</h3>
-            <div className="attack-target-condition-body">
-              <div className="scenario-defender-status">
-                <span>状態異常</span>
-                <SelectField
-                  compact
-                  label={`${attackLabel} 調整対象の状態異常`}
-                  value={attack.defenderStatus}
-                  options={statusOptions}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderStatus", value)}
-                />
-              </div>
-              <div className="scenario-defender-ranks" aria-label={`${attackLabel} 調整対象条件`}>
-                <span className="scenario-defender-rank-label">ランク</span>
-                {defenderRankKeys.map((key) => (
-                  <div className="scenario-defender-rank" key={key}>
-                    <StatIcon stat={key} />
-                    <RankSelectField
-                      label={`${attackLabel} 調整対象${statLabels[key]}ランク`}
-                      value={attack.defenderBoosts[key] ?? 0}
-                      onChange={(value) => onUpdateAttack(scenarioId, attack.id, "defenderBoosts", {
-                        ...attack.defenderBoosts,
-                        [key]: value,
-                      })}
-                    />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : null}
+              {renderSideAbilities("targetAlly")}
+              {renderSideModifiers("target")}
             </div>
           </section>
         </>

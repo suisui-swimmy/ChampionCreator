@@ -114,6 +114,21 @@ const findElementWithClasses = (
   return -1;
 };
 
+// Balance nested stat sections so owner assertions cannot accidentally include the next side.
+const getSectionMarkup = (html: string, headingId: string): string => {
+  const heading = html.indexOf(`aria-labelledby="${headingId}"`);
+  expect(heading).toBeGreaterThanOrEqual(0);
+  const start = html.lastIndexOf("<section", heading);
+  const tags = /<section\b[^>]*>|<\/section>/g;
+  tags.lastIndex = start;
+  let depth = 0;
+  for (let match = tags.exec(html); match; match = tags.exec(html)) {
+    depth += match[0].startsWith("</") ? -1 : 1;
+    if (depth === 0) return html.slice(start, tags.lastIndex);
+  }
+  throw new Error(`Unclosed section: ${headingId}`);
+};
+
 type UiStepperShape = {
   start: number;
   end: number;
@@ -1013,15 +1028,15 @@ describe("App", () => {
         battleAbilities: { targetAlly: ["Battery"], opponentAlly: index ? ["Sword of Ruin", "Friend Guard"] : ["Friend Guard"] } })),
     }));
     const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={scenarios} />);
-    expect(html.match(/class="attack-advanced-settings battle-abilities-settings"/g)).toHaveLength(4);
+    expect(html.match(/class="battle-abilities-content"/g)).toHaveLength(8);
     expect(html).toContain("調整対象の味方の特性");
     expect(html).toContain("仮想敵の味方の特性");
     expect(html).toContain("引継ぎ: わざわいのつるぎ・フレンドガード");
     expect(html).not.toContain("特性サポート");
     expect(html).not.toContain("> フレンドガード</label>");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
-    expect(css).toMatch(/\.battle-abilities-settings > summary\s*\{[^}]*min-height: var\(--desktop-control-comfort\)/);
-    expect(css).toMatch(/\.battle-abilities-settings > summary:focus-visible\s*\{[^}]*outline: 2px solid var\(--gold\)/);
+    expect(css).toMatch(/\.battle-abilities-content \.select-trigger\s*\{[^}]*min-height: var\(--desktop-control-standard\)/);
+    expect(css).toMatch(/\.mobile-scenarios-open \.attack-condition-card \.battle-abilities-content \.select-trigger\s*\{[^}]*height: auto;[^}]*font-size: var\(--mobile-text-input\)/);
   });
 
   it("keeps mobile text controls large enough to avoid iOS focus zoom", () => {
@@ -1388,12 +1403,17 @@ describe("App", () => {
     expect(narrowCss).not.toMatch(/\.mobile-target-open \.sp-summary(?:-actions|-total)?\s*\{[^}]*(?:font-size|min-height):/s);
   });
 
-  it("organizes battle modifiers as one accessible two-column section per attack", () => {
+  it("keeps side modifier controls accessible and role-sized", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const mobileStart = css.indexOf("@media (max-width: 720px)");
     const narrowStart = css.indexOf("@media (max-width: 380px)", mobileStart);
     const mobileCss = css.slice(mobileStart, narrowStart);
     const narrowCss = css.slice(narrowStart);
+
+    expect(css).toMatch(/\.scenario-options\s*\{[^}]*grid-auto-rows:\s*minmax\(var\(--desktop-control-standard\), auto\);/s);
+    expect(mobileCss).toMatch(/\.mobile-scenarios-open \.scenario-options\s*\{[^}]*grid-auto-rows:\s*minmax\(var\(--mobile-control-standard\), auto\);/s);
+    expect(css).not.toMatch(/\.scenario-options\s*\{[^}]*grid-template-rows:/s);
+    expect(css).toMatch(/\.attack-side-status\.select-field\s*\{[^}]*grid-template-columns:\s*minmax\(64px, max-content\) minmax\(0, 1fr\);/s);
 
     expect(css).toMatch(
       /\.scenario-options\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[^}]*gap:\s*6px;[^}]*margin-left:\s*0;/s,
@@ -1413,7 +1433,7 @@ describe("App", () => {
       /\.mobile-scenarios-open \.scenario-options\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[^}]*gap:\s*6px;/s,
     );
     expect(mobileCss).toMatch(
-      /\.mobile-scenarios-open \.scenario-options label\s*\{[^}]*height:\s*var\(--mobile-control-standard\);[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
+      /\.mobile-scenarios-open \.scenario-options label\s*\{[^}]*height:\s*auto;[^}]*min-height:\s*var\(--mobile-control-standard\);[^}]*font-size:\s*var\(--mobile-text-interactive-small\);/s,
     );
     expect(narrowCss).not.toMatch(
       /\.mobile-scenarios-open \.scenario-options\s*\{[^}]*grid-template-columns:\s*repeat\(1/s,
@@ -1425,62 +1445,62 @@ describe("App", () => {
       /\.mobile-scenarios-open \.scenario-options label\s*\{[^}]*gap:\s*0;[^}]*padding:\s*0 2px;/s,
     );
 
-    const html = renderExampleApp();
-    const attackCount = html.match(/class="attack-condition-card"/g)?.length ?? 0;
-    const modifierSectionCount = html.match(/class="attack-setting-section attack-battle-modifiers"/g)?.length ?? 0;
-    const optionsCount = html.match(/class="scenario-options"/g)?.length ?? 0;
-    expect(attackCount).toBeGreaterThan(0);
-    // Speed attacks intentionally do not expose these battle modifiers; every rendered
-    // modifier section must still own exactly one options grid.
-    expect(modifierSectionCount).toBeGreaterThan(0);
-    expect(optionsCount).toBe(modifierSectionCount);
+  });
 
-    const labels = ["急所", "てだすけ", "リフレクター", "ひかりのかべ", "オーロラベール"];
-    const modifierSections = Array.from(html.matchAll(
-      /<section class="attack-setting-section attack-battle-modifiers" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/g,
-    ));
-    expect(modifierSections).toHaveLength(modifierSectionCount);
-    for (const modifierSection of modifierSections) {
-      const headingId = modifierSection[1] ?? "";
-      const sectionHtml = modifierSection[2] ?? "";
-      expect(sectionHtml).toContain(`<h3 id="${headingId}">戦闘補正</h3>`);
-      expect(sectionHtml).toContain('class="scenario-options"');
-
-      const labelOrder = labels.map((label) => sectionHtml.indexOf(`> ${label}</label>`));
-      expect(labelOrder.every((index) => index >= 0)).toBe(true);
-      expect(labelOrder).toEqual([...labelOrder].sort((left, right) => left - right));
-      for (const label of labels) {
-        expect(sectionHtml.match(new RegExp(`> ${label}</label>`, "g"))).toHaveLength(1);
-      }
+  it.each(["defence", "offense"] as const)("groups %s fields by owner with the same section order", (kind) => {
+    const base = createDefaultScenarioForms().find((scenario) => scenario.adjustmentType === kind)!;
+    const scenario = initializeOffenseScenario({ ...base, attacks: [{ ...base.attacks[0],
+      gameType: "doubles", critical: true, helpingHand: true, reflect: true, lightScreen: true, auroraVeil: true,
+      battleAbilities: { targetAlly: ["Battery"], opponentAlly: ["Friend Guard"] },
+    }] });
+    const attack = scenario.attacks[0];
+    const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={[scenario]} usageData={null} />);
+    const section = (suffix: string) => getSectionMarkup(html, `${scenario.id}-${attack.id}-${suffix}-title`);
+    const action = section("action");
+    const field = section("environment");
+    const opponent = section("opponent-condition");
+    const target = section("target-condition");
+    const titles = ["仮想敵の基本情報", "攻撃・判定条件", "場の条件", "仮想敵の戦闘条件", "調整対象の戦闘条件", "定数ダメージ・回復"];
+    const positions = titles.map((title) => html.indexOf(`>${title}<`));
+    expect(positions.every((index) => index >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(action).not.toContain("仮想敵が使う技");
+    expect(action).not.toContain("調整対象が使う技");
+    for (const label of ["技", "攻撃回数", "累計回数", kind === "offense" ? "KO率" : "耐久確率", "急所"]) expect(action).toContain(label);
+    for (const label of ["ルール", "天候", "フィールド"]) expect(field).toContain(label);
+    expect(field).not.toContain("状態異常");
+    expect(field).not.toContain("味方の特性");
+    for (const [side, markup] of [["仮想敵", opponent], ["調整対象", target]]) {
+      expect(markup).toContain(`${side}の状態異常`);
+      expect(markup).toContain(`${side}の味方の特性`);
+      expect(markup).toContain('class="select-field attack-side-status"');
+      expect(markup).not.toContain("> 急所</label>");
     }
-
-    const [baseScenario, ...otherScenarios] = createDefaultScenarioForms();
-    const [baseAttack, ...otherAttacks] = baseScenario.attacks;
-    const checkedScenario = {
-      ...baseScenario,
-      attacks: [{
-        ...baseAttack,
-        critical: true,
-        reflect: true,
-        lightScreen: true,
-        auroraVeil: true,
-        helpingHand: true,
-        friendGuard: true,
-      }, ...otherAttacks],
-    };
-    const checkedHtml = renderToStaticMarkup(
-      <App
-        initialTargetForm={createDefaultTargetForm()}
-        initialScenarioForms={[checkedScenario, ...otherScenarios]}
-      />,
-    );
-    const checkedSection = checkedHtml.match(
-      /<section class="attack-setting-section attack-battle-modifiers" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/,
-    )?.[2] ?? "";
-    expect((checkedSection.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(5);
-    for (const label of labels) {
-      expect(checkedSection).toContain(`> ${label}</label>`);
+    const attacking = kind === "offense" ? target : opponent;
+    const defending = kind === "offense" ? opponent : target;
+    expect(attacking).toContain("> てだすけ</label>");
+    expect(defending).not.toContain("> てだすけ</label>");
+    for (const wall of ["リフレクター", "ひかりのかべ", "オーロラベール"]) {
+      expect(defending).toContain(`> ${wall}</label>`);
+      expect(attacking).not.toContain(`> ${wall}</label>`);
     }
+    expect((action.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(1);
+    expect((attacking.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(1);
+    expect((defending.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(3);
+    expect(html).not.toContain(">戦闘補正<");
+    expect(html).not.toContain(">状況条件<");
+  });
+
+  it.each([
+    ["ボディプレス", "B SP", "opponent-condition", "target-condition"],
+    ["イカサマ", "target-reference", "target-condition", "opponent-condition"],
+  ])("keeps %s reference stats with their actual owner", (move, marker, owner, other) => {
+    const scenario = createDefaultScenarioForms()[0];
+    scenario.attacks = [{ ...scenario.attacks[0], moveInput: move }];
+    const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={[scenario]} usageData={null} />);
+    const prefix = `${scenario.id}-${scenario.attacks[0].id}`;
+    expect(getSectionMarkup(html, `${prefix}-${owner}-title`)).toContain(marker);
+    expect(getSectionMarkup(html, `${prefix}-${other}-title`)).not.toContain(marker);
   });
 
   it("keeps mobile overview scenario affordances role-sized at narrow widths", () => {
@@ -2097,9 +2117,9 @@ describe("App", () => {
     expect(alertIconIndex).toBeLessThan(importantLabelIndex);
     expect(allyAbilityTipHtml).toContain('class="guide-tip-icon"');
     expect(allyAbilityTipHtml).toContain("ダブルバトルの味方特性");
-    expect(allyAbilityTipHtml).toContain("攻撃カードの「場の特性」を開きます。");
-    expect(allyAbilityTipHtml).toContain("調整対象の味方の特性");
-    expect(allyAbilityTipHtml).toContain("仮想敵の味方の特性");
+    expect(allyAbilityTipHtml).toContain("「仮想敵の戦闘条件」「調整対象の戦闘条件」で、それぞれの「味方の特性」を選んでください。");
+    expect(allyAbilityTipHtml).toContain("調整対象の戦闘条件");
+    expect(allyAbilityTipHtml).toContain("仮想敵の戦闘条件");
     expect(allyAbilityTipHtml).toContain("README");
     expect(allyAbilityTipHtml).not.toContain("double-battle-ally-abilities.png");
     expect(guideHtml).not.toContain("ダブルでは味方の追加にも使います");
@@ -4032,7 +4052,7 @@ describe("App", () => {
     expect(html).not.toContain('class="allocation-lock');
     expect(html).not.toContain("固定状態");
     expect(html).not.toContain('aria-label="状態異常: なし"');
-    expect(html).toContain(">耐久調整A 調整対象の状態異常</span>");
+    expect(html).toContain('aria-label="耐久調整A 調整対象の状態異常"');
   });
 
   it("renders game-style red and blue nature gain markers without changing slider interaction", () => {
@@ -4240,12 +4260,12 @@ describe("App", () => {
   it("renders only A and C parameter rows for each virtual attacker", () => {
     const html = renderExampleApp();
 
-    expect(html).toContain(">耐久条件<");
-    expect(html).toContain(">状況条件<");
+    expect(html).toContain(">攻撃・判定条件<");
+    expect(html).toContain(">場の条件<");
     expect(html).toContain('aria-label="耐久調整A 能力"');
-    expect(html.indexOf(">状況条件<")).toBeLessThan(html.indexOf('class="attack-stat-section'));
+    expect(html.indexOf(">場の条件<")).toBeLessThan(html.indexOf('class="attack-stat-section'));
     expect(html).not.toContain('id="scenario-defence-attack-a-stat-title">能力</h3>');
-    expect(html).toContain(">調整対象条件<");
+    expect(html).toContain(">調整対象の戦闘条件<");
     expect(html).toContain(">累計回数<");
     expect(html).toContain(">耐久確率<");
     expect(html).not.toContain("<span>詳細補正</span>");
@@ -4262,7 +4282,7 @@ describe("App", () => {
     expect(html).not.toContain('aria-label="耐久調整A S SP"');
     expect(html).not.toContain('aria-label="耐久調整A Bランク: 0"');
     expect(html).not.toContain('aria-label="耐久調整A Dランク: 0"');
-    expect(html).toContain('aria-label="耐久調整A 調整対象条件"');
+    expect(html).toContain('aria-label="耐久調整A 調整対象のランク"');
     expect(html).toContain('aria-label="耐久調整A 調整対象Bランク: 0"');
     expect(html).toContain('aria-label="耐久調整A 調整対象Dランク: 0"');
     expect(html).not.toContain("（この攻撃のみ）");
@@ -5453,11 +5473,11 @@ describe("App", () => {
     expect(html).toContain('aria-label="特性候補を開く"');
     expect(html).toContain('aria-label="持ち物候補を開く"');
     expect(html).toContain('aria-label="技候補を開く"');
-    expect(html).toContain('class="scenario-defender-status"');
-    expect(html).toContain(">耐久調整A 調整対象の状態異常</span>");
+    expect(html).toContain('class="select-field attack-side-status"');
+    expect(html).toContain('aria-label="耐久調整A 調整対象の状態異常"');
     expect(html).toContain(">なし</span>");
     expect(html).not.toContain('aria-label="状態異常: なし"');
-    expect(html).toContain(">耐久調整A 調整対象の状態異常</span>");
+    expect(html).toContain('aria-label="耐久調整A 調整対象の状態異常"');
     expect(html).not.toContain('value="まけんき"');
     expect(html).not.toContain('value="もうか"');
     expect(html).not.toContain('list="entity-options-item');

@@ -4799,14 +4799,64 @@ textarea {
   gap: 6px;
 }
 
-.attack-battle-modifiers {
+.attack-action-section,
+.attack-side-section,
+.attack-side-body {
   min-width: 0;
 }
 
-.attack-battle-modifiers > .scenario-options {
-  width: 100%;
+.attack-side-body {
+  display: grid;
+  gap: 8px;
+}
+
+.attack-environment-fields > .select-field:first-child {
+  grid-column: 1 / -1;
+}
+
+.attack-side-status.select-field {
+  grid-template-columns: minmax(64px, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.attack-side-status .select-field-label {
+  color: var(--muted);
+  font-size: var(--desktop-text-interactive-small);
+}
+
+.attack-condition-card .attack-side-status.select-field .select-trigger {
+  height: auto;
+  min-height: var(--desktop-control-standard);
+  white-space: normal;
+}
+
+.attack-condition-card .attack-side-section .attacker-stat-header,
+.attack-condition-card .attack-side-section .attacker-stat-row {
+  grid-template-columns: minmax(24px, 0.45fr) minmax(72px, 1.2fr) minmax(0, 1fr) minmax(0, 1.1fr);
+}
+
+.attack-side-ranks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  margin-left: 0;
+}
+
+.attack-side-ranks > .scenario-defender-rank-label {
+  flex: 0 0 64px;
+  font-size: var(--desktop-text-interactive-small);
+}
+
+.attack-side-ranks .scenario-defender-rank {
+  grid-template-columns: var(--desktop-icon-standard) minmax(0, 1fr);
+  flex: 0 1 88px;
+  min-width: 0;
+}
+
+.attack-action-section .scenario-options.attack-critical-option {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .attack-setting-section--indented .attack-setting-section-body,
@@ -4905,17 +4955,7 @@ textarea {
   padding: 2px 0 4px;
 }
 
-/* Explicit third-party abilities share the existing compact disclosure controls. */
-.attack-advanced-settings.battle-abilities-settings > summary {
-  min-height: var(--desktop-control-comfort);
-  font-size: var(--desktop-text-control);
-}
-
-.battle-abilities-settings > summary:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: -2px;
-}
-
+/* Each side owns its ally input; the accessible name retains the full owner. */
 .battle-abilities-content .select-field {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -4927,7 +4967,7 @@ textarea {
   font-size: var(--desktop-text-interactive-small);
 }
 
-.battle-abilities-content .select-trigger {
+.attack-condition-card .battle-abilities-content .select-trigger {
   min-width: 0;
   max-width: 100%;
   height: auto;
@@ -5221,7 +5261,7 @@ textarea {
 .scenario-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(3, var(--desktop-control-standard));
+  grid-auto-rows: minmax(var(--desktop-control-standard), auto);
   gap: 6px;
   align-items: center;
   width: 100%;
@@ -5235,7 +5275,7 @@ textarea {
   gap: 4px;
   width: 100%;
   min-width: 0;
-  height: var(--desktop-control-standard);
+  height: auto;
   min-height: var(--desktop-control-standard);
   border: 1px solid rgba(124, 143, 144, 0.2);
   border-radius: 6px;
@@ -5246,7 +5286,7 @@ textarea {
   overflow: hidden;
   padding: 0 8px;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .scenario-options label:focus-within {
@@ -6676,12 +6716,11 @@ textarea {
 }
 
 @media (max-width: 720px) {
-  .attack-advanced-settings.battle-abilities-settings > summary {
-    min-height: var(--mobile-control-comfort);
-    font-size: var(--mobile-text-control);
+  .mobile-scenarios-open .attack-side-status.select-field .select-trigger {
+    min-height: var(--mobile-control-standard);
   }
 
-  .mobile-scenarios-open .battle-abilities-settings .battle-abilities-content .select-trigger {
+  .mobile-scenarios-open .attack-condition-card .battle-abilities-content .select-trigger {
     min-height: var(--mobile-control-standard);
     height: auto;
     font-size: var(--mobile-text-input);
@@ -8103,7 +8142,7 @@ textarea {
   .mobile-scenarios-open .scenario-options {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, var(--mobile-control-standard));
+    grid-auto-rows: minmax(var(--mobile-control-standard), auto);
     gap: 6px;
     width: 100%;
     min-width: 0;
@@ -8111,7 +8150,7 @@ textarea {
   }
 
   .mobile-scenarios-open .scenario-options label {
-    height: var(--mobile-control-standard);
+    height: auto;
     min-height: var(--mobile-control-standard);
     font-size: var(--mobile-text-interactive-small);
   }
