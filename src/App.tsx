@@ -8911,8 +8911,8 @@ return (
       </Button>
     </div>
 
-    <section className="attack-setting-section attack-basic-section" aria-label={isSpeedAdjustment ? undefined : `${attackLabel} 仮想敵の基本情報`}>
-      {!isSpeedAdjustment ? <h3>仮想敵の基本情報</h3> : null}
+    <section className="attack-setting-section attack-basic-section" aria-label={`${attackLabel} 仮想敵の基本情報`}>
+      <h3>仮想敵の基本情報</h3>
     <div className="attack-card-fields">
       <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-identity-row">
         <ScenarioTextField

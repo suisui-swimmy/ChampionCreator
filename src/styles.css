@@ -3992,6 +3992,14 @@ textarea {
 }
 
 .attack-condition-card {
+  --attack-card-title-size: var(--desktop-text-heading);
+  --attack-section-title-size: 14px;
+  --attack-label-size: var(--desktop-text-interactive-small);
+  --attack-operation-size: var(--desktop-text-control);
+  --attack-disclosure-height: var(--desktop-control-comfort);
+  --attack-control-height: var(--desktop-control-standard);
+  --attack-section-indent: 8px;
+  --attack-field-columns: repeat(auto-fit, minmax(min(100%, 11em), 1fr));
   display: grid;
   gap: 8px;
   align-content: start;
@@ -4857,11 +4865,6 @@ textarea {
 
 .attack-action-section .scenario-options.attack-critical-option {
   grid-template-columns: minmax(0, 1fr);
-}
-
-.attack-setting-section--indented .attack-setting-section-body,
-.attack-setting-section--indented .attack-target-condition-body {
-  margin-left: 8px;
 }
 
 .attack-setting-section--target-condition .attack-target-condition-body {
@@ -6434,7 +6437,7 @@ textarea {
   .scenario-row .ui-stepper-value > input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input),
   .attack-condition-card .ui-stepper-value > input:not([type="checkbox"]):not([type="radio"]):not(.inline-title-input) {
     padding-inline: 2px;
-    font-size: var(--desktop-text-interactive-small);
+    font-size: var(--desktop-text-control);
   }
 
   .speed-offset-input,
@@ -8085,8 +8088,6 @@ textarea {
     grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
   }
 
-  .mobile-scenarios-open .attack-setting-section--indented .attack-setting-section-body,
-  .mobile-scenarios-open .attack-setting-section--indented .attack-target-condition-body,
   .mobile-scenarios-open .scenario-options {
     margin-left: 0;
   }
@@ -9151,6 +9152,125 @@ textarea {
   }
 }
 
-.offense-attack-card .attack-card-level-type-row {
+.attack-condition-card .attack-card-level-type-row {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11em), 1fr));
+}
+
+/* Shared hierarchy for defence, offense and speed cards, after density rules. */
+.attack-condition-card .attack-field-grid {
+  grid-template-columns: var(--attack-field-columns);
+}
+
+.attack-condition-card .attack-number-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5em), 1fr));
+}
+
+.attack-condition-card .attack-card-header .inline-title-input {
+  color: var(--text);
+  font-size: var(--attack-card-title-size);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.attack-condition-card .attack-setting-section > h3,
+.attack-condition-card > .attack-advanced-settings > summary {
+  color: var(--text);
+  font-size: var(--attack-section-title-size);
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+
+.attack-condition-card .attack-setting-section > :not(h3),
+.attack-condition-card > .attack-advanced-settings > .attack-advanced-content {
+  min-width: 0;
+  margin-inline-start: var(--attack-section-indent);
+}
+
+.attack-condition-card :is(
+  .row-label,
+  .move-power-label,
+  .select-field-label,
+  .attacker-stat-header,
+  .attacker-stat-row strong span,
+  .scenario-defender-rank-label,
+  .speed-target-mode-control-label,
+  .number-input-suffix,
+  .hp-event-rule-meta strong,
+  .hp-event-parameter > span
+) {
+  color: var(--muted);
+  font-size: var(--attack-label-size);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+  white-space: normal;
+}
+
+.attack-condition-card :is(.scenario-options label, .speed-target-radio-label, .hp-event-enable) {
+  color: var(--text);
+  font-size: var(--attack-operation-size);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.attack-condition-card .speed-multiplier-control.is-manual .select-field-label {
+  color: var(--gold);
+}
+
+.attack-condition-card .speed-target-mode-option {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.attack-condition-card .speed-target-radio-label {
+  flex-basis: 7em;
+}
+
+.attack-condition-card .speed-target-mode-control {
+  margin-inline-start: auto;
+}
+
+.attack-condition-card .attacker-stat-table .attacker-stat-header,
+.attack-condition-card .attacker-stat-table .attacker-stat-row {
+  grid-template-columns: minmax(24px, 0.45fr) minmax(72px, 1.2fr) minmax(0, 1fr) minmax(0, 1.1fr);
+}
+
+.attack-condition-card .attacker-stat-row strong {
+  flex-wrap: wrap;
+}
+
+.attack-condition-card .hp-event-rule-meta span {
+  color: var(--text);
+  font-size: var(--attack-label-size);
+  line-height: 1.4;
+}
+
+.attack-condition-card .hp-event-enable span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.attack-condition-card .hp-event-add-row .select-trigger {
+  height: auto;
+  min-height: var(--attack-control-height);
+  white-space: normal;
+}
+
+.attack-condition-card > .attack-advanced-settings > summary {
+  min-height: var(--attack-disclosure-height);
+}
+
+@media (max-width: 720px) {
+  .attack-condition-card {
+    --attack-card-title-size: var(--mobile-text-input);
+    --attack-label-size: var(--mobile-text-interactive-small);
+    --attack-operation-size: var(--mobile-text-control);
+    --attack-disclosure-height: var(--mobile-control-comfort);
+    --attack-control-height: var(--mobile-control-standard);
+    --attack-section-indent: 4px;
+    --attack-field-columns: minmax(0, 1fr);
+  }
+
 }

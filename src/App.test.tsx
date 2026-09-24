@@ -1367,7 +1367,7 @@ describe("App", () => {
       /\.ui-stepper-button(?:,[^{}]+)*\s*\{[^}]*width:\s*var\(--desktop-control-compact\);/s,
     );
     expect(nonMobileCss).toMatch(
-      /\.scenario-row \.ui-stepper-value > input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),\s*\.attack-condition-card \.ui-stepper-value > input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\)\s*\{[^}]*padding-inline:\s*2px;[^}]*font-size:\s*var\(--desktop-text-interactive-small\);/s,
+      /\.scenario-row \.ui-stepper-value > input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\),\s*\.attack-condition-card \.ui-stepper-value > input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\.inline-title-input\)\s*\{[^}]*padding-inline:\s*2px;[^}]*font-size:\s*var\(--desktop-text-control\);/s,
     );
     expect(mobileCss).toMatch(
       /\.ui-stepper(?:,[^{}]+)*\s*\{[^}]*height:\s*var\(--mobile-control-standard\);/s,
@@ -1401,6 +1401,39 @@ describe("App", () => {
     expect(mobileCss).not.toContain(".mobile-target-open .bulk-nature-toggle");
     expect(narrowCss).not.toContain(".mobile-target-open .sp-summary {");
     expect(narrowCss).not.toMatch(/\.mobile-target-open \.sp-summary(?:-actions|-total)?\s*\{[^}]*(?:font-size|min-height):/s);
+  });
+
+  it("shares typography and a single content indent across all adjustment cards", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const shared = css.slice(css.indexOf("/* Shared hierarchy for defence, offense and speed cards"));
+    const mobile = shared.slice(shared.indexOf("@media (max-width: 720px)"));
+    const rule = (source: string, selector: string) => {
+      const start = source.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThanOrEqual(0);
+      return source.slice(start, source.indexOf("}", start) + 1);
+    };
+    const card = rule(css, ".attack-condition-card");
+    expect(card).toContain("--attack-card-title-size: var(--desktop-text-heading)");
+    expect(card).toContain("--attack-section-title-size: 14px");
+    expect(card).toContain("--attack-label-size: var(--desktop-text-interactive-small)");
+    expect(card).toContain("--attack-section-indent: 8px");
+    const heading = rule(shared, ".attack-condition-card > .attack-advanced-settings > summary");
+    expect(heading).toContain("font-size: var(--attack-section-title-size)");
+    expect(heading).toContain("font-weight: 700");
+    expect(heading).toContain("color: var(--text)");
+    const labels = shared.slice(shared.indexOf(".attack-condition-card :is(\n"), shared.indexOf("\n}", shared.indexOf(".attack-condition-card :is(\n")) + 2);
+    for (const selector of [".row-label", ".select-field-label", ".attacker-stat-header", ".scenario-defender-rank-label", ".hp-event-rule-meta strong"]) expect(labels).toContain(selector);
+    expect(labels).toContain("font-size: var(--attack-label-size)");
+    expect(labels).toContain("font-weight: 400");
+    expect(labels).toContain("color: var(--muted)");
+    expect(shared).toContain(".attack-setting-section > :not(h3)");
+    expect(shared).toContain("margin-inline-start: var(--attack-section-indent)");
+    expect(rule(mobile, ".attack-condition-card")).toContain("--attack-section-indent: 4px");
+    expect(rule(mobile, ".attack-condition-card")).toContain("--attack-card-title-size: var(--mobile-text-input)");
+    expect(css).not.toContain(".attack-setting-section--indented .attack-setting-section-body");
+    expect(rule(shared, ".attack-condition-card .speed-multiplier-control.is-manual .select-field-label")).toContain("color: var(--gold)");
+    const html = renderExampleApp();
+    for (const name of ["耐久調整A", "火力調整A", "素早さ調整A"]) expect(html).toContain(`aria-label="${name} 仮想敵の基本情報"`);
   });
 
   it("keeps side modifier controls accessible and role-sized", () => {
@@ -2352,7 +2385,7 @@ describe("App", () => {
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     const desktopStart = css.indexOf("@media (min-width: 721px)");
     const desktopEnd = css.indexOf("@media (min-width: 1181px)", desktopStart);
-    const mobileStart = css.lastIndexOf("@media (max-width: 720px)");
+    const mobileStart = css.lastIndexOf("@media (max-width: 720px)", css.lastIndexOf(".pokemon-autocomplete-field .dropdown-menu-trigger"));
     for (const [block, tier, height, font] of [
       [css.slice(desktopStart, desktopEnd), "desktop", "compact", "control"],
       [css.slice(mobileStart), "mobile", "standard", "input"],
