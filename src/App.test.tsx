@@ -1417,6 +1417,7 @@ describe("App", () => {
     expect(card).toContain("--attack-section-title-size: 14px");
     expect(card).toContain("--attack-label-size: var(--desktop-text-interactive-small)");
     expect(card).toContain("--attack-section-indent: 8px");
+    expect(card).toContain("--attack-field-columns: repeat(auto-fit, minmax(min(100%, 11em), 1fr))");
     const heading = rule(shared, ".attack-condition-card > .attack-advanced-settings > summary");
     expect(heading).toContain("font-size: var(--attack-section-title-size)");
     expect(heading).toContain("font-weight: 700");
@@ -1430,6 +1431,7 @@ describe("App", () => {
     expect(shared).toContain("margin-inline-start: var(--attack-section-indent)");
     expect(rule(mobile, ".attack-condition-card")).toContain("--attack-section-indent: 4px");
     expect(rule(mobile, ".attack-condition-card")).toContain("--attack-card-title-size: var(--mobile-text-input)");
+    expect(rule(mobile, ".attack-condition-card")).not.toContain("--attack-field-columns");
     expect(css).not.toContain(".attack-setting-section--indented .attack-setting-section-body");
     expect(rule(shared, ".attack-condition-card .speed-multiplier-control.is-manual .select-field-label")).toContain("color: var(--gold)");
     const html = renderExampleApp();
@@ -1559,6 +1561,7 @@ describe("App", () => {
       ".attack-condition-card .attack-side-status.select-field .select-trigger",
       ".attack-condition-card .battle-abilities-content .select-trigger",
       ".attack-condition-card .hp-event-add-row .select-trigger",
+      ".attack-condition-card .attack-field-grid .select-trigger",
     ]) {
       expect(rule(css, selector)).toContain("min-height: var(--attack-control-height)");
       expect(rule(css, selector)).toContain("height: auto");
