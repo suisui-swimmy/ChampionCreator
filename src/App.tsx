@@ -434,11 +434,6 @@ const statusOptions: Array<{ value: PokemonStatus; label: string }> = [
   { value: "frz", label: "こおり" },
 ];
 
-const gameTypeOptions: Array<{ value: GameType; label: string }> = [
-  { value: "singles", label: "シングル" },
-  { value: "doubles", label: "ダブル" },
-];
-
 const rankOptions = Array.from({ length: 13 }, (_value, index) => index - 6);
 
 const rankSelectOptions = rankOptions.map((rank) => ({
@@ -1665,9 +1660,12 @@ export const getAttackSuggestionRankingOwners = (
 type SuggestionFormatToggleProps = {
   value?: SuggestionFormat;
   onChange?: (format: SuggestionFormat) => void;
+  ariaLabel?: string;
+  className?: string;
 };
 
-export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatToggleProps) {
+export function SuggestionFormatToggle({ value, onChange, ariaLabel = "バトル形式とサジェスト基準", className }: SuggestionFormatToggleProps) {
+  const groupName = useId();
   const [internalValue, setInternalValue] = useState<SuggestionFormat>("Singles");
   const selectedValue = value ?? internalValue;
   const options: Array<{ format: SuggestionFormat; label: string; assetPath: string }> = [
@@ -1676,7 +1674,7 @@ export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatTogg
   ];
 
   return (
-    <div className="suggestion-format-toggle" role="radiogroup" aria-label="バトル形式とサジェスト基準">
+    <div className={`suggestion-format-toggle${className ? ` ${className}` : ""}`} role="radiogroup" aria-label={ariaLabel}>
       {options.map(({ format, label, assetPath }) => {
         const checked = selectedValue === format;
         const iconStyle = {
@@ -1691,7 +1689,7 @@ export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatTogg
           >
             <input
               type="radio"
-              name="suggestion-format"
+              name={groupName}
               value={format}
               checked={checked}
               aria-label={label}
@@ -1707,6 +1705,24 @@ export function SuggestionFormatToggle({ value, onChange }: SuggestionFormatTogg
           </label>
         );
       })}
+    </div>
+  );
+}
+
+function CardGameTypeToggle({ value, ariaLabel, onChange }: {
+  value: GameType;
+  ariaLabel: string;
+  onChange: (value: GameType) => void;
+}) {
+  return (
+    <div className="select-field attack-game-type-field">
+      <span className="select-field-label">ルール</span>
+      <SuggestionFormatToggle
+        className="card-game-type-toggle"
+        ariaLabel={ariaLabel}
+        value={value === "doubles" ? "Doubles" : "Singles"}
+        onChange={(format) => onChange(toScenarioGameType(format))}
+      />
     </div>
   );
 }
@@ -8912,7 +8928,7 @@ return (
     </div>
 
     <section className="attack-setting-section attack-basic-section" aria-label={`${attackLabel} 仮想敵の基本情報`}>
-      <h3>仮想敵の基本情報</h3>
+      {isSpeedAdjustment ? <h3>仮想敵の基本情報</h3> : null}
     <div className="attack-card-fields">
       <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-identity-row">
         <ScenarioTextField
@@ -9078,11 +9094,9 @@ return (
           >
             <h3 id={`${scenarioId}-${attack.id}-speed-common-title`}>共通S条件</h3>
             <div className="attack-field-grid speed-field-grid attack-setting-section-body">
-              <SelectField
-                label="ルール"
+              <CardGameTypeToggle
                 ariaLabel={`${attackLabel} 共通S条件 ルール`}
                 value={attack.gameType}
-                options={gameTypeOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
               />
               <SelectField
@@ -9213,7 +9227,7 @@ return (
           <section className="attack-setting-section attack-environment-section" aria-labelledby={`${scenarioId}-${attack.id}-environment-title`}>
             <h3 id={`${scenarioId}-${attack.id}-environment-title`}>場の条件</h3>
             <div className="attack-field-grid attack-environment-fields">
-              <SelectField label="ルール" value={attack.gameType} options={gameTypeOptions}
+              <CardGameTypeToggle ariaLabel={`${attackLabel} ルール`} value={attack.gameType}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)} />
               <SelectField label="天候" value={attack.weather} options={weatherOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)} />
@@ -9225,10 +9239,10 @@ return (
           <section className="attack-setting-section attack-side-section" aria-labelledby={`${scenarioId}-${attack.id}-opponent-condition-title`}>
             <h3 id={`${scenarioId}-${attack.id}-opponent-condition-title`}>仮想敵の戦闘条件</h3>
             <div className="attack-side-body">
+              {isOffenseAdjustment ? offenseOpponentStats : renderDefenceReferenceStats("attacker")}
               <SelectField className="attack-side-status" label="状態異常" ariaLabel={`${attackLabel} 仮想敵の状態異常`}
                 value={attack.attackerStatus} options={statusOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)} />
-              {isOffenseAdjustment ? offenseOpponentStats : renderDefenceReferenceStats("attacker")}
               {renderSideAbilities("opponentAlly")}
               {renderSideModifiers("opponent")}
             </div>
@@ -9237,9 +9251,6 @@ return (
           <section className="attack-setting-section attack-side-section" aria-labelledby={`${scenarioId}-${attack.id}-target-condition-title`}>
             <h3 id={`${scenarioId}-${attack.id}-target-condition-title`}>調整対象の戦闘条件</h3>
             <div className="attack-side-body">
-              <SelectField className="attack-side-status" label="状態異常" ariaLabel={`${attackLabel} 調整対象の状態異常`}
-                value={isOffenseAdjustment ? attack.offenseAttackerStatus ?? "none" : attack.defenderStatus} options={statusOptions}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, isOffenseAdjustment ? "offenseAttackerStatus" : "defenderStatus", value)} />
               {!isOffenseAdjustment ? renderDefenceReferenceStats("target") : null}
               {targetRankKeys.length ? (
                 <div className="attack-side-ranks" role="group" aria-label={`${attackLabel} 調整対象のランク`}>
@@ -9256,6 +9267,9 @@ return (
                   ))}
                 </div>
               ) : null}
+              <SelectField className="attack-side-status" label="状態異常" ariaLabel={`${attackLabel} 調整対象の状態異常`}
+                value={isOffenseAdjustment ? attack.offenseAttackerStatus ?? "none" : attack.defenderStatus} options={statusOptions}
+                onChange={(value) => onUpdateAttack(scenarioId, attack.id, isOffenseAdjustment ? "offenseAttackerStatus" : "defenderStatus", value)} />
               {renderSideAbilities("targetAlly")}
               {renderSideModifiers("target")}
             </div>

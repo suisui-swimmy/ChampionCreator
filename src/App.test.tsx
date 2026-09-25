@@ -1035,7 +1035,7 @@ describe("App", () => {
     expect(html).not.toContain("特性サポート");
     expect(html).not.toContain("> フレンドガード</label>");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
-    expect(css).toMatch(/\.battle-abilities-content \.select-trigger\s*\{[^}]*min-height: var\(--desktop-control-standard\)/);
+    expect(css).toMatch(/\.battle-abilities-content \.select-trigger\s*\{[^}]*min-height: var\(--attack-control-height\)/);
     expect(css).toMatch(/\.mobile-scenarios-open \.attack-condition-card \.battle-abilities-content \.select-trigger\s*\{[^}]*height: auto;[^}]*font-size: var\(--mobile-text-input\)/);
   });
 
@@ -1493,7 +1493,8 @@ describe("App", () => {
     const field = section("environment");
     const opponent = section("opponent-condition");
     const target = section("target-condition");
-    const titles = ["仮想敵の基本情報", "攻撃・判定条件", "場の条件", "仮想敵の戦闘条件", "調整対象の戦闘条件", "定数ダメージ・回復"];
+    expect(html).not.toContain("<h3>仮想敵の基本情報</h3>");
+    const titles = ["攻撃・判定条件", "場の条件", "仮想敵の戦闘条件", "調整対象の戦闘条件", "定数ダメージ・回復"];
     const positions = titles.map((title) => html.indexOf(`>${title}<`));
     expect(positions.every((index) => index >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
@@ -1507,6 +1508,13 @@ describe("App", () => {
       expect(markup).toContain(`${side}の状態異常`);
       expect(markup).toContain(`${side}の味方の特性`);
       expect(markup).toContain('class="select-field attack-side-status"');
+      const statusPosition = markup.indexOf('class="select-field attack-side-status"');
+      const abilitiesPosition = markup.indexOf('class="battle-abilities-content"');
+      expect(statusPosition).toBeLessThan(abilitiesPosition);
+      expect(markup.slice(statusPosition, abilitiesPosition)).not.toMatch(/attacker-stat-table|attack-side-ranks/);
+      const statsPosition = Math.max(markup.indexOf('attacker-stat-table'), markup.indexOf('attack-side-ranks'));
+      expect(statsPosition).toBeGreaterThanOrEqual(0);
+      expect(statsPosition).toBeLessThan(statusPosition);
       expect(markup).not.toContain("> 急所</label>");
     }
     const attacking = kind === "offense" ? target : opponent;
@@ -1522,6 +1530,39 @@ describe("App", () => {
     expect((defending.match(/<input type="checkbox" checked=""/g) ?? [])).toHaveLength(3);
     expect(html).not.toContain(">戦闘補正<");
     expect(html).not.toContain(">状況条件<");
+  });
+
+  it("keeps ally abilities inline and removes only the battle stat table top border", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const rule = (selector: string) => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThanOrEqual(0);
+      return css.slice(start, css.indexOf("}", start) + 1);
+    };
+    expect(rule(".battle-abilities-content .select-field")).toContain("grid-template-columns: minmax(64px, max-content) minmax(0, 1fr)");
+    expect(rule(".battle-abilities-content .select-field")).toContain("align-items: center");
+    expect(rule(".attack-side-section .attacker-stat-table")).toContain("border-top: 0");
+    expect(rule(".ev-table")).toContain("border-top: 1px solid var(--line)");
+  });
+
+  it("uses compact desktop and standard mobile heights for battle condition selects", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const rule = (source: string, selector: string) => {
+      const start = source.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThanOrEqual(0);
+      return source.slice(start, source.indexOf("}", start) + 1);
+    };
+    expect(rule(css, ".attack-condition-card")).toContain("--attack-control-height: var(--desktop-control-compact)");
+    const mobile = css.slice(css.lastIndexOf("@media (max-width: 720px)"));
+    expect(rule(mobile, ".attack-condition-card")).toContain("--attack-control-height: var(--mobile-control-standard)");
+    for (const selector of [
+      ".attack-condition-card .attack-side-status.select-field .select-trigger",
+      ".attack-condition-card .battle-abilities-content .select-trigger",
+      ".attack-condition-card .hp-event-add-row .select-trigger",
+    ]) {
+      expect(rule(css, selector)).toContain("min-height: var(--attack-control-height)");
+      expect(rule(css, selector)).toContain("height: auto");
+    }
   });
 
   it.each([
@@ -2775,6 +2816,46 @@ describe("App", () => {
     expect(html).toContain('aria-label="シングル"');
     expect(html).toContain('aria-label="ダブル"');
     expect(html).not.toContain("title=");
+  });
+
+  it("isolates card rule radio groups from the header and other cards, including locked offense cards", () => {
+    const scenarios = createDefaultScenarioForms().map((scenario) => ({
+      ...scenario,
+      attacks: [0, 1].map((index) => ({ ...scenario.attacks[0], id: `${scenario.id}-rule-${index}`,
+        gameType: index ? "doubles" as const : "singles" as const })),
+    }));
+    const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={scenarios} usageData={null} />);
+    const groups = [...html.matchAll(/<div class="suggestion-format-toggle(?: card-game-type-toggle)?" role="radiogroup" aria-label="([^"]+)">([\s\S]*?)<\/div>/g)];
+    expect(groups).toHaveLength(7);
+    const names = groups.map((group, index) => {
+      const inputs = [...group[2].matchAll(/<input\b[^>]+>/g)].map((match) => match[0]);
+      expect(inputs).toHaveLength(2);
+      const name = inputs[0].match(/name="([^"]+)"/)![1];
+      expect(inputs[1]).toContain(`name="${name}"`);
+      expect(inputs.every((input) => !input.includes("disabled"))).toBe(true);
+      expect(inputs[0]).toContain('value="Singles"');
+      expect(inputs[1]).toContain('value="Doubles"');
+      expect(inputs[index > 0 && index % 2 === 0 ? 1 : 0]).toContain('checked=""');
+      if (index > 0) expect(group[1]).toContain("ルール");
+      expect(group[2]).toContain("assets/ui/single.svg");
+      expect(group[2]).toContain("assets/ui/double.svg");
+      return name;
+    });
+    expect(new Set(names).size).toBe(groups.length);
+  });
+
+  it("keeps card rule toggles labelled and role-sized at desktop and mobile widths", () => {
+    const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    const rule = (selector: string) => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThanOrEqual(0);
+      return css.slice(start, css.indexOf("}", start) + 1);
+    };
+    expect(rule(".card-game-type-toggle")).toContain("min-height: var(--attack-format-height)");
+    expect(rule(".attack-condition-card")).toContain("--attack-format-height: var(--desktop-control-standard)");
+    expect(rule(".card-game-type-toggle .suggestion-format-option-label")).toContain("display: inline");
+    expect(rule(".card-game-type-toggle .suggestion-format-option .suggestion-format-option-content")).toContain("flex-wrap: wrap");
+    expect(rule(".attack-game-type-field")).toContain("grid-column: 1 / -1");
   });
 
   it("syncs every scenario attack to the header format while preserving individual overrides", () => {
