@@ -1036,7 +1036,7 @@ describe("App", () => {
     expect(html).not.toContain("> フレンドガード</label>");
     const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
     expect(css).toMatch(/\.battle-abilities-content \.select-trigger\s*\{[^}]*min-height: var\(--attack-control-height\)/);
-    expect(css).toMatch(/\.mobile-scenarios-open \.attack-condition-card \.battle-abilities-content \.select-trigger\s*\{[^}]*height: auto;[^}]*font-size: var\(--mobile-text-input\)/);
+    expect(css).toMatch(/\.mobile-scenarios-open \.attack-condition-card \.battle-abilities-content \.select-trigger\s*\{[^}]*height: auto;[^}]*font-size: var\(--mobile-text-control\)/);
   });
 
   it("keeps mobile text controls large enough to avoid iOS focus zoom", () => {

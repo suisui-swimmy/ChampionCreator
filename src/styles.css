@@ -6733,7 +6733,7 @@ textarea {
   .mobile-scenarios-open .attack-condition-card .battle-abilities-content .select-trigger {
     min-height: var(--mobile-control-standard);
     height: auto;
-    font-size: var(--mobile-text-input);
+    font-size: var(--mobile-text-control);
   }
 
   .search-progress-row .progress-cancel-button {
