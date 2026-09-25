@@ -51,7 +51,7 @@ export const buildCurrentBuildEvaluationInput = (
         const missing = damageAttacks.find((attack) => !attack.moveInput.trim() || !attack.attackerPokemonInput.trim());
         if (!damageAttacks.length || missing) {
           conditions.push({ ...base, issue: incomplete(missing
-            ? `${missing.label || "攻撃条件"}のポケモンと技を入力してください`
+            ? `${formatScenarioAttackLabel("defence", damageAttacks.indexOf(missing), missing.label)}のポケモンと技を入力してください`
             : "耐久を確認する攻撃条件を入力してください") });
           continue;
         }
@@ -64,7 +64,7 @@ export const buildCurrentBuildEvaluationInput = (
           if (hit.constraint) hit.constraint.minSurvivalProbability = damageAttacks[index].minSurvivalProbabilityPercent / 100;
         });
         conditions.push({ ...base, kind: "defence", scenario: canonical,
-          hitLabels: damageAttacks.map((attack) => `${attack.label} / ${attack.moveInput}`) });
+          hitLabels: damageAttacks.map((attack, index) => `${formatScenarioAttackLabel("defence", index, attack.label)} / ${attack.moveInput}`) });
       } catch (error) {
         conditions.push({ ...base, issue: classifyCurrentBuildIssue(error) });
       }
@@ -74,7 +74,7 @@ export const buildCurrentBuildEvaluationInput = (
       try {
         const sequence = buildOffenseSequenceCondition(target, scenario);
         conditions.push({ ...base, kind: "offense", input: sequence.attacks[0], sequence,
-          hitLabels: sequence.attacks.map((attack) => `${attack.label} / ${attack.moveInput}`) });
+          hitLabels: sequence.attacks.map((attack, index) => `${formatScenarioAttackLabel("offense", index, attack.label)} / ${attack.moveInput}`) });
       } catch (error) { conditions.push({ ...base, issue: classifyCurrentBuildIssue(error) }); }
       continue;
     }
@@ -90,7 +90,7 @@ export const buildCurrentBuildEvaluationInput = (
           validatePercent(attack.targetKoProbabilityPercent);
           const input = buildOffenseAdjustmentInput(target, createOffenseAdjustmentFormFromScenarioAttack(attack));
           input.targetKoProbability = attack.targetKoProbabilityPercent / 100;
-          conditions.push({ ...identity, kind: "offense", input, hitLabels: [attack.moveInput] });
+          conditions.push({ ...identity, kind: "offense", input, hitLabels: [`${identity.label} / ${attack.moveInput}`] });
         } else {
           if (attack.speedTargetMode === "manual") {
             if (!Number.isInteger(attack.speedTargetValue) || attack.speedTargetValue <= 0 || attack.speedTargetValue > 10000) {

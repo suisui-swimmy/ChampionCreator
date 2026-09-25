@@ -38,7 +38,14 @@
   outline-offset: -2px;
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
-.current-build-results { min-width: 0; font-size: var(--desktop-text-control); overflow-wrap: anywhere; }
+.current-build-results {
+  --current-condition-dot-size: 10px;
+  --current-condition-name-gap: 8px;
+  container: current-build-results / inline-size;
+  min-width: 0;
+  font-size: var(--desktop-text-control);
+  overflow-wrap: anywhere;
+}
 .current-build-heading,
 .current-build-spread,
 .current-build-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
@@ -48,35 +55,40 @@
 .current-build-spread > span { color: var(--muted); }
 .current-build-spread .candidate-stat-spread { flex-wrap: wrap; }
 .current-build-summary { margin: 12px 0; padding: 12px; background: var(--surface-inset); border-radius: var(--radius); }
-.current-build-summary.pass > strong { color: var(--green); }
-.current-build-summary.fail > strong { color: var(--red); }
-.current-build-summary.blocked > strong { color: var(--orange); }
-.current-build-summary > span { color: var(--muted); }
+.current-build-summary > span:not(.status-dot) { color: var(--muted); }
 .current-build-condition { border-top: 1px solid var(--line); }
 .current-build-condition summary {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(45px, auto) 16px;
+  grid-template-columns: minmax(0, 1fr) 9em minmax(0, 1.7fr) 6.2em var(--desktop-icon-compact);
+  grid-template-areas: "name actual requirement status chevron";
   align-items: center;
-  gap: 12px;
+  gap: 6px 12px;
   min-height: var(--desktop-control-comfort);
   padding: 12px 4px;
   cursor: pointer;
   list-style: none;
 }
 .current-build-condition summary::-webkit-details-marker { display: none; }
-.current-condition-name,
-.current-condition-metric { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
-.current-condition-name small,
-.current-condition-metric small { font-size: var(--desktop-text-interactive-small); color: var(--muted); }
-.current-condition-name > span { font-size: var(--desktop-text-interactive-small); }
-.current-condition-status { color: var(--orange); }
-.current-build-condition.pass .current-condition-status { color: var(--green); }
-.current-build-condition.fail .current-condition-status { color: var(--red); }
-.current-condition-chevron { width: 16px; height: 16px; }
+.current-build-condition .current-condition-heading { min-width: 0; color: var(--text); font-size: inherit; }
+.current-condition-name { grid-area: name; display: flex; align-items: center; gap: var(--current-condition-name-gap); min-width: 0; }
+.current-condition-name > .status-dot { flex-shrink: 0; width: var(--current-condition-dot-size); height: var(--current-condition-dot-size); }
+.current-condition-name-text { display: flex; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.current-condition-label { color: var(--gold); }
+.current-condition-actual { grid-area: actual; min-width: 0; }
+.current-condition-status { grid-area: status; justify-self: end; max-width: 100%; text-align: center; }
+.current-condition-heading em.current-condition-unchecked {
+  color: var(--orange);
+  border-color: var(--gold-line);
+  background: var(--gold-soft);
+}
+.current-condition-requirement { grid-area: requirement; display: flex; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.current-condition-requirement > span:first-child { color: var(--muted); }
+.current-condition-chevron { grid-area: chevron; width: var(--desktop-icon-compact); height: var(--desktop-icon-compact); color: var(--muted); }
 .current-build-condition[open] .current-condition-chevron { transform: rotate(90deg); }
 .current-condition-message { margin: 0 4px 12px; color: var(--orange); }
-.current-condition-details { padding: 0 4px 12px; line-height: 1.7; }
-.current-condition-details ul { padding-left: 20px; margin: 6px 0 12px; }
+.current-condition-details { display: grid; gap: 10px; padding: 0 4px 14px; color: var(--text); font-weight: 400; line-height: 1.6; }
+.current-condition-detail-label { color: var(--gold); }
+.current-condition-details ul { display: grid; gap: 4px; list-style: none; padding: 0; margin: 4px 0 0; }
 .current-condition-details p { margin: 6px 0; }
 
 @media (max-width: 720px) {
@@ -88,12 +100,25 @@
   .result-view-tabs button { flex: 1; min-width: 0; min-height: var(--mobile-control-standard); font-size: var(--mobile-text-control); }
   .current-build-results { font-size: var(--mobile-text-control); }
   .current-build-heading h2 { font-size: var(--mobile-text-heading); }
-  .current-build-condition summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 16px; gap: 10px; min-height: var(--mobile-control-comfort); }
-  .current-condition-name { grid-column: 1; grid-row: 1; }
-  .current-condition-status { grid-column: 2; grid-row: 1; text-align: right; }
-  .current-condition-chevron { grid-column: 3; grid-row: 1; }
-  .current-condition-metric { grid-row: 2; }
-  .current-condition-name small,
-  .current-condition-metric small,
-  .current-condition-name > span { font-size: var(--mobile-text-interactive-small); }
+  .current-build-condition summary { min-height: var(--mobile-control-comfort); }
+  .current-condition-chevron { width: var(--mobile-icon-compact); height: var(--mobile-icon-compact); }
+}
+
+/* Use available result width and text size, including narrow desktop panels. */
+@container current-build-results (max-width: 44em) {
+  .current-build-condition summary {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto var(--desktop-icon-compact);
+    grid-template-areas: "name actual status chevron" "requirement requirement requirement .";
+    column-gap: 8px;
+  }
+  .current-condition-requirement {
+    padding-inline-start: calc(var(--current-condition-dot-size) + var(--current-condition-name-gap));
+  }
+}
+
+@container current-build-results (max-width: 18em) {
+  .current-build-condition summary {
+    grid-template-columns: minmax(0, 1fr) auto var(--desktop-icon-compact);
+    grid-template-areas: "name status chevron" "actual actual actual" "requirement requirement requirement";
+  }
 }

@@ -9657,7 +9657,8 @@ export function CurrentBuildResults({ state, onCheck, disabled = false }: { stat
           <span>合計{sumStatPoints(result.build.statPoints)} / 66 SP</span>
         </> : null}
       </div> : null}
-      <div className={`current-build-summary ${result?.status ?? ""}`} role="status" aria-atomic="true">
+      <div className="current-build-summary" role="status" aria-atomic="true">
+        {result && result.status !== "empty" ? <StatusBadge tone={result.status === "pass" ? "green" : result.status === "fail" ? "red" : "purple"} /> : null}
         <strong>{summary}</strong>
         {result && result.conditions.length > 0 ? <span>
           達成 {result.conditions.filter((condition) => condition.status === "pass").length} / {result.conditions.length} 条件
@@ -9669,22 +9670,29 @@ export function CurrentBuildResults({ state, onCheck, disabled = false }: { stat
         const speed = condition.speed;
         const actual = defence ? `生存率 ${formatPercent(defence.survivalProbability)}`
           : offense ? `KO率 ${formatPercent(offense.koProbability)}`
-          : speed ? `実効S ${speed.actualSpeed}` : "—";
+          : speed ? `実数値 S ${speed.actualSpeed}` : "—";
         const required = defence ? `${defence.requiredSurvivedHits}回耐久・${formatPercent(defence.minSurvivalProbability)}以上`
           : offense ? `KO率 ${formatPercent(offense.targetKoProbability)}以上`
           : speed ? `S ${speed.requiredSpeed}${speed.orderMode === "trick-room" ? "以下" : "以上"}` : "—";
         const hits = defence?.hitEvaluations ?? (offense ? ("hitEvaluations" in offense ? offense.hitEvaluations : [offense.hitEvaluation]) : []);
         const events = defence?.hpEventEvaluations ?? offense?.hpEventEvaluations ?? [];
-        const kind = condition.kind === "defence" ? "耐久" : condition.kind === "offense" ? "火力" : "素早さ";
-        return <details className={`current-build-condition ${condition.status}`} key={condition.id}>
-          <summary>
-            <span className="current-condition-name"><small>{kind}</small><strong>{condition.scenarioLabel}</strong>
-              {condition.label !== condition.scenarioLabel ? <span>{condition.label}</span> : null}
+        const tone = condition.status === "pass" ? "green" : condition.status === "fail" ? "red" : "purple";
+        return <details className="current-build-condition" data-status={condition.status} key={condition.id}>
+          <summary className="candidate-scenario-status current-condition-heading">
+            <span className="current-condition-name">
+              <StatusBadge tone={tone} />
+              <span className="current-condition-name-text">
+                <strong>{condition.scenarioLabel}</strong>
+                {condition.label !== condition.scenarioLabel && result.conditions.some((other) => other.scenarioId === condition.scenarioId && other.id !== condition.id)
+                  ? <span className="current-condition-label">{condition.label}</span> : null}
+              </span>
             </span>
-            <span className="current-condition-metric"><small>現在の結果</small><span>{actual}</span></span>
-            <span className="current-condition-metric"><small>必要条件</small><span>{required}</span></span>
-            <strong className="current-condition-status">{currentBuildStatusLabels[condition.status]}</strong>
-            <ChevronRightIcon className="current-condition-chevron" aria-hidden="true" />
+            <span className="current-condition-actual"><span className="visually-hidden">現在の結果 </span>{actual}</span>
+            <span className="current-condition-requirement"><span>必要条件</span><span>{required}</span></span>
+            <em className={`current-condition-status${condition.status === "fail" ? " fail-badge" : condition.status === "pass" ? "" : " current-condition-unchecked"}`}>
+              {currentBuildStatusLabels[condition.status]}
+            </em>
+            <ChevronRightIcon className="current-condition-chevron disclosure-chevron" aria-hidden="true" />
           </summary>
           {condition.message ? <p className="current-condition-message">{condition.message}</p> : null}
           <div className="current-condition-details">
@@ -9693,24 +9701,32 @@ export function CurrentBuildResults({ state, onCheck, disabled = false }: { stat
               const offenseStep = offense && "steps" in offense ? offense.steps[index] : undefined;
               const hitEvents = events.filter((event) => event.cardId === hit.hitId);
               const formatEvent = (event: HpEventEvaluation) => <li className="candidate-hp-event-detail" key={`${event.eventId}-${event.occurrence}`}>
+                <span className="current-condition-detail-label">定数ダメージ・回復</span>{" "}
                 {formatHpEventEvaluation(event, condition.kind === "offense" ? "offense" : "defence")}
               </li>;
               return <section key={hit.hitId}>
-                <strong>{condition.hitLabels?.[index]}</strong>
-                {offenseStep ? <p>攻撃回数 {offenseStep.moveUses} / 累計回数 {offenseStep.cumulativeUses}</p> : null}
+                <strong className="current-condition-detail-label">{condition.scenarioLabel} / {condition.hitLabels?.[index] ?? condition.label}</strong>
                 <ul>
                   {hitEvents.filter((event) => event.sequenceContext === "priorMove").map(formatEvent)}
-                  <li>{hit.description ? formatLocalizedDamageDescription(hit.description)
-                    : `${offenseStep ? "1回のダメージ" : "ダメージ"} ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}</li>
+                  <li>
+                    {hit.movePower ? `${formatMovePowerEvaluation(hit.movePower)} / ` : ""}
+                    {hit.description
+                      ? hit.movePower ? stripLocalizedDamagePowerLabel(formatLocalizedDamageDescription(hit.description)) : formatLocalizedDamageDescription(hit.description)
+                      : `${offenseStep ? "1回のダメージ" : "ダメージ"} ${formatDamageRange(hit.damageRange.min, hit.damageRange.max)} (${hit.damageRange.percentMin.toFixed(1)}-${hit.damageRange.percentMax.toFixed(1)}%)`}
+                  </li>
+                  {offenseStep ? <li>攻撃回数 {offenseStep.moveUses} / 累計回数 {offenseStep.cumulativeUses}</li> : null}
                   {offense && "steps" in offense && offense.steps[index] ? <li>攻撃後の残りHP {offense.steps[index].remainingHp.min}〜{offense.steps[index].remainingHp.max} / KO率 {formatPercent(offense.steps[index].koProbability)}</li> : null}
-                  {hit.movePower ? <li>{formatMovePowerEvaluation(hit.movePower)}</li> : null}
                   {hitEvents.filter((event) => event.sequenceContext !== "priorMove").map(formatEvent)}
                 </ul>
               </section>;
             })}
-            {speed ? <><p>{speed.reason}{speed.relation === "tie" ? "（同速）" : ""}</p>
-              {speed.notes.map((note) => <p key={note}>{note}</p>)}
-            </> : null}
+            {speed ? <section>
+              <strong className="current-condition-detail-label">{condition.scenarioLabel} / {condition.label}</strong>
+              <ul>
+                <li>S{speed.statPoints} / 自分 {speed.actualSpeed} / 相手 {speed.targetSpeed} / {formatSpeedRelationLabel(speed)}</li>
+                {speed.notes.map((note) => <li key={note}>{note}</li>)}
+              </ul>
+            </section> : null}
           </div>
         </details>;
       })}
