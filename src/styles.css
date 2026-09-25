@@ -4846,7 +4846,7 @@ textarea {
   grid-template-columns: minmax(24px, 0.45fr) minmax(72px, 1.2fr) minmax(0, 1fr) minmax(0, 1.1fr);
 }
 
-.attack-side-section .attacker-stat-table {
+.attack-condition-card .attacker-stat-table {
   border-top: 0;
 }
 
@@ -9164,6 +9164,11 @@ textarea {
 }
 
 /* Shared hierarchy for defence, offense and speed cards, after density rules. */
+.attack-condition-card .speed-condition-options {
+  grid-template-columns: minmax(0, 1fr);
+  align-self: end;
+}
+
 .attack-game-type-field {
   grid-column: 1 / -1;
 }

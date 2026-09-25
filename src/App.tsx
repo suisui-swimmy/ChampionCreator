@@ -464,16 +464,6 @@ const speedMultiplierOptions: Array<{ value: SpeedManualMultiplier; label: strin
   { value: "0.5", label: "0.5倍" },
 ];
 
-const speedOrderModeOptions = [
-  { value: "normal", label: "通常" },
-  { value: "trick-room", label: "トリックルーム" },
-] as const;
-
-const speedTailwindOptions = [
-  { value: "off", label: "なし" },
-  { value: "on", label: "あり" },
-] as const;
-
 type HpEventPresetId = SupportedHpEventEffectId;
 
 const hpEventPresetOptions: Array<{ value: HpEventPresetId; label: string }> = [
@@ -8928,7 +8918,6 @@ return (
     </div>
 
     <section className="attack-setting-section attack-basic-section" aria-label={`${attackLabel} 仮想敵の基本情報`}>
-      {isSpeedAdjustment ? <h3>仮想敵の基本情報</h3> : null}
     <div className="attack-card-fields">
       <fieldset disabled={commonLocked} className="attack-shared-fields attack-card-field-row attack-card-identity-row">
         <ScenarioTextField
@@ -9071,7 +9060,7 @@ return (
                     <span>任意S値</span>
                   </label>
                   <span className="speed-target-mode-control">
-                    <span className="speed-target-mode-control-label">S値</span>
+                    <span className="speed-target-mode-control-label">実数値</span>
                     <ScenarioNumberField
                       className="speed-manual-target-input"
                       label={`${attackLabel} 任意S値`}
@@ -9092,34 +9081,35 @@ return (
             className="attack-setting-section attack-setting-section--indented speed-condition-section"
             aria-labelledby={`${scenarioId}-${attack.id}-speed-common-title`}
           >
-            <h3 id={`${scenarioId}-${attack.id}-speed-common-title`}>共通S条件</h3>
+            <h3 id={`${scenarioId}-${attack.id}-speed-common-title`}>場の条件</h3>
             <div className="attack-field-grid speed-field-grid attack-setting-section-body">
               <CardGameTypeToggle
-                ariaLabel={`${attackLabel} 共通S条件 ルール`}
+                ariaLabel={`${attackLabel} 場の条件 ルール`}
                 value={attack.gameType}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "gameType", value)}
               />
               <SelectField
                 label="天候"
-                ariaLabel={`${attackLabel} 共通S条件 天候`}
+                ariaLabel={`${attackLabel} 場の条件 天候`}
                 value={attack.weather}
                 options={weatherOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "weather", value)}
               />
               <SelectField
                 label="フィールド"
-                ariaLabel={`${attackLabel} 共通S条件 フィールド`}
+                ariaLabel={`${attackLabel} 場の条件 フィールド`}
                 value={attack.terrain}
                 options={terrainOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "terrain", value)}
               />
-              <SelectField
-                label="行動順"
-                ariaLabel={`${attackLabel} 共通S条件 行動順`}
-                value={attack.speedOrderMode}
-                options={[...speedOrderModeOptions]}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedOrderMode", value)}
-              />
+              <div className="scenario-options speed-condition-options">
+                <label>
+                  <input type="checkbox" aria-label={`${attackLabel} 場の条件 トリックルーム`}
+                    checked={isTrickRoomSpeed}
+                    onChange={(event) => onUpdateAttack(scenarioId, attack.id, "speedOrderMode", event.target.checked ? "trick-room" : "normal")} />
+                  <span>トリックルーム</span>
+                </label>
+              </div>
             </div>
           </section>
 
@@ -9128,34 +9118,35 @@ return (
               className="attack-setting-section attack-setting-section--indented speed-condition-section"
               aria-labelledby={`${scenarioId}-${attack.id}-speed-opponent-title`}
             >
-              <h3 id={`${scenarioId}-${attack.id}-speed-opponent-title`}>相手S条件</h3>
+              <h3 id={`${scenarioId}-${attack.id}-speed-opponent-title`}>仮想敵のS条件</h3>
               <div className="attack-field-grid speed-field-grid attack-setting-section-body">
                 <SelectField
                   label="状態異常"
-                  ariaLabel={`${attackLabel} 相手S条件 状態異常`}
+                  ariaLabel={`${attackLabel} 仮想敵のS条件 状態異常`}
                   value={attack.attackerStatus}
                   options={statusOptions}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "attackerStatus", value)}
                 />
                 <SpeedMultiplierControl
                   label="道具倍率"
-                  ariaLabel={`${attackLabel} 相手S条件 道具倍率`}
+                  ariaLabel={`${attackLabel} 仮想敵のS条件 道具倍率`}
                   value={attack.speedItemMultiplier}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedItemMultiplier", value)}
                 />
                 <SpeedMultiplierControl
                   label="特性倍率"
-                  ariaLabel={`${attackLabel} 相手S条件 特性倍率`}
+                  ariaLabel={`${attackLabel} 仮想敵のS条件 特性倍率`}
                   value={attack.speedAbilityMultiplier}
                   onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedAbilityMultiplier", value)}
                 />
-                <SelectField
-                  label="おいかぜ"
-                  ariaLabel={`${attackLabel} 相手S条件 おいかぜ`}
-                  value={attack.speedOpponentTailwind ? "on" : "off"}
-                  options={[...speedTailwindOptions]}
-                  onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedOpponentTailwind", value === "on")}
-                />
+                <div className="scenario-options speed-condition-options">
+                  <label>
+                    <input type="checkbox" aria-label={`${attackLabel} 仮想敵のS条件 おいかぜ`}
+                      checked={attack.speedOpponentTailwind}
+                      onChange={(event) => onUpdateAttack(scenarioId, attack.id, "speedOpponentTailwind", event.target.checked)} />
+                    <span>おいかぜ</span>
+                  </label>
+                </div>
               </div>
             </section>
           ) : null}
@@ -9164,34 +9155,35 @@ return (
             className="attack-setting-section attack-setting-section--indented speed-condition-section"
             aria-labelledby={`${scenarioId}-${attack.id}-speed-target-title`}
           >
-            <h3 id={`${scenarioId}-${attack.id}-speed-target-title`}>調整対象S条件</h3>
+            <h3 id={`${scenarioId}-${attack.id}-speed-target-title`}>調整対象のS条件</h3>
             <div className="attack-field-grid speed-field-grid attack-setting-section-body">
               <SelectField
                 label="状態異常"
-                ariaLabel={`${attackLabel} 調整対象S条件 状態異常`}
+                ariaLabel={`${attackLabel} 調整対象のS条件 状態異常`}
                 value={attack.speedTargetStatus}
                 options={statusOptions}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetStatus", value)}
               />
               <SpeedMultiplierControl
                 label="道具倍率"
-                ariaLabel={`${attackLabel} 調整対象S条件 道具倍率`}
+                ariaLabel={`${attackLabel} 調整対象のS条件 道具倍率`}
                 value={attack.speedTargetItemMultiplier}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetItemMultiplier", value)}
               />
               <SpeedMultiplierControl
                 label="特性倍率"
-                ariaLabel={`${attackLabel} 調整対象S条件 特性倍率`}
+                ariaLabel={`${attackLabel} 調整対象のS条件 特性倍率`}
                 value={attack.speedTargetAbilityMultiplier}
                 onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetAbilityMultiplier", value)}
               />
-              <SelectField
-                label="おいかぜ"
-                ariaLabel={`${attackLabel} 調整対象S条件 おいかぜ`}
-                value={attack.speedTargetTailwind ? "on" : "off"}
-                options={[...speedTailwindOptions]}
-                onChange={(value) => onUpdateAttack(scenarioId, attack.id, "speedTargetTailwind", value === "on")}
-              />
+              <div className="scenario-options speed-condition-options">
+                <label>
+                  <input type="checkbox" aria-label={`${attackLabel} 調整対象のS条件 おいかぜ`}
+                    checked={attack.speedTargetTailwind}
+                    onChange={(event) => onUpdateAttack(scenarioId, attack.id, "speedTargetTailwind", event.target.checked)} />
+                  <span>おいかぜ</span>
+                </label>
+              </div>
             </div>
           </section>
         </>

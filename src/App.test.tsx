@@ -1541,7 +1541,7 @@ describe("App", () => {
     };
     expect(rule(".battle-abilities-content .select-field")).toContain("grid-template-columns: minmax(64px, max-content) minmax(0, 1fr)");
     expect(rule(".battle-abilities-content .select-field")).toContain("align-items: center");
-    expect(rule(".attack-side-section .attacker-stat-table")).toContain("border-top: 0");
+    expect(rule(".attack-condition-card .attacker-stat-table")).toContain("border-top: 0");
     expect(rule(".ev-table")).toContain("border-top: 1px solid var(--line)");
   });
 
@@ -2137,7 +2137,7 @@ describe("App", () => {
     for (const operation of [
       "表示された候補を選んで入力を確定してください。",
       "元のタイプに戻す", "▲ / ▼", "参加者と攻撃順", "HP基準",
-      "累計回数", "耐久確率", "KO確率", "トリックルームを有効に",
+      "累計回数", "耐久確率", "KO確率", "「場の条件」の「トリックルーム」にチェックを入れて",
       "持ち物・状態・天候を入力しても、定数ダメージや回復は自動追加されません。",
       "計算に含めたい効果は、ここで追加してください。",
       "「適用」だけではボックスに保存されません。",
@@ -2549,21 +2549,21 @@ describe("App", () => {
     expect(html).not.toContain('class="number-stepper speed-offset-input"');
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1下げる"');
     expect(html).toContain('aria-label="素早さ調整A 確定抜き差分値を1上げる"');
-    expect(html).toContain(">共通S条件</h3>");
-    expect(html).toContain(">相手S条件</h3>");
-    expect(html).toContain(">調整対象S条件</h3>");
+    expect(html).toContain(">場の条件</h3>");
+    expect(html).toContain(">仮想敵のS条件</h3>");
+    expect(html).toContain(">調整対象のS条件</h3>");
     expect(html).not.toContain("調整対象Sランク");
     expect(html).toContain(">状態異常</span>");
-    expect(html).toContain(">行動順</span>");
+    expect(html).toContain(">トリックルーム</span>");
     expect(html).toContain(">おいかぜ</span>");
     expect(html).not.toContain("両側の手動倍率は、選択中の持ち物・特性による自動補正を置き換えます。");
     expect(html).not.toContain("speed-manual-badge");
     expect(html).not.toContain("speed-override-summary");
     expect(html).not.toContain("speed-source-overridden");
     expect(html.match(/>自動<\/span>/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(html).toContain('aria-label="素早さ調整A 共通S条件 行動順"');
-    expect(html).toContain('aria-label="素早さ調整A 相手S条件 状態異常"');
-    expect(html).toContain('aria-label="素早さ調整A 調整対象S条件 状態異常"');
+    expect(html).toContain('aria-label="素早さ調整A 場の条件 トリックルーム"');
+    expect(html).toContain('aria-label="素早さ調整A 仮想敵のS条件 状態異常"');
+    expect(html).toContain('aria-label="素早さ調整A 調整対象のS条件 状態異常"');
     expect(html).toContain('aria-label="素早さ調整A 任意S値"');
     expect(css).toMatch(/\.speed-multiplier-control\.is-manual \.select-trigger\s*\{[^}]*border-color:\s*var\(--gold-line\);/s);
     expect(css).toMatch(/\.select-trigger-has-badge\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto 14px;/s);
@@ -2675,7 +2675,7 @@ describe("App", () => {
 
     expect(opponentRowHtml).toContain('class="speed-target-mode-operator" aria-hidden="true">+</span>');
     expect(opponentRowHtml).not.toContain(">差分</span>");
-    expect(manualRowHtml).toContain('class="speed-target-mode-control-label">S値</span>');
+    expect(manualRowHtml).toContain('class="speed-target-mode-control-label">実数値</span>');
     expect(modeHtml).not.toContain('tabindex="-1"');
     expect(modeHtml).not.toContain('class="speed-offset-sign"');
     expect(modeHtml).not.toMatch(/<strong>/);
@@ -2800,11 +2800,38 @@ describe("App", () => {
       />,
     );
 
-    expect(html).toContain(">共通S条件</h3>");
-    expect(html).toContain(">調整対象S条件</h3>");
-    expect(html).not.toContain(">相手S条件</h3>");
+    expect(html).toContain(">場の条件</h3>");
+    expect(html).toContain(">調整対象のS条件</h3>");
+    expect(html).not.toContain(">仮想敵のS条件</h3>");
     expect(html).not.toContain("相手S能力");
     expect(html).toContain(">任意S値</span>");
+  });
+
+  it.each([
+    [false, false, false],
+    [true, true, true],
+    [true, false, true],
+    [false, true, false],
+  ])("renders independent speed checkboxes for trick room %s, opponent %s and target %s", (trickRoom, opponentTailwind, targetTailwind) => {
+    const base = createDefaultScenarioForms().find((scenario) => scenario.adjustmentType === "speed")!;
+    const scenario = { ...base, attacks: [{ ...base.attacks[0],
+      speedOrderMode: trickRoom ? "trick-room" as const : "normal" as const,
+      speedOpponentTailwind: opponentTailwind, speedTargetTailwind: targetTailwind,
+    }] };
+    const html = renderToStaticMarkup(<App initialTargetForm={createDefaultTargetForm()} initialScenarioForms={[scenario]} usageData={null} />);
+    for (const [label, checked] of [
+      ["場の条件 トリックルーム", trickRoom],
+      ["仮想敵のS条件 おいかぜ", opponentTailwind],
+      ["調整対象のS条件 おいかぜ", targetTailwind],
+    ] as const) {
+      const input = [...html.matchAll(/<input\b[^>]*>/g)].find(([markup]) => markup.includes(`aria-label="素早さ調整A ${label}"`))?.[0];
+      expect(input).toContain('type="checkbox"');
+      expect(input?.includes('checked=""')).toBe(checked);
+    }
+    expect(html).not.toContain("<h3>仮想敵の基本情報</h3>");
+    for (const heading of ["場の条件", "仮想敵のS条件", "調整対象のS条件"]) expect(html).toContain(`>${heading}</h3>`);
+    expect(html).toContain('class="speed-target-mode-control-label">実数値</span>');
+    expect(html).not.toContain(">行動順</span>");
   });
 
   it("keeps the battle format selector native, accessible, and single-first", () => {
