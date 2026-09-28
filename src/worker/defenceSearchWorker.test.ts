@@ -407,11 +407,6 @@ describe("runMaximizeRemainingBulkWorkerTask", () => {
         options: { maxResults: 50 },
         input: {
           build: defender,
-          allowNatureChange: true,
-          natureCandidates: [
-            { nature: mustResolve("nature", "ずぶとい") },
-            { nature: mustResolve("nature", "おだやか") },
-          ],
         },
       },
       (message) => messages.push(message),
@@ -426,6 +421,19 @@ describe("runMaximizeRemainingBulkWorkerTask", () => {
     expect(complete.result).toEqual(complete.results[0]);
     expect(complete.results.every((result, index) => index === 0 || result.score.overallBulk <= complete.results[index - 1].score.overallBulk)).toBe(true);
     expect(complete?.type === "bulkComplete" ? complete.result?.score.overallBulkGain : 0).toBeGreaterThan(0);
+  });
+
+  it("cancels after allocation work has started and never publishes a completion", async () => {
+    const points = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+    const build = { ...makeBuild("target", "カイリュー", statPointTableToSmogonEvs(points)), statPoints: points };
+    let canceled = false;
+    const messages: DefenceSearchWorkerMessage[] = [];
+    await runMaximizeRemainingBulkWorkerTask({ type: "maximizeRemainingBulk", requestId: "mid-bulk", input: { build } }, (message) => {
+      messages.push(message);
+      if (message.type === "bulkProgress" && message.searchedCandidates > 0) canceled = true;
+    }, () => canceled);
+    expect(canceled).toBe(true);
+    expect(messages.some((message) => message.type === "bulkComplete")).toBe(false);
   });
 
   it("stops before emitting complete when canceled", async () => {

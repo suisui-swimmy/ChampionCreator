@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { evaluateScenario } from "./defenceSearch";
+import { createDefaultScenarioForms, createDefaultTargetForm } from "../ui/defenceSearchUi";
 import { createTrickRoomFixture } from "../ui/testFixtures/speedIntegration";
 import { buildMaximizeRemainingBulkInputFromUi } from "../ui/defenceSearchUi";
 import type { EntityKind } from "../data/localizationTypes";
@@ -11,7 +13,8 @@ import {
   computeBulkScore,
   evaluateBulkCandidate,
   maximizeRemainingBulk,
-  type BulkNatureCandidate,
+  enumerateDefensiveAllocations,
+  getBuildDerivedStats,
 } from "./maximizeRemainingBulk";
 
 const mustResolve = <K extends EntityKind>(kind: K, input: string): EntityRef<K> => {
@@ -40,10 +43,6 @@ const zeroStatPoints: StatPointTable = {
   spe: 0,
 };
 
-const natureCandidate = (label: string): BulkNatureCandidate => ({
-  nature: mustResolve("nature", label) as NatureRef,
-});
-
 const makeBuild = (
   statPoints: StatPointTable,
   natureInput = "おくびょう",
@@ -58,31 +57,15 @@ const makeBuild = (
 });
 
 describe("bulk maximization with speed conditions", () => {
-  it("rejects an invalid fixed speed before maximizing", () => {
-    const { target, scenarios } = createTrickRoomFixture(11);
-    expect(() => buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true }))
-      .toThrow("現在S81では条件を満たしません");
-  });
-
-  it("rejects a faster nature under Trick Room and permits a slower one", () => {
-    const { target, scenarios } = createTrickRoomFixture(9);
-    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true });
-    const statPoints = { ...zeroStatPoints, hp: 32, def: 25, spe: 9 };
-    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("ようき"))).toBeNull();
-    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("のんき"))?.candidate.derivedStats.spe).toBe(71);
-    const results = maximizeRemainingBulk(input, { maxResults: 50 });
+  it.each([9, 11])("keeps S and nature fixed for both passing and failing Trick Room conditions (S SP %s)", (speed) => {
+    const { target, scenarios } = createTrickRoomFixture(speed);
+    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios);
+    const results = maximizeRemainingBulk(input, { maxResults: 5 });
     expect(results.length).toBeGreaterThan(0);
-    expect(results.every((result) => result.candidate.derivedStats.spe <= 79)).toBe(true);
-    expect(results.every((result) => result.candidate.statPoints.spe === 9 && result.candidate.usedTotal <= 66)).toBe(true);
-  });
-
-  it("preserves a normal-order lower bound after nature changes", () => {
-    const { target, scenarios, speed } = createTrickRoomFixture(11);
-    scenarios[1].attacks = [{ ...speed, speedOrderMode: "normal" }];
-    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true });
-    const statPoints = { ...zeroStatPoints, hp: 32, def: 23, spe: 11 };
-    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("のんき"))).toBeNull();
-    expect(evaluateBulkCandidate(input, statPoints, natureCandidate("ようき"))?.candidate.derivedStats.spe).toBe(89);
+    for (const result of results) {
+      expect(result.candidate.statPoints.spe).toBe(speed);
+      expect(result.candidate.natureCanonicalName).toBe(input.build.nature?.canonicalName);
+    }
   });
 });
 
@@ -143,102 +126,108 @@ describe("computeBulkScore", () => {
 });
 
 describe("maximizeRemainingBulk", () => {
-  it("returns the top 50 legal candidates in the same order as the complete result set", () => {
-    const build = makeBuild({ ...zeroStatPoints, atk: 8, spa: 4, spe: 10 });
-    const input = { build, allowNatureChange: false };
-    const all = maximizeRemainingBulk(input, { maxResults: 10000 });
-    const results = maximizeRemainingBulk(input, { maxResults: 50 });
-    expect(results).toHaveLength(50);
-    expect(results).toEqual(all.slice(0, 50));
+  it("adds only to H/B/D in the annotated H30 B32 D0 example", () => {
+    const base = { ...zeroStatPoints, hp: 30, def: 32 };
+    const build = { ...makeBuild(base, "いじっぱり"), pokemon: mustResolve("pokemon", "ドドゲザン") };
+    const results = maximizeRemainingBulk({ build }, { maxResults: 50 });
+    expect(results).toHaveLength(3);
+    expect(results[0].candidate.statPoints).toEqual({ ...base, spd: 4 });
     for (const result of results) {
-      expect(result.candidate.usedTotal).toBe(66);
-      expect(result.candidate.statPoints).toMatchObject({ atk: 8, spa: 4, spe: 10 });
-      expect(Object.values(result.candidate.statPoints).every((sp) => sp >= 0 && sp <= 32)).toBe(true);
-      expect(result.score).toMatchObject(computeBulkScore(result.candidate.derivedStats));
+      expect(result.candidate.statPoints.hp).toBeGreaterThanOrEqual(30);
+      expect(result.candidate.statPoints.def).toBe(32);
+      expect(result.candidate.statPoints).toMatchObject({ atk: 0, spa: 0, spe: 0 });
+      expect(result.candidate.natureCanonicalName).toBe("Adamant");
+      expect(result.candidate.usedTotal).toBeLessThanOrEqual(66);
+    }
+    expect(evaluateBulkCandidate({ build }, { ...base, hp: 32, def: 31, spd: 3 })).toBeNull();
+    expect(evaluateBulkCandidate({ build }, { ...base, atk: 1 })).toBeNull();
+    expect(evaluateBulkCandidate({ build }, { ...base, spd: 5 })).toBeNull();
+    expect(build.statPoints).toEqual(base);
+  });
+
+  it("returns the top 50 in the same order as all legal additional allocations", () => {
+    const build = makeBuild({ ...zeroStatPoints, hp: 8, def: 8, spd: 8, atk: 8, spa: 4, spe: 10 });
+    const all = maximizeRemainingBulk({ build }, { maxResults: 10000 });
+    expect(maximizeRemainingBulk({ build }, { maxResults: 50 })).toEqual(all.slice(0, 50));
+    expect(all.length).toBeGreaterThan(50);
+    expect(all.every((entry) => entry.candidate.statPoints.hp >= 8 && entry.candidate.statPoints.def >= 8 && entry.candidate.statPoints.spd >= 8)).toBe(true);
+    expect(all[0].candidate.usedTotal).toBe(66);
+  });
+
+  it("returns the unchanged allocation when no SP remains", () => {
+    const build = makeBuild({ ...zeroStatPoints, hp: 30, def: 32, spd: 4 });
+    const results = maximizeRemainingBulk({ build }, { maxResults: 50 });
+    expect(results).toHaveLength(1);
+    expect(results[0].candidate.statPoints).toEqual(build.statPoints);
+    expect(results[0].score.overallBulkGain).toBe(0);
+  });
+
+  it("respects all lower bounds and spends exactly the remaining SP", () => {
+    const build = makeBuild({ hp: 31, atk: 0, def: 31, spa: 0, spd: 1, spe: 0 });
+    const points = enumerateDefensiveAllocations({ build });
+    expect(points).toHaveLength(4);
+    expect(points.every((entry) => Object.values(entry).reduce((sum, sp) => sum + sp, 0) === 66)).toBe(true);
+    expect(points.every((entry) => entry.hp <= 32 && entry.def <= 32 && entry.spd >= 1)).toBe(true);
+    expect(() => maximizeRemainingBulk({ build: makeBuild({ ...zeroStatPoints, hp: 33 }) })).toThrow("上限外");
+    expect(() => maximizeRemainingBulk({ build: makeBuild({ ...zeroStatPoints, hp: 32, def: 32, spd: 3 }) })).toThrow("合計66");
+  });
+
+  it("preserves the annotated passing Close Combat condition using the real calc evaluator", () => {
+    const target = { ...createDefaultTargetForm(), pokemonInput: "ドドゲザン", pokemonCanonicalName: undefined,
+      natureInput: "いじっぱり", abilityInput: "まけんき", itemInput: "ヨプのみ",
+      statPoints: { ...zeroStatPoints, hp: 30, def: 32 } };
+    const [scenario] = createDefaultScenarioForms();
+    scenario.attacks = [{ ...scenario.attacks[0], attackerPokemonInput: "オオニューラ", attackerPokemonCanonicalName: undefined,
+      attackerNatureInput: "ようき", attackerAbilityInput: "かるわざ", attackerItemInput: "たつじんのおび",
+      attackerStatPoints: { ...zeroStatPoints, atk: 32 }, moveInput: "インファイト", repeat: 1,
+      requiredSurvivedHits: 1, minSurvivalProbabilityPercent: 100 }];
+    const input = buildMaximizeRemainingBulkInputFromUi(target, [scenario]);
+    const defence = input.defenceScenarios![0];
+    expect(evaluateScenario(input.build, defence).passed).toBe(true);
+    const loweringNature = { nature: mustResolve("nature", "おっとり") as NatureRef };
+    const natureInput = { ...input, allowNatureChange: true, natureCandidates: [loweringNature] };
+    expect(evaluateBulkCandidate(natureInput, { ...target.statPoints, spd: 4 }, loweringNature)).toBeNull();
+    const failingInput = { ...natureInput, build: { ...input.build, item: undefined } };
+    expect(evaluateScenario(failingInput.build, defence).passed).toBe(false);
+    expect(evaluateBulkCandidate(failingInput, { ...target.statPoints, spd: 4 }, loweringNature)).not.toBeNull();
+    const unsupportedInput = { ...natureInput, defenceScenarios: [{ ...defence, hits: defence.hits.map((hit) => ({
+      ...hit, hpEvents: [{ id: "unsupported", effectId: "not-supported", enabled: true, sequenceContext: "currentMove" as const }],
+    })) }] };
+    expect(() => maximizeRemainingBulk(unsupportedInput)).toThrow("計算未対応");
+    const noConditions = { ...natureInput, defenceScenarios: [] };
+    expect(evaluateBulkCandidate(noConditions, { ...target.statPoints, spd: 4 }, loweringNature)).not.toBeNull();
+    const results = maximizeRemainingBulk(natureInput, { maxResults: 50 });
+    expect(results.length).toBeGreaterThan(0);
+    for (const result of results) {
+      const build = { ...input.build, statPoints: result.candidate.statPoints, evs: statPointTableToSmogonEvs(result.candidate.statPoints) };
+      expect(evaluateScenario(build, defence).passed).toBe(true);
+      expect(result.score).toMatchObject(computeBulkScore(getBuildDerivedStats(build)));
     }
   });
+});
 
-  it("returns fewer than 50 candidates when the fixed SP budget permits only one", () => {
-    const results = maximizeRemainingBulk({ build: makeBuild({ ...zeroStatPoints, atk: 32, spa: 32, spe: 2 }) }, { maxResults: 50 });
-    expect(results).toHaveLength(1);
-    expect(results[0].candidate.statPoints).toMatchObject({ hp: 0, def: 0, spd: 0 });
+describe("optional nature changes", () => {
+  it("offers other natures without reducing any SP when no conditions are set", () => {
+    const build = makeBuild({ ...zeroStatPoints, hp: 30, def: 32 }, "いじっぱり");
+    const bold = { nature: mustResolve("nature", "ずぶとい") as NatureRef };
+    const input = { build, allowNatureChange: true, natureCandidates: [bold] };
+    const result = evaluateBulkCandidate(input, { ...build.statPoints!, spd: 4 }, bold);
+    expect(result?.candidate.natureCanonicalName).toBe("Bold");
+    expect(result?.natureChangeImpact.changed).toBe(true);
+    expect(result?.candidate.statPoints).toMatchObject({ hp: 30, def: 32 });
+    expect(evaluateBulkCandidate({ ...input, allowNatureChange: false }, { ...build.statPoints!, spd: 4 }, bold)).toBeNull();
+    expect(maximizeRemainingBulk(input, { maxResults: 50 }).some((entry) => entry.candidate.natureCanonicalName === "Bold")).toBe(true);
   });
 
-  it("keeps the current nature when nature changes are disabled", () => {
-    const build = makeBuild({ ...zeroStatPoints, hp: 8, def: 4, spd: 6, spe: 12 });
-
-    const [result] = maximizeRemainingBulk({
-      build,
-      allowNatureChange: false,
-      natureCandidates: [natureCandidate("ずぶとい"), natureCandidate("おだやか")],
-    });
-
-    expect(result.candidate.natureCanonicalName).toBe("Timid");
-    expect(result.natureChangeImpact.changed).toBe(false);
-    expect(result.candidate.usedTotal).toBe(66);
-    expect(result.candidate.statPoints.atk).toBe(0);
-    expect(result.candidate.statPoints.spa).toBe(0);
-    expect(result.candidate.statPoints.spe).toBe(12);
-    expect(result.score.overallBulkGain).toBeGreaterThan(0);
-  });
-
-  it("evaluates supplied nature candidates when nature changes are enabled", () => {
-    const build = makeBuild({ ...zeroStatPoints, hp: 8, def: 4, spd: 6, spe: 12 });
-    const [withoutNatureChange] = maximizeRemainingBulk({ build, allowNatureChange: false });
-    const [withNatureChange] = maximizeRemainingBulk({
-      build,
-      allowNatureChange: true,
-      natureCandidates: [
-        natureCandidate("おくびょう"),
-        natureCandidate("ずぶとい"),
-        natureCandidate("おだやか"),
-      ],
-    });
-
-    expect(withNatureChange.score.overallBulk).toBeGreaterThanOrEqual(withoutNatureChange.score.overallBulk);
-    expect(["Timid", "Bold", "Calm"]).toContain(withNatureChange.candidate.natureCanonicalName);
-  });
-
-  it("filters candidates that reduce current physical or special bulk by default", () => {
-    const build = makeBuild({ ...zeroStatPoints, hp: 12, def: 12, spd: 12 });
-    const result = evaluateBulkCandidate(
-      { build },
-      { ...zeroStatPoints, hp: 0, def: 0, spd: 32 },
-      { nature: build.nature },
-    );
-
-    expect(result).toBeNull();
-  });
-
-  it("does not return nature candidates that lower protected A/C/S actual stats", () => {
-    const build = makeBuild({ ...zeroStatPoints, hp: 8, def: 4, spd: 6, spe: 20 }, "おくびょう");
-    const [protectedBaseline] = maximizeRemainingBulk({ build, allowNatureChange: false });
-    const [result] = maximizeRemainingBulk({
-      build,
-      allowNatureChange: true,
-      natureCandidates: [
-        natureCandidate("ずぶとい"),
-        natureCandidate("おくびょう"),
-      ],
-      protectedActualStats: {
-        spe: protectedBaseline.candidate.derivedStats.spe,
-      },
-    });
-
-    expect(result.candidate.natureCanonicalName).toBe("Timid");
-    expect(result.natureChangeImpact.loweredStats).not.toContain("spe");
-  });
-
-  it("keeps fixed A/C/S SP and never exceeds per-stat or total SP limits", () => {
-    const build = makeBuild({ ...zeroStatPoints, atk: 20, spa: 12, spe: 10, hp: 4, def: 3, spd: 2 });
-    const [result] = maximizeRemainingBulk({
-      build,
-      allowNatureChange: false,
-      minimumStatPoints: { hp: 2, def: 2, spd: 2 },
-    });
-
-    expect(result.candidate.statPoints).toMatchObject({ atk: 20, spa: 12, spe: 10 });
-    expect(Object.values(result.candidate.statPoints).every((value) => value >= 0 && value <= 32)).toBe(true);
-    expect(result.candidate.usedTotal).toBe(66);
+  it("rejects nature changes that break a passing speed condition but ignores an already failing one", () => {
+    const { target, scenarios } = createTrickRoomFixture(9);
+    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, { allowNatureChange: true });
+    input.defenceScenarios = [];
+    const points = { ...input.build.statPoints!, hp: 32, def: 25, spd: 0, spe: 9 };
+    const fast = { nature: mustResolve("nature", "ようき") as NatureRef };
+    expect(evaluateBulkCandidate(input, points, fast)).toBeNull();
+    const failInput = buildMaximizeRemainingBulkInputFromUi({ ...target, statPoints: { ...target.statPoints, spe: 11 } }, scenarios, { allowNatureChange: true });
+    failInput.defenceScenarios = [];
+    expect(evaluateBulkCandidate(failInput, { ...points, def: 23, spe: 11 }, fast)).not.toBeNull();
   });
 });

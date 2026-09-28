@@ -9,7 +9,7 @@ import { buildCurrentBuildEvaluationInput } from "../ui/currentBuildEvaluationUi
 import { evaluateCurrentBuild } from "./currentBuildEvaluation";
 import { runDefenceSearchWorkerTask, runMaximizeRemainingBulkWorkerTask, type DefenceSearchWorkerMessage } from "../worker/defenceSearchWorker";
 import { evaluateCandidate } from "./defenceSearch";
-import { maximizeRemainingBulk } from "./maximizeRemainingBulk";
+import { maximizeRemainingBulk, evaluateBulkCandidate } from "./maximizeRemainingBulk";
 import { encodeSharedAdjustment, decodeSharedAdjustment } from "../share/urlShareCodec";
 
 const zeros = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
@@ -146,6 +146,16 @@ describe("offense sequences", () => {
       expect(evaluateCandidate(sync!.build, [], candidate.candidate.statPoints, { offenseConditions: [condition] }).passed).toBe(true);
     }
   });
+  it("rejects a nature change that breaks the existing passing KO requirement", () => {
+    const { build, condition } = fixture();
+    const baseline = evaluateOffenseSequence(build, condition);
+    expect(baseline.koProbability).toBeGreaterThan(0);
+    condition.targetKoProbability = baseline.koProbability;
+    const nature = buildTargetBuildFromUi({ ...createDefaultTargetForm(), natureInput: "ようき" }).nature;
+    const points = { ...getBuildStatPoints(build), hp: 32, def: 24 };
+    expect(evaluateBulkCandidate({ build, offenseConditions: [condition], allowNatureChange: true, natureCandidates: [{ nature }] }, points, { nature })).toBeNull();
+    expect(evaluateBulkCandidate({ build, offenseConditions: [condition] }, points)).not.toBeNull();
+  });
   it("stops allocation on cancel without posting completion", async () => {
     const { build, condition } = fixture(); let canceled = false;
     const messages: DefenceSearchWorkerMessage[] = [];
@@ -183,7 +193,8 @@ describe("offense sequences", () => {
     const result = evaluateCandidate(build, [], { hp: 0, def: 0, spd: 0 }, { offenseConditions: [condition] });
     expect(result.passed).toBe(false);
     expect(result.offenseResults?.[0].passed).toBe(false);
-    expect(maximizeRemainingBulk({ build, offenseConditions: [condition] }, { maxResults: 1 })).toEqual([]);
+    const [bulk] = maximizeRemainingBulk({ build, offenseConditions: [condition] }, { maxResults: 1 });
+    expect(bulk.candidate.statPoints.spa).toBe(getBuildStatPoints(build).spa);
   });
   it("supports one use of a multi-hit move and separates missing input from immunity", () => {
     const { target, scenario, build } = fixture(["タネマシンガン"]);
@@ -216,15 +227,16 @@ describe("offense sequences", () => {
     expect(getBuildStatPoints(result!.build).spa).toBeGreaterThanOrEqual(getBuildStatPoints(build).spa);
     expect(() => finish(searchOffenseAllocation(withOffenseStatPoints(build, { ...zeros, atk: 32, spa: 32, spe: 3 }), [condition]))).toThrow("合計66");
   });
-  it("reallocates bulk after raising offensive SP without treating its former defensive SP as an illegal input", async () => {
+  it("keeps a full allocation unchanged even when an offense condition is failing", async () => {
     const { build, condition } = fixture();
     const current = withOffenseStatPoints(build, { ...zeros, hp: 32, def: 32, spe: 2 });
     const messages: DefenceSearchWorkerMessage[] = [];
     await runMaximizeRemainingBulkWorkerTask({ type: "maximizeRemainingBulk", requestId: "bulk-seq", input: {
-      build: current, prepareOffenseAllocation: true, offenseConditions: [{ ...condition, targetKoProbability: 1 }],
+      build: current, offenseConditions: [{ ...condition, targetKoProbability: 1 }],
     } }, (message) => messages.push(message));
     expect(messages.some((message) => message.type === "bulkError")).toBe(false);
-    expect(messages.some((message) => message.type === "bulkComplete")).toBe(true);
+    const complete = messages.find((message) => message.type === "bulkComplete");
+    expect(complete?.type === "bulkComplete" && complete.result?.candidate.statPoints).toEqual(getBuildStatPoints(current));
   });
   it("preserves old independent constraints, migrates once, and refuses missing new common input", () => {
     const { target, scenario } = fixture();

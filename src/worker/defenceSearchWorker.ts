@@ -13,7 +13,8 @@ import {
 } from "../search/defenceSearch";
 import {
   countMaximizeRemainingBulkCandidates,
-  maximizeRemainingBulk,
+  iterateBulkCandidateResults,
+  compareBulkCandidates,
   type MaximizeRemainingBulkInput,
   type MaximizeRemainingBulkResult,
 } from "../search/maximizeRemainingBulk";
@@ -342,19 +343,11 @@ export const runMaximizeRemainingBulkWorkerTask = async (
   isCanceled: DefenceSearchWorkerCancelCheck = () => false,
 ): Promise<void> => {
   const { requestId } = request;
-  let input = request.input;
+  const input = request.input;
   const maxResults = Math.max(1, Math.trunc(request.options?.maxResults ?? 1));
 
   try {
-    if (input.prepareOffenseAllocation) {
-      const allocation = await prepareAllocation(input.build, input.offenseConditions ?? [], input.speedConditions ?? [], requestId,
-        (message) => emit(message.type === "progress" ? { ...message, type: "bulkProgress" } : message), isCanceled);
-      if (isCanceled(requestId)) return;
-      if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
-      input = { ...input, minimumStatPoints: allocation.minimumStatPoints,
-        currentBuild: input.build, build: allocation.build };
-    }
-    const totalCandidates = countMaximizeRemainingBulkCandidates(input);
+    const totalCandidates = countMaximizeRemainingBulkCandidates(input) * 2;
     emit({
       type: "bulkProgress",
       requestId,
@@ -367,7 +360,22 @@ export const runMaximizeRemainingBulkWorkerTask = async (
       return;
     }
 
-    const results = maximizeRemainingBulk(input, { maxResults });
+    const results: MaximizeRemainingBulkResult[] = [];
+    let searchedCandidates = 0;
+    for (const result of iterateBulkCandidateResults(input, { maxResults })) {
+      if (isCanceled(requestId)) return;
+      searchedCandidates++;
+      if (result) {
+        results.push(result);
+        results.sort(compareBulkCandidates);
+        if (results.length > maxResults) results.pop();
+      }
+      if (searchedCandidates % DEFAULT_YIELD_EVERY === 0) {
+        emit({ type: "bulkProgress", requestId, searchedCandidates, totalCandidates,
+          progress: searchedCandidates / totalCandidates });
+        await yieldToWorker();
+      }
+    }
     if (isCanceled(requestId)) {
       return;
     }
@@ -375,8 +383,8 @@ export const runMaximizeRemainingBulkWorkerTask = async (
     emit({
       type: "bulkProgress",
       requestId,
-      searchedCandidates: totalCandidates,
-      totalCandidates,
+      searchedCandidates,
+      totalCandidates: searchedCandidates,
       progress: 1,
     });
     emit({
@@ -384,8 +392,8 @@ export const runMaximizeRemainingBulkWorkerTask = async (
       requestId,
       result: results[0] ?? null,
       results,
-      searchedCandidates: totalCandidates,
-      totalCandidates,
+      searchedCandidates,
+      totalCandidates: searchedCandidates,
     });
   } catch (error) {
     if (!isCanceled(requestId)) {

@@ -1571,7 +1571,7 @@ describe("resolveIntegratedSpeedRequirements", () => {
 });
 
 describe("buildMaximizeRemainingBulkInputFromUi", () => {
-  it("keeps current H/B/D, folds fixed A/C/S requirements, and supplies nature candidates on demand", () => {
+  it("preserves the full current allocation and passes conditions to the Worker", () => {
     const [defaultScenario] = createDefaultScenarioForms();
     const target = {
       ...createDefaultTargetForm(),
@@ -1593,16 +1593,24 @@ describe("buildMaximizeRemainingBulkInputFromUi", () => {
       },
     ];
 
-    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios, {
-      allowNatureChange: true,
-    });
+    const input = buildMaximizeRemainingBulkInputFromUi(target, scenarios);
 
     expect(input.build.statPoints).toMatchObject({ hp: 8, def: 6, spd: 5 });
     expect(input.build.statPoints?.atk).toBe(4);
-    expect(input.build.statPoints?.spe).toBeGreaterThanOrEqual(10);
-    expect(input.natureCandidates?.length).toBe(25);
+    expect(input.build.statPoints).toEqual(target.statPoints);
+    expect(input.defenceScenarios).toHaveLength(1);
     expect(input.speedConditions).toHaveLength(1);
-    expect(input.protectedActualStats?.spe).toBeUndefined();
+  });
+
+  it("permits a blank defence card for standalone maximization", () => {
+    const target = createDefaultTargetForm();
+    const forms = createDefaultScenarioForms().filter((scenario) => scenario.adjustmentType === "defence").map((scenario) => ({ ...scenario,
+      attacks: scenario.attacks.map((attack) => ({ ...attack, attackerPokemonInput: "", moveInput: "" })),
+    }));
+    const input = buildMaximizeRemainingBulkInputFromUi(target, forms, { allowNatureChange: true });
+    expect(input.defenceScenarios).toEqual([]);
+    expect(input.build.statPoints).toEqual(target.statPoints);
+    expect(input.natureCandidates).toHaveLength(25);
   });
 
   it("does not require an active defence scenario for standalone bulk maximization", () => {
@@ -1612,12 +1620,9 @@ describe("buildMaximizeRemainingBulkInputFromUi", () => {
         : scenario
     ));
 
-    const input = buildMaximizeRemainingBulkInputFromUi(createDefaultTargetForm(), scenarios, {
-      allowNatureChange: false,
-    });
+    const input = buildMaximizeRemainingBulkInputFromUi(createDefaultTargetForm(), scenarios);
 
     expect(input.build.pokemon.canonicalName).toBe("Delphox-Mega");
-    expect(input.natureCandidates).toBeUndefined();
   });
 });
 
@@ -1846,7 +1851,8 @@ describe("startMaximizeRemainingBulkFromUi", () => {
     expect(request.requestId).toBe("bulk-ui");
     expect(state.status).toBe("running");
     expect(client.input?.build.pokemon.canonicalName).toBe("Delphox-Mega");
-    expect(client.input?.natureCandidates?.length).toBe(25);
+    expect(client.input?.allowNatureChange).toBe(true);
+    expect(client.input?.natureCandidates).toHaveLength(25);
     expect(client.options?.maxResults).toBe(50);
 
     client.options?.callbacks?.onBulkProgress?.({

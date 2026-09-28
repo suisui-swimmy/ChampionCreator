@@ -6,12 +6,12 @@ import { buildMaximizeRemainingBulkInputFromUi, createDefaultTargetForm, applyMa
 import { BulkMaximizeCandidates, BulkCandidateRow, getBulkCandidateKey, getBulkCandidatePage } from "./BulkMaximizeCandidates";
 
 const target = { ...createDefaultTargetForm(), pokemonInput: "みがわり", natureInput: "", statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } };
-const results = maximizeRemainingBulk(buildMaximizeRemainingBulkInputFromUi(target, [], { allowNatureChange: false }), { maxResults: 50 });
+const results = maximizeRemainingBulk(buildMaximizeRemainingBulkInputFromUi(target, []), { maxResults: 50 });
 
 describe("bulk candidate comparison", () => {
   it("renders the annotated Garchomp stats with SP directly beneath each value and the shared apply style", () => {
     const form = { ...target, pokemonInput: "ガブリアス", natureInput: "ようき" };
-    const candidates = maximizeRemainingBulk(buildMaximizeRemainingBulkInputFromUi(form, [], { allowNatureChange: false }), { maxResults: 50 });
+    const candidates = maximizeRemainingBulk(buildMaximizeRemainingBulkInputFromUi(form, []), { maxResults: 50 });
     const html = renderToStaticMarkup(<BulkMaximizeCandidates results={candidates} appliedKey={null} onApply={() => undefined} />);
     expect(html).toContain("13652.5");
     expect(html).toContain('<strong>215</strong><span aria-label="H 32SP">(32)</span>');

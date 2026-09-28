@@ -6010,7 +6010,7 @@ function BulkMaximizeResultPreview({
   if (!state.result) {
     return (
       <div className="bulk-maximize-preview muted" aria-live="polite">
-        現在の物理耐久・特殊耐久を両方維持できる再配分がありません
+        現在のSPと合格条件を維持できる追加配分がありません
       </div>
     );
   }

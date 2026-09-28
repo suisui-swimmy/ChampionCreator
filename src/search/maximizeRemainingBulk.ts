@@ -13,9 +13,12 @@ import type {
   BulkScore,
   DefenceSearchStatKey,
   NatureRef,
+  Scenario,
   StatKey,
   StatTable,
 } from "../domain/model";
+import { evaluateCurrentBuildCondition, type CurrentBuildCondition } from "./currentBuildEvaluation";
+import { evaluateScenario } from "./defenceSearch";
 import { computeBulkScore, getBuildDerivedStats } from "./bulkScore";
 import type { SpeedScenarioCondition } from "../domain/speed";
 import { evaluateSpeedConditions } from "./speedAdjustment";
@@ -26,16 +29,7 @@ export type { BulkScore } from "../domain/model";
 const DEFENSIVE_STAT_KEYS = ["hp", "def", "spd"] as const satisfies readonly DefenceSearchStatKey[];
 const NATURE_STAT_KEYS = ["atk", "def", "spa", "spd", "spe"] as const satisfies readonly Exclude<StatKey, "hp">[];
 const PROTECTED_SIDE_EFFECT_STAT_KEYS = ["atk", "spa", "spe"] as const satisfies readonly StatKey[];
-const protectedSideEffectStatKeySet = new Set<StatKey>(PROTECTED_SIDE_EFFECT_STAT_KEYS);
-const sideEffectStatLabels = {
-  atk: "A",
-  spa: "C",
-  spe: "S",
-} satisfies Record<(typeof PROTECTED_SIDE_EFFECT_STAT_KEYS)[number], string>;
-
-export type BulkNatureCandidate = {
-  nature?: NatureRef;
-};
+export type BulkNatureCandidate = { nature?: NatureRef };
 
 export type NatureChangeImpact = {
   changed: boolean;
@@ -70,31 +64,14 @@ export interface MaximizeRemainingBulkInput {
   build: Build;
   allowNatureChange?: boolean;
   natureCandidates?: BulkNatureCandidate[];
-  minimumStatPoints?: Partial<Pick<StatTable, "hp" | "def" | "spd">>;
-  protectedActualStats?: Partial<Pick<StatTable, "atk" | "spa" | "spe">>;
+  defenceScenarios?: Scenario[];
   speedConditions?: SpeedScenarioCondition[];
   offenseConditions?: OffenseSequenceCondition[];
-  prepareOffenseAllocation?: boolean;
-  currentBuild?: Build;
-  keepCurrentPhysicalSpecialBulk?: boolean;
 }
 
 export interface MaximizeRemainingBulkOptions {
   maxResults?: number;
 }
-
-type MaximizeRemainingBulkContext = {
-  buildStatPoints: StatTable;
-  currentStats: StatTable;
-  currentScore: BulkScore;
-  defensiveBudget: number;
-  fixedStatPointTotal: number;
-  minimumStatPoints: Partial<Pick<StatTable, "hp" | "def" | "spd">>;
-  natureCandidates: BulkNatureCandidate[];
-  keepCurrentPhysicalSpecialBulk: boolean;
-};
-
-const cloneStatPoints = (statPoints: StatTable): StatTable => ({ ...statPoints });
 
 const getNatureLabel = (nature: NatureRef | undefined): string =>
   nature?.displayNameJa ?? nature?.canonicalName ?? "性格なし";
@@ -125,235 +102,135 @@ const normalizeNatureCandidates = (
   return normalized.length > 0 ? normalized : [baseCandidate];
 };
 
-const withStatPointsAndNature = (
-  build: Build,
-  statPoints: StatTable,
-  nature: NatureRef | undefined,
-): Build => ({
-  ...build,
-  nature,
-  statPoints,
-  evs: statPointTableToSmogonEvs(statPoints),
-});
+const validateCurrentPoints = (build: Build): StatTable => {
+  const points = getBuildStatPoints(build);
+  if (!Object.values(points).every(isLegalStatPointValue)) throw new Error("現在のSP配分に上限外の値があります");
+  if (!isLegalStatPointTable(points)) throw new Error("現在のSP配分が合計66を超えています");
+  return points;
+};
 
-const prepareMaximizeRemainingBulkContext = (
-  input: MaximizeRemainingBulkInput,
-): MaximizeRemainingBulkContext => {
-  const buildStatPoints = getBuildStatPoints(input.build);
-  if (!Object.values(buildStatPoints).every(isLegalStatPointValue)) {
-    throw new Error("現在のSP配分に上限外の値があります");
+/** Existing points are lower bounds; A/C/S SP never changes. */
+export function* iterateDefensiveAllocations(input: MaximizeRemainingBulkInput): Generator<StatTable> {
+  const base = validateCurrentPoints(input.build);
+  const budget = CHAMPIONS_TOTAL_STAT_POINTS - base.atk - base.spa - base.spe;
+  for (let hp = base.hp; hp <= CHAMPIONS_MAX_STAT_POINTS_PER_STAT; hp++) {
+    for (let def = base.def; def <= CHAMPIONS_MAX_STAT_POINTS_PER_STAT; def++) {
+      const spd = budget - hp - def;
+      if (spd >= base.spd && spd <= CHAMPIONS_MAX_STAT_POINTS_PER_STAT) yield { ...base, hp, def, spd };
+    }
   }
-  if (sumStatPoints(buildStatPoints) > CHAMPIONS_TOTAL_STAT_POINTS) {
-    throw new Error(`現在のSP配分が合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`);
-  }
+}
 
-  const fixedStatPointTotal = buildStatPoints.atk + buildStatPoints.spa + buildStatPoints.spe;
-  const defensiveBudget = CHAMPIONS_TOTAL_STAT_POINTS - fixedStatPointTotal;
-  const minimumStatPoints = input.minimumStatPoints ?? {};
-  const minimumDefensiveTotal = DEFENSIVE_STAT_KEYS.reduce(
-    (total, key) => total + (minimumStatPoints[key] ?? 0),
-    0,
-  );
-  if (minimumDefensiveTotal > defensiveBudget) {
-    throw new Error(
-      `H/B/D の下限SPが防御系予算を超えています`
-      + ` (下限 ${minimumDefensiveTotal} / 予算 ${defensiveBudget})`,
-    );
-  }
+export const enumerateDefensiveAllocations = (input: MaximizeRemainingBulkInput): StatTable[] =>
+  Array.from(iterateDefensiveAllocations(input));
 
-  if (input.currentBuild && !isLegalStatPointTable(getBuildStatPoints(input.currentBuild))) throw new Error("現在のSP配分が不正です");
-  const currentStats = getBuildDerivedStats(input.currentBuild ?? input.build);
+export const countMaximizeRemainingBulkCandidates = (input: MaximizeRemainingBulkInput): number => {
+  let count = 0;
+  for (const _points of iterateDefensiveAllocations(input)) count++;
+  return count * normalizeNatureCandidates(input.build, Boolean(input.allowNatureChange), input.natureCandidates).length;
+};
+
+type BulkContext = {
+  currentStats: StatTable;
+  currentScore: BulkScore;
+  defenceScenarios: Scenario[];
+  offenseConditions: OffenseSequenceCondition[];
+  speedConditions: SpeedScenarioCondition[];
+};
+
+const prepareContext = (input: MaximizeRemainingBulkInput): BulkContext => {
+  validateCurrentPoints(input.build);
+  const currentStats = getBuildDerivedStats(input.build);
+  const isPassing = (condition: CurrentBuildCondition): boolean => {
+    const result = evaluateCurrentBuildCondition(input.build, condition);
+    if (result.status !== "pass" && result.status !== "fail") throw new Error(result.message ?? "条件を評価できません");
+    return result.status === "pass";
+  };
   return {
-    buildStatPoints,
     currentStats,
     currentScore: computeBulkScore(currentStats),
-    defensiveBudget,
-    fixedStatPointTotal,
-    minimumStatPoints,
-    natureCandidates: normalizeNatureCandidates(
-      input.build,
-      Boolean(input.allowNatureChange),
-      input.natureCandidates,
-    ),
-    keepCurrentPhysicalSpecialBulk: input.keepCurrentPhysicalSpecialBulk ?? true,
+    defenceScenarios: (input.defenceScenarios ?? []).filter((scenario) => scenario.enabled && scenario.constraint.enabled)
+      .filter((scenario) => isPassing({ id: scenario.id, scenarioId: scenario.id, scenarioLabel: scenario.label ?? scenario.id,
+        label: scenario.label ?? scenario.id, kind: "defence", scenario })),
+    offenseConditions: (input.offenseConditions ?? []).filter((condition) => {
+      if (!condition.attacks.length) throw new Error("火力調整の攻撃条件を入力してください");
+      return isPassing({ id: condition.id, scenarioId: condition.scenarioId, scenarioLabel: condition.scenarioLabel,
+        label: condition.scenarioLabel, kind: "offense", input: condition.attacks[0], sequence: condition });
+    }),
+    speedConditions: (input.speedConditions ?? []).filter((condition) => {
+      const result = evaluateSpeedConditions(input.build, [condition])[0].result;
+      if (result.status === "invalid" || result.status === "unresolved") throw new Error(result.reason);
+      return result.passed;
+    }),
   };
 };
 
-export function* iterateDefensiveAllocations(
-  input: MaximizeRemainingBulkInput,
-): Generator<StatTable> {
-  const context = prepareMaximizeRemainingBulkContext(input);
-  yield* iterateDefensiveAllocationsFromContext(context);
-}
-
-function* iterateDefensiveAllocationsFromContext(
-  context: MaximizeRemainingBulkContext,
-): Generator<StatTable> {
-  const baseStatPoints = context.buildStatPoints;
-
-  for (let hp = 0; hp <= CHAMPIONS_MAX_STAT_POINTS_PER_STAT; hp += 1) {
-    if (hp < (context.minimumStatPoints.hp ?? 0)) {
-      continue;
-    }
-
-    for (let def = 0; def <= CHAMPIONS_MAX_STAT_POINTS_PER_STAT; def += 1) {
-      if (def < (context.minimumStatPoints.def ?? 0)) {
-        continue;
-      }
-
-      const spd = context.defensiveBudget - hp - def;
-      if (
-        spd < (context.minimumStatPoints.spd ?? 0)
-        || spd < 0
-        || spd > CHAMPIONS_MAX_STAT_POINTS_PER_STAT
-      ) {
-        continue;
-      }
-
-      const statPoints = {
-        ...baseStatPoints,
-        hp,
-        def,
-        spd,
-      };
-      if (isLegalStatPointTable(statPoints)) {
-        yield statPoints;
-      }
-    }
-  }
-}
-
-export const enumerateDefensiveAllocations = (
-  input: MaximizeRemainingBulkInput,
-): StatTable[] => Array.from(iterateDefensiveAllocations(input));
-
-export const countMaximizeRemainingBulkCandidates = (
-  input: MaximizeRemainingBulkInput,
-): number => {
-  const context = prepareMaximizeRemainingBulkContext(input);
-  let allocationCount = 0;
-  for (const _allocation of iterateDefensiveAllocationsFromContext(context)) {
-    allocationCount += 1;
-  }
-  return allocationCount * context.natureCandidates.length;
-};
-
-const getNatureChangeImpact = (
-  currentNature: NatureRef | undefined,
-  candidateNature: NatureRef | undefined,
-  currentStats: StatTable,
-  candidateStats: StatTable,
-): NatureChangeImpact => {
-  const loweredStats = NATURE_STAT_KEYS.filter((key) => candidateStats[key] < currentStats[key]);
-  const raisedStats = NATURE_STAT_KEYS.filter((key) => candidateStats[key] > currentStats[key]);
-  const notes = loweredStats
-    .filter((key) => protectedSideEffectStatKeySet.has(key))
-    .map((key) => `${sideEffectStatLabels[key as keyof typeof sideEffectStatLabels]}実数値が現在より下がります`);
-
-  return {
-    changed: (currentNature?.canonicalName ?? null) !== (candidateNature?.canonicalName ?? null),
-    from: getNatureLabel(currentNature),
-    to: getNatureLabel(candidateNature),
-    loweredStats,
-    raisedStats,
-    notes,
-  };
-};
-
-const passesProtectedActualStats = (
-  candidateStats: StatTable,
-  protectedActualStats: MaximizeRemainingBulkInput["protectedActualStats"] = {},
-): boolean => PROTECTED_SIDE_EFFECT_STAT_KEYS.every((key) => (
-  candidateStats[key] >= (protectedActualStats[key] ?? 0)
-));
-
-export const evaluateBulkCandidate = (
-  input: MaximizeRemainingBulkInput,
-  statPoints: StatTable,
-  natureCandidate: BulkNatureCandidate,
+const evaluateWithContext = (
+  input: MaximizeRemainingBulkInput, context: BulkContext, statPoints: StatTable, natureCandidate: BulkNatureCandidate,
+  validateConditions = true,
 ): MaximizeRemainingBulkResult | null => {
-  const context = prepareMaximizeRemainingBulkContext(input);
-  return evaluateBulkCandidateWithContext(input, context, statPoints, natureCandidate);
-};
-
-const evaluateBulkCandidateWithContext = (
-  input: MaximizeRemainingBulkInput,
-  context: MaximizeRemainingBulkContext,
-  statPoints: StatTable,
-  natureCandidate: BulkNatureCandidate,
-): MaximizeRemainingBulkResult | null => {
-  const candidateBuild = withStatPointsAndNature(input.build, statPoints, natureCandidate.nature);
+  const base = getBuildStatPoints(input.build);
+  if (!isLegalStatPointTable(statPoints)
+    || DEFENSIVE_STAT_KEYS.some((key) => statPoints[key] < base[key])
+    || PROTECTED_SIDE_EFFECT_STAT_KEYS.some((key) => statPoints[key] !== base[key])) return null;
+  const candidateBuild = { ...input.build, nature: natureCandidate.nature, statPoints, evs: statPointTableToSmogonEvs(statPoints) };
+  // HP thresholds, recoil and variable-power moves can break monotonicity.
+  if (validateConditions && (context.defenceScenarios.some((scenario) => !evaluateScenario(candidateBuild, scenario).passed)
+    || evaluateOffenseConditions(candidateBuild, context.offenseConditions).some((entry) => !entry.passed)
+    || evaluateSpeedConditions(candidateBuild, context.speedConditions).some((entry) => !entry.result.passed))) return null;
   const derivedStats = getBuildDerivedStats(candidateBuild);
   const score = computeBulkScore(derivedStats);
-
-  if (
-    context.keepCurrentPhysicalSpecialBulk
-    && (
-      score.physicalBulk < context.currentScore.physicalBulk
-      || score.specialBulk < context.currentScore.specialBulk
-    )
-  ) {
-    return null;
-  }
-
-  if (!passesProtectedActualStats(derivedStats, input.protectedActualStats)) {
-    return null;
-  }
-  if (evaluateOffenseConditions(candidateBuild, input.offenseConditions ?? []).some((entry) => !entry.passed)) return null;
-  if (evaluateSpeedConditions(candidateBuild, input.speedConditions ?? []).some((entry) => !entry.result.passed)) {
-    return null;
-  }
-
   const usedTotal = sumStatPoints(statPoints);
-  const natureChangeImpact = getNatureChangeImpact(
-    input.build.nature,
-    natureCandidate.nature,
-    context.currentStats,
-    derivedStats,
-  );
-  const naturePart = natureChangeImpact.changed
-    ? `性格を ${natureChangeImpact.from} から ${natureChangeImpact.to} に変更し`
-    : `${natureChangeImpact.to}のまま`;
-  const explanation = [
-    `${naturePart}、H${statPoints.hp} / B${statPoints.def} / D${statPoints.spd} に再配分します`,
-    score.overallBulk === context.currentScore.overallBulk
-      ? `総合耐久指数は ${score.overallBulk.toFixed(1)} のままです`
-      : `総合耐久指数は ${context.currentScore.overallBulk.toFixed(1)} から ${score.overallBulk.toFixed(1)} へ変わります`,
-  ].join("。");
-
+  const nature = getNatureLabel(natureCandidate.nature);
+  const natureChanged = input.build.nature?.canonicalName !== natureCandidate.nature?.canonicalName;
   return {
     candidate: {
-      nature: getNatureLabel(natureCandidate.nature),
-      natureCanonicalName: natureCandidate.nature?.canonicalName,
-      statPoints: cloneStatPoints(statPoints),
-      spOrEvs: cloneStatPoints(statPoints),
-      derivedStats,
-      usedTotal,
-      remaining: CHAMPIONS_TOTAL_STAT_POINTS - usedTotal,
+      nature, natureCanonicalName: natureCandidate.nature?.canonicalName,
+      statPoints: { ...statPoints }, spOrEvs: { ...statPoints }, derivedStats,
+      usedTotal, remaining: CHAMPIONS_TOTAL_STAT_POINTS - usedTotal,
     },
     score: {
-      ...score,
-      currentPhysicalBulk: context.currentScore.physicalBulk,
+      ...score, currentPhysicalBulk: context.currentScore.physicalBulk,
       currentSpecialBulk: context.currentScore.specialBulk,
       currentOverallBulk: context.currentScore.overallBulk,
       overallBulkGain: score.overallBulk - context.currentScore.overallBulk,
     },
-    natureChangeImpact,
-    explanation,
+    natureChangeImpact: { changed: natureChanged, from: getNatureLabel(input.build.nature), to: nature,
+      loweredStats: NATURE_STAT_KEYS.filter((key) => derivedStats[key] < context.currentStats[key]),
+      raisedStats: NATURE_STAT_KEYS.filter((key) => derivedStats[key] > context.currentStats[key]), notes: [] },
+    explanation: `現在のSPを維持し、性格${nature}で残りSPをH${statPoints.hp} / B${statPoints.def} / D${statPoints.spd}まで追加します`,
   };
 };
 
+export const evaluateBulkCandidate = (
+  input: MaximizeRemainingBulkInput, statPoints: StatTable, natureCandidate: BulkNatureCandidate = { nature: input.build.nature },
+): MaximizeRemainingBulkResult | null => {
+  if (!normalizeNatureCandidates(input.build, Boolean(input.allowNatureChange), input.natureCandidates)
+    .some((entry) => getNatureKey(entry) === getNatureKey(natureCandidate))) return null;
+  return evaluateWithContext(input, prepareContext(input), statPoints, natureCandidate);
+};
+
+/** Rank cheaply first, then validate in score order; yield during both phases for cancellation. */
 export function* iterateBulkCandidateResults(
-  input: MaximizeRemainingBulkInput,
-): Generator<MaximizeRemainingBulkResult> {
-  const context = prepareMaximizeRemainingBulkContext(input);
-  for (const statPoints of iterateDefensiveAllocationsFromContext(context)) {
-    for (const natureCandidate of context.natureCandidates) {
-      const result = evaluateBulkCandidateWithContext(input, context, statPoints, natureCandidate);
-      if (result) {
-        yield result;
-      }
+  input: MaximizeRemainingBulkInput, options: MaximizeRemainingBulkOptions = {},
+): Generator<MaximizeRemainingBulkResult | null> {
+  const context = prepareContext(input);
+  const natures = normalizeNatureCandidates(input.build, Boolean(input.allowNatureChange), input.natureCandidates);
+  const ranked: Array<{ result: MaximizeRemainingBulkResult; nature: BulkNatureCandidate }> = [];
+  for (const points of iterateDefensiveAllocations(input)) {
+    for (const nature of natures) {
+      const result = evaluateWithContext(input, context, points, nature, false);
+      if (result) ranked.push({ result, nature });
+      yield null;
     }
+  }
+  ranked.sort((a, b) => compareBulkCandidates(a.result, b.result));
+  let accepted = 0;
+  const maxResults = Math.max(1, Math.trunc(options.maxResults ?? 1));
+  for (const { result, nature } of ranked) {
+    const checked = evaluateWithContext(input, context, result.candidate.statPoints, nature);
+    yield checked;
+    if (checked && ++accepted >= maxResults) return;
   }
 }
 
@@ -399,7 +276,8 @@ export const maximizeRemainingBulk = (
   options: MaximizeRemainingBulkOptions = {},
 ): MaximizeRemainingBulkResult[] => {
   const maxResults = Math.max(1, Math.trunc(options.maxResults ?? 1));
-  return Array.from(iterateBulkCandidateResults(input))
+  return Array.from(iterateBulkCandidateResults(input, options))
+    .filter((result): result is MaximizeRemainingBulkResult => result !== null)
     .sort(compareBulkCandidates)
     .slice(0, maxResults);
 };

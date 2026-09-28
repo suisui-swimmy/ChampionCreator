@@ -79,7 +79,6 @@ import {
   type MaximizeRemainingBulkInput,
   type MaximizeRemainingBulkResult,
 } from "../search/maximizeRemainingBulk";
-import { getBuildDerivedStats } from "../search/bulkScore";
 import natureOptionsData from "../data/generated/nature-options.gen.json";
 import { searchOffenseAllocation, offenseSequenceResult, type OffenseSequenceCondition } from "../search/offenseSequence";
 
@@ -1980,82 +1979,20 @@ const createBulkNatureCandidates = (): BulkNatureCandidate[] =>
     nature: mustResolve("nature", option.label, "性格候補"),
   }));
 
-const getProtectedActualStatsForBulkMaximize = (
-  build: Build,
-  offenseRequirements: IntegratedOffenseRequirements,
-): Partial<Pick<StatPointTable, "atk" | "spa" | "spe">> => {
-  const stats = getBuildDerivedStats(build);
-  const protectedStats: Partial<Pick<StatPointTable, "atk" | "spa" | "spe">> = {};
-
-  if (offenseRequirements.selectedResults.some((entry) => entry.result.stat === "atk")) {
-    protectedStats.atk = stats.atk;
-  }
-  if (offenseRequirements.selectedResults.some((entry) => entry.result.stat === "spa")) {
-    protectedStats.spa = stats.spa;
-  }
-  return protectedStats;
-};
-
 export const buildMaximizeRemainingBulkInputFromUi = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
-  options: { allowNatureChange: boolean },
+  options: { allowNatureChange: boolean } = { allowNatureChange: false },
 ): MaximizeRemainingBulkInput => {
-  if (scenarioForms.some((scenario) => scenario.adjustmentType === "offense" && scenario.offense)) {
-    const { allocation, conditions } = resolveSequenceAllocationFromUi(createOffenseSearchBaselineTargetForm(targetForm), scenarioForms);
-    if (!allocation) throw new Error("火力・素早さ条件を同時に満たす合法な配分がありません");
-    return { build: allocation.build, currentBuild: buildTargetBuildFromUi(targetForm),
-      minimumStatPoints: allocation.minimumStatPoints, offenseConditions: conditions,
-      speedConditions: buildSpeedConditionsFromScenarios(targetForm, scenarioForms),
-      allowNatureChange: options.allowNatureChange,
-      natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined };
-  }
-  const baselineTargetForm = createOffenseSearchBaselineTargetForm(targetForm);
-  const offenseResults = calculateOffenseAdjustmentsFromScenarios(baselineTargetForm, scenarioForms);
-  const offenseRequirements = resolveIntegratedOffenseRequirements(baselineTargetForm, offenseResults);
-  if (offenseRequirements.blockingReasons.length > 0) {
-    throw new Error(`火力調整条件を耐久最大化へ統合できません: ${offenseRequirements.blockingReasons.join(" / ")}`);
-  }
-  const speedRequirements = resolveIntegratedSpeedRequirements(
-    applyIntegratedOffenseRequirementsToTargetForm(baselineTargetForm, offenseRequirements),
-    scenarioForms,
-  );
-  if (speedRequirements.blockingReasons.length > 0) {
-    throw new Error(`素早さ調整条件を耐久最大化へ統合できません: ${speedRequirements.blockingReasons.join(" / ")}`);
-  }
-
-  const integratedTargetForm = applyIntegratedSpeedRequirementsToTargetForm(
-    applyIntegratedOffenseRequirementsToTargetForm(targetForm, offenseRequirements),
-    speedRequirements,
-  );
-  const fixedBudget =
-    integratedTargetForm.statPoints.atk
-    + integratedTargetForm.statPoints.spa
-    + integratedTargetForm.statPoints.spe;
-  const minimumDefenceBudget =
-    (offenseRequirements.minimumStatPoints.hp ?? 0)
-    + (offenseRequirements.minimumStatPoints.def ?? 0)
-    + (offenseRequirements.minimumStatPoints.spd ?? 0);
-
-  if (fixedBudget + minimumDefenceBudget > CHAMPIONS_TOTAL_STAT_POINTS) {
-    throw new Error(
-      `火力/素早さ調整込みの必要SPが合計${CHAMPIONS_TOTAL_STAT_POINTS}を超えています`
-      + ` (固定 ${fixedBudget} + 火力最低 ${minimumDefenceBudget})`,
-    );
-  }
-
-  const build = buildTargetBuildFromUi(integratedTargetForm, "target-bulk-maximize");
+  const defenceForms = scenarioForms.filter((scenario) => scenario.enabled && scenario.adjustmentType === "defence"
+    && scenario.attacks.some((attack) => attack.moveInput.trim() || attack.attackerPokemonInput.trim()));
   return {
-    build,
     allowNatureChange: options.allowNatureChange,
     natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined,
-    minimumStatPoints: offenseRequirements.minimumStatPoints,
-    speedConditions: speedRequirements.speedConditions,
-    protectedActualStats: getProtectedActualStatsForBulkMaximize(
-      build,
-      offenseRequirements,
-    ),
-    keepCurrentPhysicalSpecialBulk: true,
+    build: buildTargetBuildFromUi(targetForm),
+    defenceScenarios: defenceForms.length > 0 ? buildDefenceSearchInput(targetForm, defenceForms).scenarios : [],
+    offenseConditions: buildOffenseSequenceConditions(targetForm, scenarioForms),
+    speedConditions: buildSpeedConditionsFromScenarios(targetForm, scenarioForms),
   };
 };
 
@@ -2272,16 +2209,9 @@ export const startMaximizeRemainingBulkFromUi = (
   targetForm: TargetFormState,
   scenarioForms: ScenarioFormState[],
   dispatch: BulkMaximizeUiDispatch,
-  options: { requestId?: string; allowNatureChange: boolean; maxResults?: number } = {
-    allowNatureChange: false,
-  },
+  options: { requestId?: string; maxResults?: number; allowNatureChange?: boolean } = {},
 ): { request: ActiveDefenceSearchRequest; input: MaximizeRemainingBulkInput } => {
-  const input: MaximizeRemainingBulkInput = {
-    build: buildTargetBuildFromUi(targetForm), allowNatureChange: options.allowNatureChange,
-    natureCandidates: options.allowNatureChange ? createBulkNatureCandidates() : undefined,
-    offenseConditions: buildOffenseSequenceConditions(targetForm, scenarioForms),
-    speedConditions: buildSpeedConditionsFromScenarios(targetForm, scenarioForms), prepareOffenseAllocation: true,
-  };
+  const input = buildMaximizeRemainingBulkInputFromUi(targetForm, scenarioForms, { allowNatureChange: options.allowNatureChange ?? false });
   const requestId = options.requestId ?? createBulkMaximizeRequestId();
   dispatch({ type: "start", requestId });
 
